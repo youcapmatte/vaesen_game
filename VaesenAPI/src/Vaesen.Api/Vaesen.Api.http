@@ -1,0 +1,5 @@
+@Vaesen.Api_HostAddress = http://localhost:5230
+
+GET {{Vaesen.Api_HostAddress}}/health
+
+###
