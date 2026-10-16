@@ -1,0 +1,35 @@
+{
+	"FileVersion": 3,
+	"Version": 7,
+	"VersionName": "5.6.0",
+	"FriendlyName": "GameLiftServerSDK",
+	"Description": "",
+	"Category": "Other",
+	"CreatedBy": "",
+	"CreatedByURL": "",
+	"DocsURL": "",
+	"MarketplaceURL": "",
+	"SupportURL": "",
+	"EnabledByDefault": false,
+	"CanContainContent": false,
+	"IsBetaVersion": false,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "GameLiftServerSDK",
+			"Type": "Runtime",
+			"LoadingPhase": "PreDefault",
+			"TargetAllowList": [
+				"Server"
+			]
+		},
+		{
+			"Name": "GameLiftMetrics",
+			"Type": "Runtime",
+			"LoadingPhase": "PreDefault",
+			"TargetAllowList": [
+				"Server"
+			]
+		}
+	]
+}

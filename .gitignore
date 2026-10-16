@@ -40,3 +40,6 @@ Thumbs.db
 
 # Local dev builds/deploys (not versioned)
 /Builds/
+
+# Per-machine script settings (GameLift Anywhere fleet, compute name, ...)
+Scripts/Config.local.bat
