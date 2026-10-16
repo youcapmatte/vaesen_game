@@ -1,24 +1,14 @@
-#include "Player/VaesenCharacter.h"
+#include "Characters/VaesenPlayerCharacter.h"
 
 #include "Camera/CameraComponent.h"
-#include "Components/CapsuleComponent.h"
 #include "EnhancedInputComponent.h"
-#include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Controller.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "InputActionValue.h"
 
-AVaesenCharacter::AVaesenCharacter()
+AVaesenPlayerCharacter::AVaesenPlayerCharacter()
 {
-	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.f);
-
-	// The camera turns with the controller; the character turns toward its movement direction.
-	bUseControllerRotationPitch = false;
-	bUseControllerRotationYaw = false;
-	bUseControllerRotationRoll = false;
-	GetCharacterMovement()->bOrientRotationToMovement = true;
-	GetCharacterMovement()->RotationRate = FRotator(0.f, 500.f, 0.f);
-
+	// The camera follows the controller's rotation; the character itself turns toward its movement (see base class).
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
 	CameraBoom->TargetArmLength = 400.f;
@@ -29,7 +19,7 @@ AVaesenCharacter::AVaesenCharacter()
 	FollowCamera->bUsePawnControlRotation = false;
 }
 
-void AVaesenCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+void AVaesenPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
@@ -41,11 +31,11 @@ void AVaesenCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 
 	if (MoveAction)
 	{
-		EnhancedInput->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AVaesenCharacter::Move);
+		EnhancedInput->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AVaesenPlayerCharacter::Move);
 	}
 	if (LookAction)
 	{
-		EnhancedInput->BindAction(LookAction, ETriggerEvent::Triggered, this, &AVaesenCharacter::Look);
+		EnhancedInput->BindAction(LookAction, ETriggerEvent::Triggered, this, &AVaesenPlayerCharacter::Look);
 	}
 	if (JumpAction)
 	{
@@ -54,7 +44,7 @@ void AVaesenCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 	}
 }
 
-void AVaesenCharacter::Move(const FInputActionValue& Value)
+void AVaesenPlayerCharacter::Move(const FInputActionValue& Value)
 {
 	if (!Controller)
 	{
@@ -67,7 +57,7 @@ void AVaesenCharacter::Move(const FInputActionValue& Value)
 	AddMovementInput(FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y), Input.X);
 }
 
-void AVaesenCharacter::Look(const FInputActionValue& Value)
+void AVaesenPlayerCharacter::Look(const FInputActionValue& Value)
 {
 	const FVector2D Input = Value.Get<FVector2D>();
 	AddControllerYawInput(Input.X);

@@ -1,13 +1,13 @@
 #include "Game/VaesenGameModeBase.h"
 
+#include "Characters/VaesenPlayerCharacter.h"
 #include "Engine/GameInstance.h"
-#include "GameFramework/Controller.h"
 #include "Game/VaesenGameState.h"
-#include "Game/VaesenPlayerState.h"
+#include "GameFramework/Controller.h"
 #include "Kismet/GameplayStatics.h"
 #include "Online/VaesenGameLiftSubsystem.h"
-#include "Player/VaesenCharacter.h"
 #include "Player/VaesenPlayerController.h"
+#include "Player/VaesenPlayerState.h"
 
 const TCHAR* AVaesenGameModeBase::PlayerSessionIdOption = TEXT("PlayerSessionId");
 
@@ -26,7 +26,7 @@ AVaesenGameModeBase::AVaesenGameModeBase()
 	GameStateClass = AVaesenGameState::StaticClass();
 	PlayerStateClass = AVaesenPlayerState::StaticClass();
 	PlayerControllerClass = AVaesenPlayerController::StaticClass();
-	DefaultPawnClass = AVaesenCharacter::StaticClass();
+	DefaultPawnClass = AVaesenPlayerCharacter::StaticClass();
 }
 
 void AVaesenGameModeBase::PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)

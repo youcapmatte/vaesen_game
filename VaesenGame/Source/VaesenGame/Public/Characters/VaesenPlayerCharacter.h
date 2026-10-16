@@ -1,22 +1,22 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/Character.h"
-#include "VaesenCharacter.generated.h"
+#include "Characters/VaesenBaseCharacter.h"
+#include "VaesenPlayerCharacter.generated.h"
 
 class UCameraComponent;
 class UInputAction;
 class USpringArmComponent;
 struct FInputActionValue;
 
-/** Third-person player character. Input actions are assigned in the Blueprint subclass (e.g. BP_VaesenCharacter). */
+/** Third-person character controlled by a player. Input actions are assigned in the Blueprint subclass (e.g. BP_VaesenPlayerCharacter). */
 UCLASS()
-class VAESENGAME_API AVaesenCharacter : public ACharacter
+class VAESENGAME_API AVaesenPlayerCharacter : public AVaesenBaseCharacter
 {
 	GENERATED_BODY()
 
 public:
-	AVaesenCharacter();
+	AVaesenPlayerCharacter();
 
 protected:
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;

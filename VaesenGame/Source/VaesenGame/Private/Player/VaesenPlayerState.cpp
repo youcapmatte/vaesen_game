@@ -1,4 +1,4 @@
-#include "Game/VaesenPlayerState.h"
+#include "Player/VaesenPlayerState.h"
 
 void AVaesenPlayerState::CopyProperties(APlayerState* PlayerState)
 {
