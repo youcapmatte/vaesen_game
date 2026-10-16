@@ -4,6 +4,8 @@
 #include "Engine/DeveloperSettings.h"
 #include "VaesenSettings.generated.h"
 
+class UUserWidget;
+
 /**
  * Project-wide default values. Edit in Project Settings > Game > Vaesen; saved to Config/DefaultGame.ini.
  * Read anywhere with UVaesenSettings::Get().
@@ -29,4 +31,12 @@ public:
 
 	UPROPERTY(Config, EditAnywhere, Category = "Maps", meta = (AllowedClasses = "/Script/Engine.World"))
 	TSoftObjectPtr<UWorld> CharacterSelectMap;
+
+	/** Widget shown on the login map, e.g. WBP_Login (parent class VaesenLoginWidget). */
+	UPROPERTY(Config, EditAnywhere, Category = "UI")
+	TSoftClassPtr<UUserWidget> LoginScreenWidget;
+
+	/** Widget shown on the character select map. */
+	UPROPERTY(Config, EditAnywhere, Category = "UI")
+	TSoftClassPtr<UUserWidget> CharacterSelectScreenWidget;
 };

@@ -18,7 +18,10 @@ class VAESENGAME_API AVaesenFrontEndPlayerControllerBase : public APlayerControl
 protected:
 	virtual void BeginPlay() override;
 
-	/** The screen to show, e.g. WBP_Login. Assign in the Blueprint subclass. */
+	/** Screen to show when ScreenWidgetClass isn't set in a Blueprint subclass; typically read from UVaesenSettings. */
+	virtual TSubclassOf<UUserWidget> GetDefaultScreenWidgetClass() const { return nullptr; }
+
+	/** The screen to show, e.g. WBP_Login. Overrides the default from Project Settings > Game > Vaesen. */
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UUserWidget> ScreenWidgetClass;
 

@@ -8,9 +8,9 @@ public class VaesenGame : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "AIModule", "UMG", "DeveloperSettings" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "AIModule", "UMG", "DeveloperSettings", "HTTP", "SlateCore" });
 
-		PrivateDependencyModuleNames.AddRange(new string[] {  });
+		PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "Json", "JsonUtilities" });
 
 		// The GameLift Server SDK is only compiled into the dedicated server target; clients and the editor never link it.
 		if (Target.Type == TargetType.Server)

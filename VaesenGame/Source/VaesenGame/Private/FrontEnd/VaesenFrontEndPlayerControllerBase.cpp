@@ -13,9 +13,10 @@ void AVaesenFrontEndPlayerControllerBase::BeginPlay()
 
 	SetShowMouseCursor(true);
 
-	if (ScreenWidgetClass)
+	const TSubclassOf<UUserWidget> WidgetClass = ScreenWidgetClass ? ScreenWidgetClass : GetDefaultScreenWidgetClass();
+	if (WidgetClass)
 	{
-		ScreenWidget = CreateWidget<UUserWidget>(this, ScreenWidgetClass);
+		ScreenWidget = CreateWidget<UUserWidget>(this, WidgetClass);
 		ScreenWidget->AddToViewport();
 
 		FInputModeUIOnly InputMode;
