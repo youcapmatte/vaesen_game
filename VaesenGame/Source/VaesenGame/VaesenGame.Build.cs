@@ -8,9 +8,6 @@ public class VaesenGame : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-		// Lets sources include by folder, e.g. "Online/VaesenGameLiftSubsystem.h".
-		PublicIncludePaths.Add(ModuleDirectory);
-
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput" });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
