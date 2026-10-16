@@ -4,6 +4,11 @@ public sealed class SessionsOptions
 {
     public const string SectionName = "Sessions";
 
+    /// <summary>
+    /// "GameLift" (real fleet, incl. Anywhere) or "Local" (no AWS: each world is a server you run yourself on 127.0.0.1:LocalPort).
+    /// </summary>
+    public string Provider { get; set; } = SessionProviders.GameLift;
+
     public GameLiftOptions GameLift { get; set; } = new();
 
     /// <summary>The persistent worlds players can travel between. Each world runs as one long-lived GameLift game session.</summary>
@@ -32,4 +37,13 @@ public sealed class WorldDefinition
     public string Map { get; set; } = "";
 
     public int MaxPlayers { get; set; } = 50;
+
+    /// <summary>Port of this world's server when Provider is "Local" (see Scripts/RunLocalServer.bat).</summary>
+    public int LocalPort { get; set; } = 7777;
+}
+
+public static class SessionProviders
+{
+    public const string GameLift = "GameLift";
+    public const string Local = "Local";
 }

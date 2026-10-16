@@ -14,10 +14,18 @@ public static class SessionsModule
     {
         services.Configure<SessionsOptions>(configuration.GetSection(SessionsOptions.SectionName));
 
-        services.AddDefaultAWSOptions(configuration.GetAWSOptions());
-        services.AddAWSService<IAmazonGameLift>();
+        var provider = configuration.GetSection(SessionsOptions.SectionName).Get<SessionsOptions>()?.Provider;
+        if (string.Equals(provider, SessionProviders.Local, StringComparison.OrdinalIgnoreCase))
+        {
+            services.AddSingleton<IGameLiftGateway, LocalGameLiftGateway>();
+        }
+        else
+        {
+            services.AddDefaultAWSOptions(configuration.GetAWSOptions());
+            services.AddAWSService<IAmazonGameLift>();
+            services.AddSingleton<IGameLiftGateway, AwsGameLiftGateway>();
+        }
 
-        services.AddSingleton<IGameLiftGateway, AwsGameLiftGateway>();
         services.AddSingleton<WorldSessionService>();
         return services;
     }

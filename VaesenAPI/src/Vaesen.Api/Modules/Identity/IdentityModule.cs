@@ -10,6 +10,7 @@ public static class IdentityModule
 {
     public static IServiceCollection AddIdentityModule(this IServiceCollection services, IConfiguration configuration)
     {
+        services.Configure<Auth0Options>(configuration.GetSection(Auth0Options.SectionName));
         var auth0 = configuration.GetSection(Auth0Options.SectionName).Get<Auth0Options>() ?? new Auth0Options();
 
         services

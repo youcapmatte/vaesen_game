@@ -12,9 +12,10 @@ using Vaesen.Api.Modules.Sessions;
 namespace Vaesen.Api.Tests;
 
 /// <summary>
-/// Runs the API in-process with a fake GameLift and a header-driven auth scheme instead of Auth0.
+/// Runs the API in-process (Development environment) with a fake GameLift and a header-driven auth scheme instead of Auth0.
+/// Pass useTestAuth: false to exercise the real token validation (dev login tokens).
 /// </summary>
-public sealed class VaesenApiFactory : WebApplicationFactory<Program>
+public sealed class VaesenApiFactory(bool useTestAuth = true) : WebApplicationFactory<Program>
 {
     public FakeGameLiftGateway GameLift { get; } = new();
 
@@ -39,6 +40,11 @@ public sealed class VaesenApiFactory : WebApplicationFactory<Program>
         builder.ConfigureTestServices(services =>
         {
             services.AddSingleton<IGameLiftGateway>(GameLift);
+
+            if (!useTestAuth)
+            {
+                return;
+            }
 
             services
                 .AddAuthentication(TestAuthHandler.SchemeName)

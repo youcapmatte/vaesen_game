@@ -1,4 +1,5 @@
 using Vaesen.Api.Modules.Billing;
+using Vaesen.Api.Modules.Dev;
 using Vaesen.Api.Modules.Identity;
 using Vaesen.Api.Modules.Players;
 using Vaesen.Api.Modules.Sessions;
@@ -13,6 +14,11 @@ builder.Services
     .AddBillingModule(builder.Configuration)
     .AddSessionsModule(builder.Configuration)
     .AddPlayersModule(builder.Configuration);
+
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddDevModule(builder.Configuration);
+}
 
 var app = builder.Build();
 
@@ -30,6 +36,11 @@ api.MapIdentityEndpoints();
 api.MapBillingEndpoints();
 api.MapSessionsEndpoints();
 api.MapPlayersEndpoints();
+
+if (app.Environment.IsDevelopment())
+{
+    api.MapDevEndpoints();
+}
 
 app.Run();
 
