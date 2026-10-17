@@ -8,8 +8,8 @@ class UAudioComponent;
 
 /**
  * Login screen. Shows the login widget (UVaesenSettings::LoginScreenWidget) and plays UVaesenSettings::LoginMusic.
- * Start the game with -DevPlayer=<name> (e.g. -DevPlayer=ingrid) to skip this screen: logs in to the account with that
- * username (it must exist in the API) and character select preselects the dev character with that id.
+ * Start the game with -DevPlayer=<username> (e.g. -DevPlayer=mattias) to skip this screen and log in to that account
+ * (it must exist in the API); character select then restores your last guild and character.
  */
 UCLASS()
 class VAESENGAME_API AVaesenLoginPlayerController : public AVaesenFrontEndPlayerControllerBase

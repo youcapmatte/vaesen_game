@@ -26,6 +26,6 @@ public sealed class DevController : ControllerBase
         Ok(new ResultBase<IReadOnlyList<DevGuild>>().Ok(_devLogin.GetGuilds()));
 
     [HttpPost("login")]
-    public ActionResult<ResultBase<DevLoginResult>> Login([FromBody] DevLoginRequest? request) =>
-        this.ToActionResult(_devLogin.Login(request ?? new DevLoginRequest()));
+    public async Task<ActionResult<ResultBase<DevLoginResult>>> Login([FromBody] DevLoginRequest? request, CancellationToken cancellationToken) =>
+        this.ToActionResult(await _devLogin.LoginAsync(request ?? new DevLoginRequest(), cancellationToken).ConfigureAwait(false));
 }

@@ -66,3 +66,15 @@ Content-Type: application/json
 
 ### Delete a character (leaves its guild, its player stops, the name becomes free)
 DELETE {{Vaesen.Api_HostAddress}}/api/characters/character-00000000-0000-0000-0000-000000000000
+
+### The classes a character can have
+GET {{Vaesen.Api_HostAddress}}/api/characters/classes
+
+### Dev login as a real account playing one of its guild's characters (assign the character first)
+POST {{Vaesen.Api_HostAddress}}/api/dev/login
+Content-Type: application/json
+
+{
+  "accountId": "account-00000000-0000-0000-0000-000000000000",
+  "characterId": "character-00000000-0000-0000-0000-000000000000"
+}

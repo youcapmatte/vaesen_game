@@ -22,7 +22,11 @@ class VAESENGAME_API UVaesenApiSubsystem : public UGameInstanceSubsystem
 	GENERATED_BODY()
 
 public:
-	using FGuildsCallback = TFunction<void(bool bSuccess, const TArray<FVaesenDevGuild>& Guilds, const FString& Error)>;
+	using FGuildsCallback = TFunction<void(bool bSuccess, const TArray<FVaesenGuild>& Guilds, const FString& Error)>;
+	using FCharactersCallback = TFunction<void(bool bSuccess, const TArray<FVaesenCharacter>& Characters, const FString& Error)>;
+	using FCharacterCallback = TFunction<void(bool bSuccess, const FVaesenCharacter& Character, const FString& Error)>;
+	using FStringsCallback = TFunction<void(bool bSuccess, const TArray<FString>& Values, const FString& Error)>;
+	using FNameTakenCallback = TFunction<void(bool bSuccess, bool bTaken, const FString& Error)>;
 	using FResultCallback = TFunction<void(bool bSuccess, const FString& Error)>;
 	using FProgressCallback = TFunction<void(const FText& Message)>;
 
@@ -41,11 +45,26 @@ public:
 	/** Stops a login in progress. Its callbacks are not called. */
 	void CancelLogin();
 
-	/** Development only: guilds and their characters to choose from (GET /api/dev/guilds). */
-	void GetDevGuilds(FGuildsCallback OnComplete);
+	/** The signed-in account's guilds (GET /api/guilds/by-account/{accountId}). */
+	void GetMyGuilds(FGuildsCallback OnComplete);
 
-	/** Development only: play as a seed character; gets the API token for it (POST /api/dev/login). Requires Login first. */
-	void SelectDevCharacter(const FString& DevPlayerId, FResultCallback OnComplete);
+	/** A guild's characters (GET /api/guilds/{guildId}/characters). */
+	void GetGuildCharacters(const FString& GuildId, FCharactersCallback OnComplete);
+
+	/** The classes a character can have (GET /api/characters/classes). */
+	void GetCharacterClasses(FStringsCallback OnComplete);
+
+	/** Whether a character with this name exists (GET /api/characters/by-name/{name}). */
+	void IsCharacterNameTaken(const FString& Name, FNameTakenCallback OnComplete);
+
+	/** Creates a character in the guild, made by the signed-in account (POST /api/guilds/{guildId}/characters). */
+	void CreateCharacter(const FString& GuildId, const FString& FirstName, const FString& LastName, const FString& Class, FCharacterCallback OnComplete);
+
+	/**
+	 * Plays a character: assigns it to the signed-in account in its guild, then gets the account's play token for it
+	 * (development login for now). On success the session holds the character and token.
+	 */
+	void PlayCharacter(const FVaesenCharacter& Character, FResultCallback OnComplete);
 
 	/** Cancels a pending login and clears the session. */
 	void Logout();
@@ -54,6 +73,9 @@ private:
 	UVaesenSessionSubsystem* GetSession() const;
 
 	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> CreateRequest(const FString& Verb, const FString& Path) const;
+
+	/** Gets the dev play token for a character the signed-in account is assigned to. */
+	void RequestCharacterToken(const FVaesenCharacter& Character, FResultCallback OnComplete);
 
 	/** Turns a failed or non-2xx response into a readable error; empty when the request succeeded. */
 	static FString GetError(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bConnectedSuccessfully);

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Options;
 using Vaesen.Framework.Common.Models;
 using Vaesen.Framework.Common.Repositorys;
 using Vaesen.Framework.Core.Models;
@@ -7,6 +8,9 @@ namespace Vaesen.Framework.Common.Services;
 /// <summary>Reading, changing and deleting characters. Creating one happens in its guild (<see cref="IGuildService.CreateCharacterAsync"/>).</summary>
 public interface ICharacterService
 {
+    /// <summary>The classes a character can have.</summary>
+    IReadOnlyList<string> GetClasses();
+
     Task<ResultBase<Character>> GetAsync(string characterId, CancellationToken cancellationToken = default);
 
     Task<ResultBase<Character>> GetByNameAsync(string name, CancellationToken cancellationToken = default);
@@ -22,12 +26,16 @@ public sealed class CharacterService : ICharacterService
 {
     private readonly ICharacterStore _characters;
     private readonly IGuildStore _guilds;
+    private readonly IOptions<CharacterOptions> _options;
 
-    public CharacterService(ICharacterStore characters, IGuildStore guilds)
+    public CharacterService(ICharacterStore characters, IGuildStore guilds, IOptions<CharacterOptions> options)
     {
         _characters = characters;
         _guilds = guilds;
+        _options = options;
     }
+
+    public IReadOnlyList<string> GetClasses() => _options.Value.EffectiveClasses;
 
     public async Task<ResultBase<Character>> GetAsync(string characterId, CancellationToken cancellationToken = default)
     {
@@ -61,7 +69,7 @@ public sealed class CharacterService : ICharacterService
 
         var invalid = CharacterRules.ValidatePersonName(firstName, "First name")
             ?? CharacterRules.ValidatePersonName(lastName, "Last name")
-            ?? CharacterRules.ValidateClass(characterClass)
+            ?? CharacterRules.ValidateClass(characterClass, GetClasses())
             ?? CharacterRules.ValidateHealthPoints(healthPoints);
         if (invalid is not null)
         {
@@ -72,7 +80,7 @@ public sealed class CharacterService : ICharacterService
         character.FirstName = firstName!;
         character.LastName = lastName!;
         character.Name = Character.FullName(firstName!, lastName!);
-        character.Class = characterClass;
+        character.Class = CharacterRules.NormalizeClass(characterClass, GetClasses());
         character.HealthPoints = healthPoints;
         if (!string.IsNullOrWhiteSpace(request?.UpdatedByAccountId))
         {

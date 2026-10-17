@@ -45,6 +45,39 @@ namespace VaesenApiEnvelope
 		}
 		return Result;
 	}
+
+	/** Reads the envelope's "result" object into a USTRUCT. */
+	template <typename TStruct>
+	bool ReadObject(const FString& Body, TStruct& Out, FString& OutError)
+	{
+		const TSharedPtr<FJsonValue> Result = ParseResult(Body, OutError);
+		const TSharedPtr<FJsonObject>* Object = nullptr;
+		if (OutError.IsEmpty() && (!Result->TryGetObject(Object) || !FJsonObjectConverter::JsonObjectToUStruct((*Object).ToSharedRef(), &Out)))
+		{
+			OutError = TEXT("Unexpected response from the API.");
+		}
+		return OutError.IsEmpty();
+	}
+
+	/** Reads the envelope's "result" array into USTRUCTs. */
+	template <typename TStruct>
+	bool ReadArray(const FString& Body, TArray<TStruct>& Out, FString& OutError)
+	{
+		const TSharedPtr<FJsonValue> Result = ParseResult(Body, OutError);
+		const TArray<TSharedPtr<FJsonValue>>* Items = nullptr;
+		if (OutError.IsEmpty() && (!Result->TryGetArray(Items) || !FJsonObjectConverter::JsonArrayToUStruct(*Items, &Out)))
+		{
+			OutError = TEXT("Unexpected response from the API.");
+		}
+		return OutError.IsEmpty();
+	}
+
+	FString ToJson(const TSharedRef<FJsonObject>& Object)
+	{
+		FString Json;
+		FJsonSerializer::Serialize(Object, TJsonWriterFactory<>::Create(&Json));
+		return Json;
+	}
 }
 
 namespace VaesenFakeLogin
@@ -203,73 +236,178 @@ void UVaesenApiSubsystem::FinishLogin(bool bSuccess, const FString& Error)
 	}
 }
 
-void UVaesenApiSubsystem::GetDevGuilds(FGuildsCallback OnComplete)
+void UVaesenApiSubsystem::GetMyGuilds(FGuildsCallback OnComplete)
 {
-	const TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = CreateRequest(TEXT("GET"), TEXT("/api/dev/guilds"));
+	const FString AccountId = GetSession()->GetAccount().Id;
+	if (AccountId.IsEmpty())
+	{
+		OnComplete(false, {}, TEXT("Log in first."));
+		return;
+	}
 
+	const auto Request = CreateRequest(TEXT("GET"), TEXT("/api/guilds/by-account/") + FGenericPlatformHttp::UrlEncode(AccountId));
 	Request->OnProcessRequestComplete().BindWeakLambda(this,
 		[OnComplete = MoveTemp(OnComplete)](FHttpRequestPtr Req, FHttpResponsePtr Response, bool bConnected)
 		{
-			TArray<FVaesenDevGuild> Guilds;
+			TArray<FVaesenGuild> Guilds;
+			FString Error = GetError(Req, Response, bConnected);
+			if (Error.IsEmpty())
+			{
+				VaesenApiEnvelope::ReadArray(Response->GetContentAsString(), Guilds, Error);
+			}
+			OnComplete(Error.IsEmpty(), Guilds, Error);
+		});
+	Request->ProcessRequest();
+}
+
+void UVaesenApiSubsystem::GetGuildCharacters(const FString& GuildId, FCharactersCallback OnComplete)
+{
+	const auto Request = CreateRequest(TEXT("GET"), FString::Printf(TEXT("/api/guilds/%s/characters"), *FGenericPlatformHttp::UrlEncode(GuildId)));
+	Request->OnProcessRequestComplete().BindWeakLambda(this,
+		[OnComplete = MoveTemp(OnComplete)](FHttpRequestPtr Req, FHttpResponsePtr Response, bool bConnected)
+		{
+			TArray<FVaesenCharacter> Characters;
+			FString Error = GetError(Req, Response, bConnected);
+			if (Error.IsEmpty())
+			{
+				VaesenApiEnvelope::ReadArray(Response->GetContentAsString(), Characters, Error);
+			}
+			OnComplete(Error.IsEmpty(), Characters, Error);
+		});
+	Request->ProcessRequest();
+}
+
+void UVaesenApiSubsystem::GetCharacterClasses(FStringsCallback OnComplete)
+{
+	const auto Request = CreateRequest(TEXT("GET"), TEXT("/api/characters/classes"));
+	Request->OnProcessRequestComplete().BindWeakLambda(this,
+		[OnComplete = MoveTemp(OnComplete)](FHttpRequestPtr Req, FHttpResponsePtr Response, bool bConnected)
+		{
+			TArray<FString> Classes;
 			FString Error = GetError(Req, Response, bConnected);
 			if (Error.IsEmpty())
 			{
 				const TSharedPtr<FJsonValue> Result = VaesenApiEnvelope::ParseResult(Response->GetContentAsString(), Error);
 				const TArray<TSharedPtr<FJsonValue>>* Items = nullptr;
-				if (Error.IsEmpty() && (!Result->TryGetArray(Items) || !FJsonObjectConverter::JsonArrayToUStruct(*Items, &Guilds)))
+				if (Error.IsEmpty() && Result->TryGetArray(Items))
 				{
-					Error = TEXT("Unexpected response from the API.");
+					for (const TSharedPtr<FJsonValue>& Item : *Items)
+					{
+						Classes.Add(Item->AsString());
+					}
 				}
 			}
-			OnComplete(Error.IsEmpty(), Guilds, Error);
+			OnComplete(Error.IsEmpty(), Classes, Error);
 		});
-
 	Request->ProcessRequest();
 }
 
-void UVaesenApiSubsystem::SelectDevCharacter(const FString& DevPlayerId, FResultCallback OnComplete)
+void UVaesenApiSubsystem::IsCharacterNameTaken(const FString& Name, FNameTakenCallback OnComplete)
 {
-	if (!GetSession()->IsLoggedIn())
+	const auto Request = CreateRequest(TEXT("GET"), TEXT("/api/characters/by-name/") + FGenericPlatformHttp::UrlEncode(Name));
+	Request->OnProcessRequestComplete().BindWeakLambda(this,
+		[OnComplete = MoveTemp(OnComplete)](FHttpRequestPtr Req, FHttpResponsePtr Response, bool bConnected)
+		{
+			// 404 means nobody has the name: that's the answer, not an error.
+			if (bConnected && Response.IsValid() && Response->GetResponseCode() == EHttpResponseCodes::NotFound)
+			{
+				OnComplete(true, false, FString());
+				return;
+			}
+
+			const FString Error = GetError(Req, Response, bConnected);
+			OnComplete(Error.IsEmpty(), Error.IsEmpty(), Error);
+		});
+	Request->ProcessRequest();
+}
+
+void UVaesenApiSubsystem::CreateCharacter(const FString& GuildId, const FString& FirstName, const FString& LastName, const FString& Class, FCharacterCallback OnComplete)
+{
+	const TSharedRef<FJsonObject> Body = MakeShared<FJsonObject>();
+	Body->SetStringField(TEXT("firstName"), FirstName);
+	Body->SetStringField(TEXT("lastName"), LastName);
+	if (!Class.IsEmpty())
+	{
+		Body->SetStringField(TEXT("class"), Class);
+	}
+	Body->SetStringField(TEXT("createdByAccountId"), GetSession()->GetAccount().Id);
+
+	const auto Request = CreateRequest(TEXT("POST"), FString::Printf(TEXT("/api/guilds/%s/characters"), *FGenericPlatformHttp::UrlEncode(GuildId)));
+	Request->SetContentAsString(VaesenApiEnvelope::ToJson(Body));
+	Request->OnProcessRequestComplete().BindWeakLambda(this,
+		[OnComplete = MoveTemp(OnComplete)](FHttpRequestPtr Req, FHttpResponsePtr Response, bool bConnected)
+		{
+			FVaesenCharacter Character;
+			FString Error = GetError(Req, Response, bConnected);
+			if (Error.IsEmpty())
+			{
+				VaesenApiEnvelope::ReadObject(Response->GetContentAsString(), Character, Error);
+			}
+			OnComplete(Error.IsEmpty(), Character, Error);
+		});
+	Request->ProcessRequest();
+}
+
+void UVaesenApiSubsystem::PlayCharacter(const FVaesenCharacter& Character, FResultCallback OnComplete)
+{
+	const FString AccountId = GetSession()->GetAccount().Id;
+	if (AccountId.IsEmpty())
 	{
 		OnComplete(false, TEXT("Log in first."));
 		return;
 	}
 
-	const TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = CreateRequest(TEXT("POST"), TEXT("/api/dev/login"));
-
+	// 1. Become the character's player in its guild (whoever played it before stops).
 	const TSharedRef<FJsonObject> Body = MakeShared<FJsonObject>();
-	Body->SetStringField(TEXT("playerId"), DevPlayerId);
-	FString BodyString;
-	FJsonSerializer::Serialize(Body, TJsonWriterFactory<>::Create(&BodyString));
-	Request->SetContentAsString(BodyString);
-
+	Body->SetStringField(TEXT("accountId"), AccountId);
+	const auto Request = CreateRequest(TEXT("PUT"), FString::Printf(TEXT("/api/guilds/%s/characters/%s/player"),
+		*FGenericPlatformHttp::UrlEncode(Character.GuildId), *FGenericPlatformHttp::UrlEncode(Character.Id)));
+	Request->SetContentAsString(VaesenApiEnvelope::ToJson(Body));
 	Request->OnProcessRequestComplete().BindWeakLambda(this,
-		[this, OnComplete = MoveTemp(OnComplete)](FHttpRequestPtr Req, FHttpResponsePtr Response, bool bConnected)
+		[this, Character, OnComplete = MoveTemp(OnComplete)](FHttpRequestPtr Req, FHttpResponsePtr Response, bool bConnected) mutable
+		{
+			const FString Error = GetError(Req, Response, bConnected);
+			if (!Error.IsEmpty())
+			{
+				OnComplete(false, Error);
+				return;
+			}
+
+			// 2. Get the token for playing it.
+			RequestCharacterToken(Character, MoveTemp(OnComplete));
+		});
+	Request->ProcessRequest();
+}
+
+void UVaesenApiSubsystem::RequestCharacterToken(const FVaesenCharacter& Character, FResultCallback OnComplete)
+{
+	const TSharedRef<FJsonObject> Body = MakeShared<FJsonObject>();
+	Body->SetStringField(TEXT("accountId"), GetSession()->GetAccount().Id);
+	Body->SetStringField(TEXT("characterId"), Character.Id);
+
+	const auto Request = CreateRequest(TEXT("POST"), TEXT("/api/dev/login"));
+	Request->SetContentAsString(VaesenApiEnvelope::ToJson(Body));
+	Request->OnProcessRequestComplete().BindWeakLambda(this,
+		[this, Character, OnComplete = MoveTemp(OnComplete)](FHttpRequestPtr Req, FHttpResponsePtr Response, bool bConnected)
 		{
 			FString Error = GetError(Req, Response, bConnected);
 			FVaesenDevLoginResponse Login;
 			if (Error.IsEmpty())
 			{
-				const TSharedPtr<FJsonValue> Result = VaesenApiEnvelope::ParseResult(Response->GetContentAsString(), Error);
-				const TSharedPtr<FJsonObject>* Object = nullptr;
-				if (Error.IsEmpty() && (!Result->TryGetObject(Object) || !FJsonObjectConverter::JsonObjectToUStruct((*Object).ToSharedRef(), &Login)))
-				{
-					Error = TEXT("Unexpected response from the API.");
-				}
+				VaesenApiEnvelope::ReadObject(Response->GetContentAsString(), Login, Error);
 			}
 
 			if (Error.IsEmpty())
 			{
-				FVaesenCharacterRef Character;
-				Character.Id = Login.PlayerId;
-				Character.Name = Login.PlayerName;
-				GetSession()->SetSelectedCharacter(Character, Login.AccessToken);
-				UE_LOG(LogVaesenApi, Log, TEXT("Playing as %s (%s)"), *Login.PlayerName, *Login.PlayerId);
+				FVaesenCharacterRef Selected;
+				Selected.Id = Character.Id;
+				Selected.Name = Character.Name;
+				GetSession()->SetSelectedCharacter(Selected, Login.AccessToken);
+				UE_LOG(LogVaesenApi, Log, TEXT("Playing as %s (%s)"), *Character.Name, *Character.Id);
 			}
 
 			OnComplete(Error.IsEmpty(), Error);
 		});
-
 	Request->ProcessRequest();
 }
 

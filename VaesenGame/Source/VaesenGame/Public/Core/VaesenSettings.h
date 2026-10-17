@@ -45,6 +45,14 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Audio")
 	TSoftObjectPtr<USoundBase> LoginMusic;
 
+	/** First names the "Randomize" button on character creation picks from. */
+	UPROPERTY(Config, EditAnywhere, Category = "Characters")
+	TArray<FString> RandomFirstNames;
+
+	/** Last names the "Randomize" button on character creation picks from (independently of the first name). */
+	UPROPERTY(Config, EditAnywhere, Category = "Characters")
+	TArray<FString> RandomLastNames;
+
 	/** Played when the login button is pressed (or Enter in the password box). Leave empty for none. */
 	UPROPERTY(Config, EditAnywhere, Category = "Audio")
 	TSoftObjectPtr<USoundBase> LoginButtonSound;

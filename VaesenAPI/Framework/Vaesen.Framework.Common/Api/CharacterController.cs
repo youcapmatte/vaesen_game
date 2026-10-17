@@ -24,6 +24,12 @@ public sealed class CharacterController : ControllerBase
         _characters = characters;
     }
 
+    /// <summary>The classes a character can have (for character creation).</summary>
+    [AllowAnonymous]
+    [HttpGet("classes")]
+    public ActionResult<ResultBase<IReadOnlyList<string>>> Classes() =>
+        Ok(new ResultBase<IReadOnlyList<string>>().Ok(_characters.GetClasses()));
+
     [HttpGet("{characterId}")]
     public async Task<ActionResult<ResultBase<Character>>> Get([FromRoute] string characterId, CancellationToken cancellationToken) =>
         this.ToActionResult(await _characters.GetAsync(characterId, cancellationToken).ConfigureAwait(false));

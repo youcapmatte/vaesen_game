@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Microsoft.Extensions.Options;
 using Vaesen.Framework.Common.Models;
 using Vaesen.Framework.Common.Repositorys;
 using Vaesen.Framework.Core.Models;
@@ -45,13 +46,20 @@ public sealed partial class GuildService : IGuildService
     private readonly IAccountStore _accounts;
     private readonly ICharacterStore _characters;
     private readonly TimeProvider _timeProvider;
+    private readonly IOptions<CharacterOptions> _characterOptions;
 
-    public GuildService(IGuildStore guilds, IAccountStore accounts, ICharacterStore characters, TimeProvider timeProvider)
+    public GuildService(
+        IGuildStore guilds,
+        IAccountStore accounts,
+        ICharacterStore characters,
+        TimeProvider timeProvider,
+        IOptions<CharacterOptions> characterOptions)
     {
         _guilds = guilds;
         _accounts = accounts;
         _characters = characters;
         _timeProvider = timeProvider;
+        _characterOptions = characterOptions;
     }
 
     public async Task<ResultBase<Guild>> CreateAsync(CreateGuildRequest request, CancellationToken cancellationToken = default)
@@ -174,7 +182,7 @@ public sealed partial class GuildService : IGuildService
         var characterClass = CharacterRules.Clean(request?.Class);
         var invalid = CharacterRules.ValidatePersonName(firstName, "First name")
             ?? CharacterRules.ValidatePersonName(lastName, "Last name")
-            ?? CharacterRules.ValidateClass(characterClass)
+            ?? CharacterRules.ValidateClass(characterClass, _characterOptions.Value.EffectiveClasses)
             ?? CharacterRules.ValidateHealthPoints(request?.HealthPoints);
         if (invalid is not null)
         {
@@ -198,7 +206,7 @@ public sealed partial class GuildService : IGuildService
             Name = Character.FullName(firstName!, lastName!),
             FirstName = firstName!,
             LastName = lastName!,
-            Class = characterClass,
+            Class = CharacterRules.NormalizeClass(characterClass, _characterOptions.Value.EffectiveClasses),
             HealthPoints = request?.HealthPoints ?? Character.DefaultHealthPoints,
             CreatedBy = creator.Id,
             UpdatedBy = creator.Id,

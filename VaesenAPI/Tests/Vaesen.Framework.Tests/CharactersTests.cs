@@ -109,6 +109,50 @@ public sealed class CharactersTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Classes_ListsVaesenArchetypes()
+    {
+        var classes = (await (await _client.GetAsync($"{Characters}/classes")).ReadResultAsync<List<string>>()).Result!;
+
+        Assert.Contains("Occultist", classes);
+        Assert.Contains("Private Detective", classes);
+    }
+
+    [Fact]
+    public async Task Create_ClassIsMatchedCaseInsensitively_AndStoredAsListed()
+    {
+        var character = (await (await CreateAsync(new { firstName = "Erik", lastName = "Lund", @class = "private detective", createdByAccountId = _founder.Id }))
+            .ReadResultAsync<Character>()).Result!;
+
+        Assert.Equal("Private Detective", character.Class);
+    }
+
+    [Fact]
+    public async Task Create_WithUnknownClass_IsBadRequest()
+    {
+        var response = await CreateAsync(new { firstName = "Erik", lastName = "Lund", @class = "Wizard", createdByAccountId = _founder.Id });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task DevLogin_AsAssignedCharacter_IssuesTokenForTheAccount()
+    {
+        var character = await CreateCharacterAsync();
+        var unassigned = await _client.PostAsJsonAsync("/api/dev/login", new { accountId = _founder.Id, characterId = character.Id });
+        await _client.PutAsJsonAsync($"/api/guilds/{_guild.Id}/characters/{character.Id}/player", new { accountId = _founder.Id });
+
+        var login = (await (await _client.PostAsJsonAsync("/api/dev/login", new { accountId = _founder.Id, characterId = character.Id }))
+            .ReadResultAsync<DevLoginResult>()).Result!;
+
+        Assert.Equal(HttpStatusCode.Forbidden, unassigned.StatusCode);
+        Assert.Equal($"dev|{_founder.Id}", login.PlayerId);
+        Assert.Equal("Astrid Falk", login.PlayerName);
+        Assert.Equal(character.Id, login.CharacterId);
+        Assert.Equal(_guild.Id, login.GuildId);
+        Assert.False(string.IsNullOrEmpty(login.AccessToken));
+    }
+
+    [Fact]
     public async Task Get_ByIdAndByName()
     {
         var character = await CreateCharacterAsync();

@@ -3,33 +3,70 @@
 #include "CoreMinimal.h"
 #include "VaesenApiTypes.generated.h"
 
-/** A player from the API's development seed data (GET /api/dev/guilds). */
+/** Who plays one of a guild's characters right now. */
 USTRUCT(BlueprintType)
-struct FVaesenDevPlayer
+struct FVaesenCharacterAssignment
 {
 	GENERATED_BODY()
 
-	UPROPERTY(BlueprintReadOnly, Category = "Vaesen|Dev")
-	FString Id;
+	UPROPERTY(BlueprintReadOnly, Category = "Vaesen|Guild")
+	FString CharacterId;
 
-	UPROPERTY(BlueprintReadOnly, Category = "Vaesen|Dev")
-	FString Name;
+	UPROPERTY(BlueprintReadOnly, Category = "Vaesen|Guild")
+	FString AccountId;
 };
 
-/** A guild and its players from the API's development seed data. */
+/** A guild (GET /api/guilds/...). */
 USTRUCT(BlueprintType)
-struct FVaesenDevGuild
+struct FVaesenGuild
 {
 	GENERATED_BODY()
 
-	UPROPERTY(BlueprintReadOnly, Category = "Vaesen|Dev")
+	/** "guild-{guid}". */
+	UPROPERTY(BlueprintReadOnly, Category = "Vaesen|Guild")
 	FString Id;
 
-	UPROPERTY(BlueprintReadOnly, Category = "Vaesen|Dev")
+	UPROPERTY(BlueprintReadOnly, Category = "Vaesen|Guild")
 	FString Name;
 
-	UPROPERTY(BlueprintReadOnly, Category = "Vaesen|Dev")
-	TArray<FVaesenDevPlayer> Players;
+	UPROPERTY(BlueprintReadOnly, Category = "Vaesen|Guild")
+	TArray<FString> MemberAccountIds;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Vaesen|Guild")
+	TArray<FString> CharacterIds;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Vaesen|Guild")
+	TArray<FVaesenCharacterAssignment> CharacterAssignments;
+};
+
+/** A character owned by a guild (GET /api/guilds/{id}/characters, /api/characters/...). */
+USTRUCT(BlueprintType)
+struct FVaesenCharacter
+{
+	GENERATED_BODY()
+
+	/** "character-{guid}". */
+	UPROPERTY(BlueprintReadOnly, Category = "Vaesen|Character")
+	FString Id;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Vaesen|Character")
+	FString GuildId;
+
+	/** "{FirstName} {LastName}"; unique. */
+	UPROPERTY(BlueprintReadOnly, Category = "Vaesen|Character")
+	FString Name;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Vaesen|Character")
+	FString FirstName;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Vaesen|Character")
+	FString LastName;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Vaesen|Character")
+	FString Class;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Vaesen|Character")
+	int32 HealthPoints = 0;
 };
 
 /** The account's subscription, as returned by the API. */
@@ -90,4 +127,10 @@ struct FVaesenDevLoginResponse
 
 	UPROPERTY()
 	FString GuildId;
+
+	UPROPERTY()
+	FString AccountId;
+
+	UPROPERTY()
+	FString CharacterId;
 };

@@ -13,9 +13,13 @@ public static partial class CharacterRules
         : PersonNamePattern().IsMatch(value) ? null
         : $"{field} must be 1-32 letters, optionally with single spaces, apostrophes or hyphens between them.";
 
-    /// <summary>Class: optional; 1-32 letters, spaces, apostrophes or hyphens.</summary>
-    public static string? ValidateClass(string? value) =>
-        value is null || ClassPattern().IsMatch(value) ? null : "Class must be 1-32 letters, spaces, apostrophes or hyphens.";
+    /// <summary>Class: optional; must be one of <paramref name="classes"/> (case-insensitive).</summary>
+    public static string? ValidateClass(string? value, IReadOnlyList<string> classes) =>
+        value is null || NormalizeClass(value, classes) is not null ? null : $"Class must be one of: {string.Join(", ", classes)}.";
+
+    /// <summary>The class as written in <paramref name="classes"/> ("occultist" -> "Occultist"), or null if it isn't one.</summary>
+    public static string? NormalizeClass(string? value, IReadOnlyList<string> classes) =>
+        value is null ? null : classes.FirstOrDefault(c => string.Equals(c, value, StringComparison.OrdinalIgnoreCase));
 
     public static string? ValidateHealthPoints(int? value) =>
         value is null or (>= 0 and <= MaxHealthPoints) ? null : $"Health points must be between 0 and {MaxHealthPoints}.";
@@ -25,7 +29,4 @@ public static partial class CharacterRules
 
     [GeneratedRegex(@"^(?=.{1,32}$)\p{L}+(?:[ '-]\p{L}+)*$")]
     private static partial Regex PersonNamePattern();
-
-    [GeneratedRegex(@"^[\p{L}' -]{1,32}$")]
-    private static partial Regex ClassPattern();
 }

@@ -56,8 +56,16 @@ public sealed class DevPlayer
 
 public sealed class DevLoginRequest
 {
+    /// <summary>A seed player from the "Dev" config section.</summary>
     [JsonProperty("playerId")]
     public string? PlayerId { get; set; }
+
+    /// <summary>Or: a real account playing <see cref="CharacterId"/> (assigned to it in the guild).</summary>
+    [JsonProperty("accountId")]
+    public string? AccountId { get; set; }
+
+    [JsonProperty("characterId")]
+    public string? CharacterId { get; set; }
 }
 
 public sealed class DevLoginResult
@@ -76,4 +84,11 @@ public sealed class DevLoginResult
 
     [JsonProperty("guildId")]
     public string GuildId { get; set; } = "";
+
+    /// <summary>Set when logging in as a real account's character.</summary>
+    [JsonProperty("accountId")]
+    public string? AccountId { get; set; }
+
+    [JsonProperty("characterId")]
+    public string? CharacterId { get; set; }
 }
