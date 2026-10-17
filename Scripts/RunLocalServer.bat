@@ -19,8 +19,7 @@ start "Vaesen Server :%PORT%" "%EXE%" %MAP% -port=%PORT% -NoGameLift -log
 exit /b 0
 
 :FindServerExe
-set "EXE=%BUILDS_DIR%\Server\Win64\%CONFIG%\WindowsServer\%PROJECT_NAME%Server.exe"
-if /i not "%CONFIG%"=="Development" set "EXE=%BUILDS_DIR%\Server\Win64\%CONFIG%\WindowsServer\%PROJECT_NAME%Server-Win64-%CONFIG%.exe"
+set "EXE=%BUILDS_DIR%\Server\Win64\%CONFIG%\%PROJECT_NAME%Server.exe"
 if not exist "%EXE%" (
     echo ERROR: "%EXE%" not found. Run PackageServer.bat Win64 %CONFIG% first.
     exit /b 1
