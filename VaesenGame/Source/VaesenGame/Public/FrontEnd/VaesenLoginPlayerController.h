@@ -6,7 +6,7 @@
 
 /**
  * Login screen. Shows the login widget (UVaesenSettings::LoginScreenWidget).
- * Start the game with -DevPlayer=<id> (e.g. -DevPlayer=ingrid) to log in as that dev player immediately.
+ * Start the game with -DevPlayer=<id> (e.g. -DevPlayer=ingrid) to skip this screen; character select then preselects that character.
  */
 UCLASS()
 class VAESENGAME_API AVaesenLoginPlayerController : public AVaesenFrontEndPlayerControllerBase

@@ -2,24 +2,23 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "Online/VaesenApiTypes.h"
 #include "Types/SlateEnums.h"
 #include "VaesenLoginWidget.generated.h"
 
 class UButton;
-class UComboBoxString;
+class UEditableTextBox;
 class UTextBlock;
 
 /**
- * Login screen (development login): choose a guild, then one of its players, and log in without a password.
- * On success the Character Select map opens.
+ * Login screen: username/email and password. On success the Character Select map opens.
+ * The login itself is fake for now (see UVaesenApiSubsystem::Login).
  *
  * Widget Blueprint (e.g. WBP_Login, parent class VaesenLoginWidget) must contain, by these exact names:
- *   GuildComboBox   (Combo Box (String))
- *   PlayerComboBox  (Combo Box (String))
- *   LoginButton     (Button)
- *   StatusText      (Text) - optional
- * Remembers the last guild/player picked on this machine.
+ *   UsernameTextBox  (Text Box)
+ *   PasswordTextBox  (Text Box, "Is Password" ticked)
+ *   LoginButton      (Button)
+ *   StatusText       (Text) - optional
+ * Pressing Enter in the password box logs in. The last username is remembered on this machine.
  */
 UCLASS(Abstract)
 class VAESENGAME_API UVaesenLoginWidget : public UUserWidget
@@ -31,10 +30,10 @@ protected:
 	virtual void NativeConstruct() override;
 
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UComboBoxString> GuildComboBox;
+	TObjectPtr<UEditableTextBox> UsernameTextBox;
 
 	UPROPERTY(meta = (BindWidget))
-	TObjectPtr<UComboBoxString> PlayerComboBox;
+	TObjectPtr<UEditableTextBox> PasswordTextBox;
 
 	UPROPERTY(meta = (BindWidget))
 	TObjectPtr<UButton> LoginButton;
@@ -44,21 +43,12 @@ protected:
 
 private:
 	UFUNCTION()
-	void HandleGuildSelected(FString SelectedItem, ESelectInfo::Type SelectionType);
-
-	UFUNCTION()
-	void HandlePlayerSelected(FString SelectedItem, ESelectInfo::Type SelectionType);
-
-	UFUNCTION()
 	void HandleLoginClicked();
 
-	void LoadGuilds();
-	void PopulatePlayers(const FString& PlayerIdToSelect);
-	const FVaesenDevGuild* GetSelectedGuild() const;
-	const FVaesenDevPlayer* GetSelectedPlayer() const;
-	void UpdateLoginButton();
+	UFUNCTION()
+	void HandlePasswordCommitted(const FText& Text, ETextCommit::Type CommitMethod);
+
 	void SetStatus(const FText& Message);
 
-	TArray<FVaesenDevGuild> Guilds;
 	bool bLoggingIn = false;
 };

@@ -12,6 +12,21 @@ bool UVaesenApiSubsystem::ShouldCreateSubsystem(UObject* Outer) const
 	return Super::ShouldCreateSubsystem(Outer) && !IsRunningDedicatedServer();
 }
 
+void UVaesenApiSubsystem::Login(const FString& UsernameOrEmail, const FString& Password, FResultCallback OnComplete)
+{
+	const FString Username = UsernameOrEmail.TrimStartAndEnd();
+	if (Username.IsEmpty() || Password.IsEmpty())
+	{
+		OnComplete(false, TEXT("Enter your username or email and password."));
+		return;
+	}
+
+	Session = FVaesenPlayerSession();
+	Session.AccountName = Username;
+	UE_LOG(LogVaesenApi, Log, TEXT("Logged in as account '%s' (fake login, no password check)"), *Username);
+	OnComplete(true, FString());
+}
+
 void UVaesenApiSubsystem::GetDevGuilds(FGuildsCallback OnComplete)
 {
 	const TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = CreateRequest(TEXT("GET"), TEXT("/api/v1/dev/guilds"));
@@ -31,8 +46,14 @@ void UVaesenApiSubsystem::GetDevGuilds(FGuildsCallback OnComplete)
 	Request->ProcessRequest();
 }
 
-void UVaesenApiSubsystem::DevLogin(const FString& DevPlayerId, FLoginCallback OnComplete)
+void UVaesenApiSubsystem::SelectDevCharacter(const FString& DevPlayerId, FResultCallback OnComplete)
 {
+	if (!Session.IsLoggedIn())
+	{
+		OnComplete(false, TEXT("Log in first."));
+		return;
+	}
+
 	const TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = CreateRequest(TEXT("POST"), TEXT("/api/v1/dev/login"));
 
 	const TSharedRef<FJsonObject> Body = MakeShared<FJsonObject>();
@@ -57,7 +78,7 @@ void UVaesenApiSubsystem::DevLogin(const FString& DevPlayerId, FLoginCallback On
 				Session.PlayerId = Login.PlayerId;
 				Session.PlayerName = Login.PlayerName;
 				Session.GuildId = Login.GuildId;
-				UE_LOG(LogVaesenApi, Log, TEXT("Logged in as %s (%s)"), *Session.PlayerName, *Session.PlayerId);
+				UE_LOG(LogVaesenApi, Log, TEXT("Playing as %s (%s)"), *Session.PlayerName, *Session.PlayerId);
 			}
 
 			OnComplete(Error.IsEmpty(), Error);
@@ -81,7 +102,7 @@ TSharedRef<IHttpRequest, ESPMode::ThreadSafe> UVaesenApiSubsystem::CreateRequest
 	Request->SetVerb(Verb);
 	Request->SetHeader(TEXT("Accept"), TEXT("application/json"));
 	Request->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
-	if (Session.IsValid())
+	if (Session.HasCharacter())
 	{
 		Request->SetHeader(TEXT("Authorization"), TEXT("Bearer ") + Session.AccessToken);
 	}

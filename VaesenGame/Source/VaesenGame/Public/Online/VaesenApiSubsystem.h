@@ -20,20 +20,30 @@ class VAESENGAME_API UVaesenApiSubsystem : public UGameInstanceSubsystem
 
 public:
 	using FGuildsCallback = TFunction<void(bool bSuccess, const TArray<FVaesenDevGuild>& Guilds, const FString& Error)>;
-	using FLoginCallback = TFunction<void(bool bSuccess, const FString& Error)>;
+	using FResultCallback = TFunction<void(bool bSuccess, const FString& Error)>;
 
 	virtual bool ShouldCreateSubsystem(UObject* Outer) const override;
 
-	/** Development only: guilds and players to log in as (GET /api/v1/dev/guilds). */
+	/**
+	 * Account login from the login screen.
+	 * FAKE FOR NOW: accepts any non-empty username/email and password without contacting a server.
+	 * Will be replaced by Auth0; callers don't need to change.
+	 */
+	void Login(const FString& UsernameOrEmail, const FString& Password, FResultCallback OnComplete);
+
+	/** Development only: guilds and their characters to choose from (GET /api/v1/dev/guilds). */
 	void GetDevGuilds(FGuildsCallback OnComplete);
 
-	/** Development only: log in as a seed player without a password (POST /api/v1/dev/login). */
-	void DevLogin(const FString& DevPlayerId, FLoginCallback OnComplete);
+	/** Development only: play as a seed character; gets the API token for it (POST /api/v1/dev/login). Requires Login first. */
+	void SelectDevCharacter(const FString& DevPlayerId, FResultCallback OnComplete);
 
 	void Logout();
 
 	UFUNCTION(BlueprintPure, Category = "Vaesen|Session")
-	bool IsLoggedIn() const { return Session.IsValid(); }
+	bool IsLoggedIn() const { return Session.IsLoggedIn(); }
+
+	UFUNCTION(BlueprintPure, Category = "Vaesen|Session")
+	bool HasCharacter() const { return Session.HasCharacter(); }
 
 	UFUNCTION(BlueprintPure, Category = "Vaesen|Session")
 	const FVaesenPlayerSession& GetSession() const { return Session; }

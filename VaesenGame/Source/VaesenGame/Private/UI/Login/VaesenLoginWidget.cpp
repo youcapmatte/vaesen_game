@@ -1,7 +1,7 @@
 #include "UI/Login/VaesenLoginWidget.h"
 
 #include "Components/Button.h"
-#include "Components/ComboBoxString.h"
+#include "Components/EditableTextBox.h"
 #include "Components/TextBlock.h"
 #include "Core/VaesenSettings.h"
 #include "Kismet/GameplayStatics.h"
@@ -12,137 +12,64 @@
 
 namespace VaesenLogin
 {
-	/** Last choice is kept in the per-user GameUserSettings.ini so restarts start where you left off. */
-	const TCHAR* ConfigSection = TEXT("Vaesen.DevLogin");
-	const TCHAR* LastGuildKey = TEXT("LastGuildId");
-	const TCHAR* LastPlayerKey = TEXT("LastPlayerId");
+	/** Kept in the per-user GameUserSettings.ini so restarts start with the username filled in. Never the password. */
+	const TCHAR* ConfigSection = TEXT("Vaesen.Login");
+	const TCHAR* LastUsernameKey = TEXT("LastUsername");
 }
 
 void UVaesenLoginWidget::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
 
-	GuildComboBox->OnSelectionChanged.AddDynamic(this, &UVaesenLoginWidget::HandleGuildSelected);
-	PlayerComboBox->OnSelectionChanged.AddDynamic(this, &UVaesenLoginWidget::HandlePlayerSelected);
 	LoginButton->OnClicked.AddDynamic(this, &UVaesenLoginWidget::HandleLoginClicked);
+	PasswordTextBox->OnTextCommitted.AddDynamic(this, &UVaesenLoginWidget::HandlePasswordCommitted);
 }
 
 void UVaesenLoginWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
-	LoadGuilds();
-}
 
-void UVaesenLoginWidget::LoadGuilds()
-{
-	UVaesenApiSubsystem* Api = GetGameInstance()->GetSubsystem<UVaesenApiSubsystem>();
-	if (!Api)
+	FString LastUsername;
+	GConfig->GetString(VaesenLogin::ConfigSection, VaesenLogin::LastUsernameKey, LastUsername, GGameUserSettingsIni);
+	UsernameTextBox->SetText(FText::FromString(LastUsername));
+	PasswordTextBox->SetText(FText::GetEmpty());
+	SetStatus(FText::GetEmpty());
+
+	// Start typing where it's needed.
+	if (LastUsername.IsEmpty())
 	{
-		return;
+		UsernameTextBox->SetKeyboardFocus();
 	}
-
-	GuildComboBox->ClearOptions();
-	PlayerComboBox->ClearOptions();
-	UpdateLoginButton();
-	SetStatus(LOCTEXT("Loading", "Loading..."));
-
-	Api->GetDevGuilds([WeakThis = TWeakObjectPtr<UVaesenLoginWidget>(this)](bool bSuccess, const TArray<FVaesenDevGuild>& LoadedGuilds, const FString& Error)
+	else
 	{
-		UVaesenLoginWidget* This = WeakThis.Get();
-		if (!This)
-		{
-			return;
-		}
-
-		if (!bSuccess)
-		{
-			This->SetStatus(FText::FromString(Error));
-			return;
-		}
-
-		This->Guilds = LoadedGuilds;
-		This->SetStatus(FText::GetEmpty());
-
-		FString LastGuildId;
-		FString LastPlayerId;
-		GConfig->GetString(VaesenLogin::ConfigSection, VaesenLogin::LastGuildKey, LastGuildId, GGameUserSettingsIni);
-		GConfig->GetString(VaesenLogin::ConfigSection, VaesenLogin::LastPlayerKey, LastPlayerId, GGameUserSettingsIni);
-
-		int32 GuildIndexToSelect = 0;
-		for (int32 Index = 0; Index < This->Guilds.Num(); ++Index)
-		{
-			This->GuildComboBox->AddOption(This->Guilds[Index].Name);
-			if (This->Guilds[Index].Id == LastGuildId)
-			{
-				GuildIndexToSelect = Index;
-			}
-		}
-
-		if (This->Guilds.IsValidIndex(GuildIndexToSelect))
-		{
-			// Selecting directly (not via HandleGuildSelected) so the remembered player can be restored.
-			This->GuildComboBox->SetSelectedIndex(GuildIndexToSelect);
-			This->PopulatePlayers(LastPlayerId);
-		}
-	});
-}
-
-void UVaesenLoginWidget::HandleGuildSelected(FString SelectedItem, ESelectInfo::Type SelectionType)
-{
-	if (SelectionType != ESelectInfo::Direct)
-	{
-		PopulatePlayers(FString());
+		PasswordTextBox->SetKeyboardFocus();
 	}
 }
 
-void UVaesenLoginWidget::HandlePlayerSelected(FString SelectedItem, ESelectInfo::Type SelectionType)
+void UVaesenLoginWidget::HandlePasswordCommitted(const FText& Text, ETextCommit::Type CommitMethod)
 {
-	UpdateLoginButton();
-}
-
-void UVaesenLoginWidget::PopulatePlayers(const FString& PlayerIdToSelect)
-{
-	PlayerComboBox->ClearOptions();
-
-	if (const FVaesenDevGuild* Guild = GetSelectedGuild())
+	if (CommitMethod == ETextCommit::OnEnter)
 	{
-		int32 IndexToSelect = 0;
-		for (int32 Index = 0; Index < Guild->Players.Num(); ++Index)
-		{
-			PlayerComboBox->AddOption(Guild->Players[Index].Name);
-			if (Guild->Players[Index].Id == PlayerIdToSelect)
-			{
-				IndexToSelect = Index;
-			}
-		}
-		if (Guild->Players.Num() > 0)
-		{
-			PlayerComboBox->SetSelectedIndex(IndexToSelect);
-		}
+		HandleLoginClicked();
 	}
-
-	UpdateLoginButton();
 }
 
 void UVaesenLoginWidget::HandleLoginClicked()
 {
-	const FVaesenDevGuild* Guild = GetSelectedGuild();
-	const FVaesenDevPlayer* Player = GetSelectedPlayer();
 	UVaesenApiSubsystem* Api = GetGameInstance()->GetSubsystem<UVaesenApiSubsystem>();
-	if (!Guild || !Player || !Api || bLoggingIn)
+	if (!Api || bLoggingIn)
 	{
 		return;
 	}
 
-	GConfig->SetString(VaesenLogin::ConfigSection, VaesenLogin::LastGuildKey, *Guild->Id, GGameUserSettingsIni);
-	GConfig->SetString(VaesenLogin::ConfigSection, VaesenLogin::LastPlayerKey, *Player->Id, GGameUserSettingsIni);
-	GConfig->Flush(false, GGameUserSettingsIni);
+	const FString Username = UsernameTextBox->GetText().ToString().TrimStartAndEnd();
+	const FString Password = PasswordTextBox->GetText().ToString();
 
 	bLoggingIn = true;
-	UpdateLoginButton();
-	SetStatus(FText::Format(LOCTEXT("LoggingIn", "Logging in as {0}..."), FText::FromString(Player->Name)));
+	LoginButton->SetIsEnabled(false);
+	SetStatus(LOCTEXT("LoggingIn", "Logging in..."));
 
-	Api->DevLogin(Player->Id, [WeakThis = TWeakObjectPtr<UVaesenLoginWidget>(this)](bool bSuccess, const FString& Error)
+	Api->Login(Username, Password, [WeakThis = TWeakObjectPtr<UVaesenLoginWidget>(this), Username](bool bSuccess, const FString& Error)
 	{
 		UVaesenLoginWidget* This = WeakThis.Get();
 		if (!This)
@@ -152,32 +79,16 @@ void UVaesenLoginWidget::HandleLoginClicked()
 
 		if (bSuccess)
 		{
+			GConfig->SetString(VaesenLogin::ConfigSection, VaesenLogin::LastUsernameKey, *Username, GGameUserSettingsIni);
+			GConfig->Flush(false, GGameUserSettingsIni);
 			UGameplayStatics::OpenLevelBySoftObjectPtr(This, UVaesenSettings::Get()->CharacterSelectMap);
 			return;
 		}
 
 		This->bLoggingIn = false;
-		This->UpdateLoginButton();
+		This->LoginButton->SetIsEnabled(true);
 		This->SetStatus(FText::FromString(Error));
 	});
-}
-
-const FVaesenDevGuild* UVaesenLoginWidget::GetSelectedGuild() const
-{
-	const int32 Index = GuildComboBox->GetSelectedIndex();
-	return Guilds.IsValidIndex(Index) ? &Guilds[Index] : nullptr;
-}
-
-const FVaesenDevPlayer* UVaesenLoginWidget::GetSelectedPlayer() const
-{
-	const FVaesenDevGuild* Guild = GetSelectedGuild();
-	const int32 Index = PlayerComboBox->GetSelectedIndex();
-	return Guild && Guild->Players.IsValidIndex(Index) ? &Guild->Players[Index] : nullptr;
-}
-
-void UVaesenLoginWidget::UpdateLoginButton()
-{
-	LoginButton->SetIsEnabled(!bLoggingIn && GetSelectedPlayer() != nullptr);
 }
 
 void UVaesenLoginWidget::SetStatus(const FText& Message)

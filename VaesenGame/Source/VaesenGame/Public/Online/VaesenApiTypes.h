@@ -32,13 +32,20 @@ struct FVaesenDevGuild
 	TArray<FVaesenDevPlayer> Players;
 };
 
-/** The signed-in player on this client. Filled by a successful login. */
+/**
+ * Who is signed in on this client: the account (after the login screen) and, once one is picked on
+ * the character select screen, the character and its API token.
+ */
 USTRUCT(BlueprintType)
 struct FVaesenPlayerSession
 {
 	GENERATED_BODY()
 
-	/** Bearer token sent to Vaesen.Api. */
+	/** Username or email entered on the login screen. */
+	UPROPERTY(BlueprintReadOnly, Category = "Vaesen|Session")
+	FString AccountName;
+
+	/** Bearer token sent to Vaesen.Api; set when a character is selected. */
 	UPROPERTY()
 	FString AccessToken;
 
@@ -51,7 +58,8 @@ struct FVaesenPlayerSession
 	UPROPERTY(BlueprintReadOnly, Category = "Vaesen|Session")
 	FString GuildId;
 
-	bool IsValid() const { return !AccessToken.IsEmpty(); }
+	bool IsLoggedIn() const { return !AccountName.IsEmpty(); }
+	bool HasCharacter() const { return !AccessToken.IsEmpty(); }
 };
 
 /** Response of POST /api/v1/dev/login. */

@@ -37,8 +37,8 @@ void AVaesenLoginPlayerController::TryDevAutoLogin()
 		return;
 	}
 
-	UE_LOG(LogVaesenApi, Log, TEXT("-DevPlayer=%s: logging in automatically"), *DevPlayerId);
-	Api->DevLogin(DevPlayerId, [WeakThis = TWeakObjectPtr<AVaesenLoginPlayerController>(this)](bool bSuccess, const FString& Error)
+	UE_LOG(LogVaesenApi, Log, TEXT("-DevPlayer=%s: skipping the login screen"), *DevPlayerId);
+	Api->Login(DevPlayerId, TEXT("dev"), [WeakThis = TWeakObjectPtr<AVaesenLoginPlayerController>(this)](bool bSuccess, const FString& Error)
 	{
 		AVaesenLoginPlayerController* This = WeakThis.Get();
 		if (!This)
