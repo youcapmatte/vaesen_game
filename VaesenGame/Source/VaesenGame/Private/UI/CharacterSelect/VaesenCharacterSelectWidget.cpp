@@ -5,6 +5,8 @@
 #include "Components/ComboBoxString.h"
 #include "Components/TextBlock.h"
 #include "Core/VaesenSessionSubsystem.h"
+#include "Engine/World.h"
+#include "TimerManager.h"
 #include "Misc/ConfigCacheIni.h"
 #include "Online/VaesenApiSubsystem.h"
 #include "UI/CharacterSelect/VaesenCreateCharacterWidget.h"
@@ -112,6 +114,23 @@ void UVaesenCharacterSelectWidget::NativeConstruct()
 	}
 
 	LoadGuilds(FString());
+
+	if (RosterRefreshSeconds > 0.0f)
+	{
+		if (UWorld* World = GetWorld())
+		{
+			World->GetTimerManager().SetTimer(RosterRefreshTimer, this, &UVaesenCharacterSelectWidget::RefreshRoster, RosterRefreshSeconds, true);
+		}
+	}
+}
+
+void UVaesenCharacterSelectWidget::NativeDestruct()
+{
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(RosterRefreshTimer);
+	}
+	Super::NativeDestruct();
 }
 
 void UVaesenCharacterSelectWidget::LoadGuilds(const FString& GuildIdToSelect)
@@ -151,7 +170,7 @@ void UVaesenCharacterSelectWidget::LoadGuilds(const FString& GuildIdToSelect)
 		if (This->Guilds.IsEmpty())
 		{
 			This->SelectedGuildId.Reset();
-			This->Characters.Reset();
+			This->Roster.Reset();
 			This->bCharactersLoaded = false;
 			if (This->GuildNameText)
 			{
@@ -192,7 +211,7 @@ void UVaesenCharacterSelectWidget::SelectGuild(const FVaesenGuild& Guild, const 
 
 void UVaesenCharacterSelectWidget::LoadCharacters(const FString& CharacterIdToSelect)
 {
-	Characters.Reset();
+	Roster.Reset();
 	bCharactersLoaded = false;
 	if (PlayerComboBox)
 	{
@@ -209,8 +228,8 @@ void UVaesenCharacterSelectWidget::LoadCharacters(const FString& CharacterIdToSe
 	const int32 ThisLoad = ++CharacterLoad;
 	SetStatus(LOCTEXT("LoadingCharacters", "Loading characters..."));
 	BeginLoading();
-	Api->GetGuildCharacters(SelectedGuildId,
-		[WeakThis = TWeakObjectPtr<UVaesenCharacterSelectWidget>(this), ThisLoad, CharacterIdToSelect](bool bSuccess, const TArray<FVaesenCharacter>& LoadedCharacters, const FString& Error)
+	Api->GetGuildRoster(SelectedGuildId,
+		[WeakThis = TWeakObjectPtr<UVaesenCharacterSelectWidget>(this), ThisLoad, CharacterIdToSelect](bool bSuccess, const TArray<FVaesenRosterEntry>& LoadedRoster, const FString& Error)
 		{
 			UVaesenCharacterSelectWidget* This = WeakThis.Get();
 			if (!This)
@@ -231,31 +250,97 @@ void UVaesenCharacterSelectWidget::LoadCharacters(const FString& CharacterIdToSe
 				return;
 			}
 
-			This->Characters = LoadedCharacters;
 			This->bCharactersLoaded = true;
-			This->SetStatus(This->Characters.IsEmpty()
+			This->SetStatus(LoadedRoster.IsEmpty()
 				? LOCTEXT("NoCharacters", "This guild has no characters yet. Create one.")
 				: FText::GetEmpty());
+			This->ShowRoster(LoadedRoster, CharacterIdToSelect);
+		});
+}
 
-			if (This->PlayerComboBox)
+void UVaesenCharacterSelectWidget::RefreshRoster()
+{
+	// Don't change the list under the player: not while loading, in a dialog or with the list open.
+	UVaesenApiSubsystem* Api = GetGameInstance()->GetSubsystem<UVaesenApiSubsystem>();
+	if (!Api || SelectedGuildId.IsEmpty() || !bCharactersLoaded || IsLoading() || IsDialogOpen() || (PlayerComboBox && PlayerComboBox->IsOpen()))
+	{
+		return;
+	}
+
+	const int32 ThisLoad = CharacterLoad;
+	Api->GetGuildRoster(SelectedGuildId,
+		[WeakThis = TWeakObjectPtr<UVaesenCharacterSelectWidget>(this), ThisLoad](bool bSuccess, const TArray<FVaesenRosterEntry>& LoadedRoster, const FString& Error)
+		{
+			UVaesenCharacterSelectWidget* This = WeakThis.Get();
+			// Quiet: a failed refresh keeps the current list; a newer load (another guild) wins.
+			if (!This || !bSuccess || This->CharacterLoad != ThisLoad || This->IsLoading() || (This->PlayerComboBox && This->PlayerComboBox->IsOpen()))
 			{
-				int32 IndexToSelect = 0;
-				for (int32 Index = 0; Index < This->Characters.Num(); ++Index)
-				{
-					This->PlayerComboBox->AddOption(This->Characters[Index].Name);
-					if (This->Characters[Index].Id == CharacterIdToSelect)
-					{
-						IndexToSelect = Index;
-					}
-				}
-				if (!This->Characters.IsEmpty())
-				{
-					This->PlayerComboBox->SetSelectedIndex(IndexToSelect);
-				}
+				return;
 			}
 
-			This->UpdateButtons();
+			const FVaesenCharacter* Selected = This->GetSelectedCharacter();
+			This->ShowRoster(LoadedRoster, Selected ? Selected->Id : FString());
 		});
+}
+
+void UVaesenCharacterSelectWidget::ShowRoster(const TArray<FVaesenRosterEntry>& LoadedRoster, const FString& CharacterIdToSelect)
+{
+	Roster = LoadedRoster;
+
+	if (PlayerComboBox)
+	{
+		int32 IndexToSelect = 0;
+		TArray<FString> Labels;
+		for (int32 Index = 0; Index < Roster.Num(); ++Index)
+		{
+			Labels.Add(GetRosterLabel(Roster[Index]));
+			if (Roster[Index].Character.Id == CharacterIdToSelect)
+			{
+				IndexToSelect = Index;
+			}
+		}
+
+		// Only rebuild when something changed, so a quiet refresh doesn't flicker.
+		bool bSame = PlayerComboBox->GetOptionCount() == Labels.Num() && PlayerComboBox->GetSelectedIndex() == IndexToSelect;
+		for (int32 Index = 0; bSame && Index < Labels.Num(); ++Index)
+		{
+			bSame = PlayerComboBox->GetOptionAtIndex(Index) == Labels[Index];
+		}
+		if (!bSame)
+		{
+			PlayerComboBox->ClearOptions();
+			for (const FString& Label : Labels)
+			{
+				PlayerComboBox->AddOption(Label);
+			}
+			if (!Labels.IsEmpty())
+			{
+				PlayerComboBox->SetSelectedIndex(IndexToSelect);
+			}
+		}
+	}
+
+	UpdateButtons();
+}
+
+FString UVaesenCharacterSelectWidget::GetRosterLabel(const FVaesenRosterEntry& Entry) const
+{
+	if (Entry.IsFree())
+	{
+		return Entry.Character.Name;
+	}
+	if (CanPlay(Entry))
+	{
+		return FText::Format(LOCTEXT("PlayedByYou", "{0} (you)"), FText::FromString(Entry.Character.Name)).ToString();
+	}
+	const FString Player = Entry.PlayerUsername.IsEmpty() ? LOCTEXT("SomeoneElse", "another member").ToString() : Entry.PlayerUsername;
+	return FText::Format(LOCTEXT("PlayedBy", "{0} \u2014 played by {1}"), FText::FromString(Entry.Character.Name), FText::FromString(Player)).ToString();
+}
+
+bool UVaesenCharacterSelectWidget::CanPlay(const FVaesenRosterEntry& Entry) const
+{
+	const UVaesenSessionSubsystem* Session = GetGameInstance()->GetSubsystem<UVaesenSessionSubsystem>();
+	return Entry.IsFree() || (Session && Entry.PlayerAccountId == Session->GetAccount().Id);
 }
 
 void UVaesenCharacterSelectWidget::HandleCharacterSelected(FString SelectedItem, ESelectInfo::Type SelectionType)
@@ -361,6 +446,9 @@ void UVaesenCharacterSelectWidget::HandlePlayClicked()
 		This->SetStatus(bSuccess
 			? FText::Format(LOCTEXT("Playing", "Playing as {0}. Entering the world isn't built yet."), FText::FromString(CharacterName))
 			: FText::FromString(Error));
+
+		// Show the claim (or who beat us to it) right away.
+		This->RefreshRoster();
 	});
 }
 
@@ -369,10 +457,16 @@ const FVaesenGuild* UVaesenCharacterSelectWidget::GetSelectedGuild() const
 	return Guilds.FindByPredicate([this](const FVaesenGuild& Guild) { return Guild.Id == SelectedGuildId; });
 }
 
-const FVaesenCharacter* UVaesenCharacterSelectWidget::GetSelectedCharacter() const
+const FVaesenRosterEntry* UVaesenCharacterSelectWidget::GetSelectedEntry() const
 {
 	const int32 Index = PlayerComboBox ? PlayerComboBox->GetSelectedIndex() : 0;
-	return bCharactersLoaded && Characters.IsValidIndex(Index) ? &Characters[Index] : nullptr;
+	return bCharactersLoaded && Roster.IsValidIndex(Index) ? &Roster[Index] : nullptr;
+}
+
+const FVaesenCharacter* UVaesenCharacterSelectWidget::GetSelectedCharacter() const
+{
+	const FVaesenRosterEntry* Entry = GetSelectedEntry();
+	return Entry ? &Entry->Character : nullptr;
 }
 
 bool UVaesenCharacterSelectWidget::IsDialogOpen() const
@@ -388,7 +482,8 @@ void UVaesenCharacterSelectWidget::UpdateButtons()
 	VaesenCharacterSelect::SetEnabled(ChangeGuildButton, bIdle && bGuildsLoaded && !Guilds.IsEmpty());
 	VaesenCharacterSelect::SetEnabled(CreateGuildButton, bIdle && bGuildsLoaded);
 	VaesenCharacterSelect::SetEnabled(PlayerComboBox, bIdle && bCharactersLoaded);
-	VaesenCharacterSelect::SetEnabled(PlayButton, bIdle && GetSelectedCharacter() != nullptr);
+	const FVaesenRosterEntry* Selected = GetSelectedEntry();
+	VaesenCharacterSelect::SetEnabled(PlayButton, bIdle && Selected && CanPlay(*Selected));
 	VaesenCharacterSelect::SetEnabled(CreateCharacterButton, bIdle && GetSelectedGuild() != nullptr && bCharactersLoaded);
 }
 

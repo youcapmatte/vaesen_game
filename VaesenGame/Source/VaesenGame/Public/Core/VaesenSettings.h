@@ -34,6 +34,10 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Maps", meta = (AllowedClasses = "/Script/Engine.World"))
 	TSoftObjectPtr<UWorld> CharacterSelectMap;
 
+	/** Each guild's base (its own instance of this map); where a character enters the world unless it can return to where it just was. */
+	UPROPERTY(Config, EditAnywhere, Category = "Maps", meta = (AllowedClasses = "/Script/Engine.World"))
+	TSoftObjectPtr<UWorld> GuildHubMap;
+
 	/** Widget shown on the login map, e.g. WBP_Login (parent class VaesenLoginWidget). */
 	UPROPERTY(Config, EditAnywhere, Category = "UI")
 	TSoftClassPtr<UUserWidget> LoginScreenWidget;

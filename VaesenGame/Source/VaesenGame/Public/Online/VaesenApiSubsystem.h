@@ -25,6 +25,7 @@ public:
 	using FGuildsCallback = TFunction<void(bool bSuccess, const TArray<FVaesenGuild>& Guilds, const FString& Error)>;
 	using FGuildCallback = TFunction<void(bool bSuccess, const FVaesenGuild& Guild, const FString& Error)>;
 	using FCharactersCallback = TFunction<void(bool bSuccess, const TArray<FVaesenCharacter>& Characters, const FString& Error)>;
+	using FRosterCallback = TFunction<void(bool bSuccess, const TArray<FVaesenRosterEntry>& Roster, const FString& Error)>;
 	using FCharacterCallback = TFunction<void(bool bSuccess, const FVaesenCharacter& Character, const FString& Error)>;
 	using FStringsCallback = TFunction<void(bool bSuccess, const TArray<FString>& Values, const FString& Error)>;
 	using FNameTakenCallback = TFunction<void(bool bSuccess, bool bTaken, const FString& Error)>;
@@ -54,6 +55,9 @@ public:
 
 	/** A guild's characters (GET /api/guilds/{guildId}/characters). */
 	void GetGuildCharacters(const FString& GuildId, FCharactersCallback OnComplete);
+
+	/** A guild's characters with who is playing each one (GET /api/guilds/{guildId}/roster). */
+	void GetGuildRoster(const FString& GuildId, FRosterCallback OnComplete);
 
 	/** The classes a character can have (GET /api/characters/classes). */
 	void GetCharacterClasses(FStringsCallback OnComplete);

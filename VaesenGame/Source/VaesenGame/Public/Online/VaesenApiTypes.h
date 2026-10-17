@@ -73,6 +73,25 @@ struct FVaesenCharacter
 	int32 HealthPoints = 0;
 };
 
+/** One of a guild's characters and who is playing it (GET /api/guilds/{id}/roster). */
+USTRUCT(BlueprintType)
+struct FVaesenRosterEntry
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Vaesen|Guild")
+	FVaesenCharacter Character;
+
+	/** The account playing it; empty when the character is free. */
+	UPROPERTY(BlueprintReadOnly, Category = "Vaesen|Guild")
+	FString PlayerAccountId;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Vaesen|Guild")
+	FString PlayerUsername;
+
+	bool IsFree() const { return PlayerAccountId.IsEmpty(); }
+};
+
 /** The account's subscription, as returned by the API. */
 USTRUCT(BlueprintType)
 struct FVaesenAccountSubscription

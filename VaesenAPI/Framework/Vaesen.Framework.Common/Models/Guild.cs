@@ -28,7 +28,8 @@ public sealed class Guild : BaseCore
 
     /// <summary>
     /// Who plays which character right now. A character has at most one player and a member plays at most one of
-    /// the guild's characters at a time; characters without an entry are free.
+    /// the guild's characters at a time; characters without an entry are free. An entry older than
+    /// <see cref="GuildOptions.CharacterClaimTimeout"/> no longer holds the character (see <see cref="GetActivePlayerOf"/>).
     /// </summary>
     [JsonProperty("characterAssignments")]
     public List<CharacterAssignment> CharacterAssignments { get; set; } = [];
@@ -42,6 +43,11 @@ public sealed class Guild : BaseCore
     /// <summary>The account currently playing <paramref name="characterId"/>, or null if it's free.</summary>
     public string? GetPlayerOf(string characterId) =>
         CharacterAssignments.Find(a => string.Equals(a.CharacterId, characterId, StringComparison.Ordinal))?.AccountId;
+
+    /// <summary>The account holding <paramref name="characterId"/> with a claim that hasn't timed out, or null.</summary>
+    public string? GetActivePlayerOf(string characterId, DateTime now, TimeSpan claimTimeout) =>
+        CharacterAssignments.Find(a =>
+            string.Equals(a.CharacterId, characterId, StringComparison.Ordinal) && a.AssignedAt + claimTimeout > now)?.AccountId;
 
     /// <summary>The character <paramref name="accountId"/> currently plays in this guild, or null.</summary>
     public string? GetCharacterOf(string accountId) =>
@@ -57,8 +63,27 @@ public sealed class CharacterAssignment
     [JsonProperty("accountId")]
     public string AccountId { get; set; } = "";
 
+    /// <summary>When the member claimed (or last renewed) the character.</summary>
     [JsonProperty("assignedAt")]
     public DateTime AssignedAt { get; set; }
+}
+
+/// <summary>One of a guild's characters and who is playing it: what the character select screen shows.</summary>
+public sealed class RosterEntry
+{
+    [JsonProperty("character")]
+    public Character Character { get; set; } = new();
+
+    /// <summary>The member playing it, left out when the character is free.</summary>
+    [JsonProperty("playerAccountId", NullValueHandling = NullValueHandling.Ignore)]
+    public string? PlayerAccountId { get; set; }
+
+    [JsonProperty("playerUsername", NullValueHandling = NullValueHandling.Ignore)]
+    public string? PlayerUsername { get; set; }
+
+    /// <summary>When the player claimed or last renewed it.</summary>
+    [JsonProperty("playingSince", NullValueHandling = NullValueHandling.Ignore)]
+    public DateTime? PlayingSince { get; set; }
 }
 
 public sealed class CreateGuildRequest

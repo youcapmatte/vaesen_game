@@ -25,7 +25,7 @@ class UWidget;
  *   GuildNameText           (Text)                 - the selected guild's name
  *   ChangeGuildButton       (Button)               - opens PickGuildDialog
  *   CreateGuildButton       (Button)               - opens CreateGuildDialog
- *   PlayerComboBox          (Combo Box (String))   - the guild's characters
+ *   PlayerComboBox          (Combo Box (String))   - the guild's characters, with who is playing each one
  *   PlayButton              (Button)
  *   CreateCharacterButton   (Button)               - opens CreateCharacterDialog
  *   PickGuildDialog         (WBP_PickGuild, a VaesenPickGuildWidget)                 - hidden until opened
@@ -33,7 +33,8 @@ class UWidget;
  *   CreateCharacterDialog   (WBP_CreateCharacter, a VaesenCreateCharacterWidget)     - hidden until opened
  *   StatusText              (Text)
  *   LoadingThrobber         (Circular Throbber)   - shown while the screen loads something; buttons are disabled meanwhile
- * Remembers the last guild and character picked on this machine.
+ * Remembers the last guild and character picked on this machine. A character another member is playing can't be
+ * played; the list refreshes itself every RosterRefreshSeconds (until the API can push changes).
  *
  * TEMPORARY: all bindings are BindWidgetOptional while the UI is being built, so each feature can be tried on its
  * own; whatever is missing is skipped. Make them BindWidget when the UI is done.
@@ -46,6 +47,11 @@ class VAESENGAME_API UVaesenCharacterSelectWidget : public UUserWidget
 protected:
 	virtual void NativeOnInitialized() override;
 	virtual void NativeConstruct() override;
+	virtual void NativeDestruct() override;
+
+	/** How often the character list refreshes quietly, to show who started or stopped playing. 0 = never. */
+	UPROPERTY(EditAnywhere, Category = "Vaesen", meta = (ClampMin = "0", Units = "s"))
+	float RosterRefreshSeconds = 15.0f;
 
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UTextBlock> GuildNameText;
@@ -105,7 +111,13 @@ private:
 	void LoadGuilds(const FString& GuildIdToSelect);
 	void SelectGuild(const FVaesenGuild& Guild, const FString& CharacterIdToSelect);
 	void LoadCharacters(const FString& CharacterIdToSelect);
+	/** Reloads the roster in the background (no throbber), keeping the selection. Skipped while busy. */
+	void RefreshRoster();
+	void ShowRoster(const TArray<FVaesenRosterEntry>& LoadedRoster, const FString& CharacterIdToSelect);
+	FString GetRosterLabel(const FVaesenRosterEntry& Entry) const;
+	bool CanPlay(const FVaesenRosterEntry& Entry) const;
 	const FVaesenGuild* GetSelectedGuild() const;
+	const FVaesenRosterEntry* GetSelectedEntry() const;
 	const FVaesenCharacter* GetSelectedCharacter() const;
 	bool IsDialogOpen() const;
 	/** Counts a request the screen waits for: shows the throbber and disables the buttons until EndLoading. */
@@ -118,7 +130,8 @@ private:
 
 	TArray<FVaesenGuild> Guilds;
 	FString SelectedGuildId;
-	TArray<FVaesenCharacter> Characters;
+	TArray<FVaesenRosterEntry> Roster;
+	FTimerHandle RosterRefreshTimer;
 
 	/** True once the selected guild's characters have loaded. */
 	bool bCharactersLoaded = false;

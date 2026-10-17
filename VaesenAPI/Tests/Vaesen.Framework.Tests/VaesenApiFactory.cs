@@ -26,6 +26,8 @@ public sealed class VaesenApiFactory(bool useTestAuth = true) : WebApplicationFa
 {
     public FakeGameLiftGateway GameLift { get; } = new();
 
+    public TestClock Clock { get; } = new();
+
     public HttpClient CreatePlayerClient(string subject = "auth0|player-1")
     {
         var client = CreateClient();
@@ -47,6 +49,7 @@ public sealed class VaesenApiFactory(bool useTestAuth = true) : WebApplicationFa
         builder.ConfigureTestServices(services =>
         {
             services.AddSingleton<IGameLiftGateway>(GameLift);
+            services.AddSingleton<TimeProvider>(Clock);
 
             // No DynamoDB in endpoint tests: in-memory stores, and don't try to create the table.
             var database = new InMemoryDatabase();

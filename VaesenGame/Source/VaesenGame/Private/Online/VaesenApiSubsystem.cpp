@@ -306,6 +306,23 @@ void UVaesenApiSubsystem::GetGuildCharacters(const FString& GuildId, FCharacters
 	Request->ProcessRequest();
 }
 
+void UVaesenApiSubsystem::GetGuildRoster(const FString& GuildId, FRosterCallback OnComplete)
+{
+	const auto Request = CreateRequest(TEXT("GET"), FString::Printf(TEXT("/api/guilds/%s/roster"), *FGenericPlatformHttp::UrlEncode(GuildId)));
+	Request->OnProcessRequestComplete().BindWeakLambda(this,
+		[OnComplete = MoveTemp(OnComplete)](FHttpRequestPtr Req, FHttpResponsePtr Response, bool bConnected)
+		{
+			TArray<FVaesenRosterEntry> Roster;
+			FString Error = GetError(Req, Response, bConnected);
+			if (Error.IsEmpty())
+			{
+				VaesenApiEnvelope::ReadArray(Response->GetContentAsString(), Roster, Error);
+			}
+			OnComplete(Error.IsEmpty(), Roster, Error);
+		});
+	Request->ProcessRequest();
+}
+
 void UVaesenApiSubsystem::GetCharacterClasses(FStringsCallback OnComplete)
 {
 	const auto Request = CreateRequest(TEXT("GET"), TEXT("/api/characters/classes"));
@@ -386,7 +403,7 @@ void UVaesenApiSubsystem::PlayCharacter(const FVaesenCharacter& Character, FResu
 		return;
 	}
 
-	// 1. Become the character's player in its guild (whoever played it before stops).
+	// 1. Claim the character in its guild; refused (409) while another member is playing it.
 	const TSharedRef<FJsonObject> Body = MakeShared<FJsonObject>();
 	Body->SetStringField(TEXT("accountId"), AccountId);
 	const auto Request = CreateRequest(TEXT("PUT"), FString::Printf(TEXT("/api/guilds/%s/characters/%s/player"),

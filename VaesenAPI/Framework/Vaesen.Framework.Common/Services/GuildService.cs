@@ -25,11 +25,15 @@ public interface IGuildService
 
     Task<ResultBase<IReadOnlyList<Character>>> ListCharactersAsync(string guildId, CancellationToken cancellationToken = default);
 
+    /// <summary>The guild's characters with who is playing each one (claims that have timed out count as free).</summary>
+    Task<ResultBase<IReadOnlyList<RosterEntry>>> GetRosterAsync(string guildId, CancellationToken cancellationToken = default);
+
     Task<ResultBase<Character>> CreateCharacterAsync(string guildId, CreateCharacterRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
-    /// Makes a member the player of one of the guild's characters. Whoever played that character before loses it,
-    /// and the member stops playing any other character in the guild.
+    /// Makes a member the player of one of the guild's characters, and the member stops playing any other character
+    /// in the guild. Refused with <see cref="GuildService.CharacterTaken"/> while another member's claim on it is
+    /// active; claiming a character you already play renews the claim.
     /// </summary>
     Task<ResultBase<Guild>> AssignPlayerAsync(string guildId, string characterId, AssignPlayerRequest request, CancellationToken cancellationToken = default);
 
@@ -42,26 +46,34 @@ public sealed partial class GuildService : IGuildService
     public const string NotAMember = "not_a_member";
     public const string CharacterNotInGuild = "character_not_in_guild";
     public const string GuildMasterCannotLeave = "guild_master_cannot_leave";
+    public const string CharacterTaken = "character_taken";
 
     private readonly IGuildStore _guilds;
     private readonly IAccountStore _accounts;
     private readonly ICharacterStore _characters;
     private readonly TimeProvider _timeProvider;
     private readonly IOptions<CharacterOptions> _characterOptions;
+    private readonly IOptions<GuildOptions> _guildOptions;
 
     public GuildService(
         IGuildStore guilds,
         IAccountStore accounts,
         ICharacterStore characters,
         TimeProvider timeProvider,
-        IOptions<CharacterOptions> characterOptions)
+        IOptions<CharacterOptions> characterOptions,
+        IOptions<GuildOptions> guildOptions)
     {
         _guilds = guilds;
         _accounts = accounts;
         _characters = characters;
         _timeProvider = timeProvider;
         _characterOptions = characterOptions;
+        _guildOptions = guildOptions;
     }
+
+    private DateTime Now => _timeProvider.GetUtcNow().UtcDateTime;
+
+    private TimeSpan ClaimTimeout => _guildOptions.Value.CharacterClaimTimeout;
 
     public async Task<ResultBase<Guild>> CreateAsync(CreateGuildRequest request, CancellationToken cancellationToken = default)
     {
@@ -181,6 +193,43 @@ public sealed partial class GuildService : IGuildService
         return ret.Ok(characters.OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase).ToList());
     }
 
+    public async Task<ResultBase<IReadOnlyList<RosterEntry>>> GetRosterAsync(string guildId, CancellationToken cancellationToken = default)
+    {
+        var ret = new ResultBase<IReadOnlyList<RosterEntry>>();
+        var loaded = await GetAsync(guildId, cancellationToken).ConfigureAwait(false);
+        if (!loaded.Success)
+        {
+            return ret.Fail(loaded.ErrorMessage, loaded.ErrorCode);
+        }
+
+        var guild = loaded.Result!;
+        var characters = await _characters.GetManyAsync(guild.CharacterIds, cancellationToken).ConfigureAwait(false);
+        var now = Now;
+        var usernames = new Dictionary<string, string?>(StringComparer.Ordinal);
+        var roster = new List<RosterEntry>();
+        foreach (var character in characters.OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase))
+        {
+            var entry = new RosterEntry { Character = character };
+            var player = guild.GetActivePlayerOf(character.Id, now, ClaimTimeout);
+            if (player is not null)
+            {
+                if (!usernames.TryGetValue(player, out var username))
+                {
+                    username = (await _accounts.GetAsync(player, cancellationToken).ConfigureAwait(false))?.Username;
+                    usernames[player] = username;
+                }
+
+                entry.PlayerAccountId = player;
+                entry.PlayerUsername = username;
+                entry.PlayingSince = guild.CharacterAssignments.First(a => string.Equals(a.CharacterId, character.Id, StringComparison.Ordinal)).AssignedAt;
+            }
+
+            roster.Add(entry);
+        }
+
+        return ret.Ok(roster);
+    }
+
     public async Task<ResultBase<Character>> CreateCharacterAsync(string guildId, CreateCharacterRequest request, CancellationToken cancellationToken = default)
     {
         var ret = new ResultBase<Character>();
@@ -244,12 +293,16 @@ public sealed partial class GuildService : IGuildService
             return ret.Fail("Only guild members can play the guild's characters.", NotAMember);
         }
 
-        if (string.Equals(guild.GetPlayerOf(characterId), account.Id, StringComparison.Ordinal))
+        var now = Now;
+        var holder = guild.GetActivePlayerOf(characterId, now, ClaimTimeout);
+        if (holder is not null && !string.Equals(holder, account.Id, StringComparison.Ordinal))
         {
-            return ret.Ok(guild);
+            var holderName = (await _accounts.GetAsync(holder, cancellationToken).ConfigureAwait(false))?.Username ?? "Another member";
+            return ret.Fail($"{holderName} is already playing this character.", CharacterTaken);
         }
 
-        // One player per character, one character per player.
+        // One player per character, one character per player. Claiming your own character again renews the claim;
+        // a timed-out claim by someone else is simply replaced.
         guild.CharacterAssignments.RemoveAll(a =>
             string.Equals(a.CharacterId, characterId, StringComparison.Ordinal)
             || string.Equals(a.AccountId, account.Id, StringComparison.Ordinal));
@@ -257,7 +310,7 @@ public sealed partial class GuildService : IGuildService
         {
             CharacterId = characterId,
             AccountId = account.Id,
-            AssignedAt = _timeProvider.GetUtcNow().UtcDateTime,
+            AssignedAt = now,
         });
         guild.UpdatedBy = account.Id;
 

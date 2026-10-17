@@ -23,6 +23,7 @@ public static class CommonServiceExtensions
         services.AddSingleton<IGuildStore>(sp => sp.GetRequiredService<GuildRepository>());
 
         services.Configure<CharacterOptions>(configuration.GetSection(CharacterOptions.SectionName));
+        services.Configure<GuildOptions>(configuration.GetSection(GuildOptions.SectionName));
 
         services.AddSingleton<IAccountService, AccountService>();
         services.AddSingleton<IGuildService, GuildService>();

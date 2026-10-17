@@ -62,6 +62,11 @@ public sealed class GuildController : ControllerBase
     public async Task<ActionResult<ResultBase<IReadOnlyList<Character>>>> ListCharacters([FromRoute] string guildId, CancellationToken cancellationToken) =>
         this.ToActionResult(await _guilds.ListCharactersAsync(guildId, cancellationToken).ConfigureAwait(false));
 
+    /// <summary>The guild's characters with who is playing each one; what the character select screen lists.</summary>
+    [HttpGet("{guildId}/roster")]
+    public async Task<ActionResult<ResultBase<IReadOnlyList<RosterEntry>>>> GetRoster([FromRoute] string guildId, CancellationToken cancellationToken) =>
+        this.ToActionResult(await _guilds.GetRosterAsync(guildId, cancellationToken).ConfigureAwait(false));
+
     /// <summary>Creates a character owned by the guild. The creator must be a member.</summary>
     [HttpPost("{guildId}/characters")]
     public async Task<ActionResult<ResultBase<Character>>> CreateCharacter([FromRoute] string guildId, [FromBody] CreateCharacterRequest? request, CancellationToken cancellationToken)
@@ -71,8 +76,8 @@ public sealed class GuildController : ControllerBase
     }
 
     /// <summary>
-    /// Makes a member the player of a character. The previous player loses it, and the member stops playing any
-    /// other character in this guild.
+    /// Makes a member the player of a character; the member stops playing any other character in this guild.
+    /// 409 character_taken while another member plays it. Claiming your own character again renews the claim.
     /// </summary>
     [HttpPut("{guildId}/characters/{characterId}/player")]
     public async Task<ActionResult<ResultBase<Guild>>> AssignPlayer(

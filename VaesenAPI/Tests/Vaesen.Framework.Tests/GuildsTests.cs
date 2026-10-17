@@ -171,8 +171,7 @@ public sealed class GuildsTests : IAsyncLifetime
         Assert.Equal(character.Id, updated.GetCharacterOf(founder.Id));
     }
 
-    [Fact]
-    public async Task AssignPlayer_ToAnotherMember_TakesTheCharacterOver()
+    private async Task<(Account X, Account K, Guild Guild, Character Y, Character I)> CreateGuildWithTwoPlayersAsync()
     {
         var x = await CreateAccountAsync("PlayerX");
         var k = await CreateAccountAsync("PlayerK");
@@ -180,16 +179,95 @@ public sealed class GuildsTests : IAsyncLifetime
         await _client.PostAsJsonAsync($"{Guilds}/{guild.Id}/members", new { accountId = k.Id });
         var y = await CreateCharacterAsync(guild, "Ylva", x);
         var i = await CreateCharacterAsync(guild, "Ivar", x);
+        return (x, k, guild, y, i);
+    }
+
+    [Fact]
+    public async Task AssignPlayer_SwitchingCharacter_FreesThePreviousOne()
+    {
+        var (x, k, guild, y, i) = await CreateGuildWithTwoPlayersAsync();
 
         await AssignAsync(guild, y, x);    // X plays Y.
         await AssignAsync(guild, i, x);    // Next time X plays I instead: Y becomes free.
-        await AssignAsync(guild, y, k);    // K plays Y.
-        var final = (await (await AssignAsync(guild, i, k)).ReadResultAsync<Guild>()).Result!; // K takes I over from X.
+        var final = (await (await AssignAsync(guild, y, k)).ReadResultAsync<Guild>()).Result!; // So K can play Y.
 
-        Assert.Equal(k.Id, final.GetPlayerOf(i.Id));
-        Assert.Null(final.GetPlayerOf(y.Id));          // K moved from Y to I.
-        Assert.Null(final.GetCharacterOf(x.Id));       // X lost I to K.
+        Assert.Equal(k.Id, final.GetPlayerOf(y.Id));
+        Assert.Equal(x.Id, final.GetPlayerOf(i.Id));
+        Assert.Equal(2, final.CharacterAssignments.Count);
+    }
+
+    [Fact]
+    public async Task AssignPlayer_WhileAnotherMemberPlaysIt_IsRefused()
+    {
+        var (x, k, guild, y, _) = await CreateGuildWithTwoPlayersAsync();
+        await AssignAsync(guild, y, x);
+
+        var response = await AssignAsync(guild, y, k);
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        var result = await response.ReadResultAsync<Guild>();
+        Assert.Equal(GuildService.CharacterTaken, result.ErrorCode);
+        Assert.Contains("PlayerX", result.ErrorMessage);
+        Assert.Equal(x.Id, (await GetGuildAsync(guild.Id)).GetPlayerOf(y.Id));
+    }
+
+    [Fact]
+    public async Task AssignPlayer_AfterTheClaimTimesOut_TakesTheCharacter()
+    {
+        var (x, k, guild, y, _) = await CreateGuildWithTwoPlayersAsync();
+        await AssignAsync(guild, y, x);
+        _factory.Clock.Advance(new GuildOptions().CharacterClaimTimeout + TimeSpan.FromSeconds(1));
+
+        var response = await AssignAsync(guild, y, k);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var final = (await response.ReadResultAsync<Guild>()).Result!;
+        Assert.Equal(k.Id, final.GetPlayerOf(y.Id));
         Assert.Single(final.CharacterAssignments);
+    }
+
+    [Fact]
+    public async Task AssignPlayer_Again_RenewsTheClaim()
+    {
+        var (x, k, guild, y, _) = await CreateGuildWithTwoPlayersAsync();
+        var timeout = new GuildOptions().CharacterClaimTimeout;
+        await AssignAsync(guild, y, x);
+        _factory.Clock.Advance(timeout - TimeSpan.FromMinutes(1));
+        await AssignAsync(guild, y, x);    // Renewed just before it ran out.
+        _factory.Clock.Advance(TimeSpan.FromMinutes(2));
+
+        var response = await AssignAsync(guild, y, k);
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Roster_ShowsWhoPlaysEachCharacter()
+    {
+        var (x, _, guild, y, i) = await CreateGuildWithTwoPlayersAsync();
+        await AssignAsync(guild, y, x);
+
+        var response = await _client.GetAsync($"{Guilds}/{guild.Id}/roster");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var roster = (await response.ReadResultAsync<List<RosterEntry>>()).Result!;
+        Assert.Equal([i.Id, y.Id], roster.Select(e => e.Character.Id));    // By name: Ivar, Ylva.
+        Assert.Null(roster[0].PlayerAccountId);
+        Assert.Equal(x.Id, roster[1].PlayerAccountId);
+        Assert.Equal("PlayerX", roster[1].PlayerUsername);
+        Assert.NotNull(roster[1].PlayingSince);
+    }
+
+    [Fact]
+    public async Task Roster_ShowsTimedOutClaimsAsFree()
+    {
+        var (x, _, guild, y, _) = await CreateGuildWithTwoPlayersAsync();
+        await AssignAsync(guild, y, x);
+        _factory.Clock.Advance(new GuildOptions().CharacterClaimTimeout + TimeSpan.FromSeconds(1));
+
+        var roster = (await (await _client.GetAsync($"{Guilds}/{guild.Id}/roster")).ReadResultAsync<List<RosterEntry>>()).Result!;
+
+        Assert.All(roster, e => Assert.Null(e.PlayerAccountId));
     }
 
     [Fact]
