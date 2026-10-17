@@ -6,7 +6,7 @@ Contents
 
 1. [How DynamoDB thinks](#1-how-dynamodb-thinks)
 2. [The Vaesen table design](#2-the-vaesen-table-design)
-3. [Local development with DynamoDB Local](#3-local-development-with-dynamodb-local)
+3. [Optional: offline development with DynamoDB Local](#3-optional-offline-development-with-dynamodb-local)
 4. [AWS setup](#4-aws-setup)
 5. [How the API is wired](#5-how-the-api-is-wired)
 6. [Repositories](#6-repositories)
@@ -77,13 +77,15 @@ Conventions:
 
 ---
 
-## 3. Local development with DynamoDB Local
+## 3. Optional: offline development with DynamoDB Local
 
-AWS ships a local DynamoDB that speaks the same API. The API uses it in Development, exactly like `Sessions:Provider=Local` stands in for GameLift.
+**By default, development uses the real `vaesen-dev` table in AWS** (section 4): no extra software, data browsable in the AWS console, identical to production. You only need `aws sso login --profile vaesen` when the session expires.
+
+DynamoDB Local is the alternative for working offline, or for a database nobody else touches. AWS ships it as a Docker image that speaks the same API. The repository tests use it too (section 7).
 
 ### 3.1 Run it with Docker
 
-Install **Docker Desktop** (docker.com) once. The compose file is already in the repo: `VaesenAPI/docker-compose.yml`.
+Install **Docker Desktop** (docker.com) once. The compose file is in the repo: `VaesenAPI/docker-compose.yml`.
 
 ```bash
 cd VaesenAPI
@@ -92,9 +94,17 @@ docker compose down       # stop
 docker compose down -v    # stop and delete all local data
 ```
 
-The API is already configured for it in Development (`appsettings.Development.json`): table `vaesen-local` at `http://localhost:8000`, created automatically after startup.
+To point the API at it, replace the `AWS` section in `appsettings.Development.json` with:
 
-Without Docker the API still starts: storage just doesn't work, `/health/ready` reports Unhealthy, and the log says how to start DynamoDB Local.
+```json
+"DynamoDb": {
+  "TableName": "vaesen-local",
+  "ServiceUrl": "http://localhost:8000",
+  "CreateTableIfMissing": true
+}
+```
+
+The table is then created automatically after startup. If DynamoDB Local isn't running, the API still starts: storage just doesn't work, `/health/ready` reports Unhealthy, and the log says how to start it.
 
 ### 3.2 Check it works
 
@@ -223,17 +233,16 @@ Modules depend on their repository interfaces only. Endpoints and services never
 
 ### 5.2 Configuration
 
-| Setting | `appsettings.json` (AWS) | `appsettings.Development.json` (local) |
+| Setting | `appsettings.json` | `appsettings.Development.json` |
 |---|---|---|
-| `DynamoDb:TableName` | `vaesen-dev` | `vaesen-local` |
-| `DynamoDb:ServiceUrl` | *(empty = real AWS)* | `http://localhost:8000` |
-| `DynamoDb:CreateTableIfMissing` | `false` | `true` |
+| `DynamoDb:TableName` | `vaesen-dev` | *(inherited: `vaesen-dev`)* |
+| `DynamoDb:ServiceUrl` | *(empty = real AWS)* | *(empty; set it only for DynamoDB Local, section 3)* |
 | `AWS:Region` | `eu-north-1` | *(inherited)* |
-| `AWS:Profile` | | `vaesen`, only when using your SSO login against real AWS |
+| `AWS:Profile` | | `vaesen`: your SSO login |
 
 Production overrides values with environment variables on the ECS task, e.g. `DynamoDb__TableName=vaesen-prod`. **No credentials appear in configuration:** locally they come from your SSO profile, in AWS from the task role.
 
-To run the API locally against the real `vaesen-dev` table instead of DynamoDB Local: remove `ServiceUrl` and `TableName` from the `DynamoDb` section of `appsettings.Development.json`, add `"AWS": { "Profile": "vaesen" }`, and run `aws sso login --profile vaesen` first.
+If the API logs an SSO or token error, your session has expired: run `aws sso login --profile vaesen` and restart the API.
 
 ### 5.3 Client registration
 
@@ -327,16 +336,15 @@ Careful in production: the console bypasses the API's rules. Editing `Name` on a
 
 ## 10. Checklist
 
-Local:
-
-- [ ] Docker Desktop installed; `docker compose up -d` in `VaesenAPI`
-- [ ] Start the API; `/health/ready` reports Healthy
-- [ ] Table `vaesen-local` visible in NoSQL Workbench (DynamoDB local, port 8000)
-- [ ] `dotnet test`: the `DynamoDbCharacterRepositoryTests` now run instead of being skipped
-
-AWS:
+AWS (needed for development and production):
 
 - [ ] IAM Identity Center user + `aws configure sso --profile vaesen`
-- [ ] Table `vaesen-dev` (on-demand, `GSI1`, deletion protection, PITR)
-- [ ] Task role with the least-privilege policy from 4.3
-- [ ] Same region as GameLift and the API
+- [ ] `aws sts get-caller-identity --profile vaesen` shows your account
+- [ ] `powershell -ExecutionPolicy Bypass -File .\Scripts\Aws\CreateDynamoDbTable.ps1` (creates `vaesen-dev`)
+- [ ] Start the API; `/health/ready` reports Healthy
+- [ ] Before deploying: task role with the least-privilege policy from 4.3, same region as GameLift
+
+Optional, offline:
+
+- [ ] Docker Desktop installed; `docker compose up -d` in `VaesenAPI`; Development config switched (section 3.1)
+- [ ] `dotnet test`: the `DynamoDbCharacterRepositoryTests` run instead of being skipped (needs Docker either way)
