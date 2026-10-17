@@ -26,7 +26,7 @@ public sealed class GuildController : ControllerBase
         _guilds = guilds;
     }
 
-    /// <summary>Creates a guild; the founding account becomes its first member.</summary>
+    /// <summary>Creates a guild; the founding account becomes its first member and guild master.</summary>
     [HttpPost]
     public async Task<ActionResult<ResultBase<Guild>>> Create([FromBody] CreateGuildRequest? request, CancellationToken cancellationToken)
     {
@@ -53,7 +53,7 @@ public sealed class GuildController : ControllerBase
     public async Task<ActionResult<ResultBase<Guild>>> AddMember([FromRoute] string guildId, [FromBody] GuildMemberRequest? request, CancellationToken cancellationToken) =>
         this.ToActionResult(await _guilds.AddMemberAsync(guildId, request?.AccountId ?? "", cancellationToken).ConfigureAwait(false));
 
-    /// <summary>Removes a member; the character they were playing becomes free.</summary>
+    /// <summary>Removes a member; the character they were playing becomes free. The guild master can't be removed.</summary>
     [HttpDelete("{guildId}/members/{accountId}")]
     public async Task<ActionResult<ResultBase<Guild>>> RemoveMember([FromRoute] string guildId, [FromRoute] string accountId, CancellationToken cancellationToken) =>
         this.ToActionResult(await _guilds.RemoveMemberAsync(guildId, accountId, cancellationToken).ConfigureAwait(false));

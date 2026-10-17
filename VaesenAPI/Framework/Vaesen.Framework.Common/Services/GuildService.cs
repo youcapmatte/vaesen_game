@@ -8,7 +8,7 @@ namespace Vaesen.Framework.Common.Services;
 
 public interface IGuildService
 {
-    /// <summary>Creates a guild with its founder as the first member.</summary>
+    /// <summary>Creates a guild with its founder as the first member and guild master.</summary>
     Task<ResultBase<Guild>> CreateAsync(CreateGuildRequest request, CancellationToken cancellationToken = default);
 
     Task<ResultBase<Guild>> GetAsync(string guildId, CancellationToken cancellationToken = default);
@@ -20,7 +20,7 @@ public interface IGuildService
 
     Task<ResultBase<Guild>> AddMemberAsync(string guildId, string accountId, CancellationToken cancellationToken = default);
 
-    /// <summary>Removes the member and frees the character they were playing.</summary>
+    /// <summary>Removes the member and frees the character they were playing. The guild master can't be removed.</summary>
     Task<ResultBase<Guild>> RemoveMemberAsync(string guildId, string accountId, CancellationToken cancellationToken = default);
 
     Task<ResultBase<IReadOnlyList<Character>>> ListCharactersAsync(string guildId, CancellationToken cancellationToken = default);
@@ -41,6 +41,7 @@ public sealed partial class GuildService : IGuildService
 {
     public const string NotAMember = "not_a_member";
     public const string CharacterNotInGuild = "character_not_in_guild";
+    public const string GuildMasterCannotLeave = "guild_master_cannot_leave";
 
     private readonly IGuildStore _guilds;
     private readonly IAccountStore _accounts;
@@ -82,6 +83,7 @@ public sealed partial class GuildService : IGuildService
             Name = name,
             CreatedBy = founder.Id,
             UpdatedBy = founder.Id,
+            GuildMasterAccountId = founder.Id,
             MemberAccountIds = [founder.Id],
         };
         founder.GuildIds.Add(guild.Id);
@@ -152,6 +154,11 @@ public sealed partial class GuildService : IGuildService
         if (!guild!.IsMember(account!.Id))
         {
             return ret.Fail("The account isn't a member of this guild.", NotAMember);
+        }
+
+        if (guild.IsGuildMaster(account.Id))
+        {
+            return ret.Fail("The guild master can't leave the guild.", GuildMasterCannotLeave);
         }
 
         guild.MemberAccountIds.RemoveAll(id => string.Equals(id, account.Id, StringComparison.Ordinal));

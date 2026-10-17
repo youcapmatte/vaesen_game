@@ -18,7 +18,7 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FVaesenCharacterCreatedSignature, const FVae
  * First and last name are required; the character name ("{first} {last}") is shown as you type and must be unique.
  * The class comes from the API's list. Randomize picks a first and a last name independently from UVaesenSettings.
  *
- * Widget Blueprint (e.g. WBP_CreateCharacter, parent class VaesenCreateCharacterWidget) must contain, by these exact names:
+ * Widget Blueprint (e.g. WBP_CreateCharacter, parent class VaesenCreateCharacterWidget) controls by these exact names:
  *   FirstNameTextBox    (Text Box)
  *   LastNameTextBox     (Text Box)
  *   CharacterNameText   (Text)              - shows "{first} {last}"
@@ -28,6 +28,8 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FVaesenCharacterCreatedSignature, const FVae
  *   CancelButton        (Button)
  *   StatusText          (Text) - optional, shows validation and server errors
  * Place it inside WBP_CharacterSelect named "CreateCharacterDialog"; it starts hidden and hides itself when done.
+ *
+ * TEMPORARY: all bindings are BindWidgetOptional while the UI is being built; make them BindWidget when it's done.
  */
 UCLASS(Abstract)
 class VAESENGAME_API UVaesenCreateCharacterWidget : public UUserWidget
@@ -50,25 +52,25 @@ public:
 protected:
 	virtual void NativeOnInitialized() override;
 
-	UPROPERTY(meta = (BindWidget))
+	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UEditableTextBox> FirstNameTextBox;
 
-	UPROPERTY(meta = (BindWidget))
+	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UEditableTextBox> LastNameTextBox;
 
-	UPROPERTY(meta = (BindWidget))
+	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UTextBlock> CharacterNameText;
 
-	UPROPERTY(meta = (BindWidget))
+	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UComboBoxString> ClassComboBox;
 
-	UPROPERTY(meta = (BindWidget))
+	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UButton> RandomizeButton;
 
-	UPROPERTY(meta = (BindWidget))
+	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UButton> CreateButton;
 
-	UPROPERTY(meta = (BindWidget))
+	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UButton> CancelButton;
 
 	UPROPERTY(meta = (BindWidgetOptional))

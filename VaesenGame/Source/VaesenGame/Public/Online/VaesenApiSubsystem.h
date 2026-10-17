@@ -23,6 +23,7 @@ class VAESENGAME_API UVaesenApiSubsystem : public UGameInstanceSubsystem
 
 public:
 	using FGuildsCallback = TFunction<void(bool bSuccess, const TArray<FVaesenGuild>& Guilds, const FString& Error)>;
+	using FGuildCallback = TFunction<void(bool bSuccess, const FVaesenGuild& Guild, const FString& Error)>;
 	using FCharactersCallback = TFunction<void(bool bSuccess, const TArray<FVaesenCharacter>& Characters, const FString& Error)>;
 	using FCharacterCallback = TFunction<void(bool bSuccess, const FVaesenCharacter& Character, const FString& Error)>;
 	using FStringsCallback = TFunction<void(bool bSuccess, const TArray<FString>& Values, const FString& Error)>;
@@ -47,6 +48,9 @@ public:
 
 	/** The signed-in account's guilds (GET /api/guilds/by-account/{accountId}). */
 	void GetMyGuilds(FGuildsCallback OnComplete);
+
+	/** Creates a guild with the signed-in account as its first member and guild master (POST /api/guilds). */
+	void CreateGuild(const FString& Name, FGuildCallback OnComplete);
 
 	/** A guild's characters (GET /api/guilds/{guildId}/characters). */
 	void GetGuildCharacters(const FString& GuildId, FCharactersCallback OnComplete);

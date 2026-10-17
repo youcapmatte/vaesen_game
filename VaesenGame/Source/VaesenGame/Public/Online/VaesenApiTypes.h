@@ -29,6 +29,10 @@ struct FVaesenGuild
 	UPROPERTY(BlueprintReadOnly, Category = "Vaesen|Guild")
 	FString Name;
 
+	/** The account that leads the guild (its creator). */
+	UPROPERTY(BlueprintReadOnly, Category = "Vaesen|Guild")
+	FString GuildMasterAccountId;
+
 	UPROPERTY(BlueprintReadOnly, Category = "Vaesen|Guild")
 	TArray<FString> MemberAccountIds;
 

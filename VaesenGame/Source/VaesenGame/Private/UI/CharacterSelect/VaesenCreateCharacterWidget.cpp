@@ -16,20 +16,34 @@ void UVaesenCreateCharacterWidget::NativeOnInitialized()
 	// Normally caught by the Widget Blueprint compiler; guards against a stale or broken Blueprint.
 	if (!HasRequiredWidgets())
 	{
-		UE_LOG(LogVaesenApi, Error, TEXT("%s is missing one of its required widgets (see VaesenCreateCharacterWidget.h)."), *GetClass()->GetName());
-		return;
+		UE_LOG(LogVaesenApi, Warning, TEXT("%s needs FirstNameTextBox, LastNameTextBox and CreateButton to create characters."), *GetClass()->GetName());
 	}
 
-	FirstNameTextBox->OnTextChanged.AddDynamic(this, &UVaesenCreateCharacterWidget::HandleNameChanged);
-	LastNameTextBox->OnTextChanged.AddDynamic(this, &UVaesenCreateCharacterWidget::HandleNameChanged);
-	RandomizeButton->OnClicked.AddDynamic(this, &UVaesenCreateCharacterWidget::HandleRandomizeClicked);
-	CreateButton->OnClicked.AddDynamic(this, &UVaesenCreateCharacterWidget::HandleCreateClicked);
-	CancelButton->OnClicked.AddDynamic(this, &UVaesenCreateCharacterWidget::HandleCancelClicked);
+	if (FirstNameTextBox)
+	{
+		FirstNameTextBox->OnTextChanged.AddDynamic(this, &UVaesenCreateCharacterWidget::HandleNameChanged);
+	}
+	if (LastNameTextBox)
+	{
+		LastNameTextBox->OnTextChanged.AddDynamic(this, &UVaesenCreateCharacterWidget::HandleNameChanged);
+	}
+	if (RandomizeButton)
+	{
+		RandomizeButton->OnClicked.AddDynamic(this, &UVaesenCreateCharacterWidget::HandleRandomizeClicked);
+	}
+	if (CreateButton)
+	{
+		CreateButton->OnClicked.AddDynamic(this, &UVaesenCreateCharacterWidget::HandleCreateClicked);
+	}
+	if (CancelButton)
+	{
+		CancelButton->OnClicked.AddDynamic(this, &UVaesenCreateCharacterWidget::HandleCancelClicked);
+	}
 }
 
 bool UVaesenCreateCharacterWidget::HasRequiredWidgets() const
 {
-	return FirstNameTextBox && LastNameTextBox && CharacterNameText && ClassComboBox && RandomizeButton && CreateButton && CancelButton;
+	return FirstNameTextBox && LastNameTextBox && CreateButton;
 }
 
 void UVaesenCreateCharacterWidget::Open(const FString& InGuildId)
@@ -84,14 +98,17 @@ void UVaesenCreateCharacterWidget::LoadClasses()
 		}
 
 		This->Classes = LoadedClasses;
-		This->ClassComboBox->ClearOptions();
-		for (const FString& Class : This->Classes)
+		if (This->ClassComboBox)
 		{
-			This->ClassComboBox->AddOption(Class);
-		}
-		if (!This->Classes.IsEmpty())
-		{
-			This->ClassComboBox->SetSelectedIndex(0);
+			This->ClassComboBox->ClearOptions();
+			for (const FString& Class : This->Classes)
+			{
+				This->ClassComboBox->AddOption(Class);
+			}
+			if (!This->Classes.IsEmpty())
+			{
+				This->ClassComboBox->SetSelectedIndex(0);
+			}
 		}
 		This->UpdateForm();
 	});
@@ -99,12 +116,12 @@ void UVaesenCreateCharacterWidget::LoadClasses()
 
 FString UVaesenCreateCharacterWidget::GetFirstName() const
 {
-	return FirstNameTextBox->GetText().ToString().TrimStartAndEnd();
+	return FirstNameTextBox ? FirstNameTextBox->GetText().ToString().TrimStartAndEnd() : FString();
 }
 
 FString UVaesenCreateCharacterWidget::GetLastName() const
 {
-	return LastNameTextBox->GetText().ToString().TrimStartAndEnd();
+	return LastNameTextBox ? LastNameTextBox->GetText().ToString().TrimStartAndEnd() : FString();
 }
 
 FString UVaesenCreateCharacterWidget::GetCharacterName() const
@@ -120,24 +137,35 @@ void UVaesenCreateCharacterWidget::HandleNameChanged(const FText& Text)
 
 void UVaesenCreateCharacterWidget::UpdateForm()
 {
-	CharacterNameText->SetText(FText::FromString(GetCharacterName()));
+	if (CharacterNameText)
+	{
+		CharacterNameText->SetText(FText::FromString(GetCharacterName()));
+	}
 
-	const bool bValid = !GetFirstName().IsEmpty() && !GetLastName().IsEmpty() && !ClassComboBox->GetSelectedOption().IsEmpty();
-	CreateButton->SetIsEnabled(!bBusy && bValid);
-	RandomizeButton->SetIsEnabled(!bBusy);
-	FirstNameTextBox->SetIsEnabled(!bBusy);
-	LastNameTextBox->SetIsEnabled(!bBusy);
-	ClassComboBox->SetIsEnabled(!bBusy);
+	// Class is only required when there's a class picker (it's optional in the API).
+	const bool bClassChosen = !ClassComboBox || !ClassComboBox->GetSelectedOption().IsEmpty();
+	const bool bValid = !GetFirstName().IsEmpty() && !GetLastName().IsEmpty() && bClassChosen;
+	for (UWidget* Widget : TArray<UWidget*>{ RandomizeButton, FirstNameTextBox, LastNameTextBox, ClassComboBox })
+	{
+		if (Widget)
+		{
+			Widget->SetIsEnabled(!bBusy);
+		}
+	}
+	if (CreateButton)
+	{
+		CreateButton->SetIsEnabled(!bBusy && bValid);
+	}
 }
 
 void UVaesenCreateCharacterWidget::HandleRandomizeClicked()
 {
 	const UVaesenSettings* Settings = UVaesenSettings::Get();
-	if (!Settings->RandomFirstNames.IsEmpty())
+	if (FirstNameTextBox && !Settings->RandomFirstNames.IsEmpty())
 	{
 		FirstNameTextBox->SetText(FText::FromString(Settings->RandomFirstNames[FMath::RandRange(0, Settings->RandomFirstNames.Num() - 1)]));
 	}
-	if (!Settings->RandomLastNames.IsEmpty())
+	if (LastNameTextBox && !Settings->RandomLastNames.IsEmpty())
 	{
 		LastNameTextBox->SetText(FText::FromString(Settings->RandomLastNames[FMath::RandRange(0, Settings->RandomLastNames.Num() - 1)]));
 	}
@@ -162,7 +190,7 @@ void UVaesenCreateCharacterWidget::HandleCreateClicked()
 	}
 
 	const FString CharacterName = GetCharacterName();
-	const FString Class = ClassComboBox->GetSelectedOption();
+	const FString Class = ClassComboBox ? ClassComboBox->GetSelectedOption() : FString();
 	const int32 ThisAttempt = Attempt;
 	SetBusy(true);
 	SetStatus(LOCTEXT("Checking", "Checking the name..."));

@@ -15,13 +15,15 @@ class UVaesenLoginProgressWidget;
  * on success the Character Select map opens, Cancel returns to the form.
  * The login itself is fake for now (see UVaesenApiSubsystem::Login).
  *
- * Widget Blueprint (e.g. WBP_Login, parent class VaesenLoginWidget) must contain, by these exact names:
+ * Widget Blueprint (e.g. WBP_Login, parent class VaesenLoginWidget) controls by these exact names:
  *   UsernameTextBox  (Text Box)
  *   PasswordTextBox  (Text Box, "Is Password" ticked)
  *   LoginButton      (Button)
  *   LoginProgress    (WBP_LoginProgress, a VaesenLoginProgressWidget) - hidden until Login is pressed
  *   StatusText       (Text) - optional
  * Pressing Enter in the password box logs in. The last username is remembered on this machine.
+ *
+ * TEMPORARY: all bindings are BindWidgetOptional while the UI is being built; make them BindWidget when it's done.
  */
 UCLASS(Abstract)
 class VAESENGAME_API UVaesenLoginWidget : public UUserWidget
@@ -32,16 +34,16 @@ protected:
 	virtual void NativeOnInitialized() override;
 	virtual void NativeConstruct() override;
 
-	UPROPERTY(meta = (BindWidget))
+	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UEditableTextBox> UsernameTextBox;
 
-	UPROPERTY(meta = (BindWidget))
+	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UEditableTextBox> PasswordTextBox;
 
-	UPROPERTY(meta = (BindWidget))
+	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UButton> LoginButton;
 
-	UPROPERTY(meta = (BindWidget))
+	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UVaesenLoginProgressWidget> LoginProgress;
 
 	UPROPERTY(meta = (BindWidgetOptional))

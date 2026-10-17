@@ -260,6 +260,35 @@ void UVaesenApiSubsystem::GetMyGuilds(FGuildsCallback OnComplete)
 	Request->ProcessRequest();
 }
 
+void UVaesenApiSubsystem::CreateGuild(const FString& Name, FGuildCallback OnComplete)
+{
+	const FString AccountId = GetSession()->GetAccount().Id;
+	if (AccountId.IsEmpty())
+	{
+		OnComplete(false, FVaesenGuild(), TEXT("Log in first."));
+		return;
+	}
+
+	const TSharedRef<FJsonObject> Body = MakeShared<FJsonObject>();
+	Body->SetStringField(TEXT("name"), Name);
+	Body->SetStringField(TEXT("createdByAccountId"), AccountId);
+
+	const auto Request = CreateRequest(TEXT("POST"), TEXT("/api/guilds"));
+	Request->SetContentAsString(VaesenApiEnvelope::ToJson(Body));
+	Request->OnProcessRequestComplete().BindWeakLambda(this,
+		[OnComplete = MoveTemp(OnComplete)](FHttpRequestPtr Req, FHttpResponsePtr Response, bool bConnected)
+		{
+			FVaesenGuild Guild;
+			FString Error = GetError(Req, Response, bConnected);
+			if (Error.IsEmpty())
+			{
+				VaesenApiEnvelope::ReadObject(Response->GetContentAsString(), Guild, Error);
+			}
+			OnComplete(Error.IsEmpty(), Guild, Error);
+		});
+	Request->ProcessRequest();
+}
+
 void UVaesenApiSubsystem::GetGuildCharacters(const FString& GuildId, FCharactersCallback OnComplete)
 {
 	const auto Request = CreateRequest(TEXT("GET"), FString::Printf(TEXT("/api/guilds/%s/characters"), *FGenericPlatformHttp::UrlEncode(GuildId)));

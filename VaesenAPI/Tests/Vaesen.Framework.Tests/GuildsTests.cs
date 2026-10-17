@@ -55,6 +55,7 @@ public sealed class GuildsTests : IAsyncLifetime
         Assert.True(ObjectCore.IsValidId<Guild>(guild.Id));
         Assert.Equal("The Society of Upsala", guild.Name);
         Assert.Equal(founder.Id, guild.CreatedBy);
+        Assert.Equal(founder.Id, guild.GuildMasterAccountId);
         Assert.Equal([founder.Id], guild.MemberAccountIds);
         Assert.Equal([guild.Id], (await GetAccountAsync(founder.Id)).GuildIds);
     }
@@ -240,6 +241,19 @@ public sealed class GuildsTests : IAsyncLifetime
         Assert.Null(updated.GetPlayerOf(character.Id));
         Assert.Empty((await GetAccountAsync(member.Id)).GuildIds);
         Assert.Equal([character.Id], updated.CharacterIds); // The character stays with the guild.
+    }
+
+    [Fact]
+    public async Task RemoveMember_GuildMaster_IsRefused()
+    {
+        var founder = await CreateAccountAsync("Ingrid");
+        var guild = await CreateGuildAsync("Lantern Watch", founder);
+
+        var response = await _client.DeleteAsync($"{Guilds}/{guild.Id}/members/{founder.Id}");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(GuildService.GuildMasterCannotLeave, (await response.ReadResultAsync<Guild>()).ErrorCode);
+        Assert.Equal([founder.Id], (await GetGuildAsync(guild.Id)).MemberAccountIds);
     }
 
     [Fact]

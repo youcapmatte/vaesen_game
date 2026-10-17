@@ -11,10 +11,12 @@ class UTextBlock;
  * Modal box shown over the login screen while logging in: one status line ("Authenticating...") that each new
  * message replaces, and a Cancel button. Errors are shown in the same line.
  *
- * Widget Blueprint (e.g. WBP_LoginProgress, parent class VaesenLoginProgressWidget) must contain, by these exact names:
+ * Widget Blueprint (e.g. WBP_LoginProgress, parent class VaesenLoginProgressWidget) controls by these exact names:
  *   MessageText   (Text)
  *   CancelButton  (Button)
  * Place it inside WBP_Login named "LoginProgress"; it starts hidden.
+ *
+ * TEMPORARY: all bindings are BindWidgetOptional while the UI is being built; make them BindWidget when it's done.
  */
 UCLASS(Abstract)
 class VAESENGAME_API UVaesenLoginProgressWidget : public UUserWidget
@@ -30,10 +32,10 @@ public:
 protected:
 	virtual void NativeOnInitialized() override;
 
-	UPROPERTY(meta = (BindWidget))
+	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UTextBlock> MessageText;
 
-	UPROPERTY(meta = (BindWidget))
+	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UButton> CancelButton;
 
 private:

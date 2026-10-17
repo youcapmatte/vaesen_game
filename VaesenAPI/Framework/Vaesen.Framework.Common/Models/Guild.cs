@@ -14,6 +14,10 @@ public sealed class Guild : BaseCore
     [JsonProperty("name")]
     public string Name { get; set; } = "";
 
+    /// <summary>The account that leads the guild: whoever created it. Always a member.</summary>
+    [JsonProperty("guildMasterAccountId")]
+    public string GuildMasterAccountId { get; set; } = "";
+
     /// <summary>Accounts that are members. Mirrors each member's <see cref="Account.GuildIds"/>.</summary>
     [JsonProperty("memberAccountIds")]
     public List<string> MemberAccountIds { get; set; } = [];
@@ -30,6 +34,8 @@ public sealed class Guild : BaseCore
     public List<CharacterAssignment> CharacterAssignments { get; set; } = [];
 
     public bool IsMember(string accountId) => MemberAccountIds.Contains(accountId, StringComparer.Ordinal);
+
+    public bool IsGuildMaster(string accountId) => string.Equals(GuildMasterAccountId, accountId, StringComparison.Ordinal);
 
     public bool OwnsCharacter(string characterId) => CharacterIds.Contains(characterId, StringComparer.Ordinal);
 
@@ -60,7 +66,7 @@ public sealed class CreateGuildRequest
     [JsonProperty("name")]
     public string? Name { get; set; }
 
-    /// <summary>The founding account; becomes the first member.</summary>
+    /// <summary>The founding account; becomes the first member and the guild master.</summary>
     [JsonProperty("createdByAccountId")]
     public string? CreatedByAccountId { get; set; }
 }

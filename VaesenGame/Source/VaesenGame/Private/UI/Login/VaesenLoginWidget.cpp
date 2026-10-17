@@ -24,13 +24,16 @@ void UVaesenLoginWidget::NativeOnInitialized()
 	// Normally caught by the Widget Blueprint compiler; guards against a stale or broken Blueprint.
 	if (!HasRequiredWidgets())
 	{
-		UE_LOG(LogVaesenApi, Error, TEXT("%s is missing UsernameTextBox, PasswordTextBox, LoginButton or LoginProgress."), *GetClass()->GetName());
+		UE_LOG(LogVaesenApi, Warning, TEXT("%s needs UsernameTextBox, PasswordTextBox and LoginButton to log in."), *GetClass()->GetName());
 		return;
 	}
 
 	LoginButton->OnClicked.AddDynamic(this, &UVaesenLoginWidget::HandleLoginClicked);
 	PasswordTextBox->OnTextCommitted.AddDynamic(this, &UVaesenLoginWidget::HandlePasswordCommitted);
-	LoginProgress->OnCancel.AddUObject(this, &UVaesenLoginWidget::HandleLoginCancelled);
+	if (LoginProgress)
+	{
+		LoginProgress->OnCancel.AddUObject(this, &UVaesenLoginWidget::HandleLoginCancelled);
+	}
 }
 
 void UVaesenLoginWidget::NativeConstruct()
@@ -45,7 +48,10 @@ void UVaesenLoginWidget::NativeConstruct()
 	GConfig->GetString(VaesenLogin::ConfigSection, VaesenLogin::LastUsernameKey, LastUsername, GGameUserSettingsIni);
 	UsernameTextBox->SetText(FText::FromString(LastUsername));
 	PasswordTextBox->SetText(FText::GetEmpty());
-	LoginProgress->SetVisibility(ESlateVisibility::Collapsed);
+	if (LoginProgress)
+	{
+		LoginProgress->SetVisibility(ESlateVisibility::Collapsed);
+	}
 	SetStatus(FText::GetEmpty());
 
 	// Start typing where it's needed.
@@ -61,7 +67,7 @@ void UVaesenLoginWidget::NativeConstruct()
 
 bool UVaesenLoginWidget::HasRequiredWidgets() const
 {
-	return UsernameTextBox && PasswordTextBox && LoginButton && LoginProgress;
+	return UsernameTextBox && PasswordTextBox && LoginButton;
 }
 
 void UVaesenLoginWidget::HandlePasswordCommitted(const FText& Text, ETextCommit::Type CommitMethod)
@@ -92,8 +98,11 @@ void UVaesenLoginWidget::HandleLoginClicked()
 	bLoggingIn = true;
 	SetFormEnabled(false);
 	SetStatus(FText::GetEmpty());
-	LoginProgress->SetMessage(FText::GetEmpty());
-	LoginProgress->SetVisibility(ESlateVisibility::Visible);
+	if (LoginProgress)
+	{
+		LoginProgress->SetMessage(FText::GetEmpty());
+		LoginProgress->SetVisibility(ESlateVisibility::Visible);
+	}
 
 	const TWeakObjectPtr<UVaesenLoginWidget> WeakThis(this);
 	Api->Login(Username, Password,
@@ -101,7 +110,14 @@ void UVaesenLoginWidget::HandleLoginClicked()
 		{
 			if (UVaesenLoginWidget* This = WeakThis.Get())
 			{
-				This->LoginProgress->SetMessage(Message);
+				if (This->LoginProgress)
+				{
+					This->LoginProgress->SetMessage(Message);
+				}
+				else
+				{
+					This->SetStatus(Message);
+				}
 			}
 		},
 		[WeakThis, Username](bool bSuccess, const FString& Error)
@@ -121,7 +137,16 @@ void UVaesenLoginWidget::HandleLoginClicked()
 			}
 
 			// Keep the box up with the error; Cancel returns to the form.
-			This->LoginProgress->SetMessage(FText::FromString(Error));
+			if (This->LoginProgress)
+			{
+				This->LoginProgress->SetMessage(FText::FromString(Error));
+			}
+			else
+			{
+				// Without the progress box there's no Cancel: show the error and give the form back.
+				This->SetStatus(FText::FromString(Error));
+				This->HandleLoginCancelled();
+			}
 		});
 }
 
@@ -133,7 +158,10 @@ void UVaesenLoginWidget::HandleLoginCancelled()
 	}
 
 	bLoggingIn = false;
-	LoginProgress->SetVisibility(ESlateVisibility::Collapsed);
+	if (LoginProgress)
+	{
+		LoginProgress->SetVisibility(ESlateVisibility::Collapsed);
+	}
 	SetFormEnabled(true);
 	PasswordTextBox->SetKeyboardFocus();
 }

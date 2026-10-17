@@ -7,58 +7,110 @@
 #include "Misc/ConfigCacheIni.h"
 #include "Online/VaesenApiSubsystem.h"
 #include "UI/CharacterSelect/VaesenCreateCharacterWidget.h"
+#include "UI/Guild/VaesenCreateGuildWidget.h"
+#include "UI/Guild/VaesenPickGuildWidget.h"
 
 #define LOCTEXT_NAMESPACE "VaesenCharacterSelect"
 
 namespace VaesenCharacterSelect
 {
-	/** Last choice is kept in the per-user GameUserSettings.ini so restarts start where you left off. */
+	/** Last choice is kept in the per-user GameUserSettings.ini so the screen opens where you left off. */
 	const TCHAR* ConfigSection = TEXT("Vaesen.CharacterSelect");
 	const TCHAR* LastGuildKey = TEXT("LastGuildId");
 	const TCHAR* LastCharacterKey = TEXT("LastCharacterId");
+
+	FString Remembered(const TCHAR* Key)
+	{
+		FString Value;
+		GConfig->GetString(ConfigSection, Key, Value, GGameUserSettingsIni);
+		return Value;
+	}
+
+	void Remember(const TCHAR* Key, const FString& Value)
+	{
+		GConfig->SetString(ConfigSection, Key, *Value, GGameUserSettingsIni);
+		GConfig->Flush(false, GGameUserSettingsIni);
+	}
+
+	void SetEnabled(UWidget* Widget, bool bEnabled)
+	{
+		if (Widget)
+		{
+			Widget->SetIsEnabled(bEnabled);
+		}
+	}
+
+	bool IsShown(const UWidget* Widget)
+	{
+		return Widget && Widget->GetVisibility() == ESlateVisibility::Visible;
+	}
 }
 
 void UVaesenCharacterSelectWidget::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
 
-	// Normally caught by the Widget Blueprint compiler; guards against a stale or broken Blueprint.
-	if (!HasRequiredWidgets())
+	if (ChangeGuildButton)
 	{
-		UE_LOG(LogVaesenApi, Error, TEXT("%s is missing one of its required widgets (see VaesenCharacterSelectWidget.h)."), *GetClass()->GetName());
-		return;
+		ChangeGuildButton->OnClicked.AddDynamic(this, &UVaesenCharacterSelectWidget::HandleChangeGuildClicked);
 	}
-
-	GuildComboBox->OnSelectionChanged.AddDynamic(this, &UVaesenCharacterSelectWidget::HandleGuildSelected);
-	PlayerComboBox->OnSelectionChanged.AddDynamic(this, &UVaesenCharacterSelectWidget::HandleCharacterSelected);
-	PlayButton->OnClicked.AddDynamic(this, &UVaesenCharacterSelectWidget::HandlePlayClicked);
-	CreateCharacterButton->OnClicked.AddDynamic(this, &UVaesenCharacterSelectWidget::HandleCreateCharacterClicked);
-	CreateCharacterDialog->OnCharacterCreated.AddUObject(this, &UVaesenCharacterSelectWidget::HandleCharacterCreated);
-	CreateCharacterDialog->OnCancelled.AddUObject(this, &UVaesenCharacterSelectWidget::HandleCreateCancelled);
+	if (CreateGuildButton)
+	{
+		CreateGuildButton->OnClicked.AddDynamic(this, &UVaesenCharacterSelectWidget::HandleCreateGuildClicked);
+	}
+	if (PlayerComboBox)
+	{
+		PlayerComboBox->OnSelectionChanged.AddDynamic(this, &UVaesenCharacterSelectWidget::HandleCharacterSelected);
+	}
+	if (PlayButton)
+	{
+		PlayButton->OnClicked.AddDynamic(this, &UVaesenCharacterSelectWidget::HandlePlayClicked);
+	}
+	if (CreateCharacterButton)
+	{
+		CreateCharacterButton->OnClicked.AddDynamic(this, &UVaesenCharacterSelectWidget::HandleCreateCharacterClicked);
+	}
+	if (PickGuildDialog)
+	{
+		PickGuildDialog->OnGuildPicked.AddUObject(this, &UVaesenCharacterSelectWidget::HandleGuildPicked);
+		PickGuildDialog->OnCancelled.AddUObject(this, &UVaesenCharacterSelectWidget::HandleDialogClosed);
+	}
+	if (CreateGuildDialog)
+	{
+		CreateGuildDialog->OnGuildCreated.AddUObject(this, &UVaesenCharacterSelectWidget::HandleGuildCreated);
+		CreateGuildDialog->OnCancelled.AddUObject(this, &UVaesenCharacterSelectWidget::HandleDialogClosed);
+	}
+	if (CreateCharacterDialog)
+	{
+		CreateCharacterDialog->OnCharacterCreated.AddUObject(this, &UVaesenCharacterSelectWidget::HandleCharacterCreated);
+		CreateCharacterDialog->OnCancelled.AddUObject(this, &UVaesenCharacterSelectWidget::HandleDialogClosed);
+	}
 }
 
 void UVaesenCharacterSelectWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
-	if (HasRequiredWidgets())
+
+	if (PickGuildDialog)
+	{
+		PickGuildDialog->Close();
+	}
+	if (CreateGuildDialog)
+	{
+		CreateGuildDialog->Close();
+	}
+	if (CreateCharacterDialog)
 	{
 		CreateCharacterDialog->Close();
-		LoadGuilds();
 	}
+
+	LoadGuilds(FString());
 }
 
-bool UVaesenCharacterSelectWidget::HasRequiredWidgets() const
-{
-	return GuildComboBox && PlayerComboBox && PlayButton && CreateCharacterButton && CreateCharacterDialog;
-}
-
-void UVaesenCharacterSelectWidget::LoadGuilds()
+void UVaesenCharacterSelectWidget::LoadGuilds(const FString& GuildIdToSelect)
 {
 	Guilds.Reset();
-	Characters.Reset();
-	bCharactersLoaded = false;
-	GuildComboBox->ClearOptions();
-	PlayerComboBox->ClearOptions();
+	bGuildsLoaded = false;
 	UpdateButtons();
 
 	UVaesenApiSubsystem* Api = GetGameInstance()->GetSubsystem<UVaesenApiSubsystem>();
@@ -70,7 +122,7 @@ void UVaesenCharacterSelectWidget::LoadGuilds()
 	}
 
 	SetStatus(LOCTEXT("LoadingGuilds", "Loading your guilds..."));
-	Api->GetMyGuilds([WeakThis = TWeakObjectPtr<UVaesenCharacterSelectWidget>(this)](bool bSuccess, const TArray<FVaesenGuild>& LoadedGuilds, const FString& Error)
+	Api->GetMyGuilds([WeakThis = TWeakObjectPtr<UVaesenCharacterSelectWidget>(this), GuildIdToSelect](bool bSuccess, const TArray<FVaesenGuild>& LoadedGuilds, const FString& Error)
 	{
 		UVaesenCharacterSelectWidget* This = WeakThis.Get();
 		if (!This)
@@ -85,68 +137,68 @@ void UVaesenCharacterSelectWidget::LoadGuilds()
 		}
 
 		This->Guilds = LoadedGuilds;
+		This->bGuildsLoaded = true;
 		if (This->Guilds.IsEmpty())
 		{
-			This->SetStatus(LOCTEXT("NoGuilds", "You aren't a member of any guild yet."));
+			This->SelectedGuildId.Reset();
+			This->Characters.Reset();
+			This->bCharactersLoaded = false;
+			if (This->GuildNameText)
+			{
+				This->GuildNameText->SetText(FText::GetEmpty());
+			}
+			This->SetStatus(LOCTEXT("NoGuilds", "You aren't a member of any guild yet. Create one."));
+			This->UpdateButtons();
 			return;
 		}
 
-		This->SetStatus(FText::GetEmpty());
-
-		FString LastGuildId;
-		FString LastCharacterId;
-		GConfig->GetString(VaesenCharacterSelect::ConfigSection, VaesenCharacterSelect::LastGuildKey, LastGuildId, GGameUserSettingsIni);
-		GConfig->GetString(VaesenCharacterSelect::ConfigSection, VaesenCharacterSelect::LastCharacterKey, LastCharacterId, GGameUserSettingsIni);
-
-		int32 GuildIndexToSelect = 0;
-		for (int32 Index = 0; Index < This->Guilds.Num(); ++Index)
-		{
-			This->GuildComboBox->AddOption(This->Guilds[Index].Name);
-			if (This->Guilds[Index].Id == LastGuildId)
-			{
-				GuildIndexToSelect = Index;
-			}
-		}
-
-		// Selecting directly (ignored by HandleGuildSelected) so the remembered character can be restored.
-		This->GuildComboBox->SetSelectedIndex(GuildIndexToSelect);
-		This->LoadCharacters(LastCharacterId);
+		// The requested guild, else the one used last on this machine, else the first.
+		const FString Wanted = GuildIdToSelect.IsEmpty() ? VaesenCharacterSelect::Remembered(VaesenCharacterSelect::LastGuildKey) : GuildIdToSelect;
+		const FVaesenGuild* Guild = This->Guilds.FindByPredicate([&Wanted](const FVaesenGuild& G) { return G.Id == Wanted; });
+		This->SelectGuild(Guild ? *Guild : This->Guilds[0], VaesenCharacterSelect::Remembered(VaesenCharacterSelect::LastCharacterKey));
 	});
 }
 
-void UVaesenCharacterSelectWidget::HandleGuildSelected(FString SelectedItem, ESelectInfo::Type SelectionType)
+void UVaesenCharacterSelectWidget::SelectGuild(const FVaesenGuild& Guild, const FString& CharacterIdToSelect)
 {
-	if (SelectionType != ESelectInfo::Direct)
+	SelectedGuildId = Guild.Id;
+	VaesenCharacterSelect::Remember(VaesenCharacterSelect::LastGuildKey, Guild.Id);
+
+	if (GuildNameText)
 	{
-		LoadCharacters(FString());
+		GuildNameText->SetText(FText::FromString(Guild.Name));
 	}
+
+	if (UVaesenSessionSubsystem* Session = GetGameInstance()->GetSubsystem<UVaesenSessionSubsystem>())
+	{
+		FVaesenGuildRef SelectedGuild;
+		SelectedGuild.Id = Guild.Id;
+		SelectedGuild.Name = Guild.Name;
+		Session->SetSelectedGuild(SelectedGuild);
+	}
+
+	LoadCharacters(CharacterIdToSelect);
 }
 
 void UVaesenCharacterSelectWidget::LoadCharacters(const FString& CharacterIdToSelect)
 {
 	Characters.Reset();
 	bCharactersLoaded = false;
-	PlayerComboBox->ClearOptions();
+	if (PlayerComboBox)
+	{
+		PlayerComboBox->ClearOptions();
+	}
 	UpdateButtons();
 
-	const FVaesenGuild* Guild = GetSelectedGuild();
 	UVaesenApiSubsystem* Api = GetGameInstance()->GetSubsystem<UVaesenApiSubsystem>();
-	if (!Guild || !Api)
+	if (SelectedGuildId.IsEmpty() || !Api)
 	{
 		return;
 	}
 
-	if (UVaesenSessionSubsystem* Session = GetGameInstance()->GetSubsystem<UVaesenSessionSubsystem>())
-	{
-		FVaesenGuildRef SelectedGuild;
-		SelectedGuild.Id = Guild->Id;
-		SelectedGuild.Name = Guild->Name;
-		Session->SetSelectedGuild(SelectedGuild);
-	}
-
 	const int32 ThisLoad = ++CharacterLoad;
 	SetStatus(LOCTEXT("LoadingCharacters", "Loading characters..."));
-	Api->GetGuildCharacters(Guild->Id,
+	Api->GetGuildCharacters(SelectedGuildId,
 		[WeakThis = TWeakObjectPtr<UVaesenCharacterSelectWidget>(this), ThisLoad, CharacterIdToSelect](bool bSuccess, const TArray<FVaesenCharacter>& LoadedCharacters, const FString& Error)
 		{
 			UVaesenCharacterSelectWidget* This = WeakThis.Get();
@@ -167,18 +219,21 @@ void UVaesenCharacterSelectWidget::LoadCharacters(const FString& CharacterIdToSe
 				? LOCTEXT("NoCharacters", "This guild has no characters yet. Create one.")
 				: FText::GetEmpty());
 
-			int32 IndexToSelect = 0;
-			for (int32 Index = 0; Index < This->Characters.Num(); ++Index)
+			if (This->PlayerComboBox)
 			{
-				This->PlayerComboBox->AddOption(This->Characters[Index].Name);
-				if (This->Characters[Index].Id == CharacterIdToSelect)
+				int32 IndexToSelect = 0;
+				for (int32 Index = 0; Index < This->Characters.Num(); ++Index)
 				{
-					IndexToSelect = Index;
+					This->PlayerComboBox->AddOption(This->Characters[Index].Name);
+					if (This->Characters[Index].Id == CharacterIdToSelect)
+					{
+						IndexToSelect = Index;
+					}
 				}
-			}
-			if (!This->Characters.IsEmpty())
-			{
-				This->PlayerComboBox->SetSelectedIndex(IndexToSelect);
+				if (!This->Characters.IsEmpty())
+				{
+					This->PlayerComboBox->SetSelectedIndex(IndexToSelect);
+				}
 			}
 
 			This->UpdateButtons();
@@ -187,25 +242,75 @@ void UVaesenCharacterSelectWidget::LoadCharacters(const FString& CharacterIdToSe
 
 void UVaesenCharacterSelectWidget::HandleCharacterSelected(FString SelectedItem, ESelectInfo::Type SelectionType)
 {
+	if (const FVaesenCharacter* Character = GetSelectedCharacter(); Character && SelectionType != ESelectInfo::Direct)
+	{
+		VaesenCharacterSelect::Remember(VaesenCharacterSelect::LastCharacterKey, Character->Id);
+	}
 	UpdateButtons();
+}
+
+void UVaesenCharacterSelectWidget::HandleChangeGuildClicked()
+{
+	if (!PickGuildDialog)
+	{
+		UE_LOG(LogVaesenApi, Warning, TEXT("%s has no PickGuildDialog."), *GetClass()->GetName());
+		return;
+	}
+
+	PickGuildDialog->Open(Guilds, SelectedGuildId);
+	UpdateButtons();
+}
+
+void UVaesenCharacterSelectWidget::HandleGuildPicked(const FVaesenGuild& Guild)
+{
+	if (Guild.Id != SelectedGuildId)
+	{
+		SelectGuild(Guild, FString());
+	}
+	UpdateButtons();
+}
+
+void UVaesenCharacterSelectWidget::HandleCreateGuildClicked()
+{
+	if (!CreateGuildDialog)
+	{
+		UE_LOG(LogVaesenApi, Warning, TEXT("%s has no CreateGuildDialog."), *GetClass()->GetName());
+		return;
+	}
+
+	CreateGuildDialog->Open();
+	UpdateButtons();
+}
+
+void UVaesenCharacterSelectWidget::HandleGuildCreated(const FVaesenGuild& Guild)
+{
+	SetStatus(FText::Format(LOCTEXT("GuildCreated", "{0} is founded. You are its guild master."), FText::FromString(Guild.Name)));
+	LoadGuilds(Guild.Id);
 }
 
 void UVaesenCharacterSelectWidget::HandleCreateCharacterClicked()
 {
-	if (const FVaesenGuild* Guild = GetSelectedGuild(); Guild && bCharactersLoaded)
+	if (!CreateCharacterDialog)
 	{
-		CreateCharacterDialog->Open(Guild->Id);
+		UE_LOG(LogVaesenApi, Warning, TEXT("%s has no CreateCharacterDialog."), *GetClass()->GetName());
+		return;
+	}
+
+	if (!SelectedGuildId.IsEmpty() && bCharactersLoaded)
+	{
+		CreateCharacterDialog->Open(SelectedGuildId);
 		UpdateButtons();
 	}
 }
 
 void UVaesenCharacterSelectWidget::HandleCharacterCreated(const FVaesenCharacter& Character)
 {
-	SetStatus(FText::Format(LOCTEXT("Created", "{0} has joined the guild."), FText::FromString(Character.Name)));
+	SetStatus(FText::Format(LOCTEXT("CharacterCreated", "{0} has joined the guild."), FText::FromString(Character.Name)));
+	VaesenCharacterSelect::Remember(VaesenCharacterSelect::LastCharacterKey, Character.Id);
 	LoadCharacters(Character.Id);
 }
 
-void UVaesenCharacterSelectWidget::HandleCreateCancelled()
+void UVaesenCharacterSelectWidget::HandleDialogClosed()
 {
 	UpdateButtons();
 }
@@ -219,7 +324,7 @@ void UVaesenCharacterSelectWidget::HandlePlayClicked()
 		return;
 	}
 
-	RememberSelection();
+	VaesenCharacterSelect::Remember(VaesenCharacterSelect::LastCharacterKey, Character->Id);
 	bBusy = true;
 	UpdateButtons();
 	SetStatus(FText::Format(LOCTEXT("Preparing", "Preparing {0}..."), FText::FromString(Character->Name)));
@@ -245,35 +350,30 @@ void UVaesenCharacterSelectWidget::HandlePlayClicked()
 
 const FVaesenGuild* UVaesenCharacterSelectWidget::GetSelectedGuild() const
 {
-	const int32 Index = GuildComboBox->GetSelectedIndex();
-	return Guilds.IsValidIndex(Index) ? &Guilds[Index] : nullptr;
+	return Guilds.FindByPredicate([this](const FVaesenGuild& Guild) { return Guild.Id == SelectedGuildId; });
 }
 
 const FVaesenCharacter* UVaesenCharacterSelectWidget::GetSelectedCharacter() const
 {
-	const int32 Index = PlayerComboBox->GetSelectedIndex();
+	const int32 Index = PlayerComboBox ? PlayerComboBox->GetSelectedIndex() : 0;
 	return bCharactersLoaded && Characters.IsValidIndex(Index) ? &Characters[Index] : nullptr;
 }
 
-void UVaesenCharacterSelectWidget::RememberSelection() const
+bool UVaesenCharacterSelectWidget::IsDialogOpen() const
 {
-	const FVaesenGuild* Guild = GetSelectedGuild();
-	const FVaesenCharacter* Character = GetSelectedCharacter();
-	if (Guild && Character)
-	{
-		GConfig->SetString(VaesenCharacterSelect::ConfigSection, VaesenCharacterSelect::LastGuildKey, *Guild->Id, GGameUserSettingsIni);
-		GConfig->SetString(VaesenCharacterSelect::ConfigSection, VaesenCharacterSelect::LastCharacterKey, *Character->Id, GGameUserSettingsIni);
-		GConfig->Flush(false, GGameUserSettingsIni);
-	}
+	return VaesenCharacterSelect::IsShown(PickGuildDialog)
+		|| VaesenCharacterSelect::IsShown(CreateGuildDialog)
+		|| VaesenCharacterSelect::IsShown(CreateCharacterDialog);
 }
 
 void UVaesenCharacterSelectWidget::UpdateButtons()
 {
-	const bool bDialogOpen = CreateCharacterDialog->GetVisibility() == ESlateVisibility::Visible;
-	PlayButton->SetIsEnabled(!bBusy && !bDialogOpen && GetSelectedCharacter() != nullptr);
-	CreateCharacterButton->SetIsEnabled(!bBusy && !bDialogOpen && GetSelectedGuild() != nullptr && bCharactersLoaded);
-	GuildComboBox->SetIsEnabled(!bBusy && !bDialogOpen);
-	PlayerComboBox->SetIsEnabled(!bBusy && !bDialogOpen);
+	const bool bIdle = !bBusy && !IsDialogOpen();
+	VaesenCharacterSelect::SetEnabled(ChangeGuildButton, bIdle && bGuildsLoaded && !Guilds.IsEmpty());
+	VaesenCharacterSelect::SetEnabled(CreateGuildButton, bIdle && bGuildsLoaded);
+	VaesenCharacterSelect::SetEnabled(PlayerComboBox, bIdle && bCharactersLoaded);
+	VaesenCharacterSelect::SetEnabled(PlayButton, bIdle && GetSelectedCharacter() != nullptr);
+	VaesenCharacterSelect::SetEnabled(CreateCharacterButton, bIdle && GetSelectedGuild() != nullptr && bCharactersLoaded);
 }
 
 void UVaesenCharacterSelectWidget::SetStatus(const FText& Message)
