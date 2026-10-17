@@ -6,7 +6,8 @@
 
 /**
  * Base for the client-only menu maps (login, character select). These run standalone, never on a dedicated server,
- * so they don't derive from AVaesenGameModeBase and have no player-session gating. No pawn is spawned.
+ * so they don't derive from AVaesenGameModeBase and have no player-session gating.
+ * Spawns a plain APawn (no movement); input is UI-only, set by AVaesenFrontEndPlayerControllerBase.
  */
 UCLASS(Abstract)
 class VAESENGAME_API AVaesenFrontEndGameModeBase : public AGameModeBase

@@ -1,6 +1,9 @@
 #include "FrontEnd/VaesenFrontEndGameModeBase.h"
 
+#include "GameFramework/Pawn.h"
+
 AVaesenFrontEndGameModeBase::AVaesenFrontEndGameModeBase()
 {
-	DefaultPawnClass = nullptr;
+	// A bare pawn: something to possess and view from, with no movement or collision.
+	DefaultPawnClass = APawn::StaticClass();
 }
