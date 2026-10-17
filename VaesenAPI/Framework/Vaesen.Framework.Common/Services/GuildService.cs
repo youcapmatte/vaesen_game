@@ -170,9 +170,17 @@ public sealed partial class GuildService : IGuildService
     {
         var ret = new ResultBase<Character>();
         var name = (request?.Name ?? "").Trim();
-        if (!CharacterNamePattern().IsMatch(name))
+        var firstName = CharacterRules.Clean(request?.FirstName);
+        var lastName = CharacterRules.Clean(request?.LastName);
+        var characterClass = CharacterRules.Clean(request?.Class);
+        var invalid = CharacterRules.ValidateName(name)
+            ?? CharacterRules.ValidatePersonName(firstName, "First name")
+            ?? CharacterRules.ValidatePersonName(lastName, "Last name")
+            ?? CharacterRules.ValidateClass(characterClass)
+            ?? CharacterRules.ValidateHealthPoints(request?.HealthPoints);
+        if (invalid is not null)
         {
-            return ret.Fail("Character name must be 2-24 letters, optionally with single spaces, apostrophes or hyphens between them.", ErrorCodes.Invalid);
+            return ret.Fail(invalid, ErrorCodes.Invalid);
         }
 
         var (guild, creator, error) = await LoadGuildAndAccountAsync(guildId, request?.CreatedByAccountId, cancellationToken).ConfigureAwait(false);
@@ -190,6 +198,10 @@ public sealed partial class GuildService : IGuildService
         {
             GuildId = guild.Id,
             Name = name,
+            FirstName = firstName,
+            LastName = lastName,
+            Class = characterClass,
+            HealthPoints = request?.HealthPoints ?? Character.DefaultHealthPoints,
             CreatedBy = creator.Id,
             UpdatedBy = creator.Id,
         };
@@ -293,7 +305,4 @@ public sealed partial class GuildService : IGuildService
 
     [GeneratedRegex(@"^[\p{L}\p{N}' -]{3,32}$")]
     private static partial Regex GuildNamePattern();
-
-    [GeneratedRegex(@"^(?=.{2,24}$)\p{L}+(?:[ '-]\p{L}+)*$")]
-    private static partial Regex CharacterNamePattern();
 }

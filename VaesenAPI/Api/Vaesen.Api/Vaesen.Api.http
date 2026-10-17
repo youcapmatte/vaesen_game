@@ -37,7 +37,11 @@ POST {{Vaesen.Api_HostAddress}}/api/guilds/guild-00000000-0000-0000-0000-0000000
 Content-Type: application/json
 
 {
-  "name": "Astrid Falk",
+  "name": "Astrid",
+  "firstName": "Astrid",
+  "lastName": "Falk",
+  "class": "Occultist",
+  "healthPoints": 100,
   "createdByAccountId": "account-00000000-0000-0000-0000-000000000000"
 }
 
@@ -48,3 +52,18 @@ Content-Type: application/json
 {
   "accountId": "account-00000000-0000-0000-0000-000000000000"
 }
+
+### Get a character by name
+GET {{Vaesen.Api_HostAddress}}/api/characters/by-name/Astrid
+
+### Change a character (fields left out stay as they are; "" clears a text field)
+PATCH {{Vaesen.Api_HostAddress}}/api/characters/character-00000000-0000-0000-0000-000000000000
+Content-Type: application/json
+
+{
+  "class": "Doctor",
+  "healthPoints": 80
+}
+
+### Delete a character (leaves its guild, its player stops, the name becomes free)
+DELETE {{Vaesen.Api_HostAddress}}/api/characters/character-00000000-0000-0000-0000-000000000000

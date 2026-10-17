@@ -73,8 +73,22 @@ public sealed class GuildMemberRequest
 
 public sealed class CreateCharacterRequest
 {
+    /// <summary>The character name; unique across the game and can't be changed later.</summary>
     [JsonProperty("name")]
     public string? Name { get; set; }
+
+    [JsonProperty("firstName")]
+    public string? FirstName { get; set; }
+
+    [JsonProperty("lastName")]
+    public string? LastName { get; set; }
+
+    [JsonProperty("class")]
+    public string? Class { get; set; }
+
+    /// <summary>Starting health; <see cref="Character.DefaultHealthPoints"/> when left out.</summary>
+    [JsonProperty("healthPoints")]
+    public int? HealthPoints { get; set; }
 
     /// <summary>The member creating it (stored as createdBy). Must be a member of the guild.</summary>
     [JsonProperty("createdByAccountId")]

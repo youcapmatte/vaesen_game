@@ -200,6 +200,26 @@ public class BaseRepository<T> : IBaseRepository<T> where T : BaseCore
             reservation.ErrorCode);
     }
 
+    /// <summary>Frees a unique value (e.g. a deleted character's name), only if <paramref name="ownerId"/> still holds it.</summary>
+    public TransactWrite PrepareReservationRelease(Reservation reservation, string ownerId)
+    {
+        ArgumentNullException.ThrowIfNull(reservation);
+
+        return new TransactWrite(
+            new TransactWriteItem
+            {
+                Delete = new Delete
+                {
+                    TableName = TableName,
+                    Key = new Dictionary<string, AttributeValue> { ["PK"] = new(reservation.Key), ["SK"] = new(reservation.Kind) },
+                    ConditionExpression = $"{Reservation.OwnerAttribute} = :owner",
+                    ExpressionAttributeValues = new Dictionary<string, AttributeValue> { [":owner"] = new(ownerId) },
+                },
+            },
+            "The reservation is held by someone else.",
+            ErrorCodes.Conflict);
+    }
+
     /// <summary>
     /// Stores a new item together with reservations of its unique values (e.g. a username), all or nothing.
     /// On a clash the result fails with the reservation's error code and <see cref="ResultBase{T}.Result"/> is null.

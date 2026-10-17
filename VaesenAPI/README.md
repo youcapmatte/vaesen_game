@@ -14,7 +14,7 @@ Framework/
     Api/                      ToActionResult (ResultBase -> HTTP status), [DevelopmentOnly]
     Services/                 CoreServiceExtensions.AddCoreServices
   Vaesen.Framework.Common/    Accounts, guilds, characters, billing, dev login
-    Models/ Repositorys/ Services/ Api/ (AccountController, GuildController, IdentityController, DevController)
+    Models/ Repositorys/ Services/ Api/ (AccountController, GuildController, CharacterController, IdentityController, DevController)
     Services/CommonServiceExtensions.AddCommonServices (+ AddDevServices in Development)
   Vaesen.Framework.GameLift/  Worlds and joining them via GameLift
     Models/ Services/ Api/ (SessionController)

@@ -33,6 +33,12 @@ public interface IGuildStore
     /// character to. Fails with <see cref="CharacterRepository.NameTaken"/> or <see cref="ErrorCodes.Conflict"/>.
     /// </summary>
     Task<ResultBase> CreateCharacterAsync(Guild guild, Character character, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Deletes the character (soft delete) and frees its name, saving the guild, which the caller has already removed
+    /// the character from. Fails with <see cref="ErrorCodes.Conflict"/> if either changed in the meantime.
+    /// </summary>
+    Task<ResultBase> DeleteCharacterAsync(Guild guild, Character character, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
@@ -104,4 +110,15 @@ public sealed class GuildRepository : BaseRepository<Guild>, IGuildStore
             _characters.PrepareReservation(CharacterRepository.NameReservation(character.Name), character.Id),
             PrepareUpdate(guild),
         ], cancellationToken);
+
+    public Task<ResultBase> DeleteCharacterAsync(Guild guild, Character character, CancellationToken cancellationToken = default)
+    {
+        character.IsDeleted = true;
+        return DataTransaction.ExecuteAsync(DynamoDb,
+        [
+            _characters.PrepareUpdate(character),
+            _characters.PrepareReservationRelease(CharacterRepository.NameReservation(character.Name), character.Id),
+            PrepareUpdate(guild),
+        ], cancellationToken);
+    }
 }

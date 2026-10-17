@@ -51,7 +51,7 @@ DynamoDB is a key-value / document database. Everything you need to know to use 
 | G2 | Find a guild by name (case-insensitive) | `GetItem PK=GUILDNAME#{lowercase}, SK=GUILDNAME` -> `OwnerId` -> G1 |
 | C1 | Get a character | `GetItem PK={characterId}, SK=ITEM` |
 | C2 | List a guild's characters | `Query GSI1 GSI1PK=GUILD#{guildId}, GSI1SK begins_with CHAR#` (or G1 -> `characterIds` -> `BatchGetItem`) |
-| C3 | Is a character name free? | `GetItem PK=CHARNAME#{lowercase name}, SK=CHARNAME` |
+| C3 | Is a character name free? / find a character by name | `GetItem PK=CHARNAME#{lowercase name}, SK=CHARNAME` -> `OwnerId` -> C1 |
 
 ### Keys
 
@@ -67,7 +67,7 @@ Every model is stored by the generic `BaseRepository<T>` as **its JSON document*
 |---|---|---|---|---|---|
 | Model (Account, Character, ...) | `{id}`, e.g. `account-3f2b...` | `ITEM` | set by the repository, if indexed | | the model's JSON fields (`username`, `subscription`, `createdAt`, `version`, ...), `Type` |
 | Guild | `guild-...` | `ITEM` | | | `name`, `memberAccountIds`, `characterIds`, `characterAssignments` (`characterId`, `accountId`, `assignedAt`), ... |
-| Character | `character-...` | `ITEM` | `GUILD#{guildId}` | `CHAR#{name}` | `guildId`, `name`, ... |
+| Character | `character-...` | `ITEM` | `GUILD#{guildId}` | `CHAR#{name}` | `guildId`, `name`, `firstName`, `lastName`, `class`, `healthPoints`, ... |
 | Reservation (unique value) | `USERNAME#{lowercase}`, `AUTH0#{auth0UserId}`, `GUILDNAME#{lowercase}`, `CHARNAME#{lowercase}` | `USERNAME`, `AUTH0`, `GUILDNAME`, `CHARNAME` | | | `OwnerId` (the id holding it), `Type = Reservation` |
 
 Every item has a `Type` attribute (`Account`, `Character`, `Reservation`). It isn't needed by the API, but it makes the console readable and helps if you ever export data.
@@ -81,7 +81,8 @@ Conventions:
 - Guild membership is stored on both sides: `account.guildIds` and `guild.memberAccountIds`. Every change writes both in **one transaction** with version checks, so they can't drift apart.
 - Characters belong to a guild (`character.guildId`, `guild.characterIds`). Who plays a character right now is `guild.characterAssignments`: at most one player per character and one character per member. Reassigning is just a guild update.
 - Every model has `createdAt`, `createdBy`, `updatedAt`, `updatedBy`; services set the `*By` fields (account ids) when they know who acted.
-- Writes that span models (guild + accounts, character + guild) are prepared by each repository (`PrepareCreate`, `PrepareUpdate`, `PrepareReservation`) and committed together with `DataTransaction.ExecuteAsync` (max 100 writes).
+- Writes that span models (guild + accounts, character + guild) are prepared by each repository (`PrepareCreate`, `PrepareUpdate`, `PrepareReservation`, `PrepareReservationRelease`) and committed together with `DataTransaction.ExecuteAsync` (max 100 writes).
+- Deleting a character is a soft delete in one transaction with its guild (removed from `characterIds` and `characterAssignments`) and frees its name reservation, so the name can be used again.
 - New models usually need no new table design: derive from `BaseCore`, add a repository deriving from `BaseRepository<T>`. Only new queries need a GSI key or a reservation.
 
 ---
@@ -240,6 +241,8 @@ Framework/Vaesen.Framework.Common/
   Repositorys/GuildRepository.cs     IGuildStore: guild + member accounts / new characters in one transaction
   Services/GuildService.cs          membership and who-plays-which-character rules
   Api/GuildController.cs            api/guilds
+  Services/CharacterService.cs      read, change, delete characters (CharacterRules: validation)
+  Api/CharacterController.cs        api/characters
   Services/AccountService.cs        validation + ResultBase
   Api/AccountController.cs          api/accounts
 ```

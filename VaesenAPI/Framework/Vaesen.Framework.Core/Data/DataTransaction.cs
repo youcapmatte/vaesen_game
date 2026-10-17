@@ -6,7 +6,8 @@ namespace Vaesen.Framework.Core.Data;
 
 /// <summary>
 /// One conditional write prepared by a repository (<see cref="BaseRepository{T}.PrepareCreate"/>,
-/// <see cref="BaseRepository{T}.PrepareUpdate"/>, <see cref="BaseRepository{T}.PrepareReservation"/>), to be committed
+/// <see cref="BaseRepository{T}.PrepareUpdate"/>, <see cref="BaseRepository{T}.PrepareReservation"/>,
+/// <see cref="BaseRepository{T}.PrepareReservationRelease"/>), to be committed
 /// together with others by <see cref="DataTransaction"/>.
 /// </summary>
 /// <param name="Write">The DynamoDB write, with its condition.</param>
@@ -43,7 +44,7 @@ public static class DataTransaction
 
         try
         {
-            if (writes.Count == 1)
+            if (writes.Count == 1 && writes[0].Write.Put is not null)
             {
                 var put = writes[0].Write.Put;
                 await dynamoDb.PutItemAsync(new PutItemRequest

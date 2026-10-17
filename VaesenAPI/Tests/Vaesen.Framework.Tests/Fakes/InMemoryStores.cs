@@ -58,6 +58,12 @@ public sealed class InMemoryDatabase : IAccountStore, ICharacterStore, IGuildSto
 
     Task<Character?> ICharacterStore.GetAsync(string characterId, CancellationToken cancellationToken) => Task.FromResult(Read<Character>(characterId));
 
+    Task<Character?> ICharacterStore.GetByNameAsync(string name, CancellationToken cancellationToken) =>
+        Task.FromResult(Read<Character>(Owner("CHARNAME", name.Trim().ToLowerInvariant())));
+
+    public Task<ResultBase> UpdateAsync(Character character, CancellationToken cancellationToken = default) =>
+        Task.FromResult(Commit([Update(character)], []));
+
     public Task<IReadOnlyList<Character>> GetManyAsync(IReadOnlyCollection<string> characterIds, CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<Character>>(characterIds.Select(Read<Character>).OfType<Character>().ToList());
 
@@ -97,6 +103,15 @@ public sealed class InMemoryDatabase : IAccountStore, ICharacterStore, IGuildSto
             [Create(character), Update(guild)],
             [("CHARNAME", character.Name.Trim().ToLowerInvariant(), character.Id, "That character name is taken.", CharacterRepository.NameTaken)]));
 
+    public Task<ResultBase> DeleteCharacterAsync(Guild guild, Character character, CancellationToken cancellationToken = default)
+    {
+        character.IsDeleted = true;
+        return Task.FromResult(Commit(
+            [Update(character), Update(guild)],
+            [],
+            releases: [("CHARNAME", character.Name.Trim().ToLowerInvariant(), character.Id)]));
+    }
+
     // ---- Storage --------------------------------------------------------------------------------------------
 
     private sealed record Write(BaseCore Item, bool IsCreate, int ExpectedVersion);
@@ -106,7 +121,10 @@ public sealed class InMemoryDatabase : IAccountStore, ICharacterStore, IGuildSto
     private static Write Update(BaseCore item) => new(item, IsCreate: false, ExpectedVersion: item.Version);
 
     /// <summary>Applies all writes and reservations, or none. Same error codes as the DynamoDB repositories.</summary>
-    private ResultBase Commit(IReadOnlyList<Write> writes, IReadOnlyList<(string Kind, string Value, string OwnerId, string Message, string Code)> reservations)
+    private ResultBase Commit(
+        IReadOnlyList<Write> writes,
+        IReadOnlyList<(string Kind, string Value, string OwnerId, string Message, string Code)> reservations,
+        IReadOnlyList<(string Kind, string Value, string OwnerId)>? releases = null)
     {
         var ret = new ResultBase();
         lock (_lock)
@@ -133,6 +151,14 @@ public sealed class InMemoryDatabase : IAccountStore, ICharacterStore, IGuildSto
                 }
             }
 
+            foreach (var release in releases ?? [])
+            {
+                if (!string.Equals(_reservations.GetValueOrDefault($"{release.Kind}#{release.Value}"), release.OwnerId, StringComparison.Ordinal))
+                {
+                    return ret.Fail("The reservation is held by someone else.", ErrorCodes.Conflict);
+                }
+            }
+
             var now = DateTime.UtcNow;
             foreach (var write in writes)
             {
@@ -150,6 +176,11 @@ public sealed class InMemoryDatabase : IAccountStore, ICharacterStore, IGuildSto
             foreach (var reservation in reservations)
             {
                 _reservations[$"{reservation.Kind}#{reservation.Value}"] = reservation.OwnerId;
+            }
+
+            foreach (var release in releases ?? [])
+            {
+                _reservations.Remove($"{release.Kind}#{release.Value}");
             }
         }
 

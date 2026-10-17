@@ -234,6 +234,83 @@ public abstract class StoreContract
         Assert.Equal([character.Id], (await Guilds.GetAsync(guild.Id))?.CharacterIds);
     }
 
+    private async Task<(Guild Guild, Character Character)> CreateCharacterAsync(string? name = null)
+    {
+        var (guild, founder) = await CreateGuildAsync();
+        var loadedGuild = (await Guilds.GetAsync(guild.Id))!;
+        var character = new Character
+        {
+            GuildId = guild.Id,
+            Name = name ?? Unique("Astrid", 16),
+            FirstName = "Astrid",
+            LastName = "Falk",
+            Class = "Occultist",
+            HealthPoints = 42,
+            CreatedBy = founder.Id,
+        };
+        loadedGuild.CharacterIds.Add(character.Id);
+        Assert.True((await Guilds.CreateCharacterAsync(loadedGuild, character)).Success);
+        return (loadedGuild, character);
+    }
+
+    [SkippableFact]
+    public async Task Character_RoundTripsAllFields_AndIsFoundByName()
+    {
+        SkipIfUnavailable();
+        var (_, character) = await CreateCharacterAsync();
+
+        var loaded = await Characters.GetByNameAsync(character.Name.ToUpperInvariant());
+
+        Assert.NotNull(loaded);
+        Assert.Equal(character.Id, loaded.Id);
+        Assert.Equal("Astrid", loaded.FirstName);
+        Assert.Equal("Falk", loaded.LastName);
+        Assert.Equal("Occultist", loaded.Class);
+        Assert.Equal(42, loaded.HealthPoints);
+    }
+
+    [SkippableFact]
+    public async Task Character_Update_SavesChanges_AndRejectsStaleVersions()
+    {
+        SkipIfUnavailable();
+        var (_, character) = await CreateCharacterAsync();
+        var first = (await Characters.GetAsync(character.Id))!;
+        var stale = (await Characters.GetAsync(character.Id))!;
+
+        first.HealthPoints = 7;
+        Assert.True((await Characters.UpdateAsync(first)).Success);
+        stale.Class = "Doctor";
+        var conflict = await Characters.UpdateAsync(stale);
+
+        Assert.Equal(ErrorCodes.Conflict, conflict.ErrorCode);
+        var loaded = (await Characters.GetAsync(character.Id))!;
+        Assert.Equal(7, loaded.HealthPoints);
+        Assert.Equal("Occultist", loaded.Class);
+        Assert.Equal(2, loaded.Version);
+    }
+
+    [SkippableFact]
+    public async Task Character_Delete_RemovesItFromGuild_AndFreesTheName()
+    {
+        SkipIfUnavailable();
+        var (guild, character) = await CreateCharacterAsync();
+        var loadedGuild = (await Guilds.GetAsync(guild.Id))!;
+        var loadedCharacter = (await Characters.GetAsync(character.Id))!;
+        loadedGuild.CharacterIds.Remove(character.Id);
+
+        Assert.True((await Guilds.DeleteCharacterAsync(loadedGuild, loadedCharacter)).Success);
+
+        Assert.Null(await Characters.GetAsync(character.Id));
+        Assert.Null(await Characters.GetByNameAsync(character.Name));
+        Assert.Empty((await Guilds.GetAsync(guild.Id))!.CharacterIds);
+
+        // The name can be used again.
+        var reuseGuild = (await Guilds.GetAsync(guild.Id))!;
+        var reused = new Character { GuildId = guild.Id, Name = character.Name };
+        reuseGuild.CharacterIds.Add(reused.Id);
+        Assert.True((await Guilds.CreateCharacterAsync(reuseGuild, reused)).Success);
+    }
+
     [SkippableFact]
     public async Task Lookups_ForUnknownValues_ReturnNull()
     {
@@ -244,6 +321,7 @@ public abstract class StoreContract
         Assert.Null(await Guilds.GetAsync(new Guild().Id));
         Assert.Null(await Guilds.GetByNameAsync(Unique("No guild ")));
         Assert.Null(await Characters.GetAsync(new Character().Id));
+        Assert.Null(await Characters.GetByNameAsync(Unique("Nobody", 16)));
         Assert.Empty(await Characters.ListByGuildAsync(new Guild().Id));
     }
 }
