@@ -7,6 +7,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Misc/ConfigCacheIni.h"
 #include "Online/VaesenApiSubsystem.h"
+#include "Sound/SoundBase.h"
 
 #define LOCTEXT_NAMESPACE "VaesenLogin"
 
@@ -71,6 +72,12 @@ void UVaesenLoginWidget::HandleLoginClicked()
 	if (!Api || bLoggingIn || !UsernameTextBox || !PasswordTextBox)
 	{
 		return;
+	}
+
+	if (USoundBase* ClickSound = UVaesenSettings::Get()->LoginButtonSound.LoadSynchronous())
+	{
+		// Persist across the level change, or opening Character Select would cut the sound off.
+		UGameplayStatics::SpawnSound2D(this, ClickSound, 1.f, 1.f, 0.f, nullptr, /*bPersistAcrossLevelTransition*/ true);
 	}
 
 	const FString Username = UsernameTextBox->GetText().ToString().TrimStartAndEnd();

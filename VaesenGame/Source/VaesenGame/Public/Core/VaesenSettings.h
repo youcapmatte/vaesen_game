@@ -4,6 +4,7 @@
 #include "Engine/DeveloperSettings.h"
 #include "VaesenSettings.generated.h"
 
+class USoundBase;
 class UUserWidget;
 
 /**
@@ -39,4 +40,12 @@ public:
 	/** Widget shown on the character select map. */
 	UPROPERTY(Config, EditAnywhere, Category = "UI")
 	TSoftClassPtr<UUserWidget> CharacterSelectScreenWidget;
+
+	/** Background music played when the login map starts. Leave empty for silence. Looping is set on the sound asset. */
+	UPROPERTY(Config, EditAnywhere, Category = "Audio")
+	TSoftObjectPtr<USoundBase> LoginMusic;
+
+	/** Played when the login button is pressed (or Enter in the password box). Leave empty for none. */
+	UPROPERTY(Config, EditAnywhere, Category = "Audio")
+	TSoftObjectPtr<USoundBase> LoginButtonSound;
 };
