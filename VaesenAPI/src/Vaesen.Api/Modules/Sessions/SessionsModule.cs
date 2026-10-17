@@ -21,7 +21,6 @@ public static class SessionsModule
         }
         else
         {
-            services.AddDefaultAWSOptions(configuration.GetAWSOptions());
             services.AddAWSService<IAmazonGameLift>();
             services.AddSingleton<IGameLiftGateway, AwsGameLiftGateway>();
         }

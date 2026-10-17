@@ -7,6 +7,7 @@ public static class PlayersModule
 {
     public static IServiceCollection AddPlayersModule(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddSingleton<ICharacterRepository, DynamoDbCharacterRepository>();
         return services;
     }
 

@@ -8,8 +8,8 @@ Contents
 2. [The Vaesen table design](#2-the-vaesen-table-design)
 3. [Local development with DynamoDB Local](#3-local-development-with-dynamodb-local)
 4. [AWS setup](#4-aws-setup)
-5. [Connecting the API](#5-connecting-the-api)
-6. [Writing a repository](#6-writing-a-repository)
+5. [How the API is wired](#5-how-the-api-is-wired)
+6. [Repositories](#6-repositories)
 7. [Testing](#7-testing)
 8. [Running in AWS (ECS)](#8-running-in-aws-ecs)
 9. [Looking at and editing data](#9-looking-at-and-editing-data)
@@ -83,35 +83,18 @@ AWS ships a local DynamoDB that speaks the same API. The API uses it in Developm
 
 ### 3.1 Run it with Docker
 
-Create `VaesenAPI/docker-compose.yml`:
-
-```yaml
-services:
-  dynamodb:
-    image: amazon/dynamodb-local:latest
-    container_name: vaesen-dynamodb
-    # -sharedDb: one database regardless of credentials/region. -dbPath: keep data between restarts.
-    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath /home/dynamodblocal/data"
-    working_dir: /home/dynamodblocal
-    # The image's default user can't write to a fresh named volume.
-    user: root
-    ports:
-      - "8000:8000"
-    volumes:
-      - dynamodb-data:/home/dynamodblocal/data
-
-volumes:
-  dynamodb-data:
-```
-
-Start / stop:
+Install **Docker Desktop** (docker.com) once. The compose file is already in the repo: `VaesenAPI/docker-compose.yml`.
 
 ```bash
-docker compose -f VaesenAPI/docker-compose.yml up -d
-docker compose -f VaesenAPI/docker-compose.yml down
+cd VaesenAPI
+docker compose up -d      # start (data is kept in a Docker volume)
+docker compose down       # stop
+docker compose down -v    # stop and delete all local data
 ```
 
-`down -v` also deletes the data volume (a clean database).
+The API is already configured for it in Development (`appsettings.Development.json`): table `vaesen-local` at `http://localhost:8000`, created automatically after startup.
+
+Without Docker the API still starts: storage just doesn't work, `/health/ready` reports Unhealthy, and the log says how to start DynamoDB Local.
 
 ### 3.2 Check it works
 
@@ -121,7 +104,7 @@ With the AWS CLI installed (any dummy credentials work against DynamoDB Local):
 aws dynamodb list-tables --endpoint-url http://localhost:8000 --region eu-central-1
 ```
 
-The API creates the local table itself on startup (section 5.4), so there's nothing else to set up.
+The API creates the local table itself after startup, so there's nothing else to set up.
 
 ### 3.3 Browse it
 
@@ -223,414 +206,71 @@ Notes:
 
 ---
 
-## 5. Connecting the API
+## 5. How the API is wired
 
-### 5.1 Package
+This is implemented; this section explains where things are and why.
 
-```bash
-cd VaesenAPI
-dotnet add src/Vaesen.Api package AWSSDK.DynamoDBv2
-```
-
-### 5.2 Where the code goes
-
-Storage is shared infrastructure; each module owns its own repositories:
+### 5.1 Files
 
 ```
 src/Vaesen.Api/
-  Infrastructure/
-    Persistence/
-      PersistenceModule.cs        AddPersistence(): client, options, health check, local table init
-      DynamoDbOptions.cs
-      DynamoDbTableInitializer.cs creates the table in Development (DynamoDB Local only)
-      DynamoDbHealthCheck.cs
-      VaesenKeys.cs               the PK/SK/GSI key builders (one place for "CHAR#", "GUILD#", ...)
-  Modules/
-    Players/
-      ICharacterRepository.cs     what the module needs (no DynamoDB types)
-      DynamoDbCharacterRepository.cs
-      InMemoryCharacterRepository.cs   for tests
+  Infrastructure/Persistence/
+    PersistenceModule.cs         AddPersistence(): options, DynamoDB client, local table init, health check
+    DynamoDbOptions.cs           "DynamoDb" config section
+    DynamoDbTable.cs             the table schema (used for DynamoDB Local and tests)
+    DynamoDbTableInitializer.cs  creates the table in DynamoDB Local, in the background
+    DynamoDbHealthCheck.cs       "is the table reachable?" for /health/ready
+    VaesenKeys.cs                every key format ("CHAR#", "GUILD#", ...) in one place
+  Modules/Players/
+    ICharacterRepository.cs      what the module needs; no DynamoDB types
+    DynamoDbCharacterRepository.cs
+    InMemoryCharacterRepository.cs   used by endpoint tests
 ```
 
-Modules depend on their repository interfaces only. Endpoints and services never see `IAmazonDynamoDB`.
+Modules depend on their repository interfaces only. Endpoints and services never see `IAmazonDynamoDB`. New entities follow the same pattern: an interface in the module, a DynamoDB implementation next to it, key formats added to `VaesenKeys`.
 
-### 5.3 Configuration
+### 5.2 Configuration
 
-`appsettings.json` (all environments):
+| Setting | `appsettings.json` (AWS) | `appsettings.Development.json` (local) |
+|---|---|---|
+| `DynamoDb:TableName` | `vaesen-dev` | `vaesen-local` |
+| `DynamoDb:ServiceUrl` | *(empty = real AWS)* | `http://localhost:8000` |
+| `DynamoDb:CreateTableIfMissing` | `false` | `true` |
+| `AWS:Region` | `eu-central-1` | *(inherited)* |
+| `AWS:Profile` | | `vaesen`, only when using your SSO login against real AWS |
 
-```json
-"DynamoDb": {
-  "TableName": "vaesen-dev"
-}
-```
+Production overrides values with environment variables on the ECS task, e.g. `DynamoDb__TableName=vaesen-prod`. **No credentials appear in configuration:** locally they come from your SSO profile, in AWS from the task role.
 
-`appsettings.Development.json`:
+To run the API locally against the real `vaesen-dev` table instead of DynamoDB Local: remove `ServiceUrl` and `TableName` from the `DynamoDb` section of `appsettings.Development.json`, add `"AWS": { "Profile": "vaesen" }`, and run `aws sso login --profile vaesen` first.
 
-```json
-"DynamoDb": {
-  "TableName": "vaesen-local",
-  "ServiceUrl": "http://localhost:8000",
-  "CreateTableIfMissing": true
-}
-```
+### 5.3 Client registration
 
-Production overrides `TableName` (`vaesen-prod`) through an environment variable on the ECS task: `DynamoDb__TableName=vaesen-prod`. No credentials appear anywhere in configuration: locally they come from your SSO profile, in AWS from the task role.
+`PersistenceModule.AddPersistence`:
 
-### 5.4 Registration
+- **`ServiceUrl` set (DynamoDB Local):** a client with dummy credentials, a 5-second timeout and one retry, so a stopped DynamoDB Local fails fast instead of stalling requests.
+- **`ServiceUrl` empty (AWS):** `AddAWSService<IAmazonDynamoDB>()`. Region and credentials come from the shared AWS options registered once in `Program.cs` (`AddDefaultAWSOptions`), which the GameLift client in the Sessions module uses too.
+- `TableName` is validated at startup (`ValidateOnStart`), so a missing setting fails immediately with a clear message.
 
-`Infrastructure/Persistence/DynamoDbOptions.cs`:
+### 5.4 Health checks
 
-```csharp
-namespace Vaesen.Api.Infrastructure.Persistence;
+| Endpoint | Checks | Use |
+|---|---|---|
+| `/health` | the process is up (no dependencies) | load balancer liveness check |
+| `/health/ready` | also DynamoDB (`DescribeTable` on the configured table) | deployment readiness, monitoring, "is my setup right?" |
 
-public sealed class DynamoDbOptions
-{
-    public const string SectionName = "DynamoDb";
+## 6. Repositories
 
-    public string TableName { get; set; } = "";
+### 6.1 Example: characters
 
-    /// <summary>Set to use DynamoDB Local (e.g. http://localhost:8000). Empty means real AWS.</summary>
-    public string? ServiceUrl { get; set; }
+`DynamoDbCharacterRepository` covers access patterns C1-C3:
 
-    /// <summary>Create the table on startup if it's missing. Only for DynamoDB Local.</summary>
-    public bool CreateTableIfMissing { get; set; }
+- **Get**: `GetItem CHAR#{id} / PROFILE`.
+- **List an account's characters**: `Query` on `GSI1`, paginated with `LastEvaluatedKey`.
+- **Create** in a **transaction**: the character item and its `CHARNAME#` reservation are written together, each with `attribute_not_exists(PK)`. A taken name (in any casing) cancels the whole transaction, so there's never a character without its name or a name without its character.
 
-    public const string Gsi1 = "GSI1";
-}
-```
+### 6.2 Updates without lost writes (optimistic concurrency)
 
-`Infrastructure/Persistence/PersistenceModule.cs`:
-
-```csharp
-using Amazon.DynamoDBv2;
-using Amazon.Runtime;
-
-namespace Vaesen.Api.Infrastructure.Persistence;
-
-public static class PersistenceModule
-{
-    public static IServiceCollection AddPersistence(this IServiceCollection services, IConfiguration configuration)
-    {
-        var section = configuration.GetSection(DynamoDbOptions.SectionName);
-        services.AddOptions<DynamoDbOptions>()
-            .Bind(section)
-            .Validate(o => !string.IsNullOrWhiteSpace(o.TableName), "DynamoDb:TableName is required.")
-            .ValidateOnStart();
-
-        var options = section.Get<DynamoDbOptions>() ?? new DynamoDbOptions();
-
-        if (!string.IsNullOrWhiteSpace(options.ServiceUrl))
-        {
-            // DynamoDB Local accepts any credentials.
-            services.AddSingleton<IAmazonDynamoDB>(_ => new AmazonDynamoDBClient(
-                new BasicAWSCredentials("local", "local"),
-                new AmazonDynamoDBConfig { ServiceURL = options.ServiceUrl }));
-
-            if (options.CreateTableIfMissing)
-            {
-                services.AddHostedService<DynamoDbTableInitializer>();
-            }
-        }
-        else
-        {
-            // Region and credentials from the "AWS" config section / profile / ECS task role.
-            services.AddAWSService<IAmazonDynamoDB>();
-        }
-
-        services.AddHealthChecks().AddCheck<DynamoDbHealthCheck>("dynamodb");
-        return services;
-    }
-}
-```
-
-`AddDefaultAWSOptions(configuration.GetAWSOptions())` must run once before any `AddAWSService` call. It currently lives inside `SessionsModule`; move it to `Program.cs` so both modules share it:
-
-```csharp
-builder.Services.AddDefaultAWSOptions(builder.Configuration.GetAWSOptions());
-builder.Services
-    .AddPersistence(builder.Configuration)
-    .AddIdentityModule(builder.Configuration)
-    ...
-```
-
-`Infrastructure/Persistence/DynamoDbTableInitializer.cs` (creates the same table as section 4.2, locally):
-
-```csharp
-using Amazon.DynamoDBv2;
-using Amazon.DynamoDBv2.Model;
-using Microsoft.Extensions.Options;
-
-namespace Vaesen.Api.Infrastructure.Persistence;
-
-public sealed class DynamoDbTableInitializer(
-    IAmazonDynamoDB dynamoDb,
-    IOptions<DynamoDbOptions> options,
-    ILogger<DynamoDbTableInitializer> logger) : IHostedService
-{
-    public async Task StartAsync(CancellationToken cancellationToken)
-    {
-        var tableName = options.Value.TableName;
-        try
-        {
-            await dynamoDb.DescribeTableAsync(tableName, cancellationToken);
-            return;
-        }
-        catch (ResourceNotFoundException)
-        {
-        }
-
-        logger.LogInformation("Creating local DynamoDB table {Table}", tableName);
-        await dynamoDb.CreateTableAsync(new CreateTableRequest
-        {
-            TableName = tableName,
-            BillingMode = BillingMode.PAY_PER_REQUEST,
-            AttributeDefinitions =
-            [
-                new AttributeDefinition("PK", ScalarAttributeType.S),
-                new AttributeDefinition("SK", ScalarAttributeType.S),
-                new AttributeDefinition("GSI1PK", ScalarAttributeType.S),
-                new AttributeDefinition("GSI1SK", ScalarAttributeType.S),
-            ],
-            KeySchema =
-            [
-                new KeySchemaElement("PK", KeyType.HASH),
-                new KeySchemaElement("SK", KeyType.RANGE),
-            ],
-            GlobalSecondaryIndexes =
-            [
-                new GlobalSecondaryIndex
-                {
-                    IndexName = DynamoDbOptions.Gsi1,
-                    KeySchema =
-                    [
-                        new KeySchemaElement("GSI1PK", KeyType.HASH),
-                        new KeySchemaElement("GSI1SK", KeyType.RANGE),
-                    ],
-                    Projection = new Projection { ProjectionType = ProjectionType.ALL },
-                },
-            ],
-        }, cancellationToken);
-    }
-
-    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
-}
-```
-
-`Infrastructure/Persistence/DynamoDbHealthCheck.cs`:
-
-```csharp
-using Amazon.DynamoDBv2;
-using Microsoft.Extensions.Diagnostics.HealthChecks;
-using Microsoft.Extensions.Options;
-
-namespace Vaesen.Api.Infrastructure.Persistence;
-
-public sealed class DynamoDbHealthCheck(IAmazonDynamoDB dynamoDb, IOptions<DynamoDbOptions> options) : IHealthCheck
-{
-    public async Task<HealthCheckResult> CheckHealthAsync(HealthCheckContext context, CancellationToken cancellationToken = default)
-    {
-        try
-        {
-            await dynamoDb.DescribeTableAsync(options.Value.TableName, cancellationToken);
-            return HealthCheckResult.Healthy();
-        }
-        catch (Exception ex)
-        {
-            return HealthCheckResult.Unhealthy("DynamoDB table not reachable.", ex);
-        }
-    }
-}
-```
-
-### 5.5 Key builders
-
-Keep every key format in one place so typos can't create "ghost" items:
-
-```csharp
-namespace Vaesen.Api.Infrastructure.Persistence;
-
-public static class VaesenKeys
-{
-    public const string Profile = "PROFILE";
-
-    public static string Account(string accountId) => $"ACCOUNT#{accountId}";
-    public static string Character(string characterId) => $"CHAR#{characterId}";
-    public static string CharacterName(string name) => $"CHARNAME#{name.Trim().ToLowerInvariant()}";
-    public static string Guild(string guildId) => $"GUILD#{guildId}";
-    public static string GuildMember(string characterId) => $"MEMBER#{characterId}";
-}
-```
-
----
-
-## 6. Writing a repository
-
-Example: characters (access patterns C1-C3).
-
-### 6.1 The module's view
-
-`Modules/Players/ICharacterRepository.cs`:
-
-```csharp
-namespace Vaesen.Api.Modules.Players;
-
-public sealed record Character(string Id, string AccountId, string Name, string? GuildId, int Version);
-
-public interface ICharacterRepository
-{
-    Task<Character?> GetAsync(string characterId, CancellationToken cancellationToken);
-
-    Task<IReadOnlyList<Character>> ListByAccountAsync(string accountId, CancellationToken cancellationToken);
-
-    /// <summary>Creates the character and reserves its name. Returns false if the name is taken.</summary>
-    Task<bool> TryCreateAsync(Character character, CancellationToken cancellationToken);
-}
-```
-
-### 6.2 The DynamoDB implementation
-
-The low-level client with explicit mapping is the clearest choice for single-table design: you see exactly which attributes are written.
-
-`Modules/Players/DynamoDbCharacterRepository.cs`:
-
-```csharp
-using Amazon.DynamoDBv2;
-using Amazon.DynamoDBv2.Model;
-using Microsoft.Extensions.Options;
-using Vaesen.Api.Infrastructure.Persistence;
-
-namespace Vaesen.Api.Modules.Players;
-
-public sealed class DynamoDbCharacterRepository(IAmazonDynamoDB dynamoDb, IOptions<DynamoDbOptions> options)
-    : ICharacterRepository
-{
-    private string Table => options.Value.TableName;
-
-    public async Task<Character?> GetAsync(string characterId, CancellationToken cancellationToken)
-    {
-        var response = await dynamoDb.GetItemAsync(new GetItemRequest
-        {
-            TableName = Table,
-            Key = Key(VaesenKeys.Character(characterId), VaesenKeys.Profile),
-        }, cancellationToken);
-
-        return response.Item is { Count: > 0 } ? FromItem(response.Item) : null;
-    }
-
-    public async Task<IReadOnlyList<Character>> ListByAccountAsync(string accountId, CancellationToken cancellationToken)
-    {
-        var characters = new List<Character>();
-        Dictionary<string, AttributeValue>? startKey = null;
-        do
-        {
-            var response = await dynamoDb.QueryAsync(new QueryRequest
-            {
-                TableName = Table,
-                IndexName = DynamoDbOptions.Gsi1,
-                KeyConditionExpression = "GSI1PK = :pk AND begins_with(GSI1SK, :prefix)",
-                ExpressionAttributeValues = new()
-                {
-                    [":pk"] = new AttributeValue(VaesenKeys.Account(accountId)),
-                    [":prefix"] = new AttributeValue("CHAR#"),
-                },
-                ExclusiveStartKey = startKey,
-            }, cancellationToken);
-
-            characters.AddRange((response.Items ?? []).Select(FromItem));
-            startKey = response.LastEvaluatedKey is { Count: > 0 } ? response.LastEvaluatedKey : null;
-        } while (startKey is not null);
-
-        return characters;
-    }
-
-    public async Task<bool> TryCreateAsync(Character character, CancellationToken cancellationToken)
-    {
-        // Both writes succeed or neither does: no character without its name, no name without its character.
-        try
-        {
-            await dynamoDb.TransactWriteItemsAsync(new TransactWriteItemsRequest
-            {
-                TransactItems =
-                [
-                    new TransactWriteItem
-                    {
-                        Put = new Put
-                        {
-                            TableName = Table,
-                            Item = ToItem(character),
-                            ConditionExpression = "attribute_not_exists(PK)",
-                        },
-                    },
-                    new TransactWriteItem
-                    {
-                        Put = new Put
-                        {
-                            TableName = Table,
-                            Item = new Dictionary<string, AttributeValue>
-                            {
-                                ["PK"] = new(VaesenKeys.CharacterName(character.Name)),
-                                ["SK"] = new("CHARNAME"),
-                                ["Type"] = new("CharacterName"),
-                                ["CharacterId"] = new(character.Id),
-                            },
-                            ConditionExpression = "attribute_not_exists(PK)",
-                        },
-                    },
-                ],
-            }, cancellationToken);
-            return true;
-        }
-        catch (TransactionCanceledException)
-        {
-            return false;
-        }
-    }
-
-    private static Dictionary<string, AttributeValue> Key(string pk, string sk) => new()
-    {
-        ["PK"] = new AttributeValue(pk),
-        ["SK"] = new AttributeValue(sk),
-    };
-
-    private static Dictionary<string, AttributeValue> ToItem(Character character)
-    {
-        var item = new Dictionary<string, AttributeValue>
-        {
-            ["PK"] = new(VaesenKeys.Character(character.Id)),
-            ["SK"] = new(VaesenKeys.Profile),
-            ["GSI1PK"] = new(VaesenKeys.Account(character.AccountId)),
-            ["GSI1SK"] = new($"CHAR#{character.Name}"),
-            ["Type"] = new("Character"),
-            ["Id"] = new(character.Id),
-            ["AccountId"] = new(character.AccountId),
-            ["Name"] = new(character.Name),
-            ["Version"] = new() { N = character.Version.ToString() },
-        };
-        if (character.GuildId is not null)
-        {
-            item["GuildId"] = new(character.GuildId);
-        }
-        return item;
-    }
-
-    private static Character FromItem(Dictionary<string, AttributeValue> item) => new(
-        item["Id"].S,
-        item["AccountId"].S,
-        item["Name"].S,
-        item.TryGetValue("GuildId", out var guild) ? guild.S : null,
-        int.Parse(item["Version"].N));
-}
-```
-
-Register it in `PlayersModule.AddPlayersModule`:
-
-```csharp
-services.AddSingleton<ICharacterRepository, DynamoDbCharacterRepository>();
-```
-
-### 6.3 Updates without lost writes (optimistic concurrency)
-
-Two writers (e.g. two game servers) can read the same item and overwrite each other. Guard updates with the `Version` attribute:
+Two writers (e.g. two game servers) can read the same item and overwrite each other. Characters carry a `Version`; updates should require the version they read:
 
 ```csharp
 await dynamoDb.UpdateItemAsync(new UpdateItemRequest
@@ -649,53 +289,23 @@ await dynamoDb.UpdateItemAsync(new UpdateItemRequest
 // ConditionalCheckFailedException => someone else changed it first: re-read and retry, or report a conflict.
 ```
 
-### 6.4 Rules of thumb
+### 6.3 Rules of thumb
 
-- **AWS SDK v4 returns `null` for empty collections** (`response.Items`, `response.Item`, `LastEvaluatedKey`), not empty ones. Always null-check, as in the code above.
 - **Never `Scan`** in the API. If you need it, a key or GSI is missing.
-- **Always paginate** `Query` (the `LastEvaluatedKey` loop above); a single response is at most 1 MB.
+- **Always paginate** `Query` (the `LastEvaluatedKey` loop); a single response is at most 1 MB.
 - **Use transactions** whenever two items must change together (character + name, guild + membership).
-- **Keep items small.** Big or fast-changing data (e.g. full inventories) can get its own items under the same PK: `PK=CHAR#123, SK=ITEM#{itemId}`.
+- **AWS SDK v4 returns `null` for empty collections** (`response.Items`, `response.Item`, `LastEvaluatedKey`), not empty ones. Always null-check.
+- **Keep items small.** Big or fast-changing data (e.g. inventories) can get its own items under the same PK: `PK=CHAR#123, SK=ITEM#{itemId}`.
 - **Store timestamps as ISO-8601 strings** (`2026-10-17T09:00:00Z`) so they sort correctly in sort keys.
-
----
 
 ## 7. Testing
 
-Two layers, matching how `IGameLiftGateway` is tested today:
+- **Endpoint tests** (`VaesenApiFactory`) use `InMemoryCharacterRepository` and skip the table initializer. Fast, no Docker.
+- **Repository contract tests** (`tests/Vaesen.Api.Tests/Persistence/`) define the behaviour every `ICharacterRepository` must have once, in `CharacterRepositoryContract`, and run it against:
+  - `InMemoryCharacterRepository`: always.
+  - `DynamoDbCharacterRepository` against DynamoDB Local in a throwaway container (Testcontainers): only when Docker is running; otherwise these tests are reported as **Skipped**.
 
-1. **Endpoint and service tests** replace the repository with an in-memory implementation in `VaesenApiFactory.ConfigureTestServices`:
-   ```csharp
-   services.AddSingleton<ICharacterRepository, InMemoryCharacterRepository>();
-   ```
-   They're fast, need no Docker, and run everywhere.
-
-2. **Repository tests** run the real `DynamoDbCharacterRepository` against DynamoDB Local in a throwaway container, using Testcontainers:
-   ```bash
-   dotnet add tests/Vaesen.Api.Tests package Testcontainers.DynamoDb
-   ```
-   ```csharp
-   public sealed class DynamoDbFixture : IAsyncLifetime
-   {
-       private readonly DynamoDbContainer _container = new DynamoDbBuilder().Build();
-
-       public IAmazonDynamoDB Client { get; private set; } = null!;
-
-       public async Task InitializeAsync()
-       {
-           await _container.StartAsync();
-           Client = new AmazonDynamoDBClient(
-               new BasicAWSCredentials("test", "test"),
-               new AmazonDynamoDBConfig { ServiceURL = _container.GetConnectionString() });
-           // Create the table here (reuse DynamoDbTableInitializer).
-       }
-
-       public Task DisposeAsync() => _container.DisposeAsync().AsTask();
-   }
-   ```
-   These catch mistakes in key expressions and conditions that an in-memory fake can't.
-
----
+That way the in-memory fake can't drift from the real behaviour (e.g. case-insensitive unique names).
 
 ## 8. Running in AWS (ECS)
 
@@ -707,7 +317,7 @@ When the API is deployed to ECS Fargate:
    - `ASPNETCORE_ENVIRONMENT=Production`
    - `AWS__Region=eu-central-1`
    - `DynamoDb__TableName=vaesen-prod`
-4. Point the load balancer health check at `/health`; it now includes DynamoDB.
+4. Point the load balancer health check at `/health` (liveness). Use `/health/ready` to verify that a deployment can reach DynamoDB.
 
 ---
 
@@ -727,10 +337,10 @@ Careful in production: the console bypasses the API's rules. Editing `Name` on a
 
 Local:
 
-- [ ] Docker Desktop installed; `docker compose -f VaesenAPI/docker-compose.yml up -d`
-- [ ] `AWSSDK.DynamoDBv2` added; `AddPersistence` registered in `Program.cs`
-- [ ] `appsettings.Development.json` has `DynamoDb:ServiceUrl` and `CreateTableIfMissing`
-- [ ] API starts; `/health` reports Healthy; table visible in NoSQL Workbench
+- [ ] Docker Desktop installed; `docker compose up -d` in `VaesenAPI`
+- [ ] Start the API; `/health/ready` reports Healthy
+- [ ] Table `vaesen-local` visible in NoSQL Workbench (DynamoDB local, port 8000)
+- [ ] `dotnet test`: the `DynamoDbCharacterRepositoryTests` now run instead of being skipped
 
 AWS:
 

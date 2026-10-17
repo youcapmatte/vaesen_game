@@ -5,14 +5,19 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Vaesen.Api.Infrastructure.Persistence;
+using Vaesen.Api.Modules.Players;
 using Vaesen.Api.Modules.Sessions;
 
 namespace Vaesen.Api.Tests;
 
 /// <summary>
-/// Runs the API in-process (Development environment) with a fake GameLift and a header-driven auth scheme instead of Auth0.
+/// Runs the API in-process (Development environment) with a fake GameLift, in-memory storage and a header-driven
+/// auth scheme instead of Auth0.
 /// Pass useTestAuth: false to exercise the real token validation (dev login tokens).
 /// </summary>
 public sealed class VaesenApiFactory(bool useTestAuth = true) : WebApplicationFactory<Program>
@@ -40,6 +45,10 @@ public sealed class VaesenApiFactory(bool useTestAuth = true) : WebApplicationFa
         builder.ConfigureTestServices(services =>
         {
             services.AddSingleton<IGameLiftGateway>(GameLift);
+
+            // No DynamoDB Local in endpoint tests: in-memory repositories, and don't try to create the table.
+            services.AddSingleton<ICharacterRepository, InMemoryCharacterRepository>();
+            services.RemoveAll<IHostedService>();
 
             if (!useTestAuth)
             {

@@ -1,0 +1,20 @@
+# Local services for Vaesen.Api development.
+#   docker compose up -d      start
+#   docker compose down       stop (keeps data)
+#   docker compose down -v    stop and delete all local data
+services:
+  dynamodb:
+    image: amazon/dynamodb-local:latest
+    container_name: vaesen-dynamodb
+    # -sharedDb: one database regardless of credentials/region. -dbPath: keep data between restarts.
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath /home/dynamodblocal/data"
+    working_dir: /home/dynamodblocal
+    # The image's default user can't write to a fresh named volume.
+    user: root
+    ports:
+      - "8000:8000"
+    volumes:
+      - dynamodb-data:/home/dynamodblocal/data
+
+volumes:
+  dynamodb-data:
