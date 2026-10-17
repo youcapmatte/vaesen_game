@@ -25,7 +25,8 @@ public sealed class AwsGameLiftGateway(IAmazonGameLift gameLift, IOptions<Sessio
                 NextToken = nextToken,
             }, cancellationToken);
 
-            var match = response.GameSessions.FirstOrDefault(s =>
+            // AWS SDK v4 returns null (not an empty list) when there are no sessions.
+            var match = (response.GameSessions ?? []).FirstOrDefault(s =>
                 s.Name == worldId &&
                 (s.Status == GameSessionStatus.ACTIVE || s.Status == GameSessionStatus.ACTIVATING));
             if (match is not null)
