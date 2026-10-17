@@ -1,5 +1,6 @@
 #include "UI/Loading/VaesenLoadingScreenSubsystem.h"
 
+#include "Core/VaesenMusicSubsystem.h"
 #include "Core/VaesenSettings.h"
 #include "Engine/Engine.h"
 #include "Engine/GameInstance.h"
@@ -107,12 +108,20 @@ void UVaesenLoadingScreenSubsystem::Deinitialize()
 	Super::Deinitialize();
 }
 
-void UVaesenLoadingScreenSubsystem::TravelToMap(const TSoftObjectPtr<UWorld>& Map)
+void UVaesenLoadingScreenSubsystem::TravelToMap(const TSoftObjectPtr<UWorld>& Map, bool bShowLoadingScreen)
 {
 	const FString MapPackage = Map.ToSoftObjectPath().GetLongPackageName();
 	if (MapPackage.IsEmpty())
 	{
 		UE_LOG(LogVaesenLoading, Warning, TEXT("TravelToMap: no map given."));
+		return;
+	}
+
+	if (!bShowLoadingScreen)
+	{
+		bSkipNextLoadingScreen = true;
+		PendingURL = MapPackage;
+		Travel();
 		return;
 	}
 
@@ -209,6 +218,12 @@ void UVaesenLoadingScreenSubsystem::HandlePreLoadMap(const FWorldContext& WorldC
 		return;
 	}
 
+	if (bSkipNextLoadingScreen && Phase == EPhase::Hidden)
+	{
+		bSkipNextLoadingScreen = false;
+		return;
+	}
+
 	const FString MapPackage = UWorld::RemovePIEPrefix(MapName);
 	if (Phase == EPhase::Hidden || Phase == EPhase::FadingOut)
 	{
@@ -258,6 +273,7 @@ void UVaesenLoadingScreenSubsystem::HandlePostLoadMap(UWorld* World)
 
 void UVaesenLoadingScreenSubsystem::HandleTravelFailure(UWorld* World, ETravelFailure::Type FailureType, const FString& Error)
 {
+	bSkipNextLoadingScreen = false;
 	if (Phase != EPhase::Hidden)
 	{
 		UE_LOG(LogVaesenLoading, Warning, TEXT("Travel failed (%s): %s"), ETravelFailure::ToString(FailureType), *Error);
@@ -307,6 +323,11 @@ bool UVaesenLoadingScreenSubsystem::ShowWidget(const FString& MapPackageName, bo
 	Viewport->AddViewportWidgetContent(ViewportContent.ToSharedRef(), VaesenLoading::ZOrder);
 	ShownAt = FPlatformTime::Seconds();
 	Widget->OnLoadingScreenShown();
+
+	if (UVaesenMusicSubsystem* Music = GetGameInstance()->GetSubsystem<UVaesenMusicSubsystem>())
+	{
+		Music->BeginLoadingMusic();
+	}
 	return true;
 }
 
@@ -329,6 +350,10 @@ void UVaesenLoadingScreenSubsystem::FinishLoading()
 	if (Widget)
 	{
 		Widget->OnLoadingFinished();
+	}
+	if (UVaesenMusicSubsystem* Music = GetGameInstance()->GetSubsystem<UVaesenMusicSubsystem>())
+	{
+		Music->EndLoadingMusic(FMath::Max(0.5f, UVaesenSettings::Get()->LoadingScreenFadeOutSeconds));
 	}
 	SetPhase(EPhase::FadingOut);
 }

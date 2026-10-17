@@ -39,8 +39,8 @@ public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 
-	/** Opens a map locally (front end, standalone). */
-	void TravelToMap(const TSoftObjectPtr<UWorld>& Map);
+	/** Opens a map locally (front end, standalone). Without the loading screen, the map just opens (e.g. login to character select). */
+	void TravelToMap(const TSoftObjectPtr<UWorld>& Map, bool bShowLoadingScreen = true);
 
 	/** Connects to a game server ("ip:port", plus URL options such as "?PlayerSessionId=..."); Map is preloaded meanwhile. */
 	void TravelToServer(const FString& Address, const TSoftObjectPtr<UWorld>& Map, const FString& Options = FString());
@@ -96,6 +96,9 @@ private:
 	TSharedPtr<SWidget> ViewportContent;
 
 	EPhase Phase = EPhase::Hidden;
+	/** The next map load is one we started without a loading screen. */
+	bool bSkipNextLoadingScreen = false;
+
 	/** The travel connects to a server (status says "Connecting..." until the map starts loading). */
 	bool bConnecting = false;
 	FText MapDisplayName;

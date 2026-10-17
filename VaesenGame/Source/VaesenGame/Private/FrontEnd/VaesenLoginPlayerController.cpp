@@ -1,7 +1,7 @@
 #include "FrontEnd/VaesenLoginPlayerController.h"
 
 #include "Blueprint/UserWidget.h"
-#include "Components/AudioComponent.h"
+#include "Core/VaesenMusicSubsystem.h"
 #include "Core/VaesenSessionSubsystem.h"
 #include "Core/VaesenSettings.h"
 #include "Kismet/GameplayStatics.h"
@@ -17,21 +17,12 @@ void AVaesenLoginPlayerController::BeginPlay()
 
 	if (IsLocalController())
 	{
-		PlayLoginMusic();
+		if (UVaesenMusicSubsystem* Music = GetGameInstance()->GetSubsystem<UVaesenMusicSubsystem>())
+		{
+			Music->PlayMusic(UVaesenSettings::Get()->LoginMusic.LoadSynchronous());
+		}
 		TryDevAutoLogin();
 	}
-}
-
-void AVaesenLoginPlayerController::PlayLoginMusic()
-{
-	USoundBase* Music = UVaesenSettings::Get()->LoginMusic.LoadSynchronous();
-	if (!Music)
-	{
-		return;
-	}
-
-	// 2D: not positioned in the world. Not persisted, so it ends when we leave the login map.
-	MusicComponent = UGameplayStatics::SpawnSound2D(this, Music);
 }
 
 TSubclassOf<UUserWidget> AVaesenLoginPlayerController::GetDefaultScreenWidgetClass() const
@@ -67,7 +58,7 @@ void AVaesenLoginPlayerController::TryDevAutoLogin()
 
 		if (bSuccess)
 		{
-			This->GetGameInstance()->GetSubsystem<UVaesenLoadingScreenSubsystem>()->TravelToMap(UVaesenSettings::Get()->CharacterSelectMap);
+			This->GetGameInstance()->GetSubsystem<UVaesenLoadingScreenSubsystem>()->TravelToMap(UVaesenSettings::Get()->CharacterSelectMap, /*bShowLoadingScreen*/ false);
 		}
 		else
 		{

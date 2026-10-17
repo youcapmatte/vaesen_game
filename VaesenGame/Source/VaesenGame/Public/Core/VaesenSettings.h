@@ -70,9 +70,13 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "UI")
 	TSoftObjectPtr<UVaesenUIStyle> UIStyle;
 
-	/** Background music played when the login map starts. Leave empty for silence. Looping is set on the sound asset. */
+	/** Front-end music: starts on the login screen and carries on through character select. Leave empty for silence. Looping is set on the sound asset. */
 	UPROPERTY(Config, EditAnywhere, Category = "Audio")
 	TSoftObjectPtr<USoundBase> LoginMusic;
+
+	/** Played while the loading screen is up; fades out with it. Leave empty to keep the current music playing. Looping is set on the sound asset. */
+	UPROPERTY(Config, EditAnywhere, Category = "Audio")
+	TSoftObjectPtr<USoundBase> LoadingMusic;
 
 	/** First names the "Randomize" button on character creation picks from. */
 	UPROPERTY(Config, EditAnywhere, Category = "Characters")

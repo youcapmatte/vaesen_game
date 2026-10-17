@@ -133,7 +133,7 @@ void UVaesenLoginWidget::HandleLoginClicked()
 			{
 				GConfig->SetString(VaesenLogin::ConfigSection, VaesenLogin::LastUsernameKey, *Username, GGameUserSettingsIni);
 				GConfig->Flush(false, GGameUserSettingsIni);
-				This->GetGameInstance()->GetSubsystem<UVaesenLoadingScreenSubsystem>()->TravelToMap(UVaesenSettings::Get()->CharacterSelectMap);
+				This->GetGameInstance()->GetSubsystem<UVaesenLoadingScreenSubsystem>()->TravelToMap(UVaesenSettings::Get()->CharacterSelectMap, /*bShowLoadingScreen*/ false);
 				return;
 			}
 
