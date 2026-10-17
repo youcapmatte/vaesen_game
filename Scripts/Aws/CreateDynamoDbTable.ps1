@@ -13,7 +13,7 @@
 #>
 param(
     [string]$TableName = "vaesen-dev",
-    [string]$Region = "eu-north-1",
+    [string]$Region = "eu-central-1",
     [string]$Profile = "vaesen"
 )
 

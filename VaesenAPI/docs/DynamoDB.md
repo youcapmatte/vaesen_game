@@ -111,7 +111,7 @@ The table is then created automatically after startup. If DynamoDB Local isn't r
 With the AWS CLI installed (any dummy credentials work against DynamoDB Local):
 
 ```bash
-aws dynamodb list-tables --endpoint-url http://localhost:8000 --region eu-north-1
+aws dynamodb list-tables --endpoint-url http://localhost:8000 --region eu-central-1
 ```
 
 The API creates the local table itself after startup, so there's nothing else to set up.
@@ -124,7 +124,7 @@ Install **NoSQL Workbench** (free, from AWS). *Operation builder → Add connect
 
 ## 4. AWS setup
 
-Pick one region for everything (GameLift, DynamoDB, the API). Vaesen uses **`eu-north-1` (Stockholm)**, the API's default and where IAM Identity Center is configured.
+Pick one region for the API, DynamoDB and the GameLift home region. Vaesen uses **`eu-central-1` (Frankfurt)**: Stockholm (`eu-north-1`) can't be a GameLift home region, but it can be added later as a GameLift fleet location to run game servers close to Nordic players. IAM Identity Center being configured in Stockholm doesn't matter: its permissions apply in every region.
 
 ### 4.1 Your own access: IAM Identity Center (no access keys)
 
@@ -192,8 +192,8 @@ The deployed API gets this policy through its ECS **task role** (section 8). Rep
         "dynamodb:DescribeTable"
       ],
       "Resource": [
-        "arn:aws:dynamodb:eu-north-1:123456789012:table/vaesen-dev",
-        "arn:aws:dynamodb:eu-north-1:123456789012:table/vaesen-dev/index/*"
+        "arn:aws:dynamodb:eu-central-1:123456789012:table/vaesen-dev",
+        "arn:aws:dynamodb:eu-central-1:123456789012:table/vaesen-dev/index/*"
       ]
     }
   ]
@@ -237,7 +237,7 @@ Modules depend on their repository interfaces only. Endpoints and services never
 |---|---|---|
 | `DynamoDb:TableName` | `vaesen-dev` | *(inherited: `vaesen-dev`)* |
 | `DynamoDb:ServiceUrl` | *(empty = real AWS)* | *(empty; set it only for DynamoDB Local, section 3)* |
-| `AWS:Region` | `eu-north-1` | *(inherited)* |
+| `AWS:Region` | `eu-central-1` | *(inherited)* |
 | `AWS:Profile` | | `vaesen`: your SSO login |
 
 Production overrides values with environment variables on the ECS task, e.g. `DynamoDb__TableName=vaesen-prod`. **No credentials appear in configuration:** locally they come from your SSO profile, in AWS from the task role.
@@ -316,7 +316,7 @@ When the API is deployed to ECS Fargate:
 2. Set it as the **task role** in the task definition. The AWS SDK picks it up automatically; nothing to configure in code.
 3. Set environment variables on the task:
    - `ASPNETCORE_ENVIRONMENT=Production`
-   - `AWS__Region=eu-north-1`
+   - `AWS__Region=eu-central-1`
    - `DynamoDb__TableName=vaesen-prod`
 4. Point the load balancer health check at `/health` (liveness). Use `/health/ready` to verify that a deployment can reach DynamoDB.
 
