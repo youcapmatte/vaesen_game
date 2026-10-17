@@ -7,12 +7,16 @@ public static class VaesenKeys
 {
     public const string Profile = "PROFILE";
     public const string CharacterNameSortKey = "CHARNAME";
+    public const string UsernameSortKey = "USERNAME";
+    public const string Auth0UserSortKey = "AUTH0";
 
     public const string CharacterPrefix = "CHAR#";
     public const string GuildPrefix = "GUILD#";
     public const string MemberPrefix = "MEMBER#";
 
     public static string Account(string accountId) => $"ACCOUNT#{accountId}";
+    public static string Username(string username) => $"USERNAME#{username.Trim().ToLowerInvariant()}";
+    public static string Auth0User(string auth0UserId) => $"AUTH0#{auth0UserId}";
     public static string Character(string characterId) => CharacterPrefix + characterId;
     public static string CharacterName(string name) => $"CHARNAME#{name.Trim().ToLowerInvariant()}";
     public static string Guild(string guildId) => GuildPrefix + guildId;

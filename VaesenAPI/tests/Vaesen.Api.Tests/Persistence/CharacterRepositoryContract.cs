@@ -1,3 +1,4 @@
+using Vaesen.Api.Common;
 using Vaesen.Api.Modules.Players;
 
 namespace Vaesen.Api.Tests.Persistence;
@@ -11,9 +12,9 @@ public abstract class CharacterRepositoryContract
     protected abstract ICharacterRepository Repository { get; }
 
     private static Character NewCharacter(string accountId, string name) =>
-        new(Guid.NewGuid().ToString("N"), accountId, name, null, 1);
+        new(EntityIds.New(EntityIds.Character), accountId, name, null, 1);
 
-    private static string NewAccountId() => $"auth0|{Guid.NewGuid():N}";
+    private static string NewAccountId() => EntityIds.New(EntityIds.Account);
 
     /// <summary>Names are unique per table, so tests sharing a database need their own.</summary>
     private static string UniqueName(string name) => $"{name}{Guid.NewGuid():N}"[..20];

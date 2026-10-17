@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 namespace Vaesen.Api.Modules.Identity;
 
 /// <summary>
-/// Accounts, login and token validation for the website, game client and game servers.
+/// Login and token validation for the website, game client and game servers (accounts live in the Accounts module).
 /// Tokens are issued by Auth0; this API only validates them.
 /// </summary>
 public static class IdentityModule
@@ -30,7 +30,10 @@ public static class IdentityModule
                 .RequireAssertion(context => context.User.IsPlayer()))
             .AddPolicy(Policies.GameServer, policy => policy
                 .RequireAuthenticatedUser()
-                .RequireAssertion(context => context.User.HasScope(Auth0Options.GameServerScope)));
+                .RequireAssertion(context => context.User.HasScope(Auth0Options.GameServerScope)))
+            .AddPolicy(Policies.Admin, policy => policy
+                .RequireAuthenticatedUser()
+                .RequireAssertion(context => context.User.HasScope(Auth0Options.AdminScope)));
 
         return services;
     }
@@ -54,6 +57,9 @@ public sealed class Auth0Options
     /// <summary>Scope granted to the game-server machine-to-machine application in Auth0.</summary>
     public const string GameServerScope = "game:server";
 
+    /// <summary>Scope for back-office tools (website admin pages, support scripts).</summary>
+    public const string AdminScope = "vaesen:admin";
+
     /// <summary>Auth0 tenant domain, e.g. "vaesen.eu.auth0.com".</summary>
     public string Domain { get; set; } = "";
 
@@ -68,6 +74,9 @@ public static class Policies
 
     /// <summary>A dedicated game server using its machine-to-machine credentials.</summary>
     public const string GameServer = "GameServer";
+
+    /// <summary>Back-office access to any account's data.</summary>
+    public const string Admin = "Admin";
 }
 
 public sealed record MeResponse(string PlayerId);

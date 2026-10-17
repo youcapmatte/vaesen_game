@@ -10,6 +10,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Vaesen.Api.Infrastructure.Persistence;
+using Vaesen.Api.Modules.Accounts;
 using Vaesen.Api.Modules.Players;
 using Vaesen.Api.Modules.Sessions;
 
@@ -48,6 +49,7 @@ public sealed class VaesenApiFactory(bool useTestAuth = true) : WebApplicationFa
 
             // No DynamoDB Local in endpoint tests: in-memory repositories, and don't try to create the table.
             services.AddSingleton<ICharacterRepository, InMemoryCharacterRepository>();
+            services.AddSingleton<IAccountRepository, InMemoryAccountRepository>();
             services.RemoveAll<IHostedService>();
 
             if (!useTestAuth)

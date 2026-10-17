@@ -3,6 +3,7 @@ using Amazon.Runtime;
 using Microsoft.Extensions.Options;
 using Testcontainers.DynamoDb;
 using Vaesen.Api.Infrastructure.Persistence;
+using Vaesen.Api.Modules.Accounts;
 using Vaesen.Api.Modules.Players;
 
 namespace Vaesen.Api.Tests.Persistence;
@@ -10,6 +11,11 @@ namespace Vaesen.Api.Tests.Persistence;
 public class InMemoryCharacterRepositoryTests : CharacterRepositoryContract
 {
     protected override ICharacterRepository Repository { get; } = new InMemoryCharacterRepository();
+}
+
+public class InMemoryAccountRepositoryTests : AccountRepositoryContract
+{
+    protected override IAccountRepository Repository { get; } = new InMemoryAccountRepository();
 }
 
 /// <summary>
@@ -20,6 +26,16 @@ public class DynamoDbCharacterRepositoryTests(DynamoDbFixture fixture)
     : CharacterRepositoryContract, IClassFixture<DynamoDbFixture>
 {
     protected override ICharacterRepository Repository => fixture.CreateCharacterRepository();
+
+    protected override void SkipIfUnavailable() =>
+        Skip.IfNot(DynamoDbFixture.IsDockerAvailable, "Docker is not available; install Docker Desktop to run DynamoDB tests.");
+}
+
+/// <summary>The real account repository against DynamoDB Local. Skipped when Docker isn't available.</summary>
+public class DynamoDbAccountRepositoryTests(DynamoDbFixture fixture)
+    : AccountRepositoryContract, IClassFixture<DynamoDbFixture>
+{
+    protected override IAccountRepository Repository => fixture.CreateAccountRepository();
 
     protected override void SkipIfUnavailable() =>
         Skip.IfNot(DynamoDbFixture.IsDockerAvailable, "Docker is not available; install Docker Desktop to run DynamoDB tests.");
@@ -36,8 +52,11 @@ public sealed class DynamoDbFixture : IAsyncLifetime
     public static bool IsDockerAvailable { get; } =
         File.Exists(OperatingSystem.IsWindows() ? @"\\.\pipe\docker_engine" : "/var/run/docker.sock");
 
-    public ICharacterRepository CreateCharacterRepository() =>
-        new DynamoDbCharacterRepository(_client!, Options.Create(new DynamoDbOptions { TableName = TableName }));
+    public ICharacterRepository CreateCharacterRepository() => new DynamoDbCharacterRepository(_client!, TableOptions);
+
+    public IAccountRepository CreateAccountRepository() => new DynamoDbAccountRepository(_client!, TableOptions);
+
+    private static IOptions<DynamoDbOptions> TableOptions => Options.Create(new DynamoDbOptions { TableName = TableName });
 
     public async Task InitializeAsync()
     {

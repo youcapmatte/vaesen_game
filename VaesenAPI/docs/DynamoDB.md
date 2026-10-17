@@ -44,6 +44,8 @@ DynamoDB is a key-value / document database. Everything you need to know to use 
 | # | Question the API asks | Operation |
 |---|---|---|
 | A1 | Get an account | `GetItem PK=ACCOUNT#{accountId}, SK=PROFILE` |
+| A2 | Find an account by username (case-insensitive) | `GetItem PK=USERNAME#{lowercase}` -> `AccountId` -> A1 |
+| A3 | Find an account by Auth0 user | `GetItem PK=AUTH0#{auth0UserId}` -> `AccountId` -> A1 |
 | C1 | Get a character | `GetItem PK=CHAR#{characterId}, SK=PROFILE` |
 | C2 | List an account's characters (character select) | `Query GSI1 GSI1PK=ACCOUNT#{accountId}, GSI1SK begins_with CHAR#` |
 | C3 | Is a character name free? | `GetItem PK=CHARNAME#{lowercase name}` |
@@ -61,7 +63,9 @@ Table `vaesen-{env}`:
 
 | Item | PK | SK | GSI1PK | GSI1SK | Other attributes |
 |---|---|---|---|---|---|
-| Account | `ACCOUNT#{accountId}` | `PROFILE` | | | `Email`, `CreatedAt` |
+| Account | `ACCOUNT#{accountId}` | `PROFILE` | | | `Username`, `Email`, `Auth0UserId`, `SubscriptionStatus`, `SubscriptionPlan`, `SubscriptionPeriodEnd`, `CreatedAt`, `Version` |
+| Username reservation | `USERNAME#{lowercase username}` | `USERNAME` | | | `AccountId` |
+| Auth0 link | `AUTH0#{auth0UserId}` | `AUTH0` | | | `AccountId` |
 | Character | `CHAR#{characterId}` | `PROFILE` | `ACCOUNT#{accountId}` | `CHAR#{name}` | `Name`, `AccountId`, `GuildId`, `Version` |
 | Character name reservation | `CHARNAME#{lowercase name}` | `CHARNAME` | | | `CharacterId` |
 | Guild | `GUILD#{guildId}` | `PROFILE` | | | `Name`, `CreatedAt` |
@@ -71,7 +75,9 @@ Every item also has a `Type` attribute (`Account`, `Character`, ...). It isn't n
 
 Conventions:
 
-- Ids are opaque strings (ULIDs or GUIDs). Auth0 subject ids (`auth0|...`) become the `accountId`.
+- Ids are `{type}-{lowercase guid}`, e.g. `account-3f2b8c1e-1d2c-4b5a-9e8f-0123456789ab`, created by `EntityIds.New(...)`.
+- An account's Auth0 identity is stored as `Auth0UserId`: Auth0's `user_id`, which is the `sub` claim in its tokens (`auth0|...`, `google-oauth2|...`).
+- Uniqueness (usernames, character names, Auth0 users) uses reservation items written in the same transaction as the entity, each with `attribute_not_exists(PK)`.
 - Prefixes (`CHAR#`, `GUILD#`) keep entity types apart and make `begins_with` queries possible.
 - New access patterns usually mean a new item type or a new GSI, not a new table.
 
@@ -223,6 +229,12 @@ src/Vaesen.Api/
     DynamoDbTableInitializer.cs  creates the table in DynamoDB Local, in the background
     DynamoDbHealthCheck.cs       "is the table reachable?" for /health/ready
     VaesenKeys.cs                every key format ("CHAR#", "GUILD#", ...) in one place
+  Modules/Accounts/
+    Account.cs                   account + subscription model
+    IAccountRepository.cs
+    DynamoDbAccountRepository.cs
+    InMemoryAccountRepository.cs
+    AccountsModule.cs            endpoints: create, get by id / username / Auth0 user
   Modules/Players/
     ICharacterRepository.cs      what the module needs; no DynamoDB types
     DynamoDbCharacterRepository.cs

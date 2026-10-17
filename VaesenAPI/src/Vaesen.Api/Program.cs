@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Vaesen.Api.Infrastructure.Persistence;
+using Vaesen.Api.Modules.Accounts;
 using Vaesen.Api.Modules.Billing;
 using Vaesen.Api.Modules.Dev;
 using Vaesen.Api.Modules.Identity;
@@ -15,6 +16,7 @@ builder.Services.AddDefaultAWSOptions(builder.Configuration.GetAWSOptions());
 builder.Services
     .AddPersistence(builder.Configuration)
     .AddIdentityModule(builder.Configuration)
+    .AddAccountsModule(builder.Configuration)
     .AddBillingModule(builder.Configuration)
     .AddSessionsModule(builder.Configuration)
     .AddPlayersModule(builder.Configuration);
@@ -39,6 +41,7 @@ app.MapHealthChecks("/health/ready");
 
 var api = app.MapGroup("/api/v1");
 api.MapIdentityEndpoints();
+api.MapAccountsEndpoints();
 api.MapBillingEndpoints();
 api.MapSessionsEndpoints();
 api.MapPlayersEndpoints();
