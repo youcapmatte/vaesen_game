@@ -278,15 +278,47 @@ public abstract class StoreContract
         var stale = (await Characters.GetAsync(character.Id))!;
 
         first.HealthPoints = 7;
-        Assert.True((await Characters.UpdateAsync(first)).Success);
+        Assert.True((await Characters.UpdateAsync(first, first.Name)).Success);
         stale.Class = "Doctor";
-        var conflict = await Characters.UpdateAsync(stale);
+        var conflict = await Characters.UpdateAsync(stale, stale.Name);
 
         Assert.Equal(ErrorCodes.Conflict, conflict.ErrorCode);
         var loaded = (await Characters.GetAsync(character.Id))!;
         Assert.Equal(7, loaded.HealthPoints);
         Assert.Equal("Occultist", loaded.Class);
         Assert.Equal(2, loaded.Version);
+    }
+
+    [SkippableFact]
+    public async Task Character_Rename_MovesTheNameReservation()
+    {
+        SkipIfUnavailable();
+        var (_, character) = await CreateCharacterAsync();
+        var loaded = (await Characters.GetAsync(character.Id))!;
+        var oldName = loaded.Name;
+        loaded.Name = Unique("Renamed", 16);
+
+        Assert.True((await Characters.UpdateAsync(loaded, oldName)).Success);
+
+        Assert.Equal(character.Id, (await Characters.GetByNameAsync(loaded.Name))?.Id);
+        Assert.Null(await Characters.GetByNameAsync(oldName));
+    }
+
+    [SkippableFact]
+    public async Task Character_RenameToATakenName_ChangesNothing()
+    {
+        SkipIfUnavailable();
+        var (_, taken) = await CreateCharacterAsync();
+        var (_, character) = await CreateCharacterAsync();
+        var loaded = (await Characters.GetAsync(character.Id))!;
+        var oldName = loaded.Name;
+        loaded.Name = taken.Name.ToUpperInvariant();
+
+        var result = await Characters.UpdateAsync(loaded, oldName);
+
+        Assert.Equal(CharacterRepository.NameTaken, result.ErrorCode);
+        Assert.Equal(oldName, (await Characters.GetAsync(character.Id))?.Name);
+        Assert.Equal(character.Id, (await Characters.GetByNameAsync(oldName))?.Id);
     }
 
     [SkippableFact]

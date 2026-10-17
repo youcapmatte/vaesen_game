@@ -17,8 +17,12 @@ public interface ICharacterStore
     /// <summary>Case-insensitive.</summary>
     Task<Character?> GetByNameAsync(string name, CancellationToken cancellationToken = default);
 
-    /// <summary>Saves changes. Fails with <see cref="ErrorCodes.Conflict"/> if someone else changed the character first.</summary>
-    Task<ResultBase> UpdateAsync(Character character, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Saves changes. If the name changed from <paramref name="previousName"/>, the new name is reserved and the old one
+    /// freed in the same write. Fails with <see cref="CharacterRepository.NameTaken"/>, or <see cref="ErrorCodes.Conflict"/>
+    /// if someone else changed the character first.
+    /// </summary>
+    Task<ResultBase> UpdateAsync(Character character, string previousName, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<Character>> GetManyAsync(IReadOnlyCollection<string> characterIds, CancellationToken cancellationToken = default);
 
@@ -64,8 +68,19 @@ public sealed class CharacterRepository : BaseRepository<Character>, ICharacterS
         return characterId is null ? null : await GetItemAsync(characterId, cancellationToken).ConfigureAwait(false);
     }
 
-    public Task<ResultBase> UpdateAsync(Character character, CancellationToken cancellationToken = default) =>
-        DataTransaction.ExecuteAsync(DynamoDb, [PrepareUpdate(character)], cancellationToken);
+    public Task<ResultBase> UpdateAsync(Character character, string previousName, CancellationToken cancellationToken = default)
+    {
+        var writes = new List<TransactWrite> { PrepareUpdate(character) };
+        var newName = NameReservation(character.Name);
+        var oldName = NameReservation(previousName);
+        if (!string.Equals(newName.Key, oldName.Key, StringComparison.Ordinal))
+        {
+            writes.Add(PrepareReservation(newName, character.Id));
+            writes.Add(PrepareReservationRelease(oldName, character.Id));
+        }
+
+        return DataTransaction.ExecuteAsync(DynamoDb, writes, cancellationToken);
+    }
 
     public Task<IReadOnlyList<Character>> GetManyAsync(IReadOnlyCollection<string> characterIds, CancellationToken cancellationToken = default) =>
         GetItemsAsync(characterIds, cancellationToken);

@@ -61,8 +61,17 @@ public sealed class InMemoryDatabase : IAccountStore, ICharacterStore, IGuildSto
     Task<Character?> ICharacterStore.GetByNameAsync(string name, CancellationToken cancellationToken) =>
         Task.FromResult(Read<Character>(Owner("CHARNAME", name.Trim().ToLowerInvariant())));
 
-    public Task<ResultBase> UpdateAsync(Character character, CancellationToken cancellationToken = default) =>
-        Task.FromResult(Commit([Update(character)], []));
+    public Task<ResultBase> UpdateAsync(Character character, string previousName, CancellationToken cancellationToken = default)
+    {
+        var newKey = character.Name.Trim().ToLowerInvariant();
+        var oldKey = previousName.Trim().ToLowerInvariant();
+        return Task.FromResult(string.Equals(newKey, oldKey, StringComparison.Ordinal)
+            ? Commit([Update(character)], [])
+            : Commit(
+                [Update(character)],
+                [("CHARNAME", newKey, character.Id, "That character name is taken.", CharacterRepository.NameTaken)],
+                releases: [("CHARNAME", oldKey, character.Id)]));
+    }
 
     public Task<IReadOnlyList<Character>> GetManyAsync(IReadOnlyCollection<string> characterIds, CancellationToken cancellationToken = default) =>
         Task.FromResult<IReadOnlyList<Character>>(characterIds.Select(Read<Character>).OfType<Character>().ToList());

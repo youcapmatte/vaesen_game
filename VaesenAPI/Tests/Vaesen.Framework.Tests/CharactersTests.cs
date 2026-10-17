@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Vaesen.Framework.Common.Models;
+using Vaesen.Framework.Common.Repositorys;
 using Vaesen.Framework.Core.Models;
 
 namespace Vaesen.Framework.Tests;
@@ -29,19 +30,18 @@ public sealed class CharactersTests : IAsyncLifetime
     private Task<HttpResponseMessage> CreateAsync(object body) =>
         _client.PostAsJsonAsync($"/api/guilds/{_guild.Id}/characters", body);
 
-    private async Task<Character> CreateCharacterAsync(string name = "Astrid") =>
-        (await (await CreateAsync(new { name, firstName = "Astrid", lastName = "Falk", @class = "Occultist", healthPoints = 42, createdByAccountId = _founder.Id }))
+    private async Task<Character> CreateCharacterAsync(string firstName = "Astrid", string lastName = "Falk") =>
+        (await (await CreateAsync(new { firstName, lastName, @class = "Occultist", healthPoints = 42, createdByAccountId = _founder.Id }))
             .ReadResultAsync<Character>()).Result!;
 
     private Task<HttpResponseMessage> PatchAsync(string characterId, object body) =>
         _client.PatchAsJsonAsync($"{Characters}/{characterId}", body);
 
     [Fact]
-    public async Task Create_StoresAllFields()
+    public async Task Create_StoresAllFields_AndNameIsFirstPlusLastName()
     {
         var response = await CreateAsync(new
         {
-            name = "Astrid",
             firstName = "Astrid",
             lastName = "Falk",
             @class = "Occultist",
@@ -53,7 +53,7 @@ public sealed class CharactersTests : IAsyncLifetime
         var character = (await response.ReadResultAsync<Character>()).Result!;
         Assert.True(ObjectCore.IsValidId<Character>(character.Id));
         Assert.Equal(_guild.Id, character.GuildId);
-        Assert.Equal("Astrid", character.Name);
+        Assert.Equal("Astrid Falk", character.Name);
         Assert.Equal("Astrid", character.FirstName);
         Assert.Equal("Falk", character.LastName);
         Assert.Equal("Occultist", character.Class);
@@ -64,24 +64,48 @@ public sealed class CharactersTests : IAsyncLifetime
     [Fact]
     public async Task Create_WithoutOptionalFields_UsesDefaults()
     {
-        var character = (await (await CreateAsync(new { name = "Erik", createdByAccountId = _founder.Id })).ReadResultAsync<Character>()).Result!;
+        var character = (await (await CreateAsync(new { firstName = "Erik", lastName = "Lund", createdByAccountId = _founder.Id }))
+            .ReadResultAsync<Character>()).Result!;
 
-        Assert.Null(character.FirstName);
+        Assert.Equal("Erik Lund", character.Name);
         Assert.Null(character.Class);
         Assert.Equal(Character.DefaultHealthPoints, character.HealthPoints);
     }
 
     [Theory]
-    [InlineData("x", null, null, null)]
-    [InlineData("Astrid", "Bad<Name>", null, null)]
-    [InlineData("Astrid", null, "Class 123", null)]
-    [InlineData("Astrid", null, null, -1)]
-    public async Task Create_WithInvalidFields_IsBadRequest(string name, string? firstName, string? characterClass, int? healthPoints)
+    [InlineData(null, "Falk", null, null)]
+    [InlineData("Astrid", null, null, null)]
+    [InlineData("", "Falk", null, null)]
+    [InlineData("Bad<Name>", "Falk", null, null)]
+    [InlineData("Astrid", "Falk", "Class 123", null)]
+    [InlineData("Astrid", "Falk", null, -1)]
+    public async Task Create_WithMissingOrInvalidFields_IsBadRequest(string? firstName, string? lastName, string? characterClass, int? healthPoints)
     {
-        var response = await CreateAsync(new { name, firstName, @class = characterClass, healthPoints, createdByAccountId = _founder.Id });
+        var response = await CreateAsync(new { firstName, lastName, @class = characterClass, healthPoints, createdByAccountId = _founder.Id });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal(ErrorCodes.Invalid, (await response.ReadResultAsync<Character>()).ErrorCode);
+    }
+
+    [Fact]
+    public async Task Create_WithTakenFullName_DifferentCase_IsConflict()
+    {
+        await CreateCharacterAsync("Astrid", "Falk");
+
+        var response = await CreateAsync(new { firstName = "ASTRID", lastName = "falk", createdByAccountId = _founder.Id });
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal(CharacterRepository.NameTaken, (await response.ReadResultAsync<Character>()).ErrorCode);
+    }
+
+    [Fact]
+    public async Task Create_SameFirstName_DifferentLastName_IsFine()
+    {
+        await CreateCharacterAsync("Astrid", "Falk");
+
+        var response = await CreateAsync(new { firstName = "Astrid", lastName = "Lund", createdByAccountId = _founder.Id });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
     }
 
     [Fact]
@@ -90,7 +114,7 @@ public sealed class CharactersTests : IAsyncLifetime
         var character = await CreateCharacterAsync();
 
         var byId = (await (await _client.GetAsync($"{Characters}/{character.Id}")).ReadResultAsync<Character>()).Result!;
-        var byName = (await (await _client.GetAsync($"{Characters}/by-name/astrid")).ReadResultAsync<Character>()).Result!;
+        var byName = (await (await _client.GetAsync($"{Characters}/by-name/astrid%20falk")).ReadResultAsync<Character>()).Result!;
 
         Assert.Equal(character.Id, byId.Id);
         Assert.Equal(character.Id, byName.Id);
@@ -114,22 +138,47 @@ public sealed class CharactersTests : IAsyncLifetime
         var updated = (await response.ReadResultAsync<Character>()).Result!;
         Assert.Equal(7, updated.HealthPoints);
         Assert.Equal("Doctor", updated.Class);
-        Assert.Equal("Astrid", updated.FirstName);
-        Assert.Equal("Falk", updated.LastName);
-        Assert.Equal("Astrid", updated.Name);
+        Assert.Equal("Astrid Falk", updated.Name);
         Assert.Equal(_founder.Id, updated.UpdatedBy);
         Assert.Equal(2, updated.Version);
     }
 
     [Fact]
-    public async Task Update_WithEmptyString_ClearsTheField()
+    public async Task Update_LastName_RenamesTheCharacter_AndFreesTheOldName()
     {
         var character = await CreateCharacterAsync();
 
-        var updated = (await (await PatchAsync(character.Id, new { lastName = "" })).ReadResultAsync<Character>()).Result!;
+        var updated = (await (await PatchAsync(character.Id, new { lastName = "Lund" })).ReadResultAsync<Character>()).Result!;
 
-        Assert.Null(updated.LastName);
-        Assert.Equal("Astrid", updated.FirstName);
+        Assert.Equal("Astrid Lund", updated.Name);
+        Assert.Equal(character.Id, (await (await _client.GetAsync($"{Characters}/by-name/Astrid%20Lund")).ReadResultAsync<Character>()).Result!.Id);
+        Assert.Equal(HttpStatusCode.NotFound, (await _client.GetAsync($"{Characters}/by-name/Astrid%20Falk")).StatusCode);
+        Assert.Equal(HttpStatusCode.Created, (await CreateAsync(new { firstName = "Astrid", lastName = "Falk", createdByAccountId = _founder.Id })).StatusCode);
+    }
+
+    [Fact]
+    public async Task Update_RenameToATakenName_IsConflict()
+    {
+        await CreateCharacterAsync("Astrid", "Lund");
+        var character = await CreateCharacterAsync("Astrid", "Falk");
+
+        var response = await PatchAsync(character.Id, new { lastName = "Lund" });
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Equal("Astrid Falk", (await (await _client.GetAsync($"{Characters}/{character.Id}")).ReadResultAsync<Character>()).Result!.Name);
+    }
+
+    [Fact]
+    public async Task Update_CannotClearFirstOrLastName_ButCanClearClass()
+    {
+        var character = await CreateCharacterAsync();
+
+        var clearName = await PatchAsync(character.Id, new { lastName = "" });
+        var clearClass = (await (await PatchAsync(character.Id, new { @class = "" })).ReadResultAsync<Character>()).Result!;
+
+        Assert.Equal(HttpStatusCode.BadRequest, clearName.StatusCode);
+        Assert.Null(clearClass.Class);
+        Assert.Equal("Falk", clearClass.LastName);
     }
 
     [Fact]
@@ -155,6 +204,6 @@ public sealed class CharactersTests : IAsyncLifetime
         var guild = (await (await _client.GetAsync($"/api/guilds/{_guild.Id}")).ReadResultAsync<Guild>()).Result!;
         Assert.Empty(guild.CharacterIds);
         Assert.Empty(guild.CharacterAssignments);
-        Assert.Equal(HttpStatusCode.Created, (await CreateAsync(new { name = "Astrid", createdByAccountId = _founder.Id })).StatusCode);
+        Assert.Equal(HttpStatusCode.Created, (await CreateAsync(new { firstName = "Astrid", lastName = "Falk", createdByAccountId = _founder.Id })).StatusCode);
     }
 }

@@ -7,13 +7,11 @@ public static partial class CharacterRules
 {
     public const int MaxHealthPoints = 100_000;
 
-    /// <summary>The character name: 2-24 letters, with single spaces, apostrophes or hyphens between words.</summary>
-    public static string? ValidateName(string name) =>
-        NamePattern().IsMatch(name) ? null : "Character name must be 2-24 letters, optionally with single spaces, apostrophes or hyphens between them.";
-
-    /// <summary>First or last name: optional; 1-32 letters, with single spaces, apostrophes or hyphens between words.</summary>
+    /// <summary>First or last name: required; 1-32 letters, with single spaces, apostrophes or hyphens between words.</summary>
     public static string? ValidatePersonName(string? value, string field) =>
-        value is null || PersonNamePattern().IsMatch(value) ? null : $"{field} must be 1-32 letters, optionally with single spaces, apostrophes or hyphens between them.";
+        value is null ? $"{field} is required."
+        : PersonNamePattern().IsMatch(value) ? null
+        : $"{field} must be 1-32 letters, optionally with single spaces, apostrophes or hyphens between them.";
 
     /// <summary>Class: optional; 1-32 letters, spaces, apostrophes or hyphens.</summary>
     public static string? ValidateClass(string? value) =>
@@ -24,9 +22,6 @@ public static partial class CharacterRules
 
     /// <summary>Trims; empty or whitespace becomes null (field not set / cleared).</summary>
     public static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-
-    [GeneratedRegex(@"^(?=.{2,24}$)\p{L}+(?:[ '-]\p{L}+)*$")]
-    private static partial Regex NamePattern();
 
     [GeneratedRegex(@"^(?=.{1,32}$)\p{L}+(?:[ '-]\p{L}+)*$")]
     private static partial Regex PersonNamePattern();

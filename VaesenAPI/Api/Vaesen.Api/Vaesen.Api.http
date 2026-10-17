@@ -37,7 +37,6 @@ POST {{Vaesen.Api_HostAddress}}/api/guilds/guild-00000000-0000-0000-0000-0000000
 Content-Type: application/json
 
 {
-  "name": "Astrid",
   "firstName": "Astrid",
   "lastName": "Falk",
   "class": "Occultist",
@@ -54,9 +53,9 @@ Content-Type: application/json
 }
 
 ### Get a character by name
-GET {{Vaesen.Api_HostAddress}}/api/characters/by-name/Astrid
+GET {{Vaesen.Api_HostAddress}}/api/characters/by-name/Astrid Falk
 
-### Change a character (fields left out stay as they are; "" clears a text field)
+### Change a character (fields left out stay as they are; a new first/last name renames it; "" clears the class)
 PATCH {{Vaesen.Api_HostAddress}}/api/characters/character-00000000-0000-0000-0000-000000000000
 Content-Type: application/json
 

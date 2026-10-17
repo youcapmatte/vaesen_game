@@ -36,8 +36,8 @@ public sealed class GuildsTests : IAsyncLifetime
     private async Task<Guild> CreateGuildAsync(string name, Account founder) =>
         (await (await _client.PostAsJsonAsync(Guilds, new { name, createdByAccountId = founder.Id })).ReadResultAsync<Guild>()).Result!;
 
-    private async Task<Character> CreateCharacterAsync(Guild guild, string name, Account creator) =>
-        (await (await _client.PostAsJsonAsync($"{Guilds}/{guild.Id}/characters", new { name, createdByAccountId = creator.Id }))
+    private async Task<Character> CreateCharacterAsync(Guild guild, string firstName, Account creator) =>
+        (await (await _client.PostAsJsonAsync($"{Guilds}/{guild.Id}/characters", new { firstName, lastName = "Falk", createdByAccountId = creator.Id }))
             .ReadResultAsync<Character>()).Result!;
 
     private Task<HttpResponseMessage> AssignAsync(Guild guild, Character character, Account player) =>
@@ -127,8 +127,8 @@ public sealed class GuildsTests : IAsyncLifetime
         var outsider = await CreateAccountAsync("Sigrid");
         var guild = await CreateGuildAsync("Lantern Watch", founder);
 
-        var response = await _client.PostAsJsonAsync($"{Guilds}/{guild.Id}/characters", new { name = "Astrid Falk", createdByAccountId = founder.Id });
-        var byOutsider = await _client.PostAsJsonAsync($"{Guilds}/{guild.Id}/characters", new { name = "Erik", createdByAccountId = outsider.Id });
+        var response = await _client.PostAsJsonAsync($"{Guilds}/{guild.Id}/characters", new { firstName = "Astrid", lastName = "Falk", createdByAccountId = founder.Id });
+        var byOutsider = await _client.PostAsJsonAsync($"{Guilds}/{guild.Id}/characters", new { firstName = "Erik", lastName = "Lund", createdByAccountId = outsider.Id });
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var character = (await response.ReadResultAsync<Character>()).Result!;
@@ -149,7 +149,7 @@ public sealed class GuildsTests : IAsyncLifetime
         var guild = await CreateGuildAsync("Lantern Watch", founder);
         await CreateCharacterAsync(guild, "Astrid", founder);
 
-        var response = await _client.PostAsJsonAsync($"{Guilds}/{guild.Id}/characters", new { name = "astrid", createdByAccountId = founder.Id });
+        var response = await _client.PostAsJsonAsync($"{Guilds}/{guild.Id}/characters", new { firstName = "astrid", lastName = "FALK", createdByAccountId = founder.Id });
 
         Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
         Assert.Equal(CharacterRepository.NameTaken, (await response.ReadResultAsync<Character>()).ErrorCode);

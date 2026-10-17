@@ -82,6 +82,7 @@ Conventions:
 - Characters belong to a guild (`character.guildId`, `guild.characterIds`). Who plays a character right now is `guild.characterAssignments`: at most one player per character and one character per member. Reassigning is just a guild update.
 - Every model has `createdAt`, `createdBy`, `updatedAt`, `updatedBy`; services set the `*By` fields (account ids) when they know who acted.
 - Writes that span models (guild + accounts, character + guild) are prepared by each repository (`PrepareCreate`, `PrepareUpdate`, `PrepareReservation`, `PrepareReservationRelease`) and committed together with `DataTransaction.ExecuteAsync` (max 100 writes).
+- A character's `name` is always `"{firstName} {lastName}"` (both required) and is unique. Changing the first or last name renames the character: the new name is reserved and the old one freed in the same transaction as the update (the GSI1 sort key follows automatically).
 - Deleting a character is a soft delete in one transaction with its guild (removed from `characterIds` and `characterAssignments`) and frees its name reservation, so the name can be used again.
 - New models usually need no new table design: derive from `BaseCore`, add a repository deriving from `BaseRepository<T>`. Only new queries need a GSI key or a reservation.
 

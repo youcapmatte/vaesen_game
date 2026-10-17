@@ -11,7 +11,7 @@ public interface ICharacterService
 
     Task<ResultBase<Character>> GetByNameAsync(string name, CancellationToken cancellationToken = default);
 
-    /// <summary>Changes first/last name, class and health. The character name can't be changed.</summary>
+    /// <summary>Changes first/last name (which renames the character), class and health.</summary>
     Task<ResultBase<Character>> UpdateAsync(string characterId, UpdateCharacterRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>Deletes the character: it leaves its guild, whoever played it stops, and its name becomes free again.</summary>
@@ -53,7 +53,7 @@ public sealed class CharacterService : ICharacterService
 
         var character = loaded.Result!;
 
-        // Null means "keep"; an empty string clears a text field.
+        // Null means "keep". First and last name can't be cleared; an empty class clears it.
         var firstName = request?.FirstName is null ? character.FirstName : CharacterRules.Clean(request.FirstName);
         var lastName = request?.LastName is null ? character.LastName : CharacterRules.Clean(request.LastName);
         var characterClass = request?.Class is null ? character.Class : CharacterRules.Clean(request.Class);
@@ -68,8 +68,10 @@ public sealed class CharacterService : ICharacterService
             return ret.Fail(invalid, ErrorCodes.Invalid);
         }
 
-        character.FirstName = firstName;
-        character.LastName = lastName;
+        var previousName = character.Name;
+        character.FirstName = firstName!;
+        character.LastName = lastName!;
+        character.Name = Character.FullName(firstName!, lastName!);
         character.Class = characterClass;
         character.HealthPoints = healthPoints;
         if (!string.IsNullOrWhiteSpace(request?.UpdatedByAccountId))
@@ -77,7 +79,7 @@ public sealed class CharacterService : ICharacterService
             character.UpdatedBy = request.UpdatedByAccountId.Trim();
         }
 
-        var saved = await _characters.UpdateAsync(character, cancellationToken).ConfigureAwait(false);
+        var saved = await _characters.UpdateAsync(character, previousName, cancellationToken).ConfigureAwait(false);
         return saved.Success ? ret.Ok(character) : ret.Fail(saved.ErrorMessage, saved.ErrorCode);
     }
 

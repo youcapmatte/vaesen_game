@@ -32,7 +32,10 @@ public sealed class CharacterController : ControllerBase
     public async Task<ActionResult<ResultBase<Character>>> GetByName([FromRoute] string name, CancellationToken cancellationToken) =>
         this.ToActionResult(await _characters.GetByNameAsync(name, cancellationToken).ConfigureAwait(false));
 
-    /// <summary>Changes first/last name, class or health. Fields left out stay as they are; "" clears a text field.</summary>
+    /// <summary>
+    /// Changes first/last name (which renames the character to "{firstName} {lastName}"), class or health.
+    /// Fields left out stay as they are; "" clears the class. First and last name can't be cleared.
+    /// </summary>
     [HttpPatch("{characterId}")]
     public async Task<ActionResult<ResultBase<Character>>> Update(
         [FromRoute] string characterId, [FromBody] UpdateCharacterRequest? request, CancellationToken cancellationToken) =>

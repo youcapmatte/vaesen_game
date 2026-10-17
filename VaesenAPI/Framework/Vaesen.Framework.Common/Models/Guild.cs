@@ -73,13 +73,11 @@ public sealed class GuildMemberRequest
 
 public sealed class CreateCharacterRequest
 {
-    /// <summary>The character name; unique across the game and can't be changed later.</summary>
-    [JsonProperty("name")]
-    public string? Name { get; set; }
-
+    /// <summary>Required. The character name becomes "{firstName} {lastName}", which must be unique.</summary>
     [JsonProperty("firstName")]
     public string? FirstName { get; set; }
 
+    /// <summary>Required.</summary>
     [JsonProperty("lastName")]
     public string? LastName { get; set; }
 

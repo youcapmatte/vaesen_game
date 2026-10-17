@@ -169,12 +169,10 @@ public sealed partial class GuildService : IGuildService
     public async Task<ResultBase<Character>> CreateCharacterAsync(string guildId, CreateCharacterRequest request, CancellationToken cancellationToken = default)
     {
         var ret = new ResultBase<Character>();
-        var name = (request?.Name ?? "").Trim();
         var firstName = CharacterRules.Clean(request?.FirstName);
         var lastName = CharacterRules.Clean(request?.LastName);
         var characterClass = CharacterRules.Clean(request?.Class);
-        var invalid = CharacterRules.ValidateName(name)
-            ?? CharacterRules.ValidatePersonName(firstName, "First name")
+        var invalid = CharacterRules.ValidatePersonName(firstName, "First name")
             ?? CharacterRules.ValidatePersonName(lastName, "Last name")
             ?? CharacterRules.ValidateClass(characterClass)
             ?? CharacterRules.ValidateHealthPoints(request?.HealthPoints);
@@ -197,9 +195,9 @@ public sealed partial class GuildService : IGuildService
         var character = new Character
         {
             GuildId = guild.Id,
-            Name = name,
-            FirstName = firstName,
-            LastName = lastName,
+            Name = Character.FullName(firstName!, lastName!),
+            FirstName = firstName!,
+            LastName = lastName!,
             Class = characterClass,
             HealthPoints = request?.HealthPoints ?? Character.DefaultHealthPoints,
             CreatedBy = creator.Id,
