@@ -101,7 +101,7 @@ Without Docker the API still starts: storage just doesn't work, `/health/ready` 
 With the AWS CLI installed (any dummy credentials work against DynamoDB Local):
 
 ```bash
-aws dynamodb list-tables --endpoint-url http://localhost:8000 --region eu-central-1
+aws dynamodb list-tables --endpoint-url http://localhost:8000 --region eu-north-1
 ```
 
 The API creates the local table itself after startup, so there's nothing else to set up.
@@ -114,7 +114,7 @@ Install **NoSQL Workbench** (free, from AWS). *Operation builder → Add connect
 
 ## 4. AWS setup
 
-Pick one region for everything (GameLift, DynamoDB, the API). This guide uses `eu-central-1` (Frankfurt), the API's current default; `eu-north-1` (Stockholm) is also fine.
+Pick one region for everything (GameLift, DynamoDB, the API). Vaesen uses **`eu-north-1` (Stockholm)**, the API's default and where IAM Identity Center is configured.
 
 ### 4.1 Your own access: IAM Identity Center (no access keys)
 
@@ -148,22 +148,14 @@ Console → **DynamoDB** → *Create table*:
 
 After it's created, under *Backups*: turn on **Point-in-time recovery** (lets you restore the table to any second in the last 35 days). Do this at least for `vaesen-prod`.
 
-Same thing with the CLI:
+Or all of the above in one go from PowerShell (signed in with `aws sso login --profile vaesen`):
 
-```bash
-aws dynamodb create-table --profile vaesen --region eu-central-1 \
-  --table-name vaesen-dev \
-  --billing-mode PAY_PER_REQUEST \
-  --attribute-definitions AttributeName=PK,AttributeType=S AttributeName=SK,AttributeType=S \
-                          AttributeName=GSI1PK,AttributeType=S AttributeName=GSI1SK,AttributeType=S \
-  --key-schema AttributeName=PK,KeyType=HASH AttributeName=SK,KeyType=RANGE \
-  --global-secondary-indexes "IndexName=GSI1,KeySchema=[{AttributeName=GSI1PK,KeyType=HASH},{AttributeName=GSI1SK,KeyType=RANGE}],Projection={ProjectionType=ALL}" \
-  --deletion-protection-enabled
-
-aws dynamodb update-continuous-backups --profile vaesen --region eu-central-1 \
-  --table-name vaesen-dev \
-  --point-in-time-recovery-specification PointInTimeRecoveryEnabled=true
+```powershell
+powershell -ExecutionPolicy Bypass -File .\Scripts\Aws\CreateDynamoDbTable.ps1
+powershell -ExecutionPolicy Bypass -File .\Scripts\Aws\CreateDynamoDbTable.ps1 -TableName vaesen-prod
 ```
+
+It's safe to re-run: an existing table is left unchanged.
 
 Later this belongs in infrastructure-as-code (AWS CDK in C#), so dev and prod are guaranteed identical.
 
@@ -190,8 +182,8 @@ The deployed API gets this policy through its ECS **task role** (section 8). Rep
         "dynamodb:DescribeTable"
       ],
       "Resource": [
-        "arn:aws:dynamodb:eu-central-1:123456789012:table/vaesen-dev",
-        "arn:aws:dynamodb:eu-central-1:123456789012:table/vaesen-dev/index/*"
+        "arn:aws:dynamodb:eu-north-1:123456789012:table/vaesen-dev",
+        "arn:aws:dynamodb:eu-north-1:123456789012:table/vaesen-dev/index/*"
       ]
     }
   ]
@@ -236,7 +228,7 @@ Modules depend on their repository interfaces only. Endpoints and services never
 | `DynamoDb:TableName` | `vaesen-dev` | `vaesen-local` |
 | `DynamoDb:ServiceUrl` | *(empty = real AWS)* | `http://localhost:8000` |
 | `DynamoDb:CreateTableIfMissing` | `false` | `true` |
-| `AWS:Region` | `eu-central-1` | *(inherited)* |
+| `AWS:Region` | `eu-north-1` | *(inherited)* |
 | `AWS:Profile` | | `vaesen`, only when using your SSO login against real AWS |
 
 Production overrides values with environment variables on the ECS task, e.g. `DynamoDb__TableName=vaesen-prod`. **No credentials appear in configuration:** locally they come from your SSO profile, in AWS from the task role.
@@ -315,7 +307,7 @@ When the API is deployed to ECS Fargate:
 2. Set it as the **task role** in the task definition. The AWS SDK picks it up automatically; nothing to configure in code.
 3. Set environment variables on the task:
    - `ASPNETCORE_ENVIRONMENT=Production`
-   - `AWS__Region=eu-central-1`
+   - `AWS__Region=eu-north-1`
    - `DynamoDb__TableName=vaesen-prod`
 4. Point the load balancer health check at `/health` (liveness). Use `/health/ready` to verify that a deployment can reach DynamoDB.
 
