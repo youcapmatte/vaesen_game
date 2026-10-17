@@ -22,6 +22,13 @@ void UVaesenCharacterSelectWidget::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
 
+	// Normally caught by the Widget Blueprint compiler; guards against a stale or broken Blueprint.
+	if (!HasRequiredWidgets())
+	{
+		UE_LOG(LogVaesenApi, Error, TEXT("%s is missing GuildComboBox, PlayerComboBox or PlayButton."), *GetClass()->GetName());
+		return;
+	}
+
 	GuildComboBox->OnSelectionChanged.AddDynamic(this, &UVaesenCharacterSelectWidget::HandleGuildSelected);
 	PlayerComboBox->OnSelectionChanged.AddDynamic(this, &UVaesenCharacterSelectWidget::HandlePlayerSelected);
 	PlayButton->OnClicked.AddDynamic(this, &UVaesenCharacterSelectWidget::HandlePlayClicked);
@@ -30,7 +37,15 @@ void UVaesenCharacterSelectWidget::NativeOnInitialized()
 void UVaesenCharacterSelectWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
-	LoadGuilds();
+	if (HasRequiredWidgets())
+	{
+		LoadGuilds();
+	}
+}
+
+bool UVaesenCharacterSelectWidget::HasRequiredWidgets() const
+{
+	return GuildComboBox && PlayerComboBox && PlayButton;
 }
 
 void UVaesenCharacterSelectWidget::LoadGuilds()

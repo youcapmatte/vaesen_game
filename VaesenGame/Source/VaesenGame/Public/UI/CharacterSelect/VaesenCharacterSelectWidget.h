@@ -51,6 +51,7 @@ private:
 	UFUNCTION()
 	void HandlePlayClicked();
 
+	bool HasRequiredWidgets() const;
 	void LoadGuilds();
 	void PopulatePlayers(const FString& PlayerIdToSelect);
 	const FVaesenDevGuild* GetSelectedGuild() const;

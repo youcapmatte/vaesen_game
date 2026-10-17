@@ -21,6 +21,13 @@ void UVaesenLoginWidget::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
 
+	// Normally caught by the Widget Blueprint compiler; guards against a stale or broken Blueprint.
+	if (!UsernameTextBox || !PasswordTextBox || !LoginButton)
+	{
+		UE_LOG(LogVaesenApi, Error, TEXT("%s is missing UsernameTextBox, PasswordTextBox or LoginButton."), *GetClass()->GetName());
+		return;
+	}
+
 	LoginButton->OnClicked.AddDynamic(this, &UVaesenLoginWidget::HandleLoginClicked);
 	PasswordTextBox->OnTextCommitted.AddDynamic(this, &UVaesenLoginWidget::HandlePasswordCommitted);
 }
@@ -28,6 +35,10 @@ void UVaesenLoginWidget::NativeOnInitialized()
 void UVaesenLoginWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
+	if (!UsernameTextBox || !PasswordTextBox || !LoginButton)
+	{
+		return;
+	}
 
 	FString LastUsername;
 	GConfig->GetString(VaesenLogin::ConfigSection, VaesenLogin::LastUsernameKey, LastUsername, GGameUserSettingsIni);
@@ -57,7 +68,7 @@ void UVaesenLoginWidget::HandlePasswordCommitted(const FText& Text, ETextCommit:
 void UVaesenLoginWidget::HandleLoginClicked()
 {
 	UVaesenApiSubsystem* Api = GetGameInstance()->GetSubsystem<UVaesenApiSubsystem>();
-	if (!Api || bLoggingIn)
+	if (!Api || bLoggingIn || !UsernameTextBox || !PasswordTextBox)
 	{
 		return;
 	}
