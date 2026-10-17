@@ -5,6 +5,16 @@ UVaesenSettings::UVaesenSettings()
 	ApiBaseUrl = TEXT("http://localhost:5230");
 	LoginMap = TSoftObjectPtr<UWorld>(FSoftObjectPath(TEXT("/Game/Vaesen/Maps/L_Login.L_Login")));
 	CharacterSelectMap = TSoftObjectPtr<UWorld>(FSoftObjectPath(TEXT("/Game/Vaesen/Maps/L_CharacterSelect.L_CharacterSelect")));
+	GuildHubMap = TSoftObjectPtr<UWorld>(FSoftObjectPath(TEXT("/Game/Vaesen/Maps/L_Gyllencreutz.L_Gyllencreutz")));
+
+	LoadingTips = {
+		NSLOCTEXT("VaesenTips", "Tip1", "Vaesen are bound by old rules. Learn a creature's weakness before you face it."),
+		NSLOCTEXT("VaesenTips", "Tip2", "Only those who have seen the hidden world can see the vaesen. Most people never will."),
+		NSLOCTEXT("VaesenTips", "Tip3", "Iron, salt and church bells have kept the vaesen at bay for centuries."),
+		NSLOCTEXT("VaesenTips", "Tip4", "Gyllencreutz is your guild's home. Rest, plan and prepare there between investigations."),
+		NSLOCTEXT("VaesenTips", "Tip5", "Talk to the locals. Every vaesen leaves traces in the stories people tell."),
+		NSLOCTEXT("VaesenTips", "Tip6", "Fear is a wound too. Return to Gyllencreutz to recover."),
+	};
 
 	// 19th-century Scandinavian names.
 	RandomFirstNames = {

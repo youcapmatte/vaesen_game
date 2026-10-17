@@ -9,6 +9,7 @@
 #include "Misc/Parse.h"
 #include "Online/VaesenApiSubsystem.h"
 #include "Sound/SoundBase.h"
+#include "UI/Loading/VaesenLoadingScreenSubsystem.h"
 
 void AVaesenLoginPlayerController::BeginPlay()
 {
@@ -66,7 +67,7 @@ void AVaesenLoginPlayerController::TryDevAutoLogin()
 
 		if (bSuccess)
 		{
-			UGameplayStatics::OpenLevelBySoftObjectPtr(This, UVaesenSettings::Get()->CharacterSelectMap);
+			This->GetGameInstance()->GetSubsystem<UVaesenLoadingScreenSubsystem>()->TravelToMap(UVaesenSettings::Get()->CharacterSelectMap);
 		}
 		else
 		{

@@ -10,7 +10,7 @@ public class VaesenGame : ModuleRules
 
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "AIModule", "UMG", "DeveloperSettings", "HTTP", "SlateCore" });
 
-		PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "Json", "JsonUtilities" });
+		PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "Json", "JsonUtilities", "RenderCore", "RHI" });
 
 		// The GameLift Server SDK is only compiled into the dedicated server target; clients and the editor never link it.
 		if (Target.Type == TargetType.Server)

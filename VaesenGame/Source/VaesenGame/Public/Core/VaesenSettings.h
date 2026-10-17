@@ -5,8 +5,28 @@
 #include "VaesenSettings.generated.h"
 
 class USoundBase;
+class UTexture2D;
 class UUserWidget;
+class UVaesenLoadingScreenWidget;
 class UVaesenUIStyle;
+
+/** How a map looks on the loading screen. */
+USTRUCT()
+struct FVaesenMapLoadingInfo
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, Category = "Loading", meta = (AllowedClasses = "/Script/Engine.World"))
+	TSoftObjectPtr<UWorld> Map;
+
+	/** Shown on the loading screen, e.g. "Gyllencreutz". Empty = the map's asset name without "L_". */
+	UPROPERTY(EditAnywhere, Category = "Loading")
+	FText DisplayName;
+
+	/** Empty = a random one of the default loading backgrounds. */
+	UPROPERTY(EditAnywhere, Category = "Loading")
+	TSoftObjectPtr<UTexture2D> Background;
+};
 
 /**
  * Project-wide default values. Edit in Project Settings > Game > Vaesen; saved to Config/DefaultGame.ini.
@@ -61,6 +81,41 @@ public:
 	/** Last names the "Randomize" button on character creation picks from (independently of the first name). */
 	UPROPERTY(Config, EditAnywhere, Category = "Characters")
 	TArray<FString> RandomLastNames;
+
+	/** Shown while traveling between maps, e.g. WBP_LoadingScreen (parent class VaesenLoadingScreenWidget). Empty = no loading screen. */
+	UPROPERTY(Config, EditAnywhere, Category = "Loading Screen")
+	TSoftClassPtr<UVaesenLoadingScreenWidget> LoadingScreenWidget;
+
+	/** One is picked at random for each load. */
+	UPROPERTY(Config, EditAnywhere, Category = "Loading Screen", meta = (MultiLine = "true"))
+	TArray<FText> LoadingTips;
+
+	/** Used for maps without their own background; one is picked at random. */
+	UPROPERTY(Config, EditAnywhere, Category = "Loading Screen")
+	TArray<TSoftObjectPtr<UTexture2D>> LoadingBackgrounds;
+
+	/** Per-map name and background. */
+	UPROPERTY(Config, EditAnywhere, Category = "Loading Screen")
+	TArray<FVaesenMapLoadingInfo> MapLoadingInfo;
+
+	UPROPERTY(Config, EditAnywhere, Category = "Loading Screen", meta = (ClampMin = "0", Units = "s"))
+	float LoadingScreenFadeInSeconds = 0.3f;
+
+	/** The loading screen fades out to reveal the new map. */
+	UPROPERTY(Config, EditAnywhere, Category = "Loading Screen", meta = (ClampMin = "0", Units = "s"))
+	float LoadingScreenFadeOutSeconds = 0.8f;
+
+	/** Never shown shorter than this, so a fast load doesn't flash. */
+	UPROPERTY(Config, EditAnywhere, Category = "Loading Screen", meta = (ClampMin = "0", Units = "s"))
+	float LoadingScreenMinimumSeconds = 1.0f;
+
+	/** Kept up this long after the map is ready, so textures can stream in before the reveal. */
+	UPROPERTY(Config, EditAnywhere, Category = "Loading Screen", meta = (ClampMin = "0", Units = "s"))
+	float LoadingScreenSettleSeconds = 0.5f;
+
+	/** Give up waiting for the map to be ready (streaming, your character, shaders) after this long. */
+	UPROPERTY(Config, EditAnywhere, Category = "Loading Screen", meta = (ClampMin = "1", Units = "s"))
+	float LoadingScreenTimeoutSeconds = 30.0f;
 
 	/** Played when the login button is pressed (or Enter in the password box). Leave empty for none. */
 	UPROPERTY(Config, EditAnywhere, Category = "Audio")

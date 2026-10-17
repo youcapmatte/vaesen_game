@@ -9,6 +9,7 @@
 #include "Online/VaesenApiSubsystem.h"
 #include "Sound/SoundBase.h"
 #include "UI/Login/VaesenLoginProgressWidget.h"
+#include "UI/Loading/VaesenLoadingScreenSubsystem.h"
 
 namespace VaesenLogin
 {
@@ -132,7 +133,7 @@ void UVaesenLoginWidget::HandleLoginClicked()
 			{
 				GConfig->SetString(VaesenLogin::ConfigSection, VaesenLogin::LastUsernameKey, *Username, GGameUserSettingsIni);
 				GConfig->Flush(false, GGameUserSettingsIni);
-				UGameplayStatics::OpenLevelBySoftObjectPtr(This, UVaesenSettings::Get()->CharacterSelectMap);
+				This->GetGameInstance()->GetSubsystem<UVaesenLoadingScreenSubsystem>()->TravelToMap(UVaesenSettings::Get()->CharacterSelectMap);
 				return;
 			}
 
