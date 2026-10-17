@@ -30,8 +30,9 @@ public:
 	 * Account login from the login screen. OnProgress receives one status message per step ("Authenticating...");
 	 * each replaces the previous one. Pass no OnProgress to skip the step messages (e.g. -DevPlayer).
 	 *
-	 * FAKE FOR NOW: accepts any non-empty username/email and password without contacting a server, and walks
-	 * through typical steps with a short delay each. Will be replaced by Auth0; callers don't need to change.
+	 * PARTLY FAKE FOR NOW: the account is looked up by username in the API ("Verifying account..."; unknown
+	 * usernames fail), but the password isn't checked and the other steps only show a message for a moment.
+	 * Will be replaced by Auth0; callers don't need to change.
 	 */
 	void Login(const FString& UsernameOrEmail, const FString& Password, FProgressCallback OnProgress, FResultCallback OnComplete);
 
@@ -62,13 +63,22 @@ private:
 	static FString GetError(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bConnectedSuccessfully);
 
 	void RunNextLoginStep();
+	void ScheduleNextLoginStep();
 	void FinishLogin(bool bSuccess, const FString& Error);
+
+	/** Looks up the pending username in the API; on success stores the account and calls OnFound. */
+	void VerifyAccount(TFunction<void()> OnFound);
 
 	FVaesenPlayerSession Session;
 
 	/** Login in progress. */
 	FString PendingAccountName;
+	FVaesenAccount PendingAccount;
 	TArray<FText> PendingLoginSteps;
+	/** Remaining step count at which the account lookup runs; INDEX_NONE once done. */
+	int32 VerifyAccountAtRemainingSteps = INDEX_NONE;
+	/** Incremented by every login/cancel, so responses of an abandoned login are ignored. */
+	int32 LoginAttempt = 0;
 	FProgressCallback LoginProgress;
 	FResultCallback LoginComplete;
 	FTimerHandle LoginStepTimer;

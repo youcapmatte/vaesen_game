@@ -4,6 +4,7 @@
 #include "HttpModule.h"
 #include "Interfaces/IHttpResponse.h"
 #include "Dom/JsonObject.h"
+#include "GenericPlatform/GenericPlatformHttp.h"
 #include "JsonObjectConverter.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
@@ -51,6 +52,9 @@ namespace VaesenFakeLogin
 	constexpr float StepSeconds = 1.0f;
 	constexpr float StepJitterSeconds = 0.3f;
 
+	/** Index of the step that really looks the account up in the API. */
+	constexpr int32 VerifyAccountStep = 2;
+
 	TArray<FText> GetSteps()
 	{
 		return {
@@ -86,12 +90,53 @@ void UVaesenApiSubsystem::Login(const FString& UsernameOrEmail, const FString& P
 
 	if (!LoginProgress)
 	{
-		FinishLogin(true, FString());
+		// Nobody is watching (e.g. -DevPlayer): just look the account up.
+		VerifyAccount([this]() { FinishLogin(true, FString()); });
 		return;
 	}
 
 	PendingLoginSteps = VaesenFakeLogin::GetSteps();
+	VerifyAccountAtRemainingSteps = PendingLoginSteps.Num() - VaesenFakeLogin::VerifyAccountStep;
 	RunNextLoginStep();
+}
+
+void UVaesenApiSubsystem::VerifyAccount(TFunction<void()> OnFound)
+{
+	const TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = CreateRequest(
+		TEXT("GET"), TEXT("/api/accounts/by-username/") + FGenericPlatformHttp::UrlEncode(PendingAccountName));
+
+	const int32 Attempt = LoginAttempt;
+	Request->OnProcessRequestComplete().BindWeakLambda(this,
+		[this, Attempt, OnFound = MoveTemp(OnFound)](FHttpRequestPtr Req, FHttpResponsePtr Response, bool bConnected)
+		{
+			if (Attempt != LoginAttempt)
+			{
+				return; // Cancelled or superseded while the request was in flight.
+			}
+
+			FString Error = GetError(Req, Response, bConnected);
+			FVaesenAccount Account;
+			if (Error.IsEmpty())
+			{
+				const TSharedPtr<FJsonValue> Result = VaesenApiEnvelope::ParseResult(Response->GetContentAsString(), Error);
+				const TSharedPtr<FJsonObject>* Object = nullptr;
+				if (Error.IsEmpty() && (!Result->TryGetObject(Object) || !FJsonObjectConverter::JsonObjectToUStruct((*Object).ToSharedRef(), &Account)))
+				{
+					Error = TEXT("Unexpected response from the API.");
+				}
+			}
+
+			if (!Error.IsEmpty())
+			{
+				FinishLogin(false, Error);
+				return;
+			}
+
+			PendingAccount = Account;
+			OnFound();
+		});
+
+	Request->ProcessRequest();
 }
 
 void UVaesenApiSubsystem::CancelLogin()
@@ -100,8 +145,11 @@ void UVaesenApiSubsystem::CancelLogin()
 	{
 		GameInstance->GetTimerManager().ClearTimer(LoginStepTimer);
 	}
+	++LoginAttempt;
 	PendingLoginSteps.Reset();
 	PendingAccountName.Reset();
+	PendingAccount = FVaesenAccount();
+	VerifyAccountAtRemainingSteps = INDEX_NONE;
 	LoginProgress = nullptr;
 	LoginComplete = nullptr;
 }
@@ -114,9 +162,23 @@ void UVaesenApiSubsystem::RunNextLoginStep()
 		return;
 	}
 
+	const bool bVerifyNow = PendingLoginSteps.Num() == VerifyAccountAtRemainingSteps;
 	LoginProgress(PendingLoginSteps[0]);
 	PendingLoginSteps.RemoveAt(0);
 
+	if (bVerifyNow)
+	{
+		// The real step: wait for the API before moving on.
+		VerifyAccountAtRemainingSteps = INDEX_NONE;
+		VerifyAccount([this]() { ScheduleNextLoginStep(); });
+		return;
+	}
+
+	ScheduleNextLoginStep();
+}
+
+void UVaesenApiSubsystem::ScheduleNextLoginStep()
+{
 	const float Delay = VaesenFakeLogin::StepSeconds
 		+ FMath::FRandRange(-VaesenFakeLogin::StepJitterSeconds, VaesenFakeLogin::StepJitterSeconds);
 	GetGameInstance()->GetTimerManager().SetTimer(
@@ -128,8 +190,9 @@ void UVaesenApiSubsystem::FinishLogin(bool bSuccess, const FString& Error)
 	if (bSuccess)
 	{
 		Session = FVaesenPlayerSession();
-		Session.AccountName = PendingAccountName;
-		UE_LOG(LogVaesenApi, Log, TEXT("Logged in as account '%s' (fake login, no password check)"), *Session.AccountName);
+		Session.AccountName = PendingAccount.Username;
+		Session.AccountId = PendingAccount.Id;
+		UE_LOG(LogVaesenApi, Log, TEXT("Logged in as account '%s' (%s); password not checked yet"), *Session.AccountName, *Session.AccountId);
 	}
 
 	// Reset before calling back: the callback may start another login or change level.

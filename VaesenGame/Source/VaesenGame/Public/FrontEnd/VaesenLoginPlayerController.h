@@ -8,7 +8,8 @@ class UAudioComponent;
 
 /**
  * Login screen. Shows the login widget (UVaesenSettings::LoginScreenWidget) and plays UVaesenSettings::LoginMusic.
- * Start the game with -DevPlayer=<id> (e.g. -DevPlayer=ingrid) to skip this screen; character select then preselects that character.
+ * Start the game with -DevPlayer=<name> (e.g. -DevPlayer=ingrid) to skip this screen: logs in to the account with that
+ * username (it must exist in the API) and character select preselects the dev character with that id.
  */
 UCLASS()
 class VAESENGAME_API AVaesenLoginPlayerController : public AVaesenFrontEndPlayerControllerBase

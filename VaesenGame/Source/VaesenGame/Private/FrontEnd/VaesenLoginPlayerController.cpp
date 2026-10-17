@@ -68,7 +68,7 @@ void AVaesenLoginPlayerController::TryDevAutoLogin()
 		}
 		else
 		{
-			UE_LOG(LogVaesenApi, Warning, TEXT("-DevPlayer auto-login failed: %s"), *Error);
+			UE_LOG(LogVaesenApi, Warning, TEXT("-DevPlayer auto-login failed (is there an account with that username?): %s"), *Error);
 		}
 	});
 }
