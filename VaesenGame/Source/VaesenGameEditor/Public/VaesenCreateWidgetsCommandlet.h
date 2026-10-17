@@ -10,8 +10,10 @@
  *   /Game/Vaesen/UI/Guild/WBP_PickGuild, WBP_CreateGuild
  *   /Game/Vaesen/UI/CharacterSelect/WBP_CreateCharacter
  *   /Game/Vaesen/UI/Loading/WBP_LoadingScreen
- * and adds whatever WBP_CharacterSelect is missing (guild name and buttons, the three dialogs, the throbber) without
- * touching what's already there. Existing blueprints are never replaced.
+ * and adds whatever WBP_CharacterSelect is missing (guild name and buttons, a character panel, the three dialogs, the
+ * throbber). The character panel replaces plain PlayerComboBox / PlayButton / StatusText controls with Vaesen ones of
+ * the same names and removes the obsolete GuildComboBox; everything else there is left alone. Other existing
+ * blueprints are never replaced.
  *
  * Run with the editor closed:
  *   UnrealEditor-Cmd.exe VaesenGame.uproject -run=VaesenCreateWidgets

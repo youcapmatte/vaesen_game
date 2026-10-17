@@ -398,6 +398,43 @@ namespace VaesenCreateWidgets
 			bChanged = true;
 		}
 
+		// Character panel, bottom centre: the guild's characters, Play and the status line. Replaces the plain
+		// PlayerComboBox / PlayButton / StatusText with Vaesen controls of the same names, wherever they were, and
+		// drops the old GuildComboBox (Change Guild replaced it).
+		if (Missing(TEXT("CharacterPanel")))
+		{
+			for (const TCHAR* Name : { TEXT("PlayerComboBox"), TEXT("PlayButton"), TEXT("StatusText"), TEXT("GuildComboBox") })
+			{
+				if (UWidget* Old = Blueprint->WidgetTree->FindWidget(FName(Name)))
+				{
+					Old->RemoveFromParent();
+					Old->Rename(nullptr, GetTransientPackage(), REN_DontCreateRedirectors | REN_NonTransactional);
+					UE_LOG(LogVaesenCreateWidgets, Display, TEXT("Replaced %s."), Name);
+				}
+			}
+
+			USizeBox* Size = B.Make<USizeBox>();
+			Size->SetWidthOverride(440.0f);
+			UVerticalBox* Panel = B.Make<UVerticalBox>(TEXT("CharacterPanel"));
+			Panel->bIsVariable = false;
+			Size->SetContent(Panel);
+
+			FBuilder::AddRow(Panel, B.Text(NAME_None, LOCTEXT("CharacterLabel", "Character"), EVaesenTextRole::Label), 4.0f);
+			FBuilder::AddRow(Panel, B.Make<UVaesenComboBox>(TEXT("PlayerComboBox")), 12.0f);
+			FBuilder::AddRow(Panel, B.Button(TEXT("PlayButton"), LOCTEXT("Play", "Play")), 12.0f);
+			UVaesenTextBlock* Status = B.StatusLine();
+			Status->SetJustification(ETextJustify::Center);
+			FBuilder::AddRow(Panel, Status, 0.0f);
+
+			UCanvasPanelSlot* Slot = Canvas->AddChildToCanvas(Size);
+			Slot->SetAnchors(FAnchors(0.5f, 1.0f));
+			Slot->SetAlignment(FVector2D(0.5f, 1.0f));
+			Slot->SetPosition(FVector2D(0.0f, -80.0f));
+			Slot->SetAutoSize(true);
+			Slot->SetZOrder(10);
+			bChanged = true;
+		}
+
 		if (Missing(TEXT("LoadingThrobber")))
 		{
 			UCircularThrobber* Throbber = B.Make<UCircularThrobber>(TEXT("LoadingThrobber"));
