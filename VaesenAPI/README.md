@@ -48,6 +48,8 @@ aws sso login --profile vaesen
 dotnet run --project .\Api\Vaesen.Api --launch-profile http
 ```
 
+- http://localhost:5230/docs: interactive API docs (Scalar, Development only). Click **Authentication**, paste a token from `POST /api/dev/login` (`result.accessToken`), and try the player endpoints.
+- http://localhost:5230/openapi/v1.json: the OpenAPI document (Development only).
 - http://localhost:5230/health: the API is up.
 - http://localhost:5230/health/ready: it can also reach DynamoDB.
 - `Api/Vaesen.Api/Vaesen.Api.http`: ready-made requests.
