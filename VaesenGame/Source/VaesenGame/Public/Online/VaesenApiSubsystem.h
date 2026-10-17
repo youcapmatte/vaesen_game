@@ -9,10 +9,12 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogVaesenApi, Log, All);
 
+class UVaesenSessionSubsystem;
+
 /**
- * Client-side gateway to Vaesen.Api (base URL from UVaesenSettings). Holds the signed-in player's session
- * and attaches its token to every request. Lives on the GameInstance, so the session survives map changes.
- * Not created on dedicated servers.
+ * Client-side gateway to Vaesen.Api (base URL from UVaesenSettings): the HTTP calls and nothing else.
+ * Results that describe who is playing (account, chosen character, token) go into UVaesenSessionSubsystem,
+ * and every request carries the session's token. Not created on dedicated servers.
  */
 UCLASS()
 class VAESENGAME_API UVaesenApiSubsystem : public UGameInstanceSubsystem
@@ -45,18 +47,12 @@ public:
 	/** Development only: play as a seed character; gets the API token for it (POST /api/dev/login). Requires Login first. */
 	void SelectDevCharacter(const FString& DevPlayerId, FResultCallback OnComplete);
 
+	/** Cancels a pending login and clears the session. */
 	void Logout();
 
-	UFUNCTION(BlueprintPure, Category = "Vaesen|Session")
-	bool IsLoggedIn() const { return Session.IsLoggedIn(); }
-
-	UFUNCTION(BlueprintPure, Category = "Vaesen|Session")
-	bool HasCharacter() const { return Session.HasCharacter(); }
-
-	UFUNCTION(BlueprintPure, Category = "Vaesen|Session")
-	const FVaesenPlayerSession& GetSession() const { return Session; }
-
 private:
+	UVaesenSessionSubsystem* GetSession() const;
+
 	TSharedRef<IHttpRequest, ESPMode::ThreadSafe> CreateRequest(const FString& Verb, const FString& Path) const;
 
 	/** Turns a failed or non-2xx response into a readable error; empty when the request succeeded. */
@@ -68,8 +64,6 @@ private:
 
 	/** Looks up the pending username in the API; on success stores the account and calls OnFound. */
 	void VerifyAccount(TFunction<void()> OnFound);
-
-	FVaesenPlayerSession Session;
 
 	/** Login in progress. */
 	FString PendingAccountName;

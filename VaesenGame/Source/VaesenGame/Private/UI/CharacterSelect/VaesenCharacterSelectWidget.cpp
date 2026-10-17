@@ -3,6 +3,7 @@
 #include "Components/Button.h"
 #include "Components/ComboBoxString.h"
 #include "Components/TextBlock.h"
+#include "Core/VaesenSessionSubsystem.h"
 #include "Misc/CommandLine.h"
 #include "Misc/ConfigCacheIni.h"
 #include "Misc/Parse.h"
@@ -59,7 +60,8 @@ void UVaesenCharacterSelectWidget::LoadGuilds()
 	{
 		return;
 	}
-	if (!Api->IsLoggedIn())
+	const UVaesenSessionSubsystem* Session = GetGameInstance()->GetSubsystem<UVaesenSessionSubsystem>();
+	if (!Session || !Session->IsLoggedIn())
 	{
 		SetStatus(LOCTEXT("NotLoggedIn", "Not logged in. Start from the login screen (L_Login)."));
 		return;
@@ -166,6 +168,14 @@ void UVaesenCharacterSelectWidget::HandlePlayClicked()
 	GConfig->SetString(VaesenCharacterSelect::ConfigSection, VaesenCharacterSelect::LastPlayerKey, *Player->Id, GGameUserSettingsIni);
 	GConfig->Flush(false, GGameUserSettingsIni);
 
+	if (UVaesenSessionSubsystem* Session = GetGameInstance()->GetSubsystem<UVaesenSessionSubsystem>())
+	{
+		FVaesenGuildRef SelectedGuild;
+		SelectedGuild.Id = Guild->Id;
+		SelectedGuild.Name = Guild->Name;
+		Session->SetSelectedGuild(SelectedGuild);
+	}
+
 	bBusy = true;
 	UpdatePlayButton();
 	SetStatus(FText::Format(LOCTEXT("Selecting", "Preparing {0}..."), FText::FromString(Player->Name)));
@@ -188,8 +198,9 @@ void UVaesenCharacterSelectWidget::HandlePlayClicked()
 		}
 
 		// Next step (not built yet): join the world via the API and travel to the returned server.
-		const FVaesenPlayerSession& Session = This->GetGameInstance()->GetSubsystem<UVaesenApiSubsystem>()->GetSession();
-		This->SetStatus(FText::Format(LOCTEXT("Selected", "Playing as {0}. Entering the world isn't built yet."), FText::FromString(Session.PlayerName)));
+		const UVaesenSessionSubsystem* Session = This->GetGameInstance()->GetSubsystem<UVaesenSessionSubsystem>();
+		This->SetStatus(FText::Format(LOCTEXT("Selected", "Playing as {0}. Entering the world isn't built yet."),
+			FText::FromString(Session->GetSelectedCharacter().Name)));
 	});
 }
 

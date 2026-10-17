@@ -1,5 +1,6 @@
 #include "Online/VaesenApiSubsystem.h"
 
+#include "Core/VaesenSessionSubsystem.h"
 #include "Core/VaesenSettings.h"
 #include "HttpModule.h"
 #include "Interfaces/IHttpResponse.h"
@@ -189,10 +190,8 @@ void UVaesenApiSubsystem::FinishLogin(bool bSuccess, const FString& Error)
 {
 	if (bSuccess)
 	{
-		Session = FVaesenPlayerSession();
-		Session.AccountName = PendingAccount.Username;
-		Session.AccountId = PendingAccount.Id;
-		UE_LOG(LogVaesenApi, Log, TEXT("Logged in as account '%s' (%s); password not checked yet"), *Session.AccountName, *Session.AccountId);
+		GetSession()->SetAccount(PendingAccount);
+		UE_LOG(LogVaesenApi, Log, TEXT("Logged in as account '%s' (%s); password not checked yet"), *PendingAccount.Username, *PendingAccount.Id);
 	}
 
 	// Reset before calling back: the callback may start another login or change level.
@@ -230,7 +229,7 @@ void UVaesenApiSubsystem::GetDevGuilds(FGuildsCallback OnComplete)
 
 void UVaesenApiSubsystem::SelectDevCharacter(const FString& DevPlayerId, FResultCallback OnComplete)
 {
-	if (!Session.IsLoggedIn())
+	if (!GetSession()->IsLoggedIn())
 	{
 		OnComplete(false, TEXT("Log in first."));
 		return;
@@ -261,11 +260,11 @@ void UVaesenApiSubsystem::SelectDevCharacter(const FString& DevPlayerId, FResult
 
 			if (Error.IsEmpty())
 			{
-				Session.AccessToken = Login.AccessToken;
-				Session.PlayerId = Login.PlayerId;
-				Session.PlayerName = Login.PlayerName;
-				Session.GuildId = Login.GuildId;
-				UE_LOG(LogVaesenApi, Log, TEXT("Playing as %s (%s)"), *Session.PlayerName, *Session.PlayerId);
+				FVaesenCharacterRef Character;
+				Character.Id = Login.PlayerId;
+				Character.Name = Login.PlayerName;
+				GetSession()->SetSelectedCharacter(Character, Login.AccessToken);
+				UE_LOG(LogVaesenApi, Log, TEXT("Playing as %s (%s)"), *Login.PlayerName, *Login.PlayerId);
 			}
 
 			OnComplete(Error.IsEmpty(), Error);
@@ -277,7 +276,7 @@ void UVaesenApiSubsystem::SelectDevCharacter(const FString& DevPlayerId, FResult
 void UVaesenApiSubsystem::Logout()
 {
 	CancelLogin();
-	Session = FVaesenPlayerSession();
+	GetSession()->Logout();
 }
 
 TSharedRef<IHttpRequest, ESPMode::ThreadSafe> UVaesenApiSubsystem::CreateRequest(const FString& Verb, const FString& Path) const
@@ -290,11 +289,18 @@ TSharedRef<IHttpRequest, ESPMode::ThreadSafe> UVaesenApiSubsystem::CreateRequest
 	Request->SetVerb(Verb);
 	Request->SetHeader(TEXT("Accept"), TEXT("application/json"));
 	Request->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
-	if (Session.HasCharacter())
+	const FString& AccessToken = GetSession()->GetAccessToken();
+	if (!AccessToken.IsEmpty())
 	{
-		Request->SetHeader(TEXT("Authorization"), TEXT("Bearer ") + Session.AccessToken);
+		Request->SetHeader(TEXT("Authorization"), TEXT("Bearer ") + AccessToken);
 	}
 	return Request;
+}
+
+UVaesenSessionSubsystem* UVaesenApiSubsystem::GetSession() const
+{
+	// Both live on the same GameInstance and are client-only, so the session always exists here.
+	return GetGameInstance()->GetSubsystem<UVaesenSessionSubsystem>();
 }
 
 FString UVaesenApiSubsystem::GetError(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bConnectedSuccessfully)

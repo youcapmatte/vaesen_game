@@ -2,6 +2,7 @@
 
 #include "Blueprint/UserWidget.h"
 #include "Components/AudioComponent.h"
+#include "Core/VaesenSessionSubsystem.h"
 #include "Core/VaesenSettings.h"
 #include "Kismet/GameplayStatics.h"
 #include "Misc/CommandLine.h"
@@ -46,7 +47,8 @@ void AVaesenLoginPlayerController::TryDevAutoLogin()
 	}
 
 	UVaesenApiSubsystem* Api = GetGameInstance()->GetSubsystem<UVaesenApiSubsystem>();
-	if (!Api || Api->IsLoggedIn())
+	const UVaesenSessionSubsystem* Session = GetGameInstance()->GetSubsystem<UVaesenSessionSubsystem>();
+	if (!Api || !Session || Session->IsLoggedIn())
 	{
 		// Already logged in: we came back to the login screen on purpose (e.g. logout), so don't loop.
 		return;

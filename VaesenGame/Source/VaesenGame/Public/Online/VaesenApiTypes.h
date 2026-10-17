@@ -66,40 +66,6 @@ struct FVaesenAccount
 	FVaesenAccountSubscription Subscription;
 };
 
-/**
- * Who is signed in on this client: the account (after the login screen) and, once one is picked on
- * the character select screen, the character and its API token.
- */
-USTRUCT(BlueprintType)
-struct FVaesenPlayerSession
-{
-	GENERATED_BODY()
-
-	/** The account's username, as stored in the API (the login lookup is case-insensitive). */
-	UPROPERTY(BlueprintReadOnly, Category = "Vaesen|Session")
-	FString AccountName;
-
-	/** "account-{guid}" of the signed-in account. */
-	UPROPERTY(BlueprintReadOnly, Category = "Vaesen|Session")
-	FString AccountId;
-
-	/** Bearer token sent to Vaesen.Api; set when a character is selected. */
-	UPROPERTY()
-	FString AccessToken;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Vaesen|Session")
-	FString PlayerId;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Vaesen|Session")
-	FString PlayerName;
-
-	UPROPERTY(BlueprintReadOnly, Category = "Vaesen|Session")
-	FString GuildId;
-
-	bool IsLoggedIn() const { return !AccountName.IsEmpty(); }
-	bool HasCharacter() const { return !AccessToken.IsEmpty(); }
-};
-
 /** Response of POST /api/dev/login. */
 USTRUCT()
 struct FVaesenDevLoginResponse
