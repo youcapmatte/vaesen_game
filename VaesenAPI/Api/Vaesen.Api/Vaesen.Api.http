@@ -1,0 +1,21 @@
+@Vaesen.Api_HostAddress = http://localhost:5230
+
+GET {{Vaesen.Api_HostAddress}}/health
+
+###
+
+### Create an account (open in Development)
+POST {{Vaesen.Api_HostAddress}}/api/accounts
+Content-Type: application/json
+
+{
+  "username": "Ingrid",
+  "email": "ingrid@example.com",
+  "auth0UserId": null
+}
+
+### Get an account by username
+GET {{Vaesen.Api_HostAddress}}/api/accounts/by-username/Ingrid
+
+### Readiness (includes DynamoDB)
+GET {{Vaesen.Api_HostAddress}}/health/ready

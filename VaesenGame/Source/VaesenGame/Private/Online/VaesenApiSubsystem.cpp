@@ -3,11 +3,47 @@
 #include "Core/VaesenSettings.h"
 #include "HttpModule.h"
 #include "Interfaces/IHttpResponse.h"
+#include "Dom/JsonObject.h"
 #include "JsonObjectConverter.h"
+#include "Serialization/JsonReader.h"
+#include "Serialization/JsonSerializer.h"
 
 #define LOCTEXT_NAMESPACE "VaesenApi"
 
 DEFINE_LOG_CATEGORY(LogVaesenApi);
+
+namespace VaesenApiEnvelope
+{
+	/**
+	 * Vaesen.Api wraps every response as {"success": bool, "result": ..., "errorMessage": "...", "errorCode": "..."}.
+	 * Returns "result" on success; otherwise null with OutError set to the API's message.
+	 */
+	TSharedPtr<FJsonValue> ParseResult(const FString& Body, FString& OutError)
+	{
+		TSharedPtr<FJsonObject> Envelope;
+		if (!FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Body), Envelope) || !Envelope.IsValid())
+		{
+			OutError = TEXT("Unexpected response from the API.");
+			return nullptr;
+		}
+
+		bool bSuccess = false;
+		if (!Envelope->TryGetBoolField(TEXT("success"), bSuccess) || !bSuccess)
+		{
+			FString Message;
+			Envelope->TryGetStringField(TEXT("errorMessage"), Message);
+			OutError = Message.IsEmpty() ? TEXT("Request failed.") : Message;
+			return nullptr;
+		}
+
+		TSharedPtr<FJsonValue> Result = Envelope->TryGetField(TEXT("result"));
+		if (!Result.IsValid())
+		{
+			OutError = TEXT("Unexpected response from the API.");
+		}
+		return Result;
+	}
+}
 
 namespace VaesenFakeLogin
 {
@@ -107,16 +143,21 @@ void UVaesenApiSubsystem::FinishLogin(bool bSuccess, const FString& Error)
 
 void UVaesenApiSubsystem::GetDevGuilds(FGuildsCallback OnComplete)
 {
-	const TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = CreateRequest(TEXT("GET"), TEXT("/api/v1/dev/guilds"));
+	const TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = CreateRequest(TEXT("GET"), TEXT("/api/dev/guilds"));
 
 	Request->OnProcessRequestComplete().BindWeakLambda(this,
 		[OnComplete = MoveTemp(OnComplete)](FHttpRequestPtr Req, FHttpResponsePtr Response, bool bConnected)
 		{
 			TArray<FVaesenDevGuild> Guilds;
 			FString Error = GetError(Req, Response, bConnected);
-			if (Error.IsEmpty() && !FJsonObjectConverter::JsonArrayStringToUStruct(Response->GetContentAsString(), &Guilds))
+			if (Error.IsEmpty())
 			{
-				Error = TEXT("Unexpected response from the API.");
+				const TSharedPtr<FJsonValue> Result = VaesenApiEnvelope::ParseResult(Response->GetContentAsString(), Error);
+				const TArray<TSharedPtr<FJsonValue>>* Items = nullptr;
+				if (Error.IsEmpty() && (!Result->TryGetArray(Items) || !FJsonObjectConverter::JsonArrayToUStruct(*Items, &Guilds)))
+				{
+					Error = TEXT("Unexpected response from the API.");
+				}
 			}
 			OnComplete(Error.IsEmpty(), Guilds, Error);
 		});
@@ -132,7 +173,7 @@ void UVaesenApiSubsystem::SelectDevCharacter(const FString& DevPlayerId, FResult
 		return;
 	}
 
-	const TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = CreateRequest(TEXT("POST"), TEXT("/api/v1/dev/login"));
+	const TSharedRef<IHttpRequest, ESPMode::ThreadSafe> Request = CreateRequest(TEXT("POST"), TEXT("/api/dev/login"));
 
 	const TSharedRef<FJsonObject> Body = MakeShared<FJsonObject>();
 	Body->SetStringField(TEXT("playerId"), DevPlayerId);
@@ -145,9 +186,14 @@ void UVaesenApiSubsystem::SelectDevCharacter(const FString& DevPlayerId, FResult
 		{
 			FString Error = GetError(Req, Response, bConnected);
 			FVaesenDevLoginResponse Login;
-			if (Error.IsEmpty() && !FJsonObjectConverter::JsonObjectStringToUStruct(Response->GetContentAsString(), &Login))
+			if (Error.IsEmpty())
 			{
-				Error = TEXT("Unexpected response from the API.");
+				const TSharedPtr<FJsonValue> Result = VaesenApiEnvelope::ParseResult(Response->GetContentAsString(), Error);
+				const TSharedPtr<FJsonObject>* Object = nullptr;
+				if (Error.IsEmpty() && (!Result->TryGetObject(Object) || !FJsonObjectConverter::JsonObjectToUStruct((*Object).ToSharedRef(), &Login)))
+				{
+					Error = TEXT("Unexpected response from the API.");
+				}
 			}
 
 			if (Error.IsEmpty())
@@ -202,7 +248,13 @@ FString UVaesenApiSubsystem::GetError(FHttpRequestPtr Request, FHttpResponsePtr 
 	{
 		UE_LOG(LogVaesenApi, Warning, TEXT("%s %s -> %d: %s"),
 			*Request->GetVerb(), *Request->GetURL(), Code, *Response->GetContentAsString());
-		return FString::Printf(TEXT("Request failed (%d)."), Code);
+
+		// Prefer the API's own message ("Username is taken.") over the bare status code.
+		FString Message;
+		VaesenApiEnvelope::ParseResult(Response->GetContentAsString(), Message);
+		return Message.IsEmpty() || Message == TEXT("Unexpected response from the API.")
+			? FString::Printf(TEXT("Request failed (%d)."), Code)
+			: Message;
 	}
 
 	return FString();

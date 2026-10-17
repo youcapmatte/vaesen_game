@@ -3,7 +3,7 @@
 #include "CoreMinimal.h"
 #include "VaesenApiTypes.generated.h"
 
-/** A player from the API's development seed data (GET /api/v1/dev/guilds). */
+/** A player from the API's development seed data (GET /api/dev/guilds). */
 USTRUCT(BlueprintType)
 struct FVaesenDevPlayer
 {
@@ -62,7 +62,7 @@ struct FVaesenPlayerSession
 	bool HasCharacter() const { return !AccessToken.IsEmpty(); }
 };
 
-/** Response of POST /api/v1/dev/login. */
+/** Response of POST /api/dev/login. */
 USTRUCT()
 struct FVaesenDevLoginResponse
 {

@@ -38,10 +38,10 @@ public:
 	/** Stops a login in progress. Its callbacks are not called. */
 	void CancelLogin();
 
-	/** Development only: guilds and their characters to choose from (GET /api/v1/dev/guilds). */
+	/** Development only: guilds and their characters to choose from (GET /api/dev/guilds). */
 	void GetDevGuilds(FGuildsCallback OnComplete);
 
-	/** Development only: play as a seed character; gets the API token for it (POST /api/v1/dev/login). Requires Login first. */
+	/** Development only: play as a seed character; gets the API token for it (POST /api/dev/login). Requires Login first. */
 	void SelectDevCharacter(const FString& DevPlayerId, FResultCallback OnComplete);
 
 	void Logout();

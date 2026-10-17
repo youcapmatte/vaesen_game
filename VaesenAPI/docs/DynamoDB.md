@@ -43,15 +43,12 @@ DynamoDB is a key-value / document database. Everything you need to know to use 
 
 | # | Question the API asks | Operation |
 |---|---|---|
-| A1 | Get an account | `GetItem PK=ACCOUNT#{accountId}, SK=PROFILE` |
-| A2 | Find an account by username (case-insensitive) | `GetItem PK=USERNAME#{lowercase}` -> `AccountId` -> A1 |
-| A3 | Find an account by Auth0 user | `GetItem PK=AUTH0#{auth0UserId}` -> `AccountId` -> A1 |
-| C1 | Get a character | `GetItem PK=CHAR#{characterId}, SK=PROFILE` |
+| A1 | Get an account | `GetItem PK={accountId}, SK=ITEM` |
+| A2 | Find an account by username (case-insensitive) | `GetItem PK=USERNAME#{lowercase}, SK=USERNAME` -> `OwnerId` -> A1 |
+| A3 | Find an account by Auth0 user | `GetItem PK=AUTH0#{auth0UserId}, SK=AUTH0` -> `OwnerId` -> A1 |
+| C1 | Get a character | `GetItem PK={characterId}, SK=ITEM` |
 | C2 | List an account's characters (character select) | `Query GSI1 GSI1PK=ACCOUNT#{accountId}, GSI1SK begins_with CHAR#` |
-| C3 | Is a character name free? | `GetItem PK=CHARNAME#{lowercase name}` |
-| G1 | Get a guild | `GetItem PK=GUILD#{guildId}, SK=PROFILE` |
-| G2 | List a guild's members | `Query PK=GUILD#{guildId}, SK begins_with MEMBER#` |
-| G3 | Which guild is a character in? | `Query GSI1 GSI1PK=CHAR#{characterId}, GSI1SK begins_with GUILD#` |
+| C3 | Is a character name free? | `GetItem PK=CHARNAME#{lowercase name}, SK=CHARNAME` |
 
 ### Keys
 
@@ -61,25 +58,23 @@ Table `vaesen-{env}`:
 - `SK` (String) - sort key
 - `GSI1PK` / `GSI1SK` (String) - keys of index **`GSI1`** (projection: ALL)
 
+Every model is stored by the generic `BaseRepository<T>` as **its JSON document** (the same camelCase JSON the API returns) plus key attributes. The id already says what it is (`account-...`), so it's the partition key as is:
+
 | Item | PK | SK | GSI1PK | GSI1SK | Other attributes |
 |---|---|---|---|---|---|
-| Account | `ACCOUNT#{accountId}` | `PROFILE` | | | `Username`, `Email`, `Auth0UserId`, `SubscriptionStatus`, `SubscriptionPlan`, `SubscriptionPeriodEnd`, `CreatedAt`, `Version` |
-| Username reservation | `USERNAME#{lowercase username}` | `USERNAME` | | | `AccountId` |
-| Auth0 link | `AUTH0#{auth0UserId}` | `AUTH0` | | | `AccountId` |
-| Character | `CHAR#{characterId}` | `PROFILE` | `ACCOUNT#{accountId}` | `CHAR#{name}` | `Name`, `AccountId`, `GuildId`, `Version` |
-| Character name reservation | `CHARNAME#{lowercase name}` | `CHARNAME` | | | `CharacterId` |
-| Guild | `GUILD#{guildId}` | `PROFILE` | | | `Name`, `CreatedAt` |
-| Guild membership | `GUILD#{guildId}` | `MEMBER#{characterId}` | `CHAR#{characterId}` | `GUILD#{guildId}` | `Rank`, `JoinedAt` |
+| Model (Account, Character, ...) | `{id}`, e.g. `account-3f2b...` | `ITEM` | set by the repository, if indexed | | the model's JSON fields (`username`, `subscription`, `createdAt`, `version`, ...), `Type` |
+| Character | `character-...` | `ITEM` | `ACCOUNT#{accountId}` | `CHAR#{name}` | `accountId`, `name`, `guildId`, ... |
+| Reservation (unique value) | `USERNAME#{lowercase}`, `AUTH0#{auth0UserId}`, `CHARNAME#{lowercase}` | `USERNAME`, `AUTH0`, `CHARNAME` | | | `OwnerId` (the id holding it), `Type = Reservation` |
 
-Every item also has a `Type` attribute (`Account`, `Character`, ...). It isn't needed by the API, but it makes the console readable and helps if you ever export data.
+Every item has a `Type` attribute (`Account`, `Character`, `Reservation`). It isn't needed by the API, but it makes the console readable and helps if you ever export data.
 
 Conventions:
 
-- Ids are `{type}-{lowercase guid}`, e.g. `account-3f2b8c1e-1d2c-4b5a-9e8f-0123456789ab`, created by `EntityIds.New(...)`.
-- An account's Auth0 identity is stored as `Auth0UserId`: Auth0's `user_id`, which is the `sub` claim in its tokens (`auth0|...`, `google-oauth2|...`).
-- Uniqueness (usernames, character names, Auth0 users) uses reservation items written in the same transaction as the entity, each with `attribute_not_exists(PK)`.
-- Prefixes (`CHAR#`, `GUILD#`) keep entity types apart and make `begins_with` queries possible.
-- New access patterns usually mean a new item type or a new GSI, not a new table.
+- Ids are `{class name in lowercase}-{lowercase guid}`, e.g. `account-3f2b8c1e-1d2c-4b5a-9e8f-0123456789ab`. A model gets its id automatically (`ObjectCore.Id`).
+- Every model derives from `BaseCore`: `createdAt`, `updatedAt`, `isDeleted` (soft delete: deleted items are hidden, not removed) and `version` (updates based on an older version are rejected).
+- An account's Auth0 identity is stored as `auth0UserId`: Auth0's `user_id`, which is the `sub` claim in its tokens (`auth0|...`, `google-oauth2|...`).
+- Uniqueness (usernames, character names, Auth0 users) uses reservation items written in the same transaction as the model, each with `attribute_not_exists(PK)`.
+- New models usually need no new table design: derive from `BaseCore`, add a repository deriving from `BaseRepository<T>`. Only new queries need a GSI key or a reservation.
 
 ---
 
@@ -103,7 +98,7 @@ docker compose down -v    # stop and delete all local data
 To point the API at it, replace the `AWS` section in `appsettings.Development.json` with:
 
 ```json
-"DynamoDb": {
+"DataService": {
   "TableName": "vaesen-local",
   "ServiceUrl": "http://localhost:8000",
   "CreateTableIfMissing": true
@@ -216,52 +211,49 @@ Notes:
 
 ## 5. How the API is wired
 
-This is implemented; this section explains where things are and why.
+The solution follows the Redkeep platform layout: framework libraries hold models, repositories, services and controllers; the API project only starts them. See `VaesenAPI/README.md`.
 
 ### 5.1 Files
 
 ```
-src/Vaesen.Api/
-  Infrastructure/Persistence/
-    PersistenceModule.cs         AddPersistence(): options, DynamoDB client, local table init, health check
-    DynamoDbOptions.cs           "DynamoDb" config section
-    DynamoDbTable.cs             the table schema (used for DynamoDB Local and tests)
-    DynamoDbTableInitializer.cs  creates the table in DynamoDB Local, in the background
-    DynamoDbHealthCheck.cs       "is the table reachable?" for /health/ready
-    VaesenKeys.cs                every key format ("CHAR#", "GUILD#", ...) in one place
-  Modules/Accounts/
-    Account.cs                   account + subscription model
-    IAccountRepository.cs
-    DynamoDbAccountRepository.cs
-    InMemoryAccountRepository.cs
-    AccountsModule.cs            endpoints: create, get by id / username / Auth0 user
-  Modules/Players/
-    ICharacterRepository.cs      what the module needs; no DynamoDB types
-    DynamoDbCharacterRepository.cs
-    InMemoryCharacterRepository.cs   used by endpoint tests
+Framework/Vaesen.Framework.Core/
+  Models/BaseCore.cs              ObjectCore (typed ids) and BaseCore (timestamps, soft delete, version)
+  Models/ResultBase.cs            the { success, result, errorMessage, errorCode } envelope
+  Data/BaseRepository.cs          generic DynamoDB storage (JSON document + keys), reservations, GSI1 queries
+  Data/DataServiceOptions.cs      "DataService" config section
+  Data/DynamoDbTable.cs           the table schema (used for DynamoDB Local and tests)
+  Data/DynamoDbTableInitializer.cs creates the table in DynamoDB Local, in the background
+  Data/DynamoDbHealthCheck.cs     "is the table reachable?" for /health/ready
+  Services/CoreServiceExtensions.cs AddCoreServices(): AWS, DynamoDB, Auth0, policies, health
+Framework/Vaesen.Framework.Common/
+  Models/Account.cs, Character.cs
+  Repositorys/AccountRepository.cs   IAccountStore: username and Auth0 lookups via reservations
+  Repositorys/CharacterRepository.cs ICharacterStore: characters per account via GSI1, unique names
+  Services/AccountService.cs        validation + ResultBase
+  Api/AccountController.cs          api/accounts
 ```
 
-Modules depend on their repository interfaces only. Endpoints and services never see `IAmazonDynamoDB`. New entities follow the same pattern: an interface in the module, a DynamoDB implementation next to it, key formats added to `VaesenKeys`.
+Services depend on the store interfaces (`IAccountStore`, ...), never on DynamoDB types, so they're tested with in-memory fakes.
 
 ### 5.2 Configuration
 
 | Setting | `appsettings.json` | `appsettings.Development.json` |
 |---|---|---|
-| `DynamoDb:TableName` | `vaesen-dev` | *(inherited: `vaesen-dev`)* |
-| `DynamoDb:ServiceUrl` | *(empty = real AWS)* | *(empty; set it only for DynamoDB Local, section 3)* |
+| `DataService:TableName` | `vaesen-dev` | *(inherited: `vaesen-dev`)* |
+| `DataService:ServiceUrl` | *(empty = real AWS)* | *(empty; set it only for DynamoDB Local, section 3)* |
 | `AWS:Region` | `eu-central-1` | *(inherited)* |
 | `AWS:Profile` | | `vaesen`: your SSO login |
 
-Production overrides values with environment variables on the ECS task, e.g. `DynamoDb__TableName=vaesen-prod`. **No credentials appear in configuration:** locally they come from your SSO profile, in AWS from the task role.
+Production overrides values with environment variables on the ECS task, e.g. `DataService__TableName=vaesen-prod`. **No credentials appear in configuration:** locally they come from your SSO profile, in AWS from the task role.
 
 If the API logs an SSO or token error, your session has expired: run `aws sso login --profile vaesen` and restart the API.
 
 ### 5.3 Client registration
 
-`PersistenceModule.AddPersistence`:
+`CoreServiceExtensions.AddCoreServices`:
 
 - **`ServiceUrl` set (DynamoDB Local):** a client with dummy credentials, a 5-second timeout and one retry, so a stopped DynamoDB Local fails fast instead of stalling requests.
-- **`ServiceUrl` empty (AWS):** `AddAWSService<IAmazonDynamoDB>()`. Region and credentials come from the shared AWS options registered once in `Program.cs` (`AddDefaultAWSOptions`), which the GameLift client in the Sessions module uses too.
+- **`ServiceUrl` empty (AWS):** `AddAWSService<IAmazonDynamoDB>()`. Region and credentials come from the shared AWS options (`AddDefaultAWSOptions` in `AddCoreServices`), which the GameLift client uses too.
 - `TableName` is validated at startup (`ValidateOnStart`), so a missing setting fails immediately with a clear message.
 
 ### 5.4 Health checks
@@ -275,32 +267,17 @@ If the API logs an SSO or token error, your session has expired: run `aws sso lo
 
 ### 6.1 Example: characters
 
-`DynamoDbCharacterRepository` covers access patterns C1-C3:
+`CharacterRepository : BaseRepository<Character>, ICharacterStore`:
 
-- **Get**: `GetItem CHAR#{id} / PROFILE`.
-- **List an account's characters**: `Query` on `GSI1`, paginated with `LastEvaluatedKey`.
-- **Create** in a **transaction**: the character item and its `CHARNAME#` reservation are written together, each with `attribute_not_exists(PK)`. A taken name (in any casing) cancels the whole transaction, so there's never a character without its name or a name without its character.
+- **Get**: inherited `GetItemAsync(id)`.
+- **List an account's characters**: overrides `GetIndexKeys` to put each character in GSI1 under `ACCOUNT#{accountId}`, then `QueryIndexAsync` (paginated).
+- **Create**: `CreateItemAsync(character, reservations)` writes the character and its `CHARNAME#` reservation in one transaction. A taken name (in any casing) cancels both and returns the reservation's error code (`character_name_taken`).
 
 ### 6.2 Updates without lost writes (optimistic concurrency)
 
-Two writers (e.g. two game servers) can read the same item and overwrite each other. Characters carry a `Version`; updates should require the version they read:
+`BaseRepository<T>.UpdateItemAsync` only writes if the stored `version` still equals the item's version, then increments it. If two writers (e.g. two game servers) read the same item, the second update fails with error code `conflict`: re-read and retry, or report it.
 
-```csharp
-await dynamoDb.UpdateItemAsync(new UpdateItemRequest
-{
-    TableName = Table,
-    Key = Key(VaesenKeys.Character(character.Id), VaesenKeys.Profile),
-    UpdateExpression = "SET GuildId = :guild, Version = :next",
-    ConditionExpression = "Version = :expected",
-    ExpressionAttributeValues = new()
-    {
-        [":guild"] = new AttributeValue(guildId),
-        [":expected"] = new AttributeValue { N = character.Version.ToString() },
-        [":next"] = new AttributeValue { N = (character.Version + 1).ToString() },
-    },
-}, cancellationToken);
-// ConditionalCheckFailedException => someone else changed it first: re-read and retry, or report a conflict.
-```
+Reservations aren't updated automatically: changing a username or character name needs a dedicated repository method that moves the reservation in the same transaction.
 
 ### 6.3 Rules of thumb
 
@@ -313,10 +290,11 @@ await dynamoDb.UpdateItemAsync(new UpdateItemRequest
 
 ## 7. Testing
 
-- **Endpoint tests** (`VaesenApiFactory`) use `InMemoryCharacterRepository` and skip the table initializer. Fast, no Docker.
-- **Repository contract tests** (`tests/Vaesen.Api.Tests/Persistence/`) define the behaviour every `ICharacterRepository` must have once, in `CharacterRepositoryContract`, and run it against:
-  - `InMemoryCharacterRepository`: always.
-  - `DynamoDbCharacterRepository` against DynamoDB Local in a throwaway container (Testcontainers): only when Docker is running; otherwise these tests are reported as **Skipped**.
+- **Endpoint tests** (`VaesenApiFactory`) use in-memory stores (`Tests/.../Fakes`) and skip the table initializer. Fast, no Docker.
+- **Mapping tests** (`BaseRepositoryMappingTests`) check how models become DynamoDB items and back, without a database.
+- **Store contract tests** (`Tests/Vaesen.Framework.Tests/Persistence/`) define the behaviour every `IAccountStore` / `ICharacterStore` must have once and run it against:
+  - the in-memory fakes: always.
+  - the real repositories against DynamoDB Local in a throwaway container (Testcontainers): only when Docker is running; otherwise these tests are reported as **Skipped**.
 
 That way the in-memory fake can't drift from the real behaviour (e.g. case-insensitive unique names).
 
@@ -329,7 +307,7 @@ When the API is deployed to ECS Fargate:
 3. Set environment variables on the task:
    - `ASPNETCORE_ENVIRONMENT=Production`
    - `AWS__Region=eu-central-1`
-   - `DynamoDb__TableName=vaesen-prod`
+   - `DataService__TableName=vaesen-prod`
 4. Point the load balancer health check at `/health` (liveness). Use `/health/ready` to verify that a deployment can reach DynamoDB.
 
 ---
@@ -359,4 +337,4 @@ AWS (needed for development and production):
 Optional, offline:
 
 - [ ] Docker Desktop installed; `docker compose up -d` in `VaesenAPI`; Development config switched (section 3.1)
-- [ ] `dotnet test`: the `DynamoDbCharacterRepositoryTests` run instead of being skipped (needs Docker either way)
+- [ ] `dotnet test`: the `AccountRepositoryTests` / `CharacterRepositoryTests` run instead of being skipped (needs Docker either way)
