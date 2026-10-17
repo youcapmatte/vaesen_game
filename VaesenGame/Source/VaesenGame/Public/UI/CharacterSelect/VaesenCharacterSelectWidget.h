@@ -7,6 +7,7 @@
 #include "VaesenCharacterSelectWidget.generated.h"
 
 class UButton;
+class UCircularThrobber;
 class UComboBoxString;
 class UTextBlock;
 class UVaesenCreateCharacterWidget;
@@ -31,6 +32,7 @@ class UWidget;
  *   CreateGuildDialog       (WBP_CreateGuild, a VaesenCreateGuildWidget)             - hidden until opened
  *   CreateCharacterDialog   (WBP_CreateCharacter, a VaesenCreateCharacterWidget)     - hidden until opened
  *   StatusText              (Text)
+ *   LoadingThrobber         (Circular Throbber)   - shown while the screen loads something; buttons are disabled meanwhile
  * Remembers the last guild and character picked on this machine.
  *
  * TEMPORARY: all bindings are BindWidgetOptional while the UI is being built, so each feature can be tried on its
@@ -75,6 +77,9 @@ protected:
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UTextBlock> StatusText;
 
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UCircularThrobber> LoadingThrobber;
+
 private:
 	UFUNCTION()
 	void HandleChangeGuildClicked();
@@ -103,6 +108,11 @@ private:
 	const FVaesenGuild* GetSelectedGuild() const;
 	const FVaesenCharacter* GetSelectedCharacter() const;
 	bool IsDialogOpen() const;
+	/** Counts a request the screen waits for: shows the throbber and disables the buttons until EndLoading. */
+	void BeginLoading();
+	void EndLoading();
+	bool IsLoading() const { return PendingLoads > 0; }
+
 	void UpdateButtons();
 	void SetStatus(const FText& Message);
 
@@ -113,7 +123,8 @@ private:
 	/** True once the selected guild's characters have loaded. */
 	bool bCharactersLoaded = false;
 	bool bGuildsLoaded = false;
-	bool bBusy = false;
+	/** Requests in flight (guilds, characters, play). */
+	int32 PendingLoads = 0;
 	/** Incremented per character load, so a slow answer for a previously selected guild is ignored. */
 	int32 CharacterLoad = 0;
 };

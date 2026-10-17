@@ -1,6 +1,7 @@
 #include "UI/CharacterSelect/VaesenCharacterSelectWidget.h"
 
 #include "Components/Button.h"
+#include "Components/CircularThrobber.h"
 #include "Components/ComboBoxString.h"
 #include "Components/TextBlock.h"
 #include "Core/VaesenSessionSubsystem.h"
@@ -104,6 +105,12 @@ void UVaesenCharacterSelectWidget::NativeConstruct()
 		CreateCharacterDialog->Close();
 	}
 
+	PendingLoads = 0;
+	if (LoadingThrobber)
+	{
+		LoadingThrobber->SetVisibility(ESlateVisibility::Collapsed);
+	}
+
 	LoadGuilds(FString());
 }
 
@@ -122,6 +129,7 @@ void UVaesenCharacterSelectWidget::LoadGuilds(const FString& GuildIdToSelect)
 	}
 
 	SetStatus(LOCTEXT("LoadingGuilds", "Loading your guilds..."));
+	BeginLoading();
 	Api->GetMyGuilds([WeakThis = TWeakObjectPtr<UVaesenCharacterSelectWidget>(this), GuildIdToSelect](bool bSuccess, const TArray<FVaesenGuild>& LoadedGuilds, const FString& Error)
 	{
 		UVaesenCharacterSelectWidget* This = WeakThis.Get();
@@ -129,6 +137,8 @@ void UVaesenCharacterSelectWidget::LoadGuilds(const FString& GuildIdToSelect)
 		{
 			return;
 		}
+
+		This->EndLoading();
 
 		if (!bSuccess)
 		{
@@ -198,11 +208,19 @@ void UVaesenCharacterSelectWidget::LoadCharacters(const FString& CharacterIdToSe
 
 	const int32 ThisLoad = ++CharacterLoad;
 	SetStatus(LOCTEXT("LoadingCharacters", "Loading characters..."));
+	BeginLoading();
 	Api->GetGuildCharacters(SelectedGuildId,
 		[WeakThis = TWeakObjectPtr<UVaesenCharacterSelectWidget>(this), ThisLoad, CharacterIdToSelect](bool bSuccess, const TArray<FVaesenCharacter>& LoadedCharacters, const FString& Error)
 		{
 			UVaesenCharacterSelectWidget* This = WeakThis.Get();
-			if (!This || This->CharacterLoad != ThisLoad)
+			if (!This)
+			{
+				return;
+			}
+
+			// Every request ends its loading, even one whose answer is outdated.
+			This->EndLoading();
+			if (This->CharacterLoad != ThisLoad)
 			{
 				return;
 			}
@@ -319,14 +337,13 @@ void UVaesenCharacterSelectWidget::HandlePlayClicked()
 {
 	const FVaesenCharacter* Character = GetSelectedCharacter();
 	UVaesenApiSubsystem* Api = GetGameInstance()->GetSubsystem<UVaesenApiSubsystem>();
-	if (!Character || !Api || bBusy)
+	if (!Character || !Api || IsLoading())
 	{
 		return;
 	}
 
 	VaesenCharacterSelect::Remember(VaesenCharacterSelect::LastCharacterKey, Character->Id);
-	bBusy = true;
-	UpdateButtons();
+	BeginLoading();
 	SetStatus(FText::Format(LOCTEXT("Preparing", "Preparing {0}..."), FText::FromString(Character->Name)));
 
 	const FString CharacterName = Character->Name;
@@ -338,8 +355,7 @@ void UVaesenCharacterSelectWidget::HandlePlayClicked()
 			return;
 		}
 
-		This->bBusy = false;
-		This->UpdateButtons();
+		This->EndLoading();
 
 		// Next step (not built yet): join the world via the API and travel to the returned server.
 		This->SetStatus(bSuccess
@@ -368,12 +384,32 @@ bool UVaesenCharacterSelectWidget::IsDialogOpen() const
 
 void UVaesenCharacterSelectWidget::UpdateButtons()
 {
-	const bool bIdle = !bBusy && !IsDialogOpen();
+	const bool bIdle = !IsLoading() && !IsDialogOpen();
 	VaesenCharacterSelect::SetEnabled(ChangeGuildButton, bIdle && bGuildsLoaded && !Guilds.IsEmpty());
 	VaesenCharacterSelect::SetEnabled(CreateGuildButton, bIdle && bGuildsLoaded);
 	VaesenCharacterSelect::SetEnabled(PlayerComboBox, bIdle && bCharactersLoaded);
 	VaesenCharacterSelect::SetEnabled(PlayButton, bIdle && GetSelectedCharacter() != nullptr);
 	VaesenCharacterSelect::SetEnabled(CreateCharacterButton, bIdle && GetSelectedGuild() != nullptr && bCharactersLoaded);
+}
+
+void UVaesenCharacterSelectWidget::BeginLoading()
+{
+	++PendingLoads;
+	if (LoadingThrobber)
+	{
+		LoadingThrobber->SetVisibility(ESlateVisibility::HitTestInvisible);
+	}
+	UpdateButtons();
+}
+
+void UVaesenCharacterSelectWidget::EndLoading()
+{
+	PendingLoads = FMath::Max(0, PendingLoads - 1);
+	if (LoadingThrobber && !IsLoading())
+	{
+		LoadingThrobber->SetVisibility(ESlateVisibility::Collapsed);
+	}
+	UpdateButtons();
 }
 
 void UVaesenCharacterSelectWidget::SetStatus(const FText& Message)
