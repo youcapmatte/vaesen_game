@@ -74,16 +74,16 @@ public class BaseRepositoryMappingTests
     }
 
     [Fact]
-    public void Character_IsIndexedUnderItsAccount()
+    public void Character_IsIndexedUnderItsGuild()
     {
-        var character = new Character { AccountId = "account-3f2b8c1e-1d2c-4b5a-9e8f-0123456789ab", Name = "Astrid" };
+        var character = new Character { GuildId = "guild-3f2b8c1e-1d2c-4b5a-9e8f-0123456789ab", Name = "Astrid" };
         var repository = new CharacterRepository(OfflineClient(), Options(), TimeProvider.System);
 
         var item = typeof(CharacterRepository).BaseType!
             .GetMethod("ToItem", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!
             .Invoke(repository, [character]) as Dictionary<string, AttributeValue>;
 
-        Assert.Equal("ACCOUNT#account-3f2b8c1e-1d2c-4b5a-9e8f-0123456789ab", item!["GSI1PK"].S);
+        Assert.Equal("GUILD#guild-3f2b8c1e-1d2c-4b5a-9e8f-0123456789ab", item!["GSI1PK"].S);
         Assert.Equal("CHAR#Astrid", item["GSI1SK"].S);
     }
 

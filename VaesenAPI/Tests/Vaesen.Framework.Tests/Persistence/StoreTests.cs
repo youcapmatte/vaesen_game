@@ -8,33 +8,30 @@ using Vaesen.Framework.Tests.Fakes;
 
 namespace Vaesen.Framework.Tests.Persistence;
 
-public class InMemoryAccountStoreTests : AccountStoreContract
+public class InMemoryStoreTests : StoreContract
 {
-    protected override IAccountStore Store { get; } = new InMemoryAccountStore();
+    private readonly InMemoryDatabase _database = new();
+
+    protected override IAccountStore Accounts => _database;
+
+    protected override IGuildStore Guilds => _database;
+
+    protected override ICharacterStore Characters => _database;
 }
 
-public class InMemoryCharacterStoreTests : CharacterStoreContract
+/// <summary>The real repositories against DynamoDB Local. Skipped when Docker isn't available.</summary>
+public class DynamoDbStoreTests(DynamoDbFixture fixture) : StoreContract, IClassFixture<DynamoDbFixture>
 {
-    protected override ICharacterStore Store { get; } = new InMemoryCharacterStore();
-}
+    protected override IAccountStore Accounts => fixture.Accounts;
 
-/// <summary>The real AccountRepository against DynamoDB Local. Skipped when Docker isn't available.</summary>
-public class AccountRepositoryTests(DynamoDbFixture fixture) : AccountStoreContract, IClassFixture<DynamoDbFixture>
-{
-    protected override IAccountStore Store => fixture.CreateAccountRepository();
+    protected override IGuildStore Guilds => fixture.Guilds;
+
+    protected override ICharacterStore Characters => fixture.Characters;
 
     protected override void SkipIfUnavailable() => DynamoDbFixture.SkipIfDockerUnavailable();
 }
 
-/// <summary>The real CharacterRepository against DynamoDB Local. Skipped when Docker isn't available.</summary>
-public class CharacterRepositoryTests(DynamoDbFixture fixture) : CharacterStoreContract, IClassFixture<DynamoDbFixture>
-{
-    protected override ICharacterStore Store => fixture.CreateCharacterRepository();
-
-    protected override void SkipIfUnavailable() => DynamoDbFixture.SkipIfDockerUnavailable();
-}
-
-/// <summary>DynamoDB Local in a throwaway Docker container, with the Vaesen table created.</summary>
+/// <summary>DynamoDB Local in a throwaway Docker container, with the Vaesen table and the repositories on it.</summary>
 public sealed class DynamoDbFixture : IAsyncLifetime
 {
     private const string TableName = "vaesen-test";
@@ -46,14 +43,14 @@ public sealed class DynamoDbFixture : IAsyncLifetime
     public static bool IsDockerAvailable { get; } =
         File.Exists(OperatingSystem.IsWindows() ? @"\\.\pipe\docker_engine" : "/var/run/docker.sock");
 
-    private static IOptions<DataServiceOptions> TableOptions => Options.Create(new DataServiceOptions { TableName = TableName });
+    public AccountRepository Accounts { get; private set; } = null!;
+
+    public CharacterRepository Characters { get; private set; } = null!;
+
+    public GuildRepository Guilds { get; private set; } = null!;
 
     public static void SkipIfDockerUnavailable() =>
         Skip.IfNot(IsDockerAvailable, "Docker is not available; install Docker Desktop to run DynamoDB tests.");
-
-    public AccountRepository CreateAccountRepository() => new(_client!, TableOptions, TimeProvider.System);
-
-    public CharacterRepository CreateCharacterRepository() => new(_client!, TableOptions, TimeProvider.System);
 
     public async Task InitializeAsync()
     {
@@ -69,6 +66,11 @@ public sealed class DynamoDbFixture : IAsyncLifetime
             new BasicAWSCredentials("test", "test"),
             new AmazonDynamoDBConfig { ServiceURL = _container.GetConnectionString() });
         await DynamoDbTable.CreateAsync(_client, TableName, CancellationToken.None);
+
+        var options = Options.Create(new DataServiceOptions { TableName = TableName });
+        Accounts = new AccountRepository(_client, options, TimeProvider.System);
+        Characters = new CharacterRepository(_client, options, TimeProvider.System);
+        Guilds = new GuildRepository(_client, options, TimeProvider.System, Accounts, Characters);
     }
 
     public async Task DisposeAsync()

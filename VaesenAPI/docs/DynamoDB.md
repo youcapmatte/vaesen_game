@@ -46,8 +46,11 @@ DynamoDB is a key-value / document database. Everything you need to know to use 
 | A1 | Get an account | `GetItem PK={accountId}, SK=ITEM` |
 | A2 | Find an account by username (case-insensitive) | `GetItem PK=USERNAME#{lowercase}, SK=USERNAME` -> `OwnerId` -> A1 |
 | A3 | Find an account by Auth0 user | `GetItem PK=AUTH0#{auth0UserId}, SK=AUTH0` -> `OwnerId` -> A1 |
+| A4 | An account's guilds | A1 -> `guildIds` -> `BatchGetItem` |
+| G1 | Get a guild (members, characters, who plays what) | `GetItem PK={guildId}, SK=ITEM` |
+| G2 | Find a guild by name (case-insensitive) | `GetItem PK=GUILDNAME#{lowercase}, SK=GUILDNAME` -> `OwnerId` -> G1 |
 | C1 | Get a character | `GetItem PK={characterId}, SK=ITEM` |
-| C2 | List an account's characters (character select) | `Query GSI1 GSI1PK=ACCOUNT#{accountId}, GSI1SK begins_with CHAR#` |
+| C2 | List a guild's characters | `Query GSI1 GSI1PK=GUILD#{guildId}, GSI1SK begins_with CHAR#` (or G1 -> `characterIds` -> `BatchGetItem`) |
 | C3 | Is a character name free? | `GetItem PK=CHARNAME#{lowercase name}, SK=CHARNAME` |
 
 ### Keys
@@ -63,8 +66,9 @@ Every model is stored by the generic `BaseRepository<T>` as **its JSON document*
 | Item | PK | SK | GSI1PK | GSI1SK | Other attributes |
 |---|---|---|---|---|---|
 | Model (Account, Character, ...) | `{id}`, e.g. `account-3f2b...` | `ITEM` | set by the repository, if indexed | | the model's JSON fields (`username`, `subscription`, `createdAt`, `version`, ...), `Type` |
-| Character | `character-...` | `ITEM` | `ACCOUNT#{accountId}` | `CHAR#{name}` | `accountId`, `name`, `guildId`, ... |
-| Reservation (unique value) | `USERNAME#{lowercase}`, `AUTH0#{auth0UserId}`, `CHARNAME#{lowercase}` | `USERNAME`, `AUTH0`, `CHARNAME` | | | `OwnerId` (the id holding it), `Type = Reservation` |
+| Guild | `guild-...` | `ITEM` | | | `name`, `memberAccountIds`, `characterIds`, `characterAssignments` (`characterId`, `accountId`, `assignedAt`), ... |
+| Character | `character-...` | `ITEM` | `GUILD#{guildId}` | `CHAR#{name}` | `guildId`, `name`, ... |
+| Reservation (unique value) | `USERNAME#{lowercase}`, `AUTH0#{auth0UserId}`, `GUILDNAME#{lowercase}`, `CHARNAME#{lowercase}` | `USERNAME`, `AUTH0`, `GUILDNAME`, `CHARNAME` | | | `OwnerId` (the id holding it), `Type = Reservation` |
 
 Every item has a `Type` attribute (`Account`, `Character`, `Reservation`). It isn't needed by the API, but it makes the console readable and helps if you ever export data.
 
@@ -74,7 +78,10 @@ Conventions:
 - Every model derives from `BaseCore`: `createdAt`, `updatedAt`, `isDeleted` (soft delete: deleted items are hidden, not removed) and `version` (updates based on an older version are rejected).
 - An account's Auth0 identity is stored as `auth0UserId`: Auth0's `user_id`, which is the `sub` claim in its tokens (`auth0|...`, `google-oauth2|...`).
 - Uniqueness (usernames, character names, Auth0 users) uses reservation items written in the same transaction as the model, each with `attribute_not_exists(PK)`.
-- An account's guilds are stored on the account as `guildIds` (a list), so loading the account gives its guilds in one read. The other direction ("who is in guild X") isn't covered by that list: when a guild member list is needed, add a membership item per member (`PK = {guildId}`, `SK = MEMBER#{accountId}`) written in the same transaction as the account's `guildIds`.
+- Guild membership is stored on both sides: `account.guildIds` and `guild.memberAccountIds`. Every change writes both in **one transaction** with version checks, so they can't drift apart.
+- Characters belong to a guild (`character.guildId`, `guild.characterIds`). Who plays a character right now is `guild.characterAssignments`: at most one player per character and one character per member. Reassigning is just a guild update.
+- Every model has `createdAt`, `createdBy`, `updatedAt`, `updatedBy`; services set the `*By` fields (account ids) when they know who acted.
+- Writes that span models (guild + accounts, character + guild) are prepared by each repository (`PrepareCreate`, `PrepareUpdate`, `PrepareReservation`) and committed together with `DataTransaction.ExecuteAsync` (max 100 writes).
 - New models usually need no new table design: derive from `BaseCore`, add a repository deriving from `BaseRepository<T>`. Only new queries need a GSI key or a reservation.
 
 ---
@@ -229,7 +236,10 @@ Framework/Vaesen.Framework.Core/
 Framework/Vaesen.Framework.Common/
   Models/Account.cs, Character.cs
   Repositorys/AccountRepository.cs   IAccountStore: username and Auth0 lookups via reservations
-  Repositorys/CharacterRepository.cs ICharacterStore: characters per account via GSI1, unique names
+  Repositorys/CharacterRepository.cs ICharacterStore: characters per guild via GSI1, unique names
+  Repositorys/GuildRepository.cs     IGuildStore: guild + member accounts / new characters in one transaction
+  Services/GuildService.cs          membership and who-plays-which-character rules
+  Api/GuildController.cs            api/guilds
   Services/AccountService.cs        validation + ResultBase
   Api/AccountController.cs          api/accounts
 ```
@@ -271,8 +281,8 @@ If the API logs an SSO or token error, your session has expired: run `aws sso lo
 `CharacterRepository : BaseRepository<Character>, ICharacterStore`:
 
 - **Get**: inherited `GetItemAsync(id)`.
-- **List an account's characters**: overrides `GetIndexKeys` to put each character in GSI1 under `ACCOUNT#{accountId}`, then `QueryIndexAsync` (paginated).
-- **Create**: `CreateItemAsync(character, reservations)` writes the character and its `CHARNAME#` reservation in one transaction. A taken name (in any casing) cancels both and returns the reservation's error code (`character_name_taken`).
+- **List a guild's characters**: overrides `GetIndexKeys` to put each character in GSI1 under `GUILD#{guildId}`, then `QueryIndexAsync` (paginated).
+- **Create**: `GuildRepository.CreateCharacterAsync` writes the character, its `CHARNAME#` reservation and the guild (with the new id in `characterIds`) in one transaction. A taken name (in any casing) cancels all three and returns `character_name_taken`.
 
 ### 6.2 Updates without lost writes (optimistic concurrency)
 

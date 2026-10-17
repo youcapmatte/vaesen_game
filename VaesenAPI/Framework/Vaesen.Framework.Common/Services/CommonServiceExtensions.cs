@@ -12,15 +12,18 @@ namespace Vaesen.Framework.Common.Services;
 
 public static class CommonServiceExtensions
 {
-    /// <summary>Accounts, characters and billing. Controllers: AccountController, IdentityController, DevController.</summary>
+    /// <summary>Accounts, guilds, characters and billing. Controllers: AccountController, GuildController, IdentityController, DevController.</summary>
     public static IServiceCollection AddCommonServices(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddSingleton<AccountRepository>();
         services.AddSingleton<IAccountStore>(sp => sp.GetRequiredService<AccountRepository>());
         services.AddSingleton<CharacterRepository>();
         services.AddSingleton<ICharacterStore>(sp => sp.GetRequiredService<CharacterRepository>());
+        services.AddSingleton<GuildRepository>();
+        services.AddSingleton<IGuildStore>(sp => sp.GetRequiredService<GuildRepository>());
 
         services.AddSingleton<IAccountService, AccountService>();
+        services.AddSingleton<IGuildService, GuildService>();
 
         // No payment provider yet: every player counts as subscribed.
         services.AddSingleton<ISubscriptionService, UnrestrictedSubscriptionService>();

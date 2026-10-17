@@ -19,3 +19,32 @@ GET {{Vaesen.Api_HostAddress}}/api/accounts/by-username/Ingrid
 
 ### Readiness (includes DynamoDB)
 GET {{Vaesen.Api_HostAddress}}/health/ready
+
+### Create a guild (the founder becomes its first member). Use an account id from "Create an account".
+POST {{Vaesen.Api_HostAddress}}/api/guilds
+Content-Type: application/json
+
+{
+  "name": "The Society of Upsala",
+  "createdByAccountId": "account-00000000-0000-0000-0000-000000000000"
+}
+
+### Get a guild (members, characters, who plays what)
+GET {{Vaesen.Api_HostAddress}}/api/guilds/by-name/The Society of Upsala
+
+### Create a character in the guild
+POST {{Vaesen.Api_HostAddress}}/api/guilds/guild-00000000-0000-0000-0000-000000000000/characters
+Content-Type: application/json
+
+{
+  "name": "Astrid Falk",
+  "createdByAccountId": "account-00000000-0000-0000-0000-000000000000"
+}
+
+### Let a member play a character
+PUT {{Vaesen.Api_HostAddress}}/api/guilds/guild-00000000-0000-0000-0000-000000000000/characters/character-00000000-0000-0000-0000-000000000000/player
+Content-Type: application/json
+
+{
+  "accountId": "account-00000000-0000-0000-0000-000000000000"
+}

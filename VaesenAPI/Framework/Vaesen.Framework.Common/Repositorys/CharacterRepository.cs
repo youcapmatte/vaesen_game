@@ -5,21 +5,20 @@ using Vaesen.Framework.Core.Data;
 
 namespace Vaesen.Framework.Common.Repositorys;
 
-/// <summary>Persistence for <see cref="Character"/>, so services can be tested without DynamoDB.</summary>
+/// <summary>Reading characters. They're created through <see cref="IGuildStore.CreateCharacterAsync"/>, together with their guild.</summary>
 public interface ICharacterStore
 {
     Task<Character?> GetAsync(string characterId, CancellationToken cancellationToken = default);
 
-    /// <summary>All characters of an account, ordered by name.</summary>
-    Task<IReadOnlyList<Character>> ListByAccountAsync(string accountId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Character>> GetManyAsync(IReadOnlyCollection<string> characterIds, CancellationToken cancellationToken = default);
 
-    /// <summary>Creates the character and reserves its name (case-insensitive). Fails with <see cref="CharacterRepository.NameTaken"/>.</summary>
-    Task<ItemAction<Character>> CreateAsync(Character character, CancellationToken cancellationToken = default);
+    /// <summary>All characters of a guild, ordered by name.</summary>
+    Task<IReadOnlyList<Character>> ListByGuildAsync(string guildId, CancellationToken cancellationToken = default);
 }
 
 /// <summary>
 /// Characters in the Vaesen table:
-///   {characterId} / ITEM                   the character (GSI1: ACCOUNT#{accountId} / CHAR#{name})
+///   {characterId} / ITEM                   the character (GSI1: GUILD#{guildId} / CHAR#{name})
 ///   CHARNAME#{lowercase name} / CHARNAME   name reservation, so names are unique
 /// </summary>
 public sealed class CharacterRepository : BaseRepository<Character>, ICharacterStore
@@ -34,22 +33,21 @@ public sealed class CharacterRepository : BaseRepository<Character>, ICharacterS
     {
     }
 
-    public static string NameKey(string name) => $"CHARNAME#{name.Trim().ToLowerInvariant()}";
+    public static string GuildIndexKey(string guildId) => $"GUILD#{guildId}";
 
-    public static string AccountIndexKey(string accountId) => $"ACCOUNT#{accountId}";
+    /// <summary>The reservation that keeps character names unique.</summary>
+    public static Reservation NameReservation(string name) =>
+        new($"CHARNAME#{name.Trim().ToLowerInvariant()}", NameKind, "That character name is taken.", NameTaken);
 
     public Task<Character?> GetAsync(string characterId, CancellationToken cancellationToken = default) =>
         GetItemAsync(characterId, cancellationToken);
 
-    public Task<IReadOnlyList<Character>> ListByAccountAsync(string accountId, CancellationToken cancellationToken = default) =>
-        QueryIndexAsync(AccountIndexKey(accountId), IndexSortPrefix, cancellationToken);
+    public Task<IReadOnlyList<Character>> GetManyAsync(IReadOnlyCollection<string> characterIds, CancellationToken cancellationToken = default) =>
+        GetItemsAsync(characterIds, cancellationToken);
 
-    public Task<ItemAction<Character>> CreateAsync(Character character, CancellationToken cancellationToken = default) =>
-        CreateItemAsync(
-            character,
-            [new Reservation(NameKey(character.Name), NameKind, "That character name is taken.", NameTaken)],
-            cancellationToken);
+    public Task<IReadOnlyList<Character>> ListByGuildAsync(string guildId, CancellationToken cancellationToken = default) =>
+        QueryIndexAsync(GuildIndexKey(guildId), IndexSortPrefix, cancellationToken);
 
     protected override (string PartitionKey, string SortKey)? GetIndexKeys(Character item) =>
-        (AccountIndexKey(item.AccountId), IndexSortPrefix + item.Name);
+        (GuildIndexKey(item.GuildId), IndexSortPrefix + item.Name);
 }

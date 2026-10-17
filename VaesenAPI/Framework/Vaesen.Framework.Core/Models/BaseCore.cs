@@ -113,12 +113,20 @@ public class BaseCore : ObjectCore
         set => _createdAt = EnsureUtc(value);
     }
 
+    /// <summary>Who created it, typically an account id. Set by the service that creates it.</summary>
+    [JsonProperty("createdBy")]
+    public string? CreatedBy { get; set; }
+
     [JsonProperty("updatedAt")]
     public DateTime UpdatedAt
     {
         get => _updatedAt;
         set => _updatedAt = EnsureUtc(value);
     }
+
+    /// <summary>Who changed it last, typically an account id. Set by the service that changes it, when known.</summary>
+    [JsonProperty("updatedBy")]
+    public string? UpdatedBy { get; set; }
 
     /// <summary>Soft delete: repositories hide deleted items instead of removing them.</summary>
     [JsonProperty("isDeleted")]

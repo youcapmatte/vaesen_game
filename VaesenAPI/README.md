@@ -13,8 +13,8 @@ Framework/
     Middleware/               ResultExceptionMiddleware (unhandled errors as ResultBase)
     Api/                      ToActionResult (ResultBase -> HTTP status), [DevelopmentOnly]
     Services/                 CoreServiceExtensions.AddCoreServices
-  Vaesen.Framework.Common/    Accounts, characters, billing, dev login
-    Models/ Repositorys/ Services/ Api/ (AccountController, IdentityController, DevController)
+  Vaesen.Framework.Common/    Accounts, guilds, characters, billing, dev login
+    Models/ Repositorys/ Services/ Api/ (AccountController, GuildController, IdentityController, DevController)
     Services/CommonServiceExtensions.AddCommonServices (+ AddDevServices in Development)
   Vaesen.Framework.GameLift/  Worlds and joining them via GameLift
     Models/ Services/ Api/ (SessionController)
@@ -29,7 +29,8 @@ docs/
 
 ## Conventions
 
-- **Models** derive from `BaseCore` and use Newtonsoft `[JsonProperty("camelCase")]`. Ids come from the class name: `new Account().Id` is `account-{lowercase guid}`.
+- **Models** derive from `BaseCore` (`id`, `createdAt`, `createdBy`, `updatedAt`, `updatedBy`, `isDeleted`, `version`) and use Newtonsoft `[JsonProperty("camelCase")]`. Ids come from the class name: `new Account().Id` is `account-{lowercase guid}`, `new Guild().Id` is `guild-{lowercase guid}`.
+- **Writes across models** (guild + member accounts, character + guild) go through one store method that commits them in a single DynamoDB transaction.
 - **Repositories** derive from `BaseRepository<T>` and expose a store interface (`IAccountStore`) that services depend on.
 - **Services** come as `IXService` / `XService` and return `ResultBase<T>`; failures carry an `errorCode` (`not_found`, `invalid`, `conflict`, `username_taken`, ...).
 - **Controllers** live in the framework libraries (`[ApiController]`, `[Route("api/...")]`, `[Authorize(Policy = ...)]`) and return `ResultBase<T>` with a matching HTTP status (`this.ToActionResult(result)`).

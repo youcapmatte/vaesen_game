@@ -49,8 +49,10 @@ public sealed class VaesenApiFactory(bool useTestAuth = true) : WebApplicationFa
             services.AddSingleton<IGameLiftGateway>(GameLift);
 
             // No DynamoDB in endpoint tests: in-memory stores, and don't try to create the table.
-            services.AddSingleton<IAccountStore, InMemoryAccountStore>();
-            services.AddSingleton<ICharacterStore, InMemoryCharacterStore>();
+            var database = new InMemoryDatabase();
+            services.AddSingleton<IAccountStore>(database);
+            services.AddSingleton<ICharacterStore>(database);
+            services.AddSingleton<IGuildStore>(database);
             services.RemoveAll<IHostedService>();
 
             if (!useTestAuth)

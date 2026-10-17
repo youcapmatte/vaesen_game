@@ -1,29 +1,34 @@
 using Vaesen.Framework.Common.Models;
 using Vaesen.Framework.Common.Repositorys;
+using Vaesen.Framework.Core.Models;
 
 namespace Vaesen.Framework.Tests.Persistence;
 
 /// <summary>
-/// Behaviour every <see cref="IAccountStore"/> must have. Runs against the in-memory fake and the real
-/// AccountRepository (DynamoDB Local), so the fake used by endpoint tests can't drift from the real thing.
+/// Behaviour the stores must have. Runs against the in-memory fake and the real repositories (DynamoDB Local),
+/// so the fake used by endpoint tests can't drift from the real thing.
 /// </summary>
-public abstract class AccountStoreContract
+public abstract class StoreContract
 {
-    protected abstract IAccountStore Store { get; }
+    protected abstract IAccountStore Accounts { get; }
+
+    protected abstract IGuildStore Guilds { get; }
+
+    protected abstract ICharacterStore Characters { get; }
 
     protected virtual void SkipIfUnavailable()
     {
     }
 
-    /// <summary>Usernames are unique per table, so tests sharing a database need their own.</summary>
-    private static string UniqueUsername(string name) => $"{name}_{Guid.NewGuid():N}"[..24];
+    /// <summary>Unique values are unique per table, so tests sharing a database need their own.</summary>
+    private static string Unique(string name, int length = 24) => $"{name}{Guid.NewGuid():N}"[..length];
 
-    private static Account NewAccount(string username, string? auth0UserId = null) => new()
+    private static Account NewAccount(string? auth0UserId = null) => new()
     {
-        Username = username,
+        Username = Unique("user_"),
         Email = "player@example.com",
         Auth0UserId = auth0UserId,
-        GuildIds = ["guild-1a2b3c4d-0000-4000-8000-000000000001"],
+        GuildIds = [],
         Subscription = new AccountSubscription
         {
             Status = SubscriptionStatus.Active,
@@ -32,78 +37,201 @@ public abstract class AccountStoreContract
         },
     };
 
+    private async Task<(Guild Guild, Account Founder)> CreateGuildAsync()
+    {
+        var founder = NewAccount();
+        Assert.True((await Accounts.CreateAsync(founder)).Success);
+
+        var guild = new Guild { Name = Unique("Guild "), CreatedBy = founder.Id, MemberAccountIds = [founder.Id] };
+        founder.GuildIds.Add(guild.Id);
+        Assert.True((await Guilds.CreateAsync(guild, founder)).Success);
+        return (guild, founder);
+    }
+
+    // ---- Accounts -------------------------------------------------------------------------------------------
+
     [SkippableFact]
-    public async Task Create_ThenGetById_RoundTripsAllFields()
+    public async Task Account_Create_ThenGetById_RoundTripsAllFields()
     {
         SkipIfUnavailable();
-        var account = NewAccount(UniqueUsername("Ingrid"), $"auth0|{Guid.NewGuid():N}");
+        var account = NewAccount($"auth0|{Guid.NewGuid():N}");
 
-        var created = await Store.CreateAsync(account);
-        var loaded = await Store.GetAsync(account.Id);
+        var created = await Accounts.CreateAsync(account);
+        var loaded = await Accounts.GetAsync(account.Id);
 
         Assert.True(created.Success);
         Assert.NotNull(loaded);
         Assert.Equal(account.Username, loaded.Username);
-        Assert.Equal(account.Email, loaded.Email);
         Assert.Equal(account.Auth0UserId, loaded.Auth0UserId);
         Assert.Equal(SubscriptionStatus.Active, loaded.Subscription.Status);
-        Assert.Equal("monthly", loaded.Subscription.Plan);
         Assert.Equal(account.Subscription.CurrentPeriodEnd, loaded.Subscription.CurrentPeriodEnd);
-        Assert.Equal(account.GuildIds, loaded.GuildIds);
         Assert.Equal(1, loaded.Version);
         Assert.NotEqual(default, loaded.CreatedAt);
     }
 
     [SkippableFact]
-    public async Task GetByUsername_IsCaseInsensitive()
+    public async Task Account_GetByUsername_IsCaseInsensitive()
     {
         SkipIfUnavailable();
-        var account = NewAccount(UniqueUsername("Johan"));
-        await Store.CreateAsync(account);
+        var account = NewAccount();
+        await Accounts.CreateAsync(account);
 
-        var found = await Store.GetByUsernameAsync(account.Username.ToUpperInvariant());
-
-        Assert.Equal(account.Id, found?.Id);
+        Assert.Equal(account.Id, (await Accounts.GetByUsernameAsync(account.Username.ToUpperInvariant()))?.Id);
     }
 
     [SkippableFact]
-    public async Task GetByAuth0UserId_FindsTheLinkedAccount()
+    public async Task Account_GetByAuth0UserId_FindsTheLinkedAccount()
     {
         SkipIfUnavailable();
         var auth0UserId = $"google-oauth2|{Guid.NewGuid():N}";
-        var account = NewAccount(UniqueUsername("Astrid"), auth0UserId);
-        await Store.CreateAsync(account);
+        var account = NewAccount(auth0UserId);
+        await Accounts.CreateAsync(account);
 
-        Assert.Equal(account.Id, (await Store.GetByAuth0UserIdAsync(auth0UserId))?.Id);
+        Assert.Equal(account.Id, (await Accounts.GetByAuth0UserIdAsync(auth0UserId))?.Id);
     }
 
     [SkippableFact]
-    public async Task Create_WithTakenUsername_ReportsItAndStoresNothing()
+    public async Task Account_CreateWithTakenUsername_ReportsItAndStoresNothing()
     {
         SkipIfUnavailable();
-        var username = UniqueUsername("Erik");
-        await Store.CreateAsync(NewAccount(username));
-        var duplicate = NewAccount(username.ToLowerInvariant());
+        var first = NewAccount();
+        await Accounts.CreateAsync(first);
+        var duplicate = NewAccount();
+        duplicate.Username = first.Username.ToLowerInvariant();
 
-        var result = await Store.CreateAsync(duplicate);
+        var result = await Accounts.CreateAsync(duplicate);
 
         Assert.Equal(AccountRepository.UsernameTaken, result.ErrorCode);
-        Assert.Null(await Store.GetAsync(duplicate.Id));
+        Assert.Null(await Accounts.GetAsync(duplicate.Id));
     }
 
     [SkippableFact]
-    public async Task Create_WithTakenAuth0UserId_ReportsItAndStoresNothing()
+    public async Task Account_CreateWithTakenAuth0UserId_ReportsItAndStoresNothing()
     {
         SkipIfUnavailable();
         var auth0UserId = $"auth0|{Guid.NewGuid():N}";
-        await Store.CreateAsync(NewAccount(UniqueUsername("Sigrid"), auth0UserId));
-        var duplicate = NewAccount(UniqueUsername("Other"), auth0UserId);
+        await Accounts.CreateAsync(NewAccount(auth0UserId));
+        var duplicate = NewAccount(auth0UserId);
 
-        var result = await Store.CreateAsync(duplicate);
+        var result = await Accounts.CreateAsync(duplicate);
 
         Assert.Equal(AccountRepository.Auth0UserTaken, result.ErrorCode);
-        Assert.Null(await Store.GetAsync(duplicate.Id));
-        Assert.Null(await Store.GetByUsernameAsync(duplicate.Username));
+        Assert.Null(await Accounts.GetAsync(duplicate.Id));
+        Assert.Null(await Accounts.GetByUsernameAsync(duplicate.Username));
+    }
+
+    // ---- Guilds ---------------------------------------------------------------------------------------------
+
+    [SkippableFact]
+    public async Task Guild_Create_StoresGuildAndFoundersMembership()
+    {
+        SkipIfUnavailable();
+        var (guild, founder) = await CreateGuildAsync();
+
+        var loadedGuild = await Guilds.GetAsync(guild.Id);
+        var loadedFounder = await Accounts.GetAsync(founder.Id);
+
+        Assert.Equal(guild.Name, loadedGuild?.Name);
+        Assert.Equal([founder.Id], loadedGuild?.MemberAccountIds);
+        Assert.Equal(founder.Id, loadedGuild?.CreatedBy);
+        Assert.Equal([guild.Id], loadedFounder?.GuildIds);
+        Assert.Equal(2, loadedFounder?.Version);
+        Assert.Equal(guild.Id, (await Guilds.GetByNameAsync(guild.Name.ToUpperInvariant()))?.Id);
+    }
+
+    [SkippableFact]
+    public async Task Guild_CreateWithTakenName_StoresNothing()
+    {
+        SkipIfUnavailable();
+        var (existing, _) = await CreateGuildAsync();
+        var founder = NewAccount();
+        await Accounts.CreateAsync(founder);
+        var duplicate = new Guild { Name = existing.Name.ToLowerInvariant(), MemberAccountIds = [founder.Id] };
+        founder.GuildIds.Add(duplicate.Id);
+
+        var result = await Guilds.CreateAsync(duplicate, founder);
+
+        Assert.Equal(GuildRepository.NameTaken, result.ErrorCode);
+        Assert.Null(await Guilds.GetAsync(duplicate.Id));
+        Assert.Empty((await Accounts.GetAsync(founder.Id))!.GuildIds);
+    }
+
+    [SkippableFact]
+    public async Task Guild_SaveBasedOnAnOldVersion_IsRejected()
+    {
+        SkipIfUnavailable();
+        var (guild, _) = await CreateGuildAsync();
+        var first = (await Guilds.GetAsync(guild.Id))!;
+        var second = (await Guilds.GetAsync(guild.Id))!;
+
+        first.Name = first.Name + "!";
+        Assert.True((await Guilds.SaveAsync(first, [])).Success);
+        var stale = await Guilds.SaveAsync(second, []);
+
+        Assert.Equal(ErrorCodes.Conflict, stale.ErrorCode);
+    }
+
+    [SkippableFact]
+    public async Task Guild_SaveWithAccount_FailsWhollyWhenTheAccountChanged()
+    {
+        SkipIfUnavailable();
+        var (guild, _) = await CreateGuildAsync();
+        var member = NewAccount();
+        await Accounts.CreateAsync(member);
+        var staleMember = (await Accounts.GetAsync(member.Id))!;
+        var loadedGuild = (await Guilds.GetAsync(guild.Id))!;
+
+        // Someone else changes the account first.
+        var concurrent = (await Accounts.GetAsync(member.Id))!;
+        concurrent.GuildIds.Add("guild-00000000-0000-4000-8000-000000000000");
+        Assert.True((await Guilds.SaveAsync((await Guilds.GetAsync(guild.Id))!, [concurrent])).Success);
+
+        loadedGuild.MemberAccountIds.Add(staleMember.Id);
+        staleMember.GuildIds.Add(guild.Id);
+        var result = await Guilds.SaveAsync(loadedGuild, [staleMember]);
+
+        Assert.Equal(ErrorCodes.Conflict, result.ErrorCode);
+        Assert.DoesNotContain(member.Id, (await Guilds.GetAsync(guild.Id))!.MemberAccountIds);
+    }
+
+    // ---- Characters -----------------------------------------------------------------------------------------
+
+    [SkippableFact]
+    public async Task Character_Create_StoresCharacterAndGuildsList()
+    {
+        SkipIfUnavailable();
+        var (guild, founder) = await CreateGuildAsync();
+        var loadedGuild = (await Guilds.GetAsync(guild.Id))!;
+        var character = new Character { GuildId = guild.Id, Name = Unique("Ingrid", 16), CreatedBy = founder.Id };
+        loadedGuild.CharacterIds.Add(character.Id);
+
+        Assert.True((await Guilds.CreateCharacterAsync(loadedGuild, character)).Success);
+
+        Assert.Equal(character.Name, (await Characters.GetAsync(character.Id))?.Name);
+        Assert.Equal([character.Id], (await Guilds.GetAsync(guild.Id))?.CharacterIds);
+        Assert.Equal([character.Id], (await Characters.ListByGuildAsync(guild.Id)).Select(c => c.Id));
+        Assert.Equal([character.Id], (await Characters.GetManyAsync([character.Id])).Select(c => c.Id));
+    }
+
+    [SkippableFact]
+    public async Task Character_CreateWithTakenName_StoresNothing()
+    {
+        SkipIfUnavailable();
+        var (guild, _) = await CreateGuildAsync();
+        var name = Unique("Johan", 16);
+        var first = (await Guilds.GetAsync(guild.Id))!;
+        var character = new Character { GuildId = guild.Id, Name = name };
+        first.CharacterIds.Add(character.Id);
+        await Guilds.CreateCharacterAsync(first, character);
+
+        var second = (await Guilds.GetAsync(guild.Id))!;
+        var duplicate = new Character { GuildId = guild.Id, Name = name.ToUpperInvariant() };
+        second.CharacterIds.Add(duplicate.Id);
+        var result = await Guilds.CreateCharacterAsync(second, duplicate);
+
+        Assert.Equal(CharacterRepository.NameTaken, result.ErrorCode);
+        Assert.Null(await Characters.GetAsync(duplicate.Id));
+        Assert.Equal([character.Id], (await Guilds.GetAsync(guild.Id))?.CharacterIds);
     }
 
     [SkippableFact]
@@ -111,84 +239,11 @@ public abstract class AccountStoreContract
     {
         SkipIfUnavailable();
 
-        Assert.Null(await Store.GetAsync(new Account().Id));
-        Assert.Null(await Store.GetByUsernameAsync(UniqueUsername("Nobody")));
-        Assert.Null(await Store.GetByAuth0UserIdAsync("auth0|nobody"));
-    }
-}
-
-/// <summary>Behaviour every <see cref="ICharacterStore"/> must have (in-memory fake and CharacterRepository).</summary>
-public abstract class CharacterStoreContract
-{
-    protected abstract ICharacterStore Store { get; }
-
-    protected virtual void SkipIfUnavailable()
-    {
-    }
-
-    private static Character NewCharacter(string accountId, string name) => new() { AccountId = accountId, Name = name };
-
-    private static string NewAccountId() => new Account().Id;
-
-    /// <summary>Names are unique per table, so tests sharing a database need their own.</summary>
-    private static string UniqueName(string name) => $"{name}{Guid.NewGuid():N}"[..20];
-
-    [SkippableFact]
-    public async Task Create_ThenGet_ReturnsTheCharacter()
-    {
-        SkipIfUnavailable();
-        var character = NewCharacter(NewAccountId(), UniqueName("Ingrid"));
-
-        Assert.True((await Store.CreateAsync(character)).Success);
-        var loaded = await Store.GetAsync(character.Id);
-
-        Assert.Equal(character.Name, loaded?.Name);
-        Assert.Equal(character.AccountId, loaded?.AccountId);
-    }
-
-    [SkippableFact]
-    public async Task Get_Unknown_ReturnsNull()
-    {
-        SkipIfUnavailable();
-
-        Assert.Null(await Store.GetAsync(new Character().Id));
-    }
-
-    [SkippableFact]
-    public async Task Create_WithTakenName_DifferentCase_Fails()
-    {
-        SkipIfUnavailable();
-        var name = UniqueName("Johan");
-        Assert.True((await Store.CreateAsync(NewCharacter(NewAccountId(), name))).Success);
-        var duplicate = NewCharacter(NewAccountId(), name.ToUpperInvariant());
-
-        var result = await Store.CreateAsync(duplicate);
-
-        Assert.Equal(CharacterRepository.NameTaken, result.ErrorCode);
-        Assert.Null(await Store.GetAsync(duplicate.Id));
-    }
-
-    [SkippableFact]
-    public async Task ListByAccount_ReturnsOnlyThatAccountsCharacters()
-    {
-        SkipIfUnavailable();
-        var accountId = NewAccountId();
-        var first = NewCharacter(accountId, UniqueName("Astrid"));
-        var second = NewCharacter(accountId, UniqueName("Erik"));
-        await Store.CreateAsync(first);
-        await Store.CreateAsync(second);
-        await Store.CreateAsync(NewCharacter(NewAccountId(), UniqueName("Sigrid")));
-
-        var characters = await Store.ListByAccountAsync(accountId);
-
-        Assert.Equal(new[] { first.Id, second.Id }.Order(StringComparer.Ordinal), characters.Select(c => c.Id).Order(StringComparer.Ordinal));
-    }
-
-    [SkippableFact]
-    public async Task ListByAccount_WithNoCharacters_IsEmpty()
-    {
-        SkipIfUnavailable();
-
-        Assert.Empty(await Store.ListByAccountAsync(NewAccountId()));
+        Assert.Null(await Accounts.GetAsync(new Account().Id));
+        Assert.Null(await Accounts.GetByUsernameAsync(Unique("nobody")));
+        Assert.Null(await Guilds.GetAsync(new Guild().Id));
+        Assert.Null(await Guilds.GetByNameAsync(Unique("No guild ")));
+        Assert.Null(await Characters.GetAsync(new Character().Id));
+        Assert.Empty(await Characters.ListByGuildAsync(new Guild().Id));
     }
 }

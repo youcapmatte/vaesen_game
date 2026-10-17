@@ -15,12 +15,13 @@ namespace Vaesen.Framework.Core.Data;
 /// Each model is stored as its JSON document plus key attributes:
 ///   PK = the item's id ("account-..."), SK = "ITEM", Type = class name, and optionally GSI1PK/GSI1SK.
 /// Derived repositories add queries (<see cref="QueryIndexAsync"/>) and unique values (<see cref="Reservation"/>).
+/// Writes that must happen together, also across models, are prepared with the Prepare* methods and committed
+/// with <see cref="DataTransaction"/>.
 /// </summary>
 public class BaseRepository<T> : IBaseRepository<T> where T : BaseCore
 {
     public const string ItemSortKey = "ITEM";
 
-    private const string ConditionalCheckFailed = "ConditionalCheckFailed";
     private const int BatchGetLimit = 100;
 
     private static readonly JsonSerializerSettings SerializerSettings = new()
@@ -101,27 +102,10 @@ public class BaseRepository<T> : IBaseRepository<T> where T : BaseCore
         ArgumentNullException.ThrowIfNull(item);
         var ret = new ItemAction<T>();
 
-        var expectedVersion = item.Version;
-        item.Version = expectedVersion + 1;
-        item.UpdatedAt = TimeProvider.GetUtcNow().UtcDateTime;
-
-        try
+        var result = await DataTransaction.ExecuteAsync(DynamoDb, [PrepareUpdate(item)], cancellationToken).ConfigureAwait(false);
+        if (!result.Success)
         {
-            await DynamoDb.PutItemAsync(new PutItemRequest
-            {
-                TableName = TableName,
-                Item = ToItem(item),
-                ConditionExpression = "attribute_exists(PK) AND version = :expected",
-                ExpressionAttributeValues = new Dictionary<string, AttributeValue>
-                {
-                    [":expected"] = new() { N = expectedVersion.ToString(CultureInfo.InvariantCulture) },
-                },
-            }, cancellationToken).ConfigureAwait(false);
-        }
-        catch (ConditionalCheckFailedException)
-        {
-            item.Version = expectedVersion;
-            ret.Fail("The item was changed or removed by someone else. Reload and try again.", ErrorCodes.Conflict);
+            ret.Fail(result.ErrorMessage, result.ErrorCode);
             return ret;
         }
 
@@ -144,65 +128,95 @@ public class BaseRepository<T> : IBaseRepository<T> where T : BaseCore
     }
 
     /// <summary>
-    /// Stores a new item together with reservations of its unique values (e.g. a username), all or nothing.
-    /// On a clash the result fails with <see cref="ErrorCodes.Conflict"/> and <see cref="ItemAction{T}.Result"/> is null;
-    /// <paramref name="reservations"/>' <see cref="Reservation.ErrorCode"/> tells which value was taken.
+    /// A write that stores a new item, failing if the id already exists. Sets CreatedAt/UpdatedAt and Version 1.
+    /// Commit it with <see cref="DataTransaction.ExecuteAsync"/>, alone or with other writes.
     /// </summary>
-    protected async Task<ItemAction<T>> CreateItemAsync(T item, IReadOnlyList<Reservation> reservations, CancellationToken cancellationToken)
+    public TransactWrite PrepareCreate(T item)
     {
         ArgumentNullException.ThrowIfNull(item);
-        var ret = new ItemAction<T>();
 
         var now = TimeProvider.GetUtcNow().UtcDateTime;
         item.CreatedAt = now;
         item.UpdatedAt = now;
         item.Version = 1;
 
-        var writes = new List<TransactWriteItem> { PutIfAbsent(ToItem(item)) };
-        writes.AddRange(reservations.Select(r => PutIfAbsent(r.ToItem(item.Id))));
-
-        try
-        {
-            if (writes.Count == 1)
+        return new TransactWrite(
+            new TransactWriteItem
             {
-                await DynamoDb.PutItemAsync(new PutItemRequest
+                Put = new Put { TableName = TableName, Item = ToItem(item), ConditionExpression = "attribute_not_exists(PK)" },
+            },
+            $"A {TypeName} with this id already exists.",
+            ErrorCodes.Conflict);
+    }
+
+    /// <summary>
+    /// A write that stores changes to an existing item, failing if someone else updated it since it was read
+    /// (its version changed). The item's Version and UpdatedAt are bumped only once the write is committed.
+    /// </summary>
+    public TransactWrite PrepareUpdate(T item)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+
+        var expectedVersion = item.Version;
+        var now = TimeProvider.GetUtcNow().UtcDateTime;
+        var attributes = ToItem(item);
+        attributes["version"] = new() { N = (expectedVersion + 1).ToString(CultureInfo.InvariantCulture) };
+        attributes["updatedAt"] = new(now.ToString("o", CultureInfo.InvariantCulture));
+
+        return new TransactWrite(
+            new TransactWriteItem
+            {
+                Put = new Put
                 {
                     TableName = TableName,
-                    Item = writes[0].Put.Item,
-                    ConditionExpression = writes[0].Put.ConditionExpression,
-                }, cancellationToken).ConfigureAwait(false);
-            }
-            else
+                    Item = attributes,
+                    ConditionExpression = "attribute_exists(PK) AND version = :expected",
+                    ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+                    {
+                        [":expected"] = new() { N = expectedVersion.ToString(CultureInfo.InvariantCulture) },
+                    },
+                },
+            },
+            $"The {TypeName} was changed or removed by someone else. Reload and try again.",
+            ErrorCodes.Conflict,
+            () =>
             {
-                await DynamoDb.TransactWriteItemsAsync(new TransactWriteItemsRequest { TransactItems = writes }, cancellationToken)
-                    .ConfigureAwait(false);
-            }
-        }
-        catch (ConditionalCheckFailedException)
+                item.Version = expectedVersion + 1;
+                item.UpdatedAt = now;
+            });
+    }
+
+    /// <summary>A write that claims a unique value for <paramref name="ownerId"/>, failing if it's already taken.</summary>
+    public TransactWrite PrepareReservation(Reservation reservation, string ownerId)
+    {
+        ArgumentNullException.ThrowIfNull(reservation);
+
+        return new TransactWrite(
+            new TransactWriteItem
+            {
+                Put = new Put { TableName = TableName, Item = reservation.ToItem(ownerId), ConditionExpression = "attribute_not_exists(PK)" },
+            },
+            reservation.ErrorMessage,
+            reservation.ErrorCode);
+    }
+
+    /// <summary>
+    /// Stores a new item together with reservations of its unique values (e.g. a username), all or nothing.
+    /// On a clash the result fails with the reservation's error code and <see cref="ResultBase{T}.Result"/> is null.
+    /// </summary>
+    protected async Task<ItemAction<T>> CreateItemAsync(T item, IReadOnlyList<Reservation> reservations, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(item);
+        var ret = new ItemAction<T>();
+
+        var writes = new List<TransactWrite> { PrepareCreate(item) };
+        writes.AddRange(reservations.Select(r => PrepareReservation(r, item.Id)));
+
+        var result = await DataTransaction.ExecuteAsync(DynamoDb, writes, cancellationToken).ConfigureAwait(false);
+        if (!result.Success)
         {
-            ret.Fail("An item with this id already exists.", ErrorCodes.Conflict);
+            ret.Fail(result.ErrorMessage, result.ErrorCode);
             return ret;
-        }
-        catch (TransactionCanceledException ex)
-        {
-            // Reasons come in the same order as the writes: [item, reservation 1, reservation 2, ...].
-            var reasons = ex.CancellationReasons ?? [];
-            for (var i = 0; i < reservations.Count; i++)
-            {
-                if (reasons.Count > i + 1 && reasons[i + 1].Code == ConditionalCheckFailed)
-                {
-                    ret.Fail(reservations[i].ErrorMessage, reservations[i].ErrorCode);
-                    return ret;
-                }
-            }
-
-            if (reasons.Count > 0 && reasons[0].Code == ConditionalCheckFailed)
-            {
-                ret.Fail("An item with this id already exists.", ErrorCodes.Conflict);
-                return ret;
-            }
-
-            throw;
         }
 
         ret.Ok(item);
@@ -252,7 +266,7 @@ public class BaseRepository<T> : IBaseRepository<T> where T : BaseCore
         return results;
     }
 
-    /// <summary>Override to put the item in GSI1, e.g. characters under their account.</summary>
+    /// <summary>Override to put the item in GSI1, e.g. characters under their guild.</summary>
     protected virtual (string PartitionKey, string SortKey)? GetIndexKeys(T item) => null;
 
     protected Dictionary<string, AttributeValue> ToItem(T item)
@@ -285,11 +299,6 @@ public class BaseRepository<T> : IBaseRepository<T> where T : BaseCore
     };
 
     private static T? VisibleOrNull(T item) => item.IsDeleted ? null : item;
-
-    private TransactWriteItem PutIfAbsent(Dictionary<string, AttributeValue> attributes) => new()
-    {
-        Put = new Put { TableName = TableName, Item = attributes, ConditionExpression = "attribute_not_exists(PK)" },
-    };
 }
 
 /// <summary>
