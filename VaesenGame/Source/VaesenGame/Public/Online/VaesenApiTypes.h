@@ -64,6 +64,10 @@ struct FVaesenAccount
 
 	UPROPERTY(BlueprintReadOnly, Category = "Vaesen|Account")
 	FVaesenAccountSubscription Subscription;
+
+	/** Ids of the guilds this account is a member of ("guild-{guid}"). */
+	UPROPERTY(BlueprintReadOnly, Category = "Vaesen|Account")
+	TArray<FString> GuildIds;
 };
 
 /** Response of POST /api/dev/login. */

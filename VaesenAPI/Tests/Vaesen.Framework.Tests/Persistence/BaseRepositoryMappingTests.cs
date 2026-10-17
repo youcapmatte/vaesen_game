@@ -28,6 +28,7 @@ public class BaseRepositoryMappingTests
                 Plan = "monthly",
                 CurrentPeriodEnd = new DateTime(2030, 1, 1, 12, 30, 0, DateTimeKind.Utc),
             },
+            GuildIds = ["guild-1a2b3c4d-0000-4000-8000-000000000001", "guild-1a2b3c4d-0000-4000-8000-000000000002"],
             CreatedAt = new DateTime(2026, 10, 17, 9, 0, 0, DateTimeKind.Utc),
             Version = 3,
         };
@@ -48,6 +49,19 @@ public class BaseRepositoryMappingTests
         Assert.Equal(DateTimeKind.Utc, loaded.CreatedAt.Kind);
         Assert.Equal(account.CreatedAt, loaded.CreatedAt);
         Assert.Equal(3, loaded.Version);
+        Assert.Equal(2, item["guildIds"].L.Count);
+        Assert.Equal(account.GuildIds, loaded.GuildIds);
+    }
+
+    [Fact]
+    public void EmptyGuildIds_RoundTripAsEmptyList()
+    {
+        var repository = new MappingProbe<Account>();
+
+        var loaded = MappingProbe<Account>.FromItemPublic(repository.ToItemPublic(new Account { Username = "Johan" }));
+
+        Assert.NotNull(loaded.GuildIds);
+        Assert.Empty(loaded.GuildIds);
     }
 
     [Fact]

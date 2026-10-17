@@ -26,6 +26,13 @@ public sealed class Account : BaseCore
 
     [JsonProperty("subscription")]
     public AccountSubscription Subscription { get; set; } = new();
+
+    /// <summary>
+    /// Ids of the guilds this account is a member of ("guild-{guid}"). Stored on the account, so loading an account
+    /// gives its guilds without another read. Listing a guild's members will need membership items of its own.
+    /// </summary>
+    [JsonProperty("guildIds")]
+    public List<string> GuildIds { get; set; } = [];
 }
 
 /// <summary>

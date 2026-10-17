@@ -44,6 +44,7 @@ public class AccountsTests
         Assert.Contains("\"success\":true", json, StringComparison.Ordinal);
         Assert.Contains("\"result\":{", json, StringComparison.Ordinal);
         Assert.Contains("\"status\":\"None\"", json, StringComparison.Ordinal);
+        Assert.Contains("\"guildIds\":[]", json, StringComparison.Ordinal);
     }
 
     [Fact]

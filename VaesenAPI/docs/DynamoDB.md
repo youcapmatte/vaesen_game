@@ -74,6 +74,7 @@ Conventions:
 - Every model derives from `BaseCore`: `createdAt`, `updatedAt`, `isDeleted` (soft delete: deleted items are hidden, not removed) and `version` (updates based on an older version are rejected).
 - An account's Auth0 identity is stored as `auth0UserId`: Auth0's `user_id`, which is the `sub` claim in its tokens (`auth0|...`, `google-oauth2|...`).
 - Uniqueness (usernames, character names, Auth0 users) uses reservation items written in the same transaction as the model, each with `attribute_not_exists(PK)`.
+- An account's guilds are stored on the account as `guildIds` (a list), so loading the account gives its guilds in one read. The other direction ("who is in guild X") isn't covered by that list: when a guild member list is needed, add a membership item per member (`PK = {guildId}`, `SK = MEMBER#{accountId}`) written in the same transaction as the account's `guildIds`.
 - New models usually need no new table design: derive from `BaseCore`, add a repository deriving from `BaseRepository<T>`. Only new queries need a GSI key or a reservation.
 
 ---

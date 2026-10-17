@@ -23,6 +23,7 @@ public abstract class AccountStoreContract
         Username = username,
         Email = "player@example.com",
         Auth0UserId = auth0UserId,
+        GuildIds = ["guild-1a2b3c4d-0000-4000-8000-000000000001"],
         Subscription = new AccountSubscription
         {
             Status = SubscriptionStatus.Active,
@@ -48,6 +49,7 @@ public abstract class AccountStoreContract
         Assert.Equal(SubscriptionStatus.Active, loaded.Subscription.Status);
         Assert.Equal("monthly", loaded.Subscription.Plan);
         Assert.Equal(account.Subscription.CurrentPeriodEnd, loaded.Subscription.CurrentPeriodEnd);
+        Assert.Equal(account.GuildIds, loaded.GuildIds);
         Assert.Equal(1, loaded.Version);
         Assert.NotEqual(default, loaded.CreatedAt);
     }
