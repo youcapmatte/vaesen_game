@@ -5,26 +5,104 @@
 #include "Interfaces/IHttpResponse.h"
 #include "JsonObjectConverter.h"
 
+#define LOCTEXT_NAMESPACE "VaesenApi"
+
 DEFINE_LOG_CATEGORY(LogVaesenApi);
+
+namespace VaesenFakeLogin
+{
+	/** Each step message stays up for StepSeconds +/- StepJitterSeconds. */
+	constexpr float StepSeconds = 1.0f;
+	constexpr float StepJitterSeconds = 0.3f;
+
+	TArray<FText> GetSteps()
+	{
+		return {
+			LOCTEXT("StepConnecting", "Connecting..."),
+			LOCTEXT("StepAuthenticating", "Authenticating..."),
+			LOCTEXT("StepVerifyingAccount", "Verifying account..."),
+			LOCTEXT("StepCheckingSubscription", "Checking subscription..."),
+			LOCTEXT("StepRetrievingRealms", "Retrieving realm list..."),
+			LOCTEXT("StepRetrievingCharacters", "Retrieving character list..."),
+			LOCTEXT("StepSuccess", "Success!"),
+		};
+	}
+}
 
 bool UVaesenApiSubsystem::ShouldCreateSubsystem(UObject* Outer) const
 {
 	return Super::ShouldCreateSubsystem(Outer) && !IsRunningDedicatedServer();
 }
 
-void UVaesenApiSubsystem::Login(const FString& UsernameOrEmail, const FString& Password, FResultCallback OnComplete)
+void UVaesenApiSubsystem::Login(const FString& UsernameOrEmail, const FString& Password, FProgressCallback OnProgress, FResultCallback OnComplete)
 {
-	const FString Username = UsernameOrEmail.TrimStartAndEnd();
-	if (Username.IsEmpty() || Password.IsEmpty())
+	CancelLogin();
+
+	LoginProgress = MoveTemp(OnProgress);
+	LoginComplete = MoveTemp(OnComplete);
+	PendingAccountName = UsernameOrEmail.TrimStartAndEnd();
+
+	if (PendingAccountName.IsEmpty() || Password.IsEmpty())
 	{
-		OnComplete(false, TEXT("Enter your username or email and password."));
+		FinishLogin(false, TEXT("Enter your account name and password."));
 		return;
 	}
 
-	Session = FVaesenPlayerSession();
-	Session.AccountName = Username;
-	UE_LOG(LogVaesenApi, Log, TEXT("Logged in as account '%s' (fake login, no password check)"), *Username);
-	OnComplete(true, FString());
+	if (!LoginProgress)
+	{
+		FinishLogin(true, FString());
+		return;
+	}
+
+	PendingLoginSteps = VaesenFakeLogin::GetSteps();
+	RunNextLoginStep();
+}
+
+void UVaesenApiSubsystem::CancelLogin()
+{
+	if (UGameInstance* GameInstance = GetGameInstance())
+	{
+		GameInstance->GetTimerManager().ClearTimer(LoginStepTimer);
+	}
+	PendingLoginSteps.Reset();
+	PendingAccountName.Reset();
+	LoginProgress = nullptr;
+	LoginComplete = nullptr;
+}
+
+void UVaesenApiSubsystem::RunNextLoginStep()
+{
+	if (PendingLoginSteps.IsEmpty())
+	{
+		FinishLogin(true, FString());
+		return;
+	}
+
+	LoginProgress(PendingLoginSteps[0]);
+	PendingLoginSteps.RemoveAt(0);
+
+	const float Delay = VaesenFakeLogin::StepSeconds
+		+ FMath::FRandRange(-VaesenFakeLogin::StepJitterSeconds, VaesenFakeLogin::StepJitterSeconds);
+	GetGameInstance()->GetTimerManager().SetTimer(
+		LoginStepTimer, FTimerDelegate::CreateUObject(this, &UVaesenApiSubsystem::RunNextLoginStep), Delay, false);
+}
+
+void UVaesenApiSubsystem::FinishLogin(bool bSuccess, const FString& Error)
+{
+	if (bSuccess)
+	{
+		Session = FVaesenPlayerSession();
+		Session.AccountName = PendingAccountName;
+		UE_LOG(LogVaesenApi, Log, TEXT("Logged in as account '%s' (fake login, no password check)"), *Session.AccountName);
+	}
+
+	// Reset before calling back: the callback may start another login or change level.
+	FResultCallback Complete = MoveTemp(LoginComplete);
+	CancelLogin();
+	if (Complete)
+	{
+		Complete(bSuccess, Error);
+	}
 }
 
 void UVaesenApiSubsystem::GetDevGuilds(FGuildsCallback OnComplete)
@@ -89,6 +167,7 @@ void UVaesenApiSubsystem::SelectDevCharacter(const FString& DevPlayerId, FResult
 
 void UVaesenApiSubsystem::Logout()
 {
+	CancelLogin();
 	Session = FVaesenPlayerSession();
 }
 
@@ -128,3 +207,5 @@ FString UVaesenApiSubsystem::GetError(FHttpRequestPtr Request, FHttpResponsePtr 
 
 	return FString();
 }
+
+#undef LOCTEXT_NAMESPACE

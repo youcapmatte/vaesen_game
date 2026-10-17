@@ -8,8 +8,7 @@
 #include "Misc/ConfigCacheIni.h"
 #include "Online/VaesenApiSubsystem.h"
 #include "Sound/SoundBase.h"
-
-#define LOCTEXT_NAMESPACE "VaesenLogin"
+#include "UI/Login/VaesenLoginProgressWidget.h"
 
 namespace VaesenLogin
 {
@@ -23,20 +22,21 @@ void UVaesenLoginWidget::NativeOnInitialized()
 	Super::NativeOnInitialized();
 
 	// Normally caught by the Widget Blueprint compiler; guards against a stale or broken Blueprint.
-	if (!UsernameTextBox || !PasswordTextBox || !LoginButton)
+	if (!HasRequiredWidgets())
 	{
-		UE_LOG(LogVaesenApi, Error, TEXT("%s is missing UsernameTextBox, PasswordTextBox or LoginButton."), *GetClass()->GetName());
+		UE_LOG(LogVaesenApi, Error, TEXT("%s is missing UsernameTextBox, PasswordTextBox, LoginButton or LoginProgress."), *GetClass()->GetName());
 		return;
 	}
 
 	LoginButton->OnClicked.AddDynamic(this, &UVaesenLoginWidget::HandleLoginClicked);
 	PasswordTextBox->OnTextCommitted.AddDynamic(this, &UVaesenLoginWidget::HandlePasswordCommitted);
+	LoginProgress->OnCancel.AddUObject(this, &UVaesenLoginWidget::HandleLoginCancelled);
 }
 
 void UVaesenLoginWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
-	if (!UsernameTextBox || !PasswordTextBox || !LoginButton)
+	if (!HasRequiredWidgets())
 	{
 		return;
 	}
@@ -45,6 +45,7 @@ void UVaesenLoginWidget::NativeConstruct()
 	GConfig->GetString(VaesenLogin::ConfigSection, VaesenLogin::LastUsernameKey, LastUsername, GGameUserSettingsIni);
 	UsernameTextBox->SetText(FText::FromString(LastUsername));
 	PasswordTextBox->SetText(FText::GetEmpty());
+	LoginProgress->SetVisibility(ESlateVisibility::Collapsed);
 	SetStatus(FText::GetEmpty());
 
 	// Start typing where it's needed.
@@ -58,6 +59,11 @@ void UVaesenLoginWidget::NativeConstruct()
 	}
 }
 
+bool UVaesenLoginWidget::HasRequiredWidgets() const
+{
+	return UsernameTextBox && PasswordTextBox && LoginButton && LoginProgress;
+}
+
 void UVaesenLoginWidget::HandlePasswordCommitted(const FText& Text, ETextCommit::Type CommitMethod)
 {
 	if (CommitMethod == ETextCommit::OnEnter)
@@ -69,7 +75,7 @@ void UVaesenLoginWidget::HandlePasswordCommitted(const FText& Text, ETextCommit:
 void UVaesenLoginWidget::HandleLoginClicked()
 {
 	UVaesenApiSubsystem* Api = GetGameInstance()->GetSubsystem<UVaesenApiSubsystem>();
-	if (!Api || bLoggingIn || !UsernameTextBox || !PasswordTextBox)
+	if (!Api || bLoggingIn || !HasRequiredWidgets())
 	{
 		return;
 	}
@@ -84,29 +90,59 @@ void UVaesenLoginWidget::HandleLoginClicked()
 	const FString Password = PasswordTextBox->GetText().ToString();
 
 	bLoggingIn = true;
-	LoginButton->SetIsEnabled(false);
-	SetStatus(LOCTEXT("LoggingIn", "Logging in..."));
+	SetFormEnabled(false);
+	SetStatus(FText::GetEmpty());
+	LoginProgress->SetMessage(FText::GetEmpty());
+	LoginProgress->SetVisibility(ESlateVisibility::Visible);
 
-	Api->Login(Username, Password, [WeakThis = TWeakObjectPtr<UVaesenLoginWidget>(this), Username](bool bSuccess, const FString& Error)
+	const TWeakObjectPtr<UVaesenLoginWidget> WeakThis(this);
+	Api->Login(Username, Password,
+		[WeakThis](const FText& Message)
+		{
+			if (UVaesenLoginWidget* This = WeakThis.Get())
+			{
+				This->LoginProgress->SetMessage(Message);
+			}
+		},
+		[WeakThis, Username](bool bSuccess, const FString& Error)
+		{
+			UVaesenLoginWidget* This = WeakThis.Get();
+			if (!This)
+			{
+				return;
+			}
+
+			if (bSuccess)
+			{
+				GConfig->SetString(VaesenLogin::ConfigSection, VaesenLogin::LastUsernameKey, *Username, GGameUserSettingsIni);
+				GConfig->Flush(false, GGameUserSettingsIni);
+				UGameplayStatics::OpenLevelBySoftObjectPtr(This, UVaesenSettings::Get()->CharacterSelectMap);
+				return;
+			}
+
+			// Keep the box up with the error; Cancel returns to the form.
+			This->LoginProgress->SetMessage(FText::FromString(Error));
+		});
+}
+
+void UVaesenLoginWidget::HandleLoginCancelled()
+{
+	if (UVaesenApiSubsystem* Api = GetGameInstance()->GetSubsystem<UVaesenApiSubsystem>())
 	{
-		UVaesenLoginWidget* This = WeakThis.Get();
-		if (!This)
-		{
-			return;
-		}
+		Api->CancelLogin();
+	}
 
-		if (bSuccess)
-		{
-			GConfig->SetString(VaesenLogin::ConfigSection, VaesenLogin::LastUsernameKey, *Username, GGameUserSettingsIni);
-			GConfig->Flush(false, GGameUserSettingsIni);
-			UGameplayStatics::OpenLevelBySoftObjectPtr(This, UVaesenSettings::Get()->CharacterSelectMap);
-			return;
-		}
+	bLoggingIn = false;
+	LoginProgress->SetVisibility(ESlateVisibility::Collapsed);
+	SetFormEnabled(true);
+	PasswordTextBox->SetKeyboardFocus();
+}
 
-		This->bLoggingIn = false;
-		This->LoginButton->SetIsEnabled(true);
-		This->SetStatus(FText::FromString(Error));
-	});
+void UVaesenLoginWidget::SetFormEnabled(bool bEnabled)
+{
+	UsernameTextBox->SetIsEnabled(bEnabled);
+	PasswordTextBox->SetIsEnabled(bEnabled);
+	LoginButton->SetIsEnabled(bEnabled);
 }
 
 void UVaesenLoginWidget::SetStatus(const FText& Message)
@@ -117,4 +153,3 @@ void UVaesenLoginWidget::SetStatus(const FText& Message)
 	}
 }
 
-#undef LOCTEXT_NAMESPACE

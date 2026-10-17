@@ -53,7 +53,8 @@ void AVaesenLoginPlayerController::TryDevAutoLogin()
 	}
 
 	UE_LOG(LogVaesenApi, Log, TEXT("-DevPlayer=%s: skipping the login screen"), *DevPlayerId);
-	Api->Login(DevPlayerId, TEXT("dev"), [WeakThis = TWeakObjectPtr<AVaesenLoginPlayerController>(this)](bool bSuccess, const FString& Error)
+	// No progress callback: skip the fake login steps so restarts stay fast.
+	Api->Login(DevPlayerId, TEXT("dev"), nullptr, [WeakThis = TWeakObjectPtr<AVaesenLoginPlayerController>(this)](bool bSuccess, const FString& Error)
 	{
 		AVaesenLoginPlayerController* This = WeakThis.Get();
 		if (!This)
