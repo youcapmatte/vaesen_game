@@ -6,6 +6,7 @@
 
 class USoundBase;
 class UUserWidget;
+class UVaesenUIStyle;
 
 /**
  * Project-wide default values. Edit in Project Settings > Game > Vaesen; saved to Config/DefaultGame.ini.
@@ -40,6 +41,10 @@ public:
 	/** Widget shown on the character select map. */
 	UPROPERTY(Config, EditAnywhere, Category = "UI")
 	TSoftClassPtr<UUserWidget> CharacterSelectScreenWidget;
+
+	/** Look of the Vaesen controls (buttons, text, text boxes, combo boxes), e.g. DA_VaesenUIStyle. Empty = built-in defaults. */
+	UPROPERTY(Config, EditAnywhere, Category = "UI")
+	TSoftObjectPtr<UVaesenUIStyle> UIStyle;
 
 	/** Background music played when the login map starts. Leave empty for silence. Looping is set on the sound asset. */
 	UPROPERTY(Config, EditAnywhere, Category = "Audio")
