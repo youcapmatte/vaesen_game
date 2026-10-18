@@ -95,6 +95,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Camera|First Person")
 	FName HeadBoneName = TEXT("head");
 
+	/** How far down you can look in first person, so you can't look straight down into the neck. Third person keeps the full range. */
+	UPROPERTY(EditDefaultsOnly, Category = "Camera|First Person", meta = (ClampMin = "-89.9", ClampMax = "0", Units = "Degrees"))
+	float FirstPersonMinPitch = -65.0f;
+
 	/** Eye height above the capsule's centre (the capsule is 192 cm tall, so 68 puts the eyes at about 164 cm). */
 	UPROPERTY(EditDefaultsOnly, Category = "Camera|First Person", meta = (Units = "cm"))
 	float FirstPersonEyeHeight = 68.0f;

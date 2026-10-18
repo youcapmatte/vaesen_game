@@ -3,7 +3,9 @@
 #include "Camera/CameraComponent.h"
 #include "EnhancedInputComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Camera/PlayerCameraManager.h"
 #include "GameFramework/Controller.h"
+#include "GameFramework/PlayerController.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "InputActionValue.h"
 #include "Misc/ConfigCacheIni.h"
@@ -268,4 +270,11 @@ void AVaesenPlayerCharacter::ApplyViewMode()
 		FollowCamera->SetRelativeLocation(FVector::ZeroVector);
 	}
 	FollowCamera->bUsePawnControlRotation = bFirstPerson;
+
+	// Limit looking down in first person; the camera manager applies it to the view (and the control rotation).
+	const APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	if (APlayerCameraManager* CameraManager = PlayerController ? PlayerController->PlayerCameraManager.Get() : nullptr)
+	{
+		CameraManager->ViewPitchMin = bFirstPerson ? FirstPersonMinPitch : GetDefault<APlayerCameraManager>()->ViewPitchMin;
+	}
 }
