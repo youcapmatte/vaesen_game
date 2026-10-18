@@ -111,6 +111,9 @@ private:
 	void LoadGuilds(const FString& GuildIdToSelect);
 	void SelectGuild(const FVaesenGuild& Guild, const FString& CharacterIdToSelect);
 	void LoadCharacters(const FString& CharacterIdToSelect);
+	/** After Play: asks the API where to go, waits while the world starts, then travels there. */
+	void EnterWorld(const FString& CharacterId, const FString& CharacterName, int32 Attempt);
+
 	/** Reloads the roster in the background (no throbber), keeping the selection. Skipped while busy. */
 	void RefreshRoster();
 	void ShowRoster(const TArray<FVaesenRosterEntry>& LoadedRoster, const FString& CharacterIdToSelect);
@@ -132,6 +135,7 @@ private:
 	FString SelectedGuildId;
 	TArray<FVaesenRosterEntry> Roster;
 	FTimerHandle RosterRefreshTimer;
+	FTimerHandle EnterRetryTimer;
 
 	/** True once the selected guild's characters have loaded. */
 	bool bCharactersLoaded = false;

@@ -8,8 +8,10 @@
 #include "Engine/World.h"
 #include "TimerManager.h"
 #include "Misc/ConfigCacheIni.h"
+#include "Misc/PackageName.h"
 #include "Online/VaesenApiSubsystem.h"
 #include "UI/CharacterSelect/VaesenCreateCharacterWidget.h"
+#include "UI/Loading/VaesenLoadingScreenSubsystem.h"
 #include "UI/Guild/VaesenCreateGuildWidget.h"
 #include "UI/Guild/VaesenPickGuildWidget.h"
 
@@ -129,6 +131,7 @@ void UVaesenCharacterSelectWidget::NativeDestruct()
 	if (UWorld* World = GetWorld())
 	{
 		World->GetTimerManager().ClearTimer(RosterRefreshTimer);
+		World->GetTimerManager().ClearTimer(EnterRetryTimer);
 	}
 	Super::NativeDestruct();
 }
@@ -431,8 +434,9 @@ void UVaesenCharacterSelectWidget::HandlePlayClicked()
 	BeginLoading();
 	SetStatus(FText::Format(LOCTEXT("Preparing", "Preparing {0}..."), FText::FromString(Character->Name)));
 
+	const FString CharacterId = Character->Id;
 	const FString CharacterName = Character->Name;
-	Api->PlayCharacter(*Character, [WeakThis = TWeakObjectPtr<UVaesenCharacterSelectWidget>(this), CharacterName](bool bSuccess, const FString& Error)
+	Api->PlayCharacter(*Character, [WeakThis = TWeakObjectPtr<UVaesenCharacterSelectWidget>(this), CharacterId, CharacterName](bool bSuccess, const FString& Error)
 	{
 		UVaesenCharacterSelectWidget* This = WeakThis.Get();
 		if (!This)
@@ -440,15 +444,75 @@ void UVaesenCharacterSelectWidget::HandlePlayClicked()
 			return;
 		}
 
-		This->EndLoading();
+		if (!bSuccess)
+		{
+			This->EndLoading();
+			This->SetStatus(FText::FromString(Error));
+			// Show who beat us to it.
+			This->RefreshRoster();
+			return;
+		}
 
-		// Next step (not built yet): join the world via the API and travel to the returned server.
-		This->SetStatus(bSuccess
-			? FText::Format(LOCTEXT("Playing", "Playing as {0}. Entering the world isn't built yet."), FText::FromString(CharacterName))
-			: FText::FromString(Error));
+		// Stay "loading" (throbber up, buttons off) until we travel or fail.
+		This->EnterWorld(CharacterId, CharacterName, 1);
+	});
+}
 
-		// Show the claim (or who beat us to it) right away.
-		This->RefreshRoster();
+void UVaesenCharacterSelectWidget::EnterWorld(const FString& CharacterId, const FString& CharacterName, int32 Attempt)
+{
+	// A new game session takes a few seconds to start; give up after about a minute.
+	constexpr int32 MaxAttempts = 30;
+
+	UVaesenApiSubsystem* Api = GetGameInstance()->GetSubsystem<UVaesenApiSubsystem>();
+	if (!Api)
+	{
+		EndLoading();
+		return;
+	}
+
+	Api->EnterWorld(CharacterId, [WeakThis = TWeakObjectPtr<UVaesenCharacterSelectWidget>(this), CharacterId, CharacterName, Attempt](
+		bool bSuccess, const FVaesenEnterWorldResponse& Response, const FString& Error)
+	{
+		UVaesenCharacterSelectWidget* This = WeakThis.Get();
+		if (!This)
+		{
+			return;
+		}
+
+		if (!bSuccess)
+		{
+			This->EndLoading();
+			This->SetStatus(FText::FromString(Error));
+			This->RefreshRoster();
+			return;
+		}
+
+		const FText WorldName = FText::FromString(Response.DisplayName.IsEmpty() ? Response.WorldId : Response.DisplayName);
+		if (!Response.IsReady())
+		{
+			if (Attempt >= MaxAttempts)
+			{
+				This->EndLoading();
+				This->SetStatus(FText::Format(LOCTEXT("WorldNotStarting", "{0} didn't open in time. Try again in a moment."), WorldName));
+				return;
+			}
+
+			This->SetStatus(FText::Format(LOCTEXT("OpeningWorld", "Opening {0}..."), WorldName));
+			FTimerDelegate Retry = FTimerDelegate::CreateWeakLambda(This, [This, CharacterId, CharacterName, Attempt]()
+			{
+				This->EnterWorld(CharacterId, CharacterName, Attempt + 1);
+			});
+			This->GetWorld()->GetTimerManager().SetTimer(This->EnterRetryTimer, Retry, FMath::Max(1, Response.RetryAfterSeconds), false);
+			return;
+		}
+
+		This->SetStatus(FText::Format(LOCTEXT("Entering", "Entering {0} as {1}..."), WorldName, FText::FromString(CharacterName)));
+		UE_LOG(LogVaesenApi, Log, TEXT("Entering %s (%s) at %s"), *Response.WorldId, *Response.Map, *Response.ConnectUrl);
+
+		// The server knows which character joined from the CharacterId option; the map is preloaded meanwhile.
+		const TSoftObjectPtr<UWorld> Map(FSoftObjectPath(Response.Map + TEXT(".") + FPackageName::GetShortName(Response.Map)));
+		This->GetGameInstance()->GetSubsystem<UVaesenLoadingScreenSubsystem>()->TravelToServer(
+			Response.ConnectUrl, Map, FString::Printf(TEXT("&CharacterId=%s"), *CharacterId));
 	});
 }
 

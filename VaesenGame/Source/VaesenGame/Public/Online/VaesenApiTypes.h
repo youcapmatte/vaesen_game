@@ -92,6 +92,37 @@ struct FVaesenRosterEntry
 	bool IsFree() const { return PlayerAccountId.IsEmpty(); }
 };
 
+/** Answer to entering the world (POST /api/sessions/enter). */
+USTRUCT()
+struct FVaesenEnterWorldResponse
+{
+	GENERATED_BODY()
+
+	/** "ready": connect to ConnectUrl. "starting": the world's server is starting; ask again after RetryAfterSeconds. */
+	UPROPERTY()
+	FString Status;
+
+	UPROPERTY()
+	FString WorldId;
+
+	/** e.g. "Gyllencreutz". */
+	UPROPERTY()
+	FString DisplayName;
+
+	/** Package of the map the server runs, e.g. "/Game/Vaesen/Maps/L_Gyllencreutz". */
+	UPROPERTY()
+	FString Map;
+
+	/** "{host}:{port}?PlayerSessionId={id}". */
+	UPROPERTY()
+	FString ConnectUrl;
+
+	UPROPERTY()
+	int32 RetryAfterSeconds = 0;
+
+	bool IsReady() const { return Status == TEXT("ready"); }
+};
+
 /** The account's subscription, as returned by the API. */
 USTRUCT(BlueprintType)
 struct FVaesenAccountSubscription

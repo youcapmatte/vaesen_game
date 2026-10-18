@@ -7,5 +7,6 @@ void AVaesenPlayerState::CopyProperties(APlayerState* PlayerState)
 	if (AVaesenPlayerState* VaesenPlayerState = Cast<AVaesenPlayerState>(PlayerState))
 	{
 		VaesenPlayerState->PlayerSessionId = PlayerSessionId;
+		VaesenPlayerState->CharacterId = CharacterId;
 	}
 }

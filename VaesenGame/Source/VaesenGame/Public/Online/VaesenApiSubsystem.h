@@ -30,6 +30,7 @@ public:
 	using FStringsCallback = TFunction<void(bool bSuccess, const TArray<FString>& Values, const FString& Error)>;
 	using FNameTakenCallback = TFunction<void(bool bSuccess, bool bTaken, const FString& Error)>;
 	using FResultCallback = TFunction<void(bool bSuccess, const FString& Error)>;
+	using FEnterWorldCallback = TFunction<void(bool bSuccess, const FVaesenEnterWorldResponse& Response, const FString& Error)>;
 	using FProgressCallback = TFunction<void(const FText& Message)>;
 
 	virtual bool ShouldCreateSubsystem(UObject* Outer) const override;
@@ -73,6 +74,12 @@ public:
 	 * (development login for now). On success the session holds the character and token.
 	 */
 	void PlayCharacter(const FVaesenCharacter& Character, FResultCallback OnComplete);
+
+	/**
+	 * Asks where the character (just claimed with PlayCharacter) enters the world: back where it just was, else its
+	 * guild's hub (POST /api/sessions/enter). Status "starting" means ask again shortly.
+	 */
+	void EnterWorld(const FString& CharacterId, FEnterWorldCallback OnComplete);
 
 	/** Cancels a pending login and clears the session. */
 	void Logout();

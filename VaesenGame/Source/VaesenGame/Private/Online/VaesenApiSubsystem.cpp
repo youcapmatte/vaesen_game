@@ -425,6 +425,26 @@ void UVaesenApiSubsystem::PlayCharacter(const FVaesenCharacter& Character, FResu
 	Request->ProcessRequest();
 }
 
+void UVaesenApiSubsystem::EnterWorld(const FString& CharacterId, FEnterWorldCallback OnComplete)
+{
+	const TSharedRef<FJsonObject> Body = MakeShared<FJsonObject>();
+	Body->SetStringField(TEXT("characterId"), CharacterId);
+	const auto Request = CreateRequest(TEXT("POST"), TEXT("/api/sessions/enter"));
+	Request->SetContentAsString(VaesenApiEnvelope::ToJson(Body));
+	Request->OnProcessRequestComplete().BindWeakLambda(this,
+		[OnComplete = MoveTemp(OnComplete)](FHttpRequestPtr Req, FHttpResponsePtr Response, bool bConnected)
+		{
+			FVaesenEnterWorldResponse Enter;
+			FString Error = GetError(Req, Response, bConnected);
+			if (Error.IsEmpty())
+			{
+				VaesenApiEnvelope::ReadObject(Response->GetContentAsString(), Enter, Error);
+			}
+			OnComplete(Error.IsEmpty(), Enter, Error);
+		});
+	Request->ProcessRequest();
+}
+
 void UVaesenApiSubsystem::RequestCharacterToken(const FVaesenCharacter& Character, FResultCallback OnComplete)
 {
 	const TSharedRef<FJsonObject> Body = MakeShared<FJsonObject>();
