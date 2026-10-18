@@ -17,7 +17,7 @@
  * Also creates the data-only player Blueprints (defaults only, no graph logic): BP_VaesenPlayerCharacter (UE
  * mannequin, ABP_Manny, template input actions), BP_VaesenPlayerController (IMC_Default) and BP_VaesenGameMode;
  * the camera zoom input; the modular body (Manny split into Head/Torso/Arms/Legs/Feet, set on the character); and the
- * interaction outline (PP_InteractionOutline on the character, BP_InteractableTest to try it on).
+ * interaction (outline material and interact key on the character, WBP_InteractionCard, BP_InteractableTest to try it on).
  *
  * Run with the editor closed:
  *   UnrealEditor-Cmd.exe VaesenGame.uproject -run=VaesenCreateWidgets

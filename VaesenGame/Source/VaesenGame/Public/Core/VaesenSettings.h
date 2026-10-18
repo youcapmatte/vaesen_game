@@ -7,6 +7,7 @@
 class USoundBase;
 class UTexture2D;
 class UUserWidget;
+class UVaesenInteractionCardWidget;
 class UVaesenLoadingScreenWidget;
 class UVaesenUIStyle;
 
@@ -69,6 +70,10 @@ public:
 	/** Look of the Vaesen controls (buttons, text, text boxes, combo boxes), e.g. DA_VaesenUIStyle. Empty = built-in defaults. */
 	UPROPERTY(Config, EditAnywhere, Category = "UI")
 	TSoftObjectPtr<UVaesenUIStyle> UIStyle;
+
+	/** Card shown at an interactable the player looks at, e.g. WBP_InteractionCard (parent class VaesenInteractionCardWidget). An interactable can pick its own instead. */
+	UPROPERTY(Config, EditAnywhere, Category = "UI")
+	TSoftClassPtr<UVaesenInteractionCardWidget> InteractionCardWidget;
 
 	/** Front-end music: starts on the login screen and carries on through character select. Leave empty for silence. Looping is set on the sound asset. */
 	UPROPERTY(Config, EditAnywhere, Category = "Audio")

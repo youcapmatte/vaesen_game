@@ -16,6 +16,7 @@
 #include "Components/OverlaySlot.h"
 #include "Components/ProgressBar.h"
 #include "Components/SizeBox.h"
+#include "Components/TextBlock.h"
 #include "Components/Spacer.h"
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
@@ -27,7 +28,7 @@
 #include "Engine/SkeletalMesh.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/StaticMeshActor.h"
-#include "Interaction/VaesenInteractableComponent.h"
+#include "Interaction/VaesenInteractionComponent.h"
 #include "MaterialEditingLibrary.h"
 #include "Materials/Material.h"
 #include "MaterialDomain.h"
@@ -48,6 +49,7 @@
 #include "UI/CharacterSelect/VaesenCreateCharacterWidget.h"
 #include "UI/Guild/VaesenCreateGuildWidget.h"
 #include "UI/Guild/VaesenPickGuildWidget.h"
+#include "UI/Interaction/VaesenInteractionCardWidget.h"
 #include "UI/Loading/VaesenLoadingScreenWidget.h"
 #include "UI/Widgets/VaesenButton.h"
 #include "UI/Widgets/VaesenComboBox.h"
@@ -464,7 +466,7 @@ namespace VaesenCreateWidgets
 		};
 		UMaterialExpressionScalarParameter* Thickness = Scalar(TEXT("Thickness"), 2.0f, 400);
 		UMaterialExpressionScalarParameter* Fill = Scalar(TEXT("FillOpacity"), 0.06f, 500);
-		UMaterialExpressionScalarParameter* StencilValue = Scalar(TEXT("StencilValue"), UVaesenInteractableComponent::HighlightStencilValue, 600);
+		UMaterialExpressionScalarParameter* StencilValue = Scalar(TEXT("StencilValue"), UVaesenInteractionComponent::HighlightStencilValue, 600);
 
 		UMaterialExpressionCustom* Outline = CastChecked<UMaterialExpressionCustom>(Add(UMaterialExpressionCustom::StaticClass(), -250, 0));
 		Outline->Description = TEXT("Outline");
@@ -501,11 +503,110 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 		return Material;
 	}
 
+	const TCHAR* InteractionCardPath = TEXT("/Game/Vaesen/UI/Interaction/WBP_InteractionCard");
+
+	/** The card UVaesenInteractionComponent shows: a dark panel with name, quantity, description, action and progress. */
+	void CreateInteractionCard()
+	{
+		UWidgetBlueprint* Blueprint = CreateBlueprint(InteractionCardPath, UVaesenInteractionCardWidget::StaticClass());
+		if (!Blueprint)
+		{
+			return;
+		}
+
+		const FBuilder Build{ Blueprint->WidgetTree };
+		UObject* FontObject = LoadObject<UObject>(nullptr, *UWidget::GetDefaultFontName());
+		const FLinearColor Parchment(0.93f, 0.88f, 0.76f);
+
+		const auto Line = [&Build, FontObject](FName Name, const TCHAR* Sample, int32 Size, FName Typeface, const FLinearColor& Color)
+		{
+			UTextBlock* Text = Build.Make<UTextBlock>(Name);
+			Text->SetText(FText::FromString(Sample));
+			Text->SetFont(FSlateFontInfo(FontObject, Size, Typeface));
+			Text->SetColorAndOpacity(Color);
+			Text->SetAutoWrapText(true);
+			return Text;
+		};
+
+		UBorder* Panel = Build.Make<UBorder>(TEXT("Panel"));
+		Panel->bIsVariable = false;
+		Panel->SetBrush(FSlateRoundedBoxBrush(FLinearColor(0.06f, 0.05f, 0.04f, 0.88f), 6.0f, Brass, 1.0f));
+		Panel->SetPadding(FMargin(10.0f, 8.0f));
+		Panel->SetVerticalAlignment(VAlign_Top);
+		Blueprint->WidgetTree->RootWidget = Panel;
+
+		UVerticalBox* Content = Build.Make<UVerticalBox>();
+		Panel->SetContent(Content);
+
+		// Name, with the quantity on the right.
+		UHorizontalBox* Header = Build.Make<UHorizontalBox>();
+		UHorizontalBoxSlot* NameSlot = Header->AddChildToHorizontalBox(Line(TEXT("NameText"), TEXT("Name"), 13, TEXT("Bold"), Parchment));
+		NameSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+		UHorizontalBoxSlot* QuantitySlot = Header->AddChildToHorizontalBox(Line(TEXT("QuantityText"), TEXT("x1"), 11, TEXT("Regular"), BrassBright));
+		QuantitySlot->SetVerticalAlignment(VAlign_Center);
+		QuantitySlot->SetPadding(FMargin(6.0f, 0.0f, 0.0f, 0.0f));
+		FBuilder::AddRow(Content, Header, 4.0f);
+
+		FBuilder::AddRow(Content, Line(TEXT("DescriptionText"), TEXT("Description"), 9, TEXT("Regular"), FLinearColor(0.80f, 0.77f, 0.70f)), 6.0f);
+		FBuilder::AddRow(Content, Line(TEXT("ActionText"), TEXT("[E] Interact"), 10, TEXT("Bold"), BrassBright), 4.0f);
+
+		UProgressBar* Progress = Build.Make<UProgressBar>(TEXT("InteractionProgress"));
+		Progress->SetFillColorAndOpacity(BrassBright);
+		FProgressBarStyle ProgressStyle = Progress->GetWidgetStyle();
+		ProgressStyle.BackgroundImage.TintColor = FSlateColor(FLinearColor(0.0f, 0.0f, 0.0f, 0.6f));
+		Progress->SetWidgetStyle(ProgressStyle);
+		USizeBox* ProgressSize = Build.Make<USizeBox>();
+		ProgressSize->SetHeightOverride(4.0f);
+		ProgressSize->SetContent(Progress);
+		FBuilder::AddRow(Content, ProgressSize, 0.0f);
+
+		Finish(Blueprint);
+	}
+
+	/** The interact key: IA_Interact (button), E in IMC_Default, set on BP_VaesenPlayerCharacter. Each part only when missing. */
+	void SetupInteractInput()
+	{
+		UInputAction* Interact = LoadObject<UInputAction>(nullptr, TEXT("/Game/Vaesen/Input/IA_Interact.IA_Interact"));
+		if (!Interact)
+		{
+			UPackage* Package = CreatePackage(TEXT("/Game/Vaesen/Input/IA_Interact"));
+			Interact = NewObject<UInputAction>(Package, TEXT("IA_Interact"), RF_Public | RF_Standalone);
+			Interact->ValueType = EInputActionValueType::Boolean;
+			FAssetRegistryModule::AssetCreated(Interact);
+			Save(Interact);
+		}
+
+		if (UInputMappingContext* Mappings = LoadObject<UInputMappingContext>(nullptr, TEXT("/Game/ThirdPerson/Input/IMC_Default.IMC_Default")))
+		{
+			const bool bMapped = Mappings->GetMappings().ContainsByPredicate([Interact](const FEnhancedActionKeyMapping& Mapping)
+			{
+				return Mapping.Action == Interact;
+			});
+			if (!bMapped)
+			{
+				Mappings->MapKey(Interact, EKeys::E);
+				Save(Mappings);
+			}
+		}
+
+		if (UBlueprint* Character = LoadObject<UBlueprint>(nullptr, *(FString(PlayerCharacterPath) + TEXT(".BP_VaesenPlayerCharacter"))))
+		{
+			UObject* Defaults = Character->GeneratedClass->GetDefaultObject();
+			const FObjectPropertyBase* Property = FindFProperty<FObjectPropertyBase>(Defaults->GetClass(), TEXT("InteractAction"));
+			if (Property && !Property->GetObjectPropertyValue_InContainer(Defaults))
+			{
+				SetDefault(Defaults, TEXT("InteractAction"), Interact);
+				Finish(Character);
+			}
+		}
+	}
+
 	/**
-	 * Interaction outline: the PP_InteractionOutline material, set on BP_VaesenPlayerCharacter, and
-	 * BP_InteractableTest (a cube with UVaesenInteractableComponent) to drop into a level and try it on.
+	 * Interaction: the PP_InteractionOutline material and the interact key on BP_VaesenPlayerCharacter, the card
+	 * (WBP_InteractionCard), and BP_InteractableTest, a cube with a UVaesenInteractionComponent (hold E for a
+	 * second; the server logs the interaction) to drop into a level and try it on.
 	 */
-	void SetupInteractionOutline()
+	void SetupInteraction()
 	{
 		UMaterial* Material = CreateOutlineMaterial();
 
@@ -520,6 +621,9 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 			}
 		}
 
+		SetupInteractInput();
+		CreateInteractionCard();
+
 		if (UBlueprint* Blueprint = CreateActorBlueprint(InteractableTestPath, AStaticMeshActor::StaticClass()))
 		{
 			AStaticMeshActor* Defaults = CastChecked<AStaticMeshActor>(Blueprint->GeneratedClass->GetDefaultObject());
@@ -529,7 +633,15 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 			}
 			Defaults->GetStaticMeshComponent()->SetMobility(EComponentMobility::Movable);
 
-			USCS_Node* Node = Blueprint->SimpleConstructionScript->CreateNode(UVaesenInteractableComponent::StaticClass(), TEXT("Interactable"));
+			USCS_Node* Node = Blueprint->SimpleConstructionScript->CreateNode(UVaesenInteractionComponent::StaticClass(), TEXT("Interaction"));
+			UVaesenInteractionComponent* Interaction = CastChecked<UVaesenInteractionComponent>(Node->ComponentTemplate);
+			Interaction->InteractableName = LOCTEXT("TestName", "Supply crate");
+			Interaction->Description = LOCTEXT("TestDescription", "A test interactable. Hold E to open it.");
+			Interaction->ActionText = LOCTEXT("TestAction", "Open");
+			Interaction->Quantity = 3;
+			Interaction->InteractionTime = 1.0f;
+			// The card's bottom just above the cube (the cube is 100 cm, centred on the actor).
+			Interaction->SetRelativeLocation(FVector(0.0, 0.0, 70.0));
 			Blueprint->SimpleConstructionScript->AddNode(Node);
 			Finish(Blueprint);
 		}
@@ -846,7 +958,7 @@ int32 UVaesenCreateWidgetsCommandlet::Main(const FString& Params)
 	CreatePlayerBlueprints();
 	SetupZoomInput();
 	SetupModularCharacter();
-	SetupInteractionOutline();
+	SetupInteraction();
 	return 0;
 }
 

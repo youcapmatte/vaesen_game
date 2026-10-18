@@ -8,7 +8,7 @@ class UCameraComponent;
 class UInputAction;
 class UMaterialInterface;
 class USpringArmComponent;
-class UVaesenInteractableComponent;
+class UVaesenInteractorComponent;
 struct FInputActionValue;
 
 /**
@@ -25,9 +25,8 @@ struct FInputActionValue;
  * and a short dip on landing. The view never rotates by itself. Players scale it all with the camera motion setting
  * (0 = completely still), see SetCameraMotionScale.
  *
- * Interaction: the local player keeps track of the interactable (UVaesenInteractableComponent) under the crosshair
- * within InteractionRange of the eyes, and outlines it with InteractionOutlineMaterial (a post-process material on
- * the camera).
+ * Interaction: the Interactor component finds what the player looks at and handles the interact key (InteractAction);
+ * InteractionOutlineMaterial (a post-process material on the camera) outlines the focused interactable.
  */
 UCLASS()
 class VAESENGAME_API AVaesenPlayerCharacter : public AVaesenBaseCharacter
@@ -50,25 +49,28 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Camera")
 	static float GetCameraMotionScale();
 
-	/** The interactable the local player is looking at, if any (always null for other players' characters). */
 	UFUNCTION(BlueprintPure, Category = "Interaction")
-	UVaesenInteractableComponent* GetFocusedInteractable() const { return FocusedInteractable.Get(); }
+	UVaesenInteractorComponent* GetInteractor() const { return Interactor; }
 
 protected:
 	virtual void BeginPlay() override;
-	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 	virtual void Landed(const FHitResult& Hit) override;
 
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
 	void Zoom(const FInputActionValue& Value);
+	void BeginInteract();
+	void EndInteract();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
 	TObjectPtr<USpringArmComponent> CameraBoom;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
 	TObjectPtr<UCameraComponent> FollowCamera;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Interaction")
+	TObjectPtr<UVaesenInteractorComponent> Interactor;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<UInputAction> MoveAction;
@@ -82,6 +84,10 @@ protected:
 	/** Mouse wheel (Axis1D): positive zooms in. */
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<UInputAction> ZoomAction;
+
+	/** Interact key (held for interactions that take time). */
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TObjectPtr<UInputAction> InteractAction;
 
 	/** Farthest the camera can be pulled back. */
 	UPROPERTY(EditDefaultsOnly, Category = "Camera|Zoom", meta = (ClampMin = "0", Units = "cm"))
@@ -142,10 +148,6 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Camera|First Person|Motion", meta = (ClampMin = "0.1"))
 	float MotionSmoothing = 10.0f;
 
-	/** How far from the eyes something can be and still be interacted with (and outlined). */
-	UPROPERTY(EditDefaultsOnly, Category = "Interaction", meta = (ClampMin = "0", Units = "cm"))
-	float InteractionRange = 250.0f;
-
 	/** Post-process material that outlines the focused interactable (PP_InteractionOutline). */
 	UPROPERTY(EditDefaultsOnly, Category = "Interaction")
 	TObjectPtr<UMaterialInterface> InteractionOutlineMaterial;
@@ -165,12 +167,6 @@ private:
 
 	/** Where the camera is gliding to; 0 = into the head (first person). Local player only. */
 	float DesiredCameraDistance = 400.0f;
-
-	/** Finds the interactable under the crosshair and moves the outline to it. Local player only. */
-	void UpdateInteractionFocus();
-	void SetFocusedInteractable(UVaesenInteractableComponent* Interactable);
-
-	TWeakObjectPtr<UVaesenInteractableComponent> FocusedInteractable;
 
 	/** First-person eye position plus motion for this frame. */
 	FVector GetFirstPersonEyeLocation(float DeltaSeconds);

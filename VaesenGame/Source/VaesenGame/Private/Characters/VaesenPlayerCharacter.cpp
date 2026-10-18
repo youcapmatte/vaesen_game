@@ -9,7 +9,7 @@
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "InputActionValue.h"
-#include "Interaction/VaesenInteractableComponent.h"
+#include "Interaction/VaesenInteractorComponent.h"
 #include "Materials/MaterialInterface.h"
 #include "Misc/ConfigCacheIni.h"
 #include "Net/UnrealNetwork.h"
@@ -28,6 +28,8 @@ AVaesenPlayerCharacter::AVaesenPlayerCharacter()
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false;
+
+	Interactor = CreateDefaultSubobject<UVaesenInteractorComponent>(TEXT("Interactor"));
 
 	// Movement feel (UE Third Person template values; tune in BP_VaesenPlayerCharacter).
 	UCharacterMovementComponent* Movement = GetCharacterMovement();
@@ -60,12 +62,6 @@ void AVaesenPlayerCharacter::BeginPlay()
 	}
 }
 
-void AVaesenPlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
-{
-	SetFocusedInteractable(nullptr);
-	Super::EndPlay(EndPlayReason);
-}
-
 void AVaesenPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
@@ -93,6 +89,11 @@ void AVaesenPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 	{
 		EnhancedInput->BindAction(ZoomAction, ETriggerEvent::Triggered, this, &AVaesenPlayerCharacter::Zoom);
 	}
+	if (InteractAction)
+	{
+		EnhancedInput->BindAction(InteractAction, ETriggerEvent::Started, this, &AVaesenPlayerCharacter::BeginInteract);
+		EnhancedInput->BindAction(InteractAction, ETriggerEvent::Completed, this, &AVaesenPlayerCharacter::EndInteract);
+	}
 }
 
 void AVaesenPlayerCharacter::Move(const FInputActionValue& Value)
@@ -113,6 +114,16 @@ void AVaesenPlayerCharacter::Look(const FInputActionValue& Value)
 	const FVector2D Input = Value.Get<FVector2D>();
 	AddControllerYawInput(Input.X);
 	AddControllerPitchInput(Input.Y);
+}
+
+void AVaesenPlayerCharacter::BeginInteract()
+{
+	Interactor->BeginInteract();
+}
+
+void AVaesenPlayerCharacter::EndInteract()
+{
+	Interactor->EndInteract();
 }
 
 void AVaesenPlayerCharacter::Zoom(const FInputActionValue& Value)
@@ -148,11 +159,8 @@ void AVaesenPlayerCharacter::Tick(float DeltaSeconds)
 
 	if (!IsLocallyControlled())
 	{
-		SetFocusedInteractable(nullptr);
 		return;
 	}
-
-	UpdateInteractionFocus();
 
 	CameraBoom->TargetArmLength = FMath::FInterpTo(CameraBoom->TargetArmLength, DesiredCameraDistance, DeltaSeconds, ZoomInterpSpeed);
 
@@ -166,60 +174,6 @@ void AVaesenPlayerCharacter::Tick(float DeltaSeconds)
 	if (bFirstPerson)
 	{
 		FollowCamera->SetWorldLocation(GetFirstPersonEyeLocation(DeltaSeconds));
-	}
-}
-
-void AVaesenPlayerCharacter::UpdateInteractionFocus()
-{
-	const APlayerController* PlayerController = Cast<APlayerController>(GetController());
-	if (!PlayerController)
-	{
-		SetFocusedInteractable(nullptr);
-		return;
-	}
-
-	// Along the view from the camera (which may be behind the character), but only as far as reach from the eyes.
-	FVector ViewLocation;
-	FRotator ViewRotation;
-	PlayerController->GetPlayerViewPoint(ViewLocation, ViewRotation);
-	const FVector EyeLocation = GetPawnViewLocation();
-	const FVector Start = ViewLocation;
-	const FVector End = Start + ViewRotation.Vector() * (FVector::Dist(ViewLocation, EyeLocation) + InteractionRange);
-
-	// A thin sweep rather than a line, so small things are easy to aim at.
-	FCollisionQueryParams Params(SCENE_QUERY_STAT(VaesenInteractionFocus), false, this);
-	FHitResult Hit;
-	UVaesenInteractableComponent* Found = nullptr;
-	if (GetWorld()->SweepSingleByChannel(Hit, Start, End, FQuat::Identity, ECC_Visibility, FCollisionShape::MakeSphere(8.0f), Params)
-		&& FVector::Dist(EyeLocation, Hit.ImpactPoint) <= InteractionRange)
-	{
-		if (const AActor* HitActor = Hit.GetActor())
-		{
-			UVaesenInteractableComponent* Interactable = HitActor->FindComponentByClass<UVaesenInteractableComponent>();
-			if (Interactable && Interactable->bCanInteract)
-			{
-				Found = Interactable;
-			}
-		}
-	}
-	SetFocusedInteractable(Found);
-}
-
-void AVaesenPlayerCharacter::SetFocusedInteractable(UVaesenInteractableComponent* Interactable)
-{
-	UVaesenInteractableComponent* Previous = FocusedInteractable.Get();
-	if (Previous == Interactable)
-	{
-		return;
-	}
-	if (Previous)
-	{
-		Previous->SetHighlighted(false);
-	}
-	FocusedInteractable = Interactable;
-	if (Interactable)
-	{
-		Interactable->SetHighlighted(true);
 	}
 }
 
