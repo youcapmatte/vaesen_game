@@ -19,6 +19,13 @@
 #include "Components/Spacer.h"
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "Engine/Blueprint.h"
+#include "Engine/BlueprintGeneratedClass.h"
+#include "Engine/SkeletalMesh.h"
+#include "Characters/VaesenPlayerCharacter.h"
+#include "Game/VaesenGameModeBase.h"
+#include "Player/VaesenPlayerController.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
 #include "Misc/PackageName.h"
@@ -157,7 +164,7 @@ namespace VaesenCreateWidgets
 		return FPackageName::DoesPackageExist(PackagePath);
 	}
 
-	bool Save(UWidgetBlueprint* Blueprint)
+	bool Save(UBlueprint* Blueprint)
 	{
 		UPackage* Package = Blueprint->GetOutermost();
 		Package->MarkPackageDirty();
@@ -187,7 +194,7 @@ namespace VaesenCreateWidgets
 		return Blueprint;
 	}
 
-	bool Finish(UWidgetBlueprint* Blueprint)
+	bool Finish(UBlueprint* Blueprint)
 	{
 		FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
 		FKismetEditorUtilities::CompileBlueprint(Blueprint);
@@ -196,6 +203,106 @@ namespace VaesenCreateWidgets
 			UE_LOG(LogVaesenCreateWidgets, Error, TEXT("%s failed to compile."), *Blueprint->GetPathName());
 		}
 		return Save(Blueprint);
+	}
+
+	/** Creates an empty (data-only) Blueprint, or null when the asset already exists. */
+	UBlueprint* CreateActorBlueprint(const FString& PackagePath, UClass* ParentClass)
+	{
+		if (AssetExists(PackagePath))
+		{
+			UE_LOG(LogVaesenCreateWidgets, Display, TEXT("%s already exists; leaving it alone."), *PackagePath);
+			return nullptr;
+		}
+
+		UPackage* Package = CreatePackage(*PackagePath);
+		UBlueprint* Blueprint = FKismetEditorUtilities::CreateBlueprint(
+			ParentClass, Package, FName(FPackageName::GetShortName(PackagePath)), BPTYPE_Normal,
+			UBlueprint::StaticClass(), UBlueprintGeneratedClass::StaticClass());
+		FAssetRegistryModule::AssetCreated(Blueprint);
+		FKismetEditorUtilities::CompileBlueprint(Blueprint);
+		return Blueprint;
+	}
+
+	UObject* LoadAsset(const TCHAR* ObjectPath)
+	{
+		UObject* Asset = LoadObject<UObject>(nullptr, ObjectPath);
+		if (!Asset)
+		{
+			UE_LOG(LogVaesenCreateWidgets, Warning, TEXT("%s not found."), ObjectPath);
+		}
+		return Asset;
+	}
+
+	/** Sets an object or class property (by name, so protected ones too) on a class default object. */
+	void SetDefault(UObject* Defaults, const TCHAR* PropertyName, UObject* Value)
+	{
+		if (FObjectPropertyBase* Property = FindFProperty<FObjectPropertyBase>(Defaults->GetClass(), PropertyName))
+		{
+			Property->SetObjectPropertyValue_InContainer(Defaults, Value);
+		}
+		else
+		{
+			UE_LOG(LogVaesenCreateWidgets, Warning, TEXT("%s has no property %s."), *Defaults->GetClass()->GetName(), PropertyName);
+		}
+	}
+
+	UClass* LoadBlueprintClass(const FString& PackagePath)
+	{
+		const FString ObjectPath = PackagePath + TEXT(".") + FPackageName::GetShortName(PackagePath);
+		const UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *ObjectPath);
+		return Blueprint ? Blueprint->GeneratedClass.Get() : nullptr;
+	}
+
+	const TCHAR* PlayerCharacterPath = TEXT("/Game/Vaesen/Blueprints/Characters/BP_VaesenPlayerCharacter");
+	const TCHAR* PlayerControllerPath = TEXT("/Game/Vaesen/Blueprints/Player/BP_VaesenPlayerController");
+	const TCHAR* GameModePath = TEXT("/Game/Vaesen/Blueprints/Game/BP_VaesenGameMode");
+
+	/**
+	 * Data-only Blueprints (defaults, no graph logic) for playing in the world: the character with the UE mannequin
+	 * (Content/Characters/Mannequins) and the template input (Content/ThirdPerson/Input), its controller, and the game
+	 * mode that uses both (the project's default game mode, so every world map gets it).
+	 */
+	void CreatePlayerBlueprints()
+	{
+		if (UBlueprint* Blueprint = CreateActorBlueprint(PlayerCharacterPath, AVaesenPlayerCharacter::StaticClass()))
+		{
+			AVaesenPlayerCharacter* Defaults = CastChecked<AVaesenPlayerCharacter>(Blueprint->GeneratedClass->GetDefaultObject());
+			USkeletalMeshComponent* Mesh = Defaults->GetMesh();
+			if (USkeletalMesh* Manny = Cast<USkeletalMesh>(LoadAsset(TEXT("/Game/Characters/Mannequins/Meshes/SKM_Manny.SKM_Manny"))))
+			{
+				Mesh->SetSkeletalMeshAsset(Manny);
+			}
+			// The mannequin's origin is at its feet and it faces +Y; the capsule's origin is its centre and it faces +X.
+			Mesh->SetRelativeLocationAndRotation(FVector(0.0, 0.0, -90.0), FRotator(0.0, -90.0, 0.0));
+			Mesh->SetAnimationMode(EAnimationMode::AnimationBlueprint);
+			Mesh->AnimClass = Cast<UClass>(LoadAsset(TEXT("/Game/Characters/Mannequins/Animations/ABP_Manny.ABP_Manny_C")));
+
+			SetDefault(Defaults, TEXT("MoveAction"), LoadAsset(TEXT("/Game/ThirdPerson/Input/Actions/IA_Move.IA_Move")));
+			SetDefault(Defaults, TEXT("LookAction"), LoadAsset(TEXT("/Game/ThirdPerson/Input/Actions/IA_Look.IA_Look")));
+			SetDefault(Defaults, TEXT("JumpAction"), LoadAsset(TEXT("/Game/ThirdPerson/Input/Actions/IA_Jump.IA_Jump")));
+			Finish(Blueprint);
+		}
+
+		if (UBlueprint* Blueprint = CreateActorBlueprint(PlayerControllerPath, AVaesenPlayerController::StaticClass()))
+		{
+			SetDefault(Blueprint->GeneratedClass->GetDefaultObject(), TEXT("DefaultMappingContext"),
+				LoadAsset(TEXT("/Game/ThirdPerson/Input/IMC_Default.IMC_Default")));
+			Finish(Blueprint);
+		}
+
+		if (UBlueprint* Blueprint = CreateActorBlueprint(GameModePath, AVaesenGameModeBase::StaticClass()))
+		{
+			AVaesenGameModeBase* Defaults = CastChecked<AVaesenGameModeBase>(Blueprint->GeneratedClass->GetDefaultObject());
+			if (UClass* Character = LoadBlueprintClass(PlayerCharacterPath))
+			{
+				Defaults->DefaultPawnClass = Character;
+			}
+			if (UClass* Controller = LoadBlueprintClass(PlayerControllerPath))
+			{
+				Defaults->PlayerControllerClass = Controller;
+			}
+			Finish(Blueprint);
+		}
 	}
 
 	UClass* LoadWidgetClass(const FString& PackagePath)
@@ -506,6 +613,7 @@ int32 UVaesenCreateWidgetsCommandlet::Main(const FString& Params)
 	CreateCreateCharacter();
 	CreateLoadingScreen();
 	UpdateCharacterSelect();
+	CreatePlayerBlueprints();
 	return 0;
 }
 

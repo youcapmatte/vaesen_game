@@ -14,6 +14,8 @@
  * throbber). The character panel replaces plain PlayerComboBox / PlayButton / StatusText controls with Vaesen ones of
  * the same names and removes the obsolete GuildComboBox; everything else there is left alone. Other existing
  * blueprints are never replaced.
+ * Also creates the data-only player Blueprints (defaults only, no graph logic): BP_VaesenPlayerCharacter (UE
+ * mannequin, ABP_Manny, template input actions), BP_VaesenPlayerController (IMC_Default) and BP_VaesenGameMode.
  *
  * Run with the editor closed:
  *   UnrealEditor-Cmd.exe VaesenGame.uproject -run=VaesenCreateWidgets
