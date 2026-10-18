@@ -14,9 +14,13 @@ struct FInputActionValue;
  *
  * The mouse wheel (ZoomAction) moves the camera in and out smoothly between MinThirdPersonDistance and
  * MaxCameraDistance. Zooming in past the closest distance glides the camera into the head and switches to first
- * person: the camera follows the head bone, the head is hidden for this player only, and the body turns with the
- * view. One step out returns to third person. The view mode replicates, so the server and other players see the
- * character turn the right way.
+ * person: the head is hidden for this player only and the body turns with the view. One step out returns to third
+ * person. The view mode replicates, so the server and other players see the character turn the right way.
+ *
+ * First-person camera motion: the eyes sit at a steady point in the body (not on the animated head, which jitters)
+ * with gentle procedural motion on top: a step bob and sway that grow with speed, slow breathing when standing still
+ * and a short dip on landing. The view never rotates by itself. Players scale it all with the camera motion setting
+ * (0 = completely still), see SetCameraMotionScale.
  */
 UCLASS()
 class VAESENGAME_API AVaesenPlayerCharacter : public AVaesenBaseCharacter
@@ -32,9 +36,17 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Camera")
 	bool IsFirstPerson() const { return bFirstPerson; }
 
+	/** Player setting: how much the first-person camera moves (bob, sway, breathing, landing), 0..1. Saved per user. */
+	UFUNCTION(BlueprintCallable, Category = "Camera")
+	static void SetCameraMotionScale(float Scale);
+
+	UFUNCTION(BlueprintPure, Category = "Camera")
+	static float GetCameraMotionScale();
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
+	virtual void Landed(const FHitResult& Hit) override;
 
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
@@ -79,16 +91,44 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Camera|First Person", meta = (ClampMin = "0", Units = "cm"))
 	float FirstPersonSwitchDistance = 30.0f;
 
-	/** Bone the first-person camera follows and that is hidden for the owner in first person. */
+	/** Bone hidden for the owner in first person (the head and everything attached to it). */
 	UPROPERTY(EditDefaultsOnly, Category = "Camera|First Person")
 	FName HeadBoneName = TEXT("head");
 
-	/** Eye position relative to the head bone: forward along the character's facing, and up. */
+	/** Eye height above the capsule's centre (the capsule is 192 cm tall, so 68 puts the eyes at about 164 cm). */
 	UPROPERTY(EditDefaultsOnly, Category = "Camera|First Person", meta = (Units = "cm"))
-	float FirstPersonForwardOffset = 12.0f;
+	float FirstPersonEyeHeight = 68.0f;
 
+	/** Eyes this far in front of the body's centre, so the view doesn't start inside the head. */
 	UPROPERTY(EditDefaultsOnly, Category = "Camera|First Person", meta = (Units = "cm"))
-	float FirstPersonUpOffset = 8.0f;
+	float FirstPersonForwardOffset = 10.0f;
+
+	/** Up-and-down per step at walking speed. */
+	UPROPERTY(EditDefaultsOnly, Category = "Camera|First Person|Motion", meta = (ClampMin = "0", Units = "cm"))
+	float BobHeight = 1.2f;
+
+	/** Side-to-side per stride at walking speed. */
+	UPROPERTY(EditDefaultsOnly, Category = "Camera|First Person|Motion", meta = (ClampMin = "0", Units = "cm"))
+	float BobSway = 0.8f;
+
+	/** Distance covered by one full stride (two steps); sets the bob's rhythm. */
+	UPROPERTY(EditDefaultsOnly, Category = "Camera|First Person|Motion", meta = (ClampMin = "10", Units = "cm"))
+	float StrideLength = 150.0f;
+
+	/** Breathing when standing still. */
+	UPROPERTY(EditDefaultsOnly, Category = "Camera|First Person|Motion", meta = (ClampMin = "0", Units = "cm"))
+	float BreathingHeight = 0.4f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Camera|First Person|Motion", meta = (ClampMin = "0", Units = "Hz"))
+	float BreathingRate = 0.25f;
+
+	/** Deepest dip on landing from a big fall. */
+	UPROPERTY(EditDefaultsOnly, Category = "Camera|First Person|Motion", meta = (ClampMin = "0", Units = "cm"))
+	float LandingDip = 6.0f;
+
+	/** How quickly the camera eases toward its motion (higher = tighter, lower = floatier). */
+	UPROPERTY(EditDefaultsOnly, Category = "Camera|First Person|Motion", meta = (ClampMin = "0.1"))
+	float MotionSmoothing = 10.0f;
 
 private:
 	void SetFirstPerson(bool bInFirstPerson);
@@ -105,4 +145,14 @@ private:
 
 	/** Where the camera is gliding to; 0 = into the head (first person). Local player only. */
 	float DesiredCameraDistance = 400.0f;
+
+	/** First-person eye position plus motion for this frame. */
+	FVector GetFirstPersonEyeLocation(float DeltaSeconds);
+
+	// First-person motion state (local player only).
+	float BobPhase = 0.0f;
+	float BobWeight = 0.0f;
+	float LandingOffset = 0.0f;
+	float LastFallSpeed = 0.0f;
+	FVector MotionOffset = FVector::ZeroVector;
 };

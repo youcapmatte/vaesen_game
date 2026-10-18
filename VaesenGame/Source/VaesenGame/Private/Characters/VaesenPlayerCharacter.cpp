@@ -6,6 +6,7 @@
 #include "GameFramework/Controller.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "InputActionValue.h"
+#include "Misc/ConfigCacheIni.h"
 #include "Net/UnrealNetwork.h"
 
 AVaesenPlayerCharacter::AVaesenPlayerCharacter()
@@ -142,14 +143,80 @@ void AVaesenPlayerCharacter::Tick(float DeltaSeconds)
 		SetFirstPerson(true);
 	}
 
-	// First person: the eyes ride on the head bone, so the view moves with the body (walking, jumping).
-	if (bFirstPerson && GetMesh()->DoesSocketExist(HeadBoneName))
+	if (bFirstPerson)
 	{
-		const FVector Eyes = GetMesh()->GetSocketLocation(HeadBoneName)
-			+ GetActorForwardVector() * FirstPersonForwardOffset
-			+ FVector::UpVector * FirstPersonUpOffset;
-		FollowCamera->SetWorldLocation(Eyes);
+		FollowCamera->SetWorldLocation(GetFirstPersonEyeLocation(DeltaSeconds));
 	}
+}
+
+FVector AVaesenPlayerCharacter::GetFirstPersonEyeLocation(float DeltaSeconds)
+{
+	const UCharacterMovementComponent* Movement = GetCharacterMovement();
+	const bool bOnGround = Movement->IsMovingOnGround();
+	const float Speed = GetVelocity().Size2D();
+
+	// Bob grows with speed (walking = 1, running more), and fades out in the air.
+	const float WalkSpeed = FMath::Max(Movement->MaxWalkSpeed, 1.0f);
+	const float TargetWeight = bOnGround ? FMath::Clamp(Speed / WalkSpeed, 0.0f, 1.5f) : 0.0f;
+	BobWeight = FMath::FInterpTo(BobWeight, TargetWeight, DeltaSeconds, 6.0f);
+	if (bOnGround)
+	{
+		BobPhase = FMath::Fmod(BobPhase + DeltaSeconds * UE_TWO_PI * Speed / StrideLength, UE_TWO_PI);
+	}
+
+	// Two dips per stride (one per step) and one sway left-right per stride.
+	const float Bob = FMath::Sin(2.0f * BobPhase) * BobHeight * BobWeight;
+	const float Sway = FMath::Sin(BobPhase) * BobSway * BobWeight;
+
+	// Slow breathing, only while standing still.
+	const float Time = GetWorld()->GetTimeSeconds();
+	const float Breathing = FMath::Sin(Time * UE_TWO_PI * BreathingRate) * BreathingHeight * (1.0f - FMath::Min(BobWeight, 1.0f));
+
+	// Landing: remember how fast we fell, dip in Landed(), ease back up.
+	if (Movement->IsFalling())
+	{
+		LastFallSpeed = FMath::Max(0.0f, -GetVelocity().Z);
+	}
+	LandingOffset = FMath::FInterpTo(LandingOffset, 0.0f, DeltaSeconds, 5.0f);
+
+	const FVector TargetOffset = (GetActorRightVector() * Sway + FVector::UpVector * (Bob + Breathing + LandingOffset)) * GetCameraMotionScale();
+	MotionOffset = FMath::VInterpTo(MotionOffset, TargetOffset, DeltaSeconds, MotionSmoothing);
+
+	return GetActorLocation()
+		+ FVector::UpVector * FirstPersonEyeHeight
+		+ GetActorForwardVector() * FirstPersonForwardOffset
+		+ MotionOffset;
+}
+
+void AVaesenPlayerCharacter::Landed(const FHitResult& Hit)
+{
+	Super::Landed(Hit);
+
+	// Small hops don't dip; a long fall dips up to LandingDip.
+	constexpr float NoDipBelowSpeed = 300.0f;
+	constexpr float FullDipAtSpeed = 1200.0f;
+	const float Alpha = FMath::Clamp((LastFallSpeed - NoDipBelowSpeed) / (FullDipAtSpeed - NoDipBelowSpeed), 0.0f, 1.0f);
+	LandingOffset = -LandingDip * Alpha;
+	LastFallSpeed = 0.0f;
+}
+
+namespace VaesenCameraSettings
+{
+	const TCHAR* Section = TEXT("Vaesen.Camera");
+	const TCHAR* MotionScaleKey = TEXT("MotionScale");
+}
+
+void AVaesenPlayerCharacter::SetCameraMotionScale(float Scale)
+{
+	GConfig->SetFloat(VaesenCameraSettings::Section, VaesenCameraSettings::MotionScaleKey, FMath::Clamp(Scale, 0.0f, 1.0f), GGameUserSettingsIni);
+	GConfig->Flush(false, GGameUserSettingsIni);
+}
+
+float AVaesenPlayerCharacter::GetCameraMotionScale()
+{
+	float Scale = 1.0f;
+	GConfig->GetFloat(VaesenCameraSettings::Section, VaesenCameraSettings::MotionScaleKey, Scale, GGameUserSettingsIni);
+	return FMath::Clamp(Scale, 0.0f, 1.0f);
 }
 
 void AVaesenPlayerCharacter::SetFirstPerson(bool bInFirstPerson)
