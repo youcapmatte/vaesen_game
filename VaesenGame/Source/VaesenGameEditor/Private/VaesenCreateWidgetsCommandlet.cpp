@@ -14,6 +14,7 @@
 #include "Components/Image.h"
 #include "Components/Overlay.h"
 #include "Components/OverlaySlot.h"
+#include "Components/UniformGridPanel.h"
 #include "Components/ProgressBar.h"
 #include "Components/SizeBox.h"
 #include "Components/TextBlock.h"
@@ -31,6 +32,8 @@
 #include "Interaction/VaesenInteractionComponent.h"
 #include "Items/VaesenItem.h"
 #include "Items/VaesenPickup.h"
+#include "Inventory/VaesenInventoryComponent.h"
+#include "Inventory/VaesenLootContainer.h"
 #include "MaterialEditingLibrary.h"
 #include "Materials/Material.h"
 #include "MaterialDomain.h"
@@ -52,6 +55,10 @@
 #include "UI/Guild/VaesenCreateGuildWidget.h"
 #include "UI/Guild/VaesenPickGuildWidget.h"
 #include "UI/Interaction/VaesenInteractionCardWidget.h"
+#include "UI/Inventory/VaesenInventoryPanelWidget.h"
+#include "UI/Inventory/VaesenInventoryScreenWidget.h"
+#include "UI/Inventory/VaesenInventorySlotWidget.h"
+#include "UI/Inventory/VaesenItemTooltipWidget.h"
 #include "UI/Loading/VaesenLoadingScreenWidget.h"
 #include "UI/Widgets/VaesenButton.h"
 #include "UI/Widgets/VaesenComboBox.h"
@@ -982,6 +989,266 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 			UE_LOG(LogVaesenCreateWidgets, Display, TEXT("WBP_CharacterSelect already has every control."));
 		}
 	}
+
+	const TCHAR* ItemTooltipPath = TEXT("/Game/Vaesen/UI/Inventory/WBP_ItemTooltip");
+	const TCHAR* InventorySlotPath = TEXT("/Game/Vaesen/UI/Inventory/WBP_InventorySlot");
+	const TCHAR* InventoryPanelPath = TEXT("/Game/Vaesen/UI/Inventory/WBP_InventoryPanel");
+	const TCHAR* InventoryScreenPath = TEXT("/Game/Vaesen/UI/Inventory/WBP_InventoryScreen");
+	const TCHAR* LootChestPath = TEXT("/Game/Vaesen/Blueprints/Interaction/BP_LootChest");
+
+	/** Plain text in the inventory UI's own sizes (the Vaesen text roles are sized for menus). */
+	UTextBlock* InventoryText(const FBuilder& Build, FName Name, const TCHAR* Sample, int32 Size, FName Typeface, const FLinearColor& Color)
+	{
+		static UObject* FontObject = LoadObject<UObject>(nullptr, *UWidget::GetDefaultFontName());
+		UTextBlock* Text = Build.Make<UTextBlock>(Name);
+		Text->SetText(FText::FromString(Sample));
+		Text->SetFont(FSlateFontInfo(FontObject, Size, Typeface));
+		Text->SetColorAndOpacity(Color);
+		return Text;
+	}
+
+	const FLinearColor InventoryParchment(0.93f, 0.88f, 0.76f);
+	const FLinearColor InventoryMuted(0.70f, 0.66f, 0.58f);
+
+	/** A dark panel with a brass edge. */
+	UBorder* InventoryPanelBorder(const FBuilder& Build, FName Name, float Padding)
+	{
+		UBorder* Panel = Build.Make<UBorder>(Name);
+		Panel->bIsVariable = false;
+		Panel->SetBrush(FSlateRoundedBoxBrush(FLinearColor(0.05f, 0.04f, 0.03f, 0.94f), 6.0f, Brass, 1.0f));
+		Panel->SetPadding(FMargin(Padding));
+		return Panel;
+	}
+
+	void CreateItemTooltip()
+	{
+		UWidgetBlueprint* Blueprint = CreateBlueprint(ItemTooltipPath, UVaesenItemTooltipWidget::StaticClass());
+		if (!Blueprint)
+		{
+			return;
+		}
+		const FBuilder Build{ Blueprint->WidgetTree };
+
+		UBorder* Panel = InventoryPanelBorder(Build, TEXT("Panel"), 10.0f);
+		Blueprint->WidgetTree->RootWidget = Panel;
+		USizeBox* Size = Build.Make<USizeBox>();
+		Size->SetMaxDesiredWidth(260.0f);
+		Panel->SetContent(Size);
+		UVerticalBox* Content = Build.Make<UVerticalBox>();
+		Size->SetContent(Content);
+
+		FBuilder::AddRow(Content, InventoryText(Build, TEXT("NameText"), TEXT("Item"), 14, TEXT("Bold"), InventoryParchment), 2.0f);
+		FBuilder::AddRow(Content, InventoryText(Build, TEXT("CategoryText"), TEXT("Category"), 10, TEXT("Italic"), BrassBright), 6.0f);
+		UTextBlock* Description = InventoryText(Build, TEXT("DescriptionText"), TEXT("Description"), 11, TEXT("Regular"), FLinearColor(0.85f, 0.82f, 0.76f));
+		Description->SetAutoWrapText(true);
+		FBuilder::AddRow(Content, Description, 8.0f);
+		FBuilder::AddRow(Content, InventoryText(Build, TEXT("StatsText"), TEXT("Weight"), 10, TEXT("Regular"), InventoryMuted), 0.0f);
+		Finish(Blueprint);
+	}
+
+	void CreateInventorySlot()
+	{
+		UWidgetBlueprint* Blueprint = CreateBlueprint(InventorySlotPath, UVaesenInventorySlotWidget::StaticClass());
+		if (!Blueprint)
+		{
+			return;
+		}
+		const FBuilder Build{ Blueprint->WidgetTree };
+
+		USizeBox* Size = Build.Make<USizeBox>();
+		Size->SetWidthOverride(64.0f);
+		Size->SetHeightOverride(64.0f);
+		Blueprint->WidgetTree->RootWidget = Size;
+
+		// The border's colour is tinted by the slot (normal / hovered), so its own fill is white.
+		UBorder* SlotBorder = Build.Make<UBorder>(TEXT("SlotBorder"));
+		SlotBorder->SetBrush(FSlateRoundedBoxBrush(FLinearColor::White, 4.0f, FLinearColor(0.35f, 0.29f, 0.20f), 1.0f));
+		SlotBorder->SetBrushColor(FLinearColor(0.03f, 0.025f, 0.02f, 0.85f));
+		SlotBorder->SetPadding(FMargin(0.0f));
+		Size->SetContent(SlotBorder);
+
+		UOverlay* Layers = Build.Make<UOverlay>();
+		SlotBorder->SetContent(Layers);
+
+		UImage* Thumbnail = Build.Make<UImage>(TEXT("ThumbnailImage"));
+		UOverlaySlot* ThumbnailSlot = Layers->AddChildToOverlay(Thumbnail);
+		ThumbnailSlot->SetHorizontalAlignment(HAlign_Fill);
+		ThumbnailSlot->SetVerticalAlignment(VAlign_Fill);
+		ThumbnailSlot->SetPadding(FMargin(6.0f));
+
+		UTextBlock* Name = InventoryText(Build, TEXT("NameText"), TEXT("Item"), 9, TEXT("Regular"), InventoryParchment);
+		Name->SetAutoWrapText(true);
+		Name->SetJustification(ETextJustify::Center);
+		UOverlaySlot* NameSlot = Layers->AddChildToOverlay(Name);
+		NameSlot->SetHorizontalAlignment(HAlign_Fill);
+		NameSlot->SetVerticalAlignment(VAlign_Center);
+		NameSlot->SetPadding(FMargin(3.0f));
+
+		UTextBlock* Quantity = InventoryText(Build, TEXT("QuantityText"), TEXT("2"), 11, TEXT("Bold"), BrassBright);
+		Quantity->SetShadowOffset(FVector2D(1.0f, 1.0f));
+		Quantity->SetShadowColorAndOpacity(FLinearColor(0.0f, 0.0f, 0.0f, 0.9f));
+		UOverlaySlot* QuantitySlot = Layers->AddChildToOverlay(Quantity);
+		QuantitySlot->SetHorizontalAlignment(HAlign_Right);
+		QuantitySlot->SetVerticalAlignment(VAlign_Bottom);
+		QuantitySlot->SetPadding(FMargin(0.0f, 0.0f, 4.0f, 2.0f));
+
+		FKismetEditorUtilities::CompileBlueprint(Blueprint);
+		SetDefault(Blueprint->GeneratedClass->GetDefaultObject(), TEXT("TooltipClass"), LoadWidgetClass(ItemTooltipPath));
+		Finish(Blueprint);
+	}
+
+	void CreateInventoryPanel()
+	{
+		UWidgetBlueprint* Blueprint = CreateBlueprint(InventoryPanelPath, UVaesenInventoryPanelWidget::StaticClass());
+		if (!Blueprint)
+		{
+			return;
+		}
+		const FBuilder Build{ Blueprint->WidgetTree };
+
+		UBorder* Panel = InventoryPanelBorder(Build, TEXT("Panel"), 14.0f);
+		Blueprint->WidgetTree->RootWidget = Panel;
+		UVerticalBox* Content = Build.Make<UVerticalBox>();
+		Panel->SetContent(Content);
+
+		UHorizontalBox* Header = Build.Make<UHorizontalBox>();
+		UHorizontalBoxSlot* TitleSlot = Header->AddChildToHorizontalBox(InventoryText(Build, TEXT("TitleText"), TEXT("Inventory"), 18, TEXT("Bold"), InventoryParchment));
+		TitleSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+		TitleSlot->SetVerticalAlignment(VAlign_Center);
+		UHorizontalBoxSlot* CapacitySlot = Header->AddChildToHorizontalBox(InventoryText(Build, TEXT("CapacityText"), TEXT("0 / 24"), 12, TEXT("Regular"), InventoryMuted));
+		CapacitySlot->SetVerticalAlignment(VAlign_Center);
+		FBuilder::AddRow(Content, Header, 10.0f);
+
+		UUniformGridPanel* Grid = Build.Make<UUniformGridPanel>(TEXT("SlotGrid"));
+		Grid->SetSlotPadding(FMargin(2.0f));
+		FBuilder::AddRow(Content, Grid, 10.0f);
+
+		UProgressBar* WeightBar = Build.Make<UProgressBar>(TEXT("WeightBar"));
+		WeightBar->SetFillColorAndOpacity(BrassBright);
+		FProgressBarStyle BarStyle = WeightBar->GetWidgetStyle();
+		BarStyle.BackgroundImage.TintColor = FSlateColor(FLinearColor(0.0f, 0.0f, 0.0f, 0.6f));
+		WeightBar->SetWidgetStyle(BarStyle);
+		USizeBox* BarSize = Build.Make<USizeBox>();
+		BarSize->SetHeightOverride(6.0f);
+		BarSize->SetContent(WeightBar);
+		FBuilder::AddRow(Content, BarSize, 4.0f);
+
+		UTextBlock* Weight = InventoryText(Build, TEXT("WeightText"), TEXT("0 / 40 kg"), 11, TEXT("Regular"), InventoryMuted);
+		FBuilder::AddRow(Content, Weight, 0.0f)->SetHorizontalAlignment(HAlign_Right);
+
+		FKismetEditorUtilities::CompileBlueprint(Blueprint);
+		SetDefault(Blueprint->GeneratedClass->GetDefaultObject(), TEXT("SlotWidgetClass"), LoadWidgetClass(InventorySlotPath));
+		Finish(Blueprint);
+	}
+
+	void CreateInventoryScreen()
+	{
+		UWidgetBlueprint* Blueprint = CreateBlueprint(InventoryScreenPath, UVaesenInventoryScreenWidget::StaticClass());
+		UClass* PanelClass = LoadWidgetClass(InventoryPanelPath);
+		if (!Blueprint || !PanelClass)
+		{
+			return;
+		}
+		const FBuilder Build{ Blueprint->WidgetTree };
+
+		// Full screen and hit-testable, so dropping outside the panels lands here (on the ground).
+		UBorder* Backdrop = Build.Make<UBorder>(TEXT("Backdrop"));
+		Backdrop->bIsVariable = false;
+		Backdrop->SetBrushColor(FLinearColor(0.0f, 0.0f, 0.0f, 0.35f));
+		Backdrop->SetPadding(FMargin(0.0f));
+		Backdrop->SetHorizontalAlignment(HAlign_Center);
+		Backdrop->SetVerticalAlignment(VAlign_Center);
+		Backdrop->SetVisibility(ESlateVisibility::Visible);
+		Blueprint->WidgetTree->RootWidget = Backdrop;
+
+		UVerticalBox* Content = Build.Make<UVerticalBox>();
+		Backdrop->SetContent(Content);
+
+		UHorizontalBox* Panels = Build.Make<UHorizontalBox>();
+		Panels->AddChildToHorizontalBox(Build.Make<UVaesenInventoryPanelWidget>(TEXT("PlayerPanel"), PanelClass))->SetVerticalAlignment(VAlign_Top);
+		UHorizontalBoxSlot* ContainerSlot = Panels->AddChildToHorizontalBox(Build.Make<UVaesenInventoryPanelWidget>(TEXT("ContainerPanel"), PanelClass));
+		ContainerSlot->SetPadding(FMargin(24.0f, 0.0f, 0.0f, 0.0f));
+		ContainerSlot->SetVerticalAlignment(VAlign_Top);
+		FBuilder::AddRow(Content, Panels, 14.0f);
+
+		UTextBlock* Hint = InventoryText(Build, TEXT("HintText"),
+			TEXT("Drag: move   Ctrl+drag: split   Shift+click: transfer   Right-click: use   Drag outside: drop   Tab: close"),
+			11, TEXT("Regular"), InventoryMuted);
+		FBuilder::AddRow(Content, Hint, 0.0f)->SetHorizontalAlignment(HAlign_Center);
+
+		Finish(Blueprint);
+	}
+
+	/** An input action (button) mapped to Key in IMC_Default and set as PropertyName on the character. Each part only when missing. */
+	void SetupButtonInput(const TCHAR* Name, FKey Key, const TCHAR* PropertyName)
+	{
+		const FString PackagePath = FString(TEXT("/Game/Vaesen/Input/")) + Name;
+		UInputAction* Action = LoadObject<UInputAction>(nullptr, *(PackagePath + TEXT(".") + Name));
+		if (!Action)
+		{
+			UPackage* Package = CreatePackage(*PackagePath);
+			Action = NewObject<UInputAction>(Package, Name, RF_Public | RF_Standalone);
+			Action->ValueType = EInputActionValueType::Boolean;
+			FAssetRegistryModule::AssetCreated(Action);
+			Save(Action);
+		}
+
+		if (UInputMappingContext* Mappings = LoadObject<UInputMappingContext>(nullptr, TEXT("/Game/ThirdPerson/Input/IMC_Default.IMC_Default")))
+		{
+			const bool bMapped = Mappings->GetMappings().ContainsByPredicate([Action](const FEnhancedActionKeyMapping& Mapping)
+			{
+				return Mapping.Action == Action;
+			});
+			if (!bMapped)
+			{
+				Mappings->MapKey(Action, Key);
+				Save(Mappings);
+			}
+		}
+
+		if (UBlueprint* Character = LoadObject<UBlueprint>(nullptr, *(FString(PlayerCharacterPath) + TEXT(".BP_VaesenPlayerCharacter"))))
+		{
+			UObject* Defaults = Character->GeneratedClass->GetDefaultObject();
+			const FObjectPropertyBase* Property = FindFProperty<FObjectPropertyBase>(Defaults->GetClass(), PropertyName);
+			if (Property && !Property->GetObjectPropertyValue_InContainer(Defaults))
+			{
+				SetDefault(Defaults, PropertyName, Action);
+				Finish(Character);
+			}
+		}
+	}
+
+	/**
+	 * Inventory: the screen and its parts (WBP_ItemTooltip, WBP_InventorySlot, WBP_InventoryPanel,
+	 * WBP_InventoryScreen), Tab to open it, and BP_LootChest (a crate with some lamp oil) to loot.
+	 */
+	void SetupInventory()
+	{
+		CreateItemTooltip();
+		CreateInventorySlot();
+		CreateInventoryPanel();
+		CreateInventoryScreen();
+		SetupButtonInput(TEXT("IA_Inventory"), EKeys::Tab, TEXT("InventoryAction"));
+
+		if (UBlueprint* Blueprint = CreateActorBlueprint(LootChestPath, AVaesenLootContainer::StaticClass()))
+		{
+			AVaesenLootContainer* Defaults = CastChecked<AVaesenLootContainer>(Blueprint->GeneratedClass->GetDefaultObject());
+			if (UStaticMeshComponent* Mesh = Cast<UStaticMeshComponent>(Defaults->GetRootComponent()))
+			{
+				Mesh->SetStaticMesh(Cast<UStaticMesh>(LoadAsset(TEXT("/Engine/BasicShapes/Cube.Cube"))));
+			}
+			// A low crate.
+			Defaults->GetRootComponent()->SetRelativeScale3D(FVector(1.0, 0.7, 0.6));
+			if (UClass* LampOil = LoadBlueprintClass(TestItemPath))
+			{
+				FVaesenItemStack Stack;
+				Stack.ItemClass = LampOil;
+				Stack.Quantity = 7;
+				Defaults->GetInventory()->StartingItems.Add(Stack);
+			}
+			Finish(Blueprint);
+		}
+	}
 }
 
 UVaesenCreateWidgetsCommandlet::UVaesenCreateWidgetsCommandlet()
@@ -1007,6 +1274,7 @@ int32 UVaesenCreateWidgetsCommandlet::Main(const FString& Params)
 	SetupModularCharacter();
 	SetupInteraction();
 	SetupPickups();
+	SetupInventory();
 	return 0;
 }
 

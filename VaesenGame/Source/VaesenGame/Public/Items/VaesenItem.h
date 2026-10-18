@@ -6,6 +6,7 @@
 #include "VaesenItem.generated.h"
 
 class AVaesenPlayerCharacter;
+class UVaesenInventoryComponent;
 class UStaticMesh;
 class UTexture2D;
 
@@ -39,6 +40,13 @@ public:
 	/** The actor holding this item (its outer), e.g. a pickup. */
 	UFUNCTION(BlueprintPure, Category = "Item")
 	AActor* GetOwningActor() const;
+
+	/** The inventory it's in, if any. */
+	UFUNCTION(BlueprintPure, Category = "Item")
+	UVaesenInventoryComponent* GetOwningInventory() const;
+
+	/** Set by the inventory when it takes (or lets go of) the item. */
+	void SetOwningInventory(UVaesenInventoryComponent* Inventory);
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
@@ -125,4 +133,9 @@ protected:
 private:
 	UFUNCTION()
 	void OnRep_Quantity();
+
+	/** Tells listeners (and the inventory) that it changed. */
+	void NotifyModified();
+
+	TWeakObjectPtr<UVaesenInventoryComponent> OwningInventory;
 };

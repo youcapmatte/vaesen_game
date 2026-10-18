@@ -10,6 +10,8 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "InputActionValue.h"
 #include "Interaction/VaesenInteractorComponent.h"
+#include "Inventory/VaesenInventoryComponent.h"
+#include "Player/VaesenPlayerController.h"
 #include "Materials/MaterialInterface.h"
 #include "Misc/ConfigCacheIni.h"
 #include "Net/UnrealNetwork.h"
@@ -30,6 +32,14 @@ AVaesenPlayerCharacter::AVaesenPlayerCharacter()
 	FollowCamera->bUsePawnControlRotation = false;
 
 	Interactor = CreateDefaultSubobject<UVaesenInteractorComponent>(TEXT("Interactor"));
+
+	// The player's own things: only they can open it.
+	Inventory = CreateDefaultSubobject<UVaesenInventoryComponent>(TEXT("Inventory"));
+	Inventory->DisplayName = NSLOCTEXT("VaesenInventory", "PlayerInventory", "Inventory");
+	Inventory->Capacity = 24;
+	Inventory->WeightCapacity = 40.0f;
+	Inventory->bAccessibleByOthers = false;
+	bReplicateUsingRegisteredSubObjectList = true;
 
 	// Movement feel (UE Third Person template values; tune in BP_VaesenPlayerCharacter).
 	UCharacterMovementComponent* Movement = GetCharacterMovement();
@@ -94,6 +104,10 @@ void AVaesenPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 		EnhancedInput->BindAction(InteractAction, ETriggerEvent::Started, this, &AVaesenPlayerCharacter::BeginInteract);
 		EnhancedInput->BindAction(InteractAction, ETriggerEvent::Completed, this, &AVaesenPlayerCharacter::EndInteract);
 	}
+	if (InventoryAction)
+	{
+		EnhancedInput->BindAction(InventoryAction, ETriggerEvent::Started, this, &AVaesenPlayerCharacter::ToggleInventory);
+	}
 }
 
 void AVaesenPlayerCharacter::Move(const FInputActionValue& Value)
@@ -124,6 +138,14 @@ void AVaesenPlayerCharacter::BeginInteract()
 void AVaesenPlayerCharacter::EndInteract()
 {
 	Interactor->EndInteract();
+}
+
+void AVaesenPlayerCharacter::ToggleInventory()
+{
+	if (AVaesenPlayerController* PlayerController = Cast<AVaesenPlayerController>(GetController()))
+	{
+		PlayerController->ToggleInventory();
+	}
 }
 
 void AVaesenPlayerCharacter::Zoom(const FInputActionValue& Value)

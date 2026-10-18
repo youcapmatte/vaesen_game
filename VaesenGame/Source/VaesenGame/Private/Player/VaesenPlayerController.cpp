@@ -1,10 +1,14 @@
 #include "Player/VaesenPlayerController.h"
 
+#include "Characters/VaesenPlayerCharacter.h"
 #include "Core/VaesenMusicSubsystem.h"
+#include "Core/VaesenSettings.h"
 #include "EnhancedInputSubsystems.h"
 #include "Engine/GameInstance.h"
 #include "Engine/LocalPlayer.h"
 #include "InputMappingContext.h"
+#include "Inventory/VaesenInventoryComponent.h"
+#include "UI/Inventory/VaesenInventoryScreenWidget.h"
 
 void AVaesenPlayerController::BeginPlay()
 {
@@ -34,4 +38,68 @@ void AVaesenPlayerController::BeginPlay()
 	{
 		InputSubsystem->AddMappingContext(DefaultMappingContext, 0);
 	}
+}
+
+bool AVaesenPlayerController::IsInventoryOpen() const
+{
+	return InventoryScreen && InventoryScreen->IsInViewport();
+}
+
+void AVaesenPlayerController::ToggleInventory()
+{
+	if (IsInventoryOpen())
+	{
+		CloseInventory();
+	}
+	else
+	{
+		OpenInventory();
+	}
+}
+
+void AVaesenPlayerController::OpenInventory(UVaesenInventoryComponent* Container)
+{
+	const AVaesenPlayerCharacter* PlayerCharacter = Cast<AVaesenPlayerCharacter>(GetPawn());
+	if (!IsLocalController() || !PlayerCharacter || !PlayerCharacter->GetInventory())
+	{
+		return;
+	}
+
+	if (!InventoryScreen)
+	{
+		const TSubclassOf<UVaesenInventoryScreenWidget> ScreenClass = UVaesenSettings::Get()->InventoryScreenWidget.LoadSynchronous();
+		if (!ScreenClass)
+		{
+			return;
+		}
+		InventoryScreen = CreateWidget<UVaesenInventoryScreenWidget>(this, ScreenClass);
+	}
+
+	InventoryScreen->SetInventories(PlayerCharacter->GetInventory(), Container);
+	if (!InventoryScreen->IsInViewport())
+	{
+		InventoryScreen->AddToViewport(10);
+
+		// Mouse for the UI, keys still walk; the view doesn't turn while the cursor is out.
+		FInputModeGameAndUI InputMode;
+		InputMode.SetWidgetToFocus(InventoryScreen->TakeWidget());
+		InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+		InputMode.SetHideCursorDuringCapture(false);
+		SetInputMode(InputMode);
+		SetShowMouseCursor(true);
+		SetIgnoreLookInput(true);
+	}
+}
+
+void AVaesenPlayerController::CloseInventory()
+{
+	if (!IsInventoryOpen())
+	{
+		return;
+	}
+
+	InventoryScreen->RemoveFromParent();
+	SetInputMode(FInputModeGameOnly());
+	SetShowMouseCursor(false);
+	ResetIgnoreLookInput();
 }

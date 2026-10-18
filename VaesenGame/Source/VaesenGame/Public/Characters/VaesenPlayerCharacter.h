@@ -9,6 +9,7 @@ class UInputAction;
 class UMaterialInterface;
 class USpringArmComponent;
 class UVaesenInteractorComponent;
+class UVaesenInventoryComponent;
 struct FInputActionValue;
 
 /**
@@ -52,6 +53,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Interaction")
 	UVaesenInteractorComponent* GetInteractor() const { return Interactor; }
 
+	UFUNCTION(BlueprintPure, Category = "Inventory")
+	UVaesenInventoryComponent* GetInventory() const { return Inventory; }
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
@@ -62,6 +66,7 @@ protected:
 	void Zoom(const FInputActionValue& Value);
 	void BeginInteract();
 	void EndInteract();
+	void ToggleInventory();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
 	TObjectPtr<USpringArmComponent> CameraBoom;
@@ -71,6 +76,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Interaction")
 	TObjectPtr<UVaesenInteractorComponent> Interactor;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
+	TObjectPtr<UVaesenInventoryComponent> Inventory;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<UInputAction> MoveAction;
@@ -88,6 +96,10 @@ protected:
 	/** Interact key (held for interactions that take time). */
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<UInputAction> InteractAction;
+
+	/** Opens and closes the inventory screen. */
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TObjectPtr<UInputAction> InventoryAction;
 
 	/** Farthest the camera can be pulled back. */
 	UPROPERTY(EditDefaultsOnly, Category = "Camera|Zoom", meta = (ClampMin = "0", Units = "cm"))

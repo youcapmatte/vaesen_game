@@ -1,6 +1,7 @@
 #include "Items/VaesenItem.h"
 
 #include "GameFramework/Actor.h"
+#include "Inventory/VaesenInventoryComponent.h"
 #include "Net/UnrealNetwork.h"
 
 UWorld* UVaesenItem::GetWorld() const
@@ -20,6 +21,16 @@ AActor* UVaesenItem::GetOwningActor() const
 	return GetTypedOuter<AActor>();
 }
 
+UVaesenInventoryComponent* UVaesenItem::GetOwningInventory() const
+{
+	return OwningInventory.Get();
+}
+
+void UVaesenItem::SetOwningInventory(UVaesenInventoryComponent* Inventory)
+{
+	OwningInventory = Inventory;
+}
+
 void UVaesenItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -32,7 +43,7 @@ void UVaesenItem::SetQuantity(int32 NewQuantity)
 	if (Clamped != Quantity)
 	{
 		Quantity = Clamped;
-		OnItemModified.Broadcast();
+		NotifyModified();
 	}
 }
 
@@ -47,7 +58,16 @@ void UVaesenItem::Use_Implementation(AVaesenPlayerCharacter* Character)
 
 void UVaesenItem::OnRep_Quantity()
 {
+	NotifyModified();
+}
+
+void UVaesenItem::NotifyModified()
+{
 	OnItemModified.Broadcast();
+	if (UVaesenInventoryComponent* Inventory = OwningInventory.Get())
+	{
+		Inventory->NotifyChanged();
+	}
 }
 
 #if WITH_EDITOR

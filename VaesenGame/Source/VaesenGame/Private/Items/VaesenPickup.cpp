@@ -3,6 +3,7 @@
 #include "Characters/VaesenPlayerCharacter.h"
 #include "Components/StaticMeshComponent.h"
 #include "Interaction/VaesenInteractionComponent.h"
+#include "Inventory/VaesenInventoryComponent.h"
 #include "Items/VaesenItem.h"
 #include "Net/UnrealNetwork.h"
 
@@ -110,10 +111,24 @@ void AVaesenPickup::OnTakePickup(AVaesenPlayerCharacter* Taker)
 		return;
 	}
 
-	// TODO: put it in Taker's inventory (and only remove what fit) once there is one.
-	UE_LOG(LogVaesenPickup, Display, TEXT("%s picked up %d x %s."), Taker ? *Taker->GetName() : TEXT("Someone"),
-		Item->GetQuantity(), *Item->ItemName.ToString());
-	Destroy();
+	UVaesenInventoryComponent* Inventory = Taker ? Taker->GetInventory() : nullptr;
+	if (!Inventory)
+	{
+		return;
+	}
+
+	// Whatever doesn't fit stays here.
+	const FVaesenItemAddResult Result = Inventory->TryAddItem(Item);
+	UE_LOG(LogVaesenPickup, Display, TEXT("%s picked up %d of %d x %s. %s"), *Taker->GetName(), Result.AmountGiven,
+		Result.AmountToGive, *Item->ItemName.ToString(), *Result.ErrorText.ToString());
+	if (Result.Result == EVaesenAddItemOutcome::All)
+	{
+		Destroy();
+	}
+	else if (Result.AmountGiven > 0)
+	{
+		Item->SetQuantity(Item->GetQuantity() - Result.AmountGiven);
+	}
 }
 
 #if WITH_EDITOR

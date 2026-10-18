@@ -15,8 +15,8 @@ class UVaesenItem;
  * the editor too. Dropped items can be spawned on the server and set up with InitializePickup.
  *
  * The server creates the item instance from the template; it replicates with the pickup. Picking up happens on the
- * server (the interaction component's OnInteract). There's no inventory yet, so for now it's logged and the pickup
- * removed.
+ * server (the interaction component's OnInteract): as much as fits goes into the player's inventory, and the pickup
+ * goes away once it's empty.
  */
 UCLASS()
 class VAESENGAME_API AVaesenPickup : public AActor

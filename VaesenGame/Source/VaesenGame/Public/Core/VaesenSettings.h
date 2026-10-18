@@ -8,6 +8,7 @@ class USoundBase;
 class UTexture2D;
 class UUserWidget;
 class UVaesenInteractionCardWidget;
+class UVaesenInventoryScreenWidget;
 class UVaesenLoadingScreenWidget;
 class UVaesenUIStyle;
 
@@ -74,6 +75,10 @@ public:
 	/** Card shown at an interactable the player looks at, e.g. WBP_InteractionCard (parent class VaesenInteractionCardWidget). An interactable can pick its own instead. */
 	UPROPERTY(Config, EditAnywhere, Category = "UI")
 	TSoftClassPtr<UVaesenInteractionCardWidget> InteractionCardWidget;
+
+	/** The inventory screen (player inventory, plus a container being looted), e.g. WBP_InventoryScreen. */
+	UPROPERTY(Config, EditAnywhere, Category = "UI")
+	TSoftClassPtr<UVaesenInventoryScreenWidget> InventoryScreenWidget;
 
 	/** Front-end music: starts on the login screen and carries on through character select. Leave empty for silence. Looping is set on the sound asset. */
 	UPROPERTY(Config, EditAnywhere, Category = "Audio")
