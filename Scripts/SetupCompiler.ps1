@@ -70,7 +70,7 @@ if (-not $pinned) {
     }
 }
 
-# Pin Unreal to it (keeps other settings in an existing file only if it has none of its own; back it up first).
+# Pin Unreal to it (replaces the whole file, so any other settings in it are dropped; the old file is kept as .bak).
 $configDir = Join-Path $env:APPDATA "Unreal Engine\UnrealBuildTool"
 $configFile = Join-Path $configDir "BuildConfiguration.xml"
 New-Item -ItemType Directory -Force -Path $configDir | Out-Null
