@@ -25,6 +25,9 @@
 #include "Engine/SkeletalMesh.h"
 #include "Characters/VaesenPlayerCharacter.h"
 #include "Game/VaesenGameModeBase.h"
+#include "InputAction.h"
+#include "InputCoreTypes.h"
+#include "InputMappingContext.h"
 #include "Player/VaesenPlayerController.h"
 #include "Kismet2/BlueprintEditorUtils.h"
 #include "Kismet2/KismetEditorUtilities.h"
@@ -164,15 +167,15 @@ namespace VaesenCreateWidgets
 		return FPackageName::DoesPackageExist(PackagePath);
 	}
 
-	bool Save(UBlueprint* Blueprint)
+	bool Save(UObject* Asset)
 	{
-		UPackage* Package = Blueprint->GetOutermost();
+		UPackage* Package = Asset->GetOutermost();
 		Package->MarkPackageDirty();
 		const FString FileName = FPackageName::LongPackageNameToFilename(Package->GetName(), FPackageName::GetAssetPackageExtension());
 		FSavePackageArgs Args;
 		Args.TopLevelFlags = RF_Public | RF_Standalone;
 		Args.SaveFlags = SAVE_NoError;
-		const bool bSaved = UPackage::SavePackage(Package, Blueprint, *FileName, Args);
+		const bool bSaved = UPackage::SavePackage(Package, Asset, *FileName, Args);
 		UE_LOG(LogVaesenCreateWidgets, Display, TEXT("%s %s"), bSaved ? TEXT("Saved") : TEXT("FAILED to save"), *FileName);
 		return bSaved;
 	}
@@ -302,6 +305,49 @@ namespace VaesenCreateWidgets
 				Defaults->PlayerControllerClass = Controller;
 			}
 			Finish(Blueprint);
+		}
+	}
+
+	/**
+	 * Camera zoom: IA_Zoom (1D axis), mapped to the mouse wheel in IMC_Default and set on BP_VaesenPlayerCharacter.
+	 * Each part is only added when missing.
+	 */
+	void SetupZoomInput()
+	{
+		const TCHAR* ZoomPath = TEXT("/Game/Vaesen/Input/IA_Zoom");
+		UInputAction* Zoom = LoadObject<UInputAction>(nullptr, TEXT("/Game/Vaesen/Input/IA_Zoom.IA_Zoom"));
+		if (!Zoom)
+		{
+			UPackage* Package = CreatePackage(ZoomPath);
+			Zoom = NewObject<UInputAction>(Package, TEXT("IA_Zoom"), RF_Public | RF_Standalone);
+			Zoom->ValueType = EInputActionValueType::Axis1D;
+			FAssetRegistryModule::AssetCreated(Zoom);
+			Save(Zoom);
+		}
+
+		if (UInputMappingContext* Mappings = LoadObject<UInputMappingContext>(nullptr, TEXT("/Game/ThirdPerson/Input/IMC_Default.IMC_Default")))
+		{
+			const bool bMapped = Mappings->GetMappings().ContainsByPredicate([Zoom](const FEnhancedActionKeyMapping& Mapping)
+			{
+				return Mapping.Action == Zoom;
+			});
+			if (!bMapped)
+			{
+				// Wheel up = +1 = zoom in.
+				Mappings->MapKey(Zoom, EKeys::MouseWheelAxis);
+				Save(Mappings);
+			}
+		}
+
+		if (UBlueprint* Character = LoadObject<UBlueprint>(nullptr, *(FString(PlayerCharacterPath) + TEXT(".BP_VaesenPlayerCharacter"))))
+		{
+			UObject* Defaults = Character->GeneratedClass->GetDefaultObject();
+			const FObjectPropertyBase* Property = FindFProperty<FObjectPropertyBase>(Defaults->GetClass(), TEXT("ZoomAction"));
+			if (Property && !Property->GetObjectPropertyValue_InContainer(Defaults))
+			{
+				SetDefault(Defaults, TEXT("ZoomAction"), Zoom);
+				Finish(Character);
+			}
 		}
 	}
 
@@ -614,6 +660,7 @@ int32 UVaesenCreateWidgetsCommandlet::Main(const FString& Params)
 	CreateLoadingScreen();
 	UpdateCharacterSelect();
 	CreatePlayerBlueprints();
+	SetupZoomInput();
 	return 0;
 }
 

@@ -8,6 +8,6 @@ public class VaesenGameEditor : ModuleRules
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine" });
-		PrivateDependencyModuleNames.AddRange(new string[] { "UnrealEd", "UMG", "UMGEditor", "Slate", "SlateCore", "AssetRegistry", "VaesenGame" });
+		PrivateDependencyModuleNames.AddRange(new string[] { "UnrealEd", "UMG", "UMGEditor", "Slate", "SlateCore", "AssetRegistry", "EnhancedInput", "InputCore", "VaesenGame" });
 	}
 }
