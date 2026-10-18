@@ -29,6 +29,8 @@
 #include "Engine/StaticMesh.h"
 #include "Engine/StaticMeshActor.h"
 #include "Interaction/VaesenInteractionComponent.h"
+#include "Items/VaesenItem.h"
+#include "Items/VaesenPickup.h"
 #include "MaterialEditingLibrary.h"
 #include "Materials/Material.h"
 #include "MaterialDomain.h"
@@ -647,6 +649,51 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 		}
 	}
 
+	const TCHAR* TestItemPath = TEXT("/Game/Vaesen/Items/BP_Item_LampOil");
+	const TCHAR* TestPickupPath = TEXT("/Game/Vaesen/Blueprints/Interaction/BP_Pickup_LampOil");
+
+	/** A test item (BP_Item_LampOil) and a pickup of 5 of it (BP_Pickup_LampOil) to drop into a level. */
+	void SetupPickups()
+	{
+		UStaticMesh* Cylinder = Cast<UStaticMesh>(LoadAsset(TEXT("/Engine/BasicShapes/Cylinder.Cylinder")));
+
+		if (UBlueprint* Blueprint = CreateActorBlueprint(TestItemPath, UVaesenItem::StaticClass()))
+		{
+			UVaesenItem* Defaults = CastChecked<UVaesenItem>(Blueprint->GeneratedClass->GetDefaultObject());
+			Defaults->ItemName = LOCTEXT("LampOilName", "Lamp oil");
+			Defaults->Description = LOCTEXT("LampOilDescription", "A small flask of lamp oil.");
+			Defaults->PickupMesh = Cylinder;
+			Defaults->bStackable = true;
+			Defaults->MaxStackSize = 10;
+			Finish(Blueprint);
+		}
+
+		if (UBlueprint* Blueprint = CreateActorBlueprint(TestPickupPath, AVaesenPickup::StaticClass()))
+		{
+			AVaesenPickup* Defaults = CastChecked<AVaesenPickup>(Blueprint->GeneratedClass->GetDefaultObject());
+			SetDefault(Defaults, TEXT("ItemTemplate"), LoadBlueprintClass(TestItemPath));
+			if (FIntProperty* QuantityProperty = FindFProperty<FIntProperty>(Defaults->GetClass(), TEXT("Quantity")))
+			{
+				QuantityProperty->SetPropertyValue_InContainer(Defaults, 5);
+			}
+
+			// The basic cylinder is a metre tall; a flask-sized pickup, with its card just above it.
+			Defaults->GetRootComponent()->SetRelativeScale3D(FVector(0.2, 0.2, 0.25));
+			if (UStaticMeshComponent* Mesh = Cast<UStaticMeshComponent>(Defaults->GetRootComponent()))
+			{
+				Mesh->SetStaticMesh(Cylinder);
+			}
+			if (const FObjectPropertyBase* Property = FindFProperty<FObjectPropertyBase>(Defaults->GetClass(), TEXT("InteractionComponent")))
+			{
+				if (USceneComponent* Card = Cast<USceneComponent>(Property->GetObjectPropertyValue_InContainer(Defaults)))
+				{
+					Card->SetRelativeLocation(FVector(0.0, 0.0, 120.0));
+				}
+			}
+			Finish(Blueprint);
+		}
+	}
+
 	UClass* LoadWidgetClass(const FString& PackagePath)
 	{
 		const FString ObjectPath = PackagePath + TEXT(".") + FPackageName::GetShortName(PackagePath);
@@ -959,6 +1006,7 @@ int32 UVaesenCreateWidgetsCommandlet::Main(const FString& Params)
 	SetupZoomInput();
 	SetupModularCharacter();
 	SetupInteraction();
+	SetupPickups();
 	return 0;
 }
 
