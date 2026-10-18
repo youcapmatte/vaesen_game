@@ -30,6 +30,13 @@ public sealed class JoinWorldResponse
     [JsonProperty("map")]
     public string Map { get; set; } = "";
 
+    [JsonProperty("displayName")]
+    public string DisplayName { get; set; } = "";
+
+    /// <summary>The instance entered (its game session name), e.g. "gyllencreutz-guild-{guid}".</summary>
+    [JsonProperty("instance", NullValueHandling = NullValueHandling.Ignore)]
+    public string? Instance { get; set; }
+
     [JsonProperty("ipAddress")]
     public string? IpAddress { get; set; }
 
@@ -48,4 +55,18 @@ public sealed class JoinWorldResponse
 
     [JsonProperty("retryAfterSeconds")]
     public int? RetryAfterSeconds { get; set; }
+}
+
+/// <summary>POST api/sessions/enter: the character to play (the caller must hold its claim, i.e. pressed Play).</summary>
+public sealed class EnterWorldRequest
+{
+    [JsonProperty("characterId")]
+    public string? CharacterId { get; set; }
+}
+
+/// <summary>POST api/sessions/server/heartbeat: the characters in a game server's world right now.</summary>
+public sealed class ServerHeartbeatRequest
+{
+    [JsonProperty("characterIds")]
+    public List<string> CharacterIds { get; set; } = [];
 }

@@ -7,10 +7,11 @@ namespace Vaesen.Framework.GameLift.Services;
 /// </summary>
 public interface IGameLiftGateway
 {
-    /// <summary>Returns the ACTIVE or ACTIVATING game session hosting <paramref name="worldId"/>, if any.</summary>
-    Task<GameSessionInfo?> FindWorldSessionAsync(string worldId, CancellationToken cancellationToken);
+    /// <summary>Returns the ACTIVE or ACTIVATING game session named <paramref name="sessionName"/>, if any.</summary>
+    Task<GameSessionInfo?> FindWorldSessionAsync(string sessionName, CancellationToken cancellationToken);
 
-    Task<GameSessionInfo> CreateWorldSessionAsync(WorldDefinition world, CancellationToken cancellationToken);
+    /// <summary>Starts a game session named <paramref name="sessionName"/> running <paramref name="world"/>'s map.</summary>
+    Task<GameSessionInfo> CreateWorldSessionAsync(WorldDefinition world, string sessionName, string? guildId, CancellationToken cancellationToken);
 
     /// <summary>Reserves a slot for the player. Returns null if the game session is full.</summary>
     Task<PlayerSessionInfo?> CreatePlayerSessionAsync(string gameSessionId, string playerId, CancellationToken cancellationToken);

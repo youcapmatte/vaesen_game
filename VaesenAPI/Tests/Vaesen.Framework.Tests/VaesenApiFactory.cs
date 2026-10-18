@@ -126,16 +126,25 @@ public sealed class FakeGameLiftGateway : IGameLiftGateway
 
     public List<WorldDefinition> CreatedWorlds { get; } = [];
 
-    public Task<GameSessionInfo?> FindWorldSessionAsync(string worldId, CancellationToken cancellationToken) =>
-        Task.FromResult(SessionsByWorld.GetValueOrDefault(worldId));
+    /// <summary>Game session names created, in order (e.g. "gyllencreutz-guild-...").</summary>
+    public List<string> CreatedSessionNames { get; } = [];
 
-    public Task<GameSessionInfo> CreateWorldSessionAsync(WorldDefinition world, CancellationToken cancellationToken)
+    /// <summary>Sessions by game session name (a shared world's id, or "{worldId}-{guildId}" for a hub).</summary>
+    public Task<GameSessionInfo?> FindWorldSessionAsync(string sessionName, CancellationToken cancellationToken) =>
+        Task.FromResult(SessionsByWorld.GetValueOrDefault(sessionName));
+
+    public Task<GameSessionInfo> CreateWorldSessionAsync(WorldDefinition world, string sessionName, string? guildId, CancellationToken cancellationToken)
     {
         CreatedWorlds.Add(world);
-        var session = new GameSessionInfo($"gsess-{world.Id}", GameSessionState.Activating, null, null, 0);
-        SessionsByWorld[world.Id] = session;
+        CreatedSessionNames.Add(sessionName);
+        var session = new GameSessionInfo($"gsess-{sessionName}", GameSessionState.Activating, null, null, 0);
+        SessionsByWorld[sessionName] = session;
         return Task.FromResult(session);
     }
+
+    /// <summary>Makes a session running, as if its server finished starting.</summary>
+    public void Activate(string sessionName) =>
+        SessionsByWorld[sessionName] = new GameSessionInfo($"gsess-{sessionName}", GameSessionState.Active, "10.0.0.5", null, 7777);
 
     public Task<PlayerSessionInfo?> CreatePlayerSessionAsync(string gameSessionId, string playerId, CancellationToken cancellationToken)
     {

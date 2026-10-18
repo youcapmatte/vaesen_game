@@ -10,10 +10,11 @@ public sealed class AwsGameLiftGateway(IAmazonGameLift gameLift, IOptions<Sessio
     /// <summary>Game property keys the Unreal server reads in OnStartGameSession.</summary>
     public const string WorldIdProperty = "worldId";
     public const string MapProperty = "map";
+    public const string GuildIdProperty = "guildId";
 
     private GameLiftOptions GameLift => options.Value.GameLift;
 
-    public async Task<GameSessionInfo?> FindWorldSessionAsync(string worldId, CancellationToken cancellationToken)
+    public async Task<GameSessionInfo?> FindWorldSessionAsync(string sessionName, CancellationToken cancellationToken)
     {
         string? nextToken = null;
         do
@@ -28,7 +29,7 @@ public sealed class AwsGameLiftGateway(IAmazonGameLift gameLift, IOptions<Sessio
 
             // AWS SDK v4 returns null (not an empty list) when there are no sessions.
             var match = (response.GameSessions ?? []).FirstOrDefault(s =>
-                s.Name == worldId &&
+                s.Name == sessionName &&
                 (s.Status == GameSessionStatus.ACTIVE || s.Status == GameSessionStatus.ACTIVATING));
             if (match is not null)
             {
@@ -41,20 +42,26 @@ public sealed class AwsGameLiftGateway(IAmazonGameLift gameLift, IOptions<Sessio
         return null;
     }
 
-    public async Task<GameSessionInfo> CreateWorldSessionAsync(WorldDefinition world, CancellationToken cancellationToken)
+    public async Task<GameSessionInfo> CreateWorldSessionAsync(WorldDefinition world, string sessionName, string? guildId, CancellationToken cancellationToken)
     {
+        List<GameProperty> properties =
+        [
+            new GameProperty { Key = WorldIdProperty, Value = world.Id },
+            new GameProperty { Key = MapProperty, Value = world.Map },
+        ];
+        if (!string.IsNullOrEmpty(guildId))
+        {
+            properties.Add(new GameProperty { Key = GuildIdProperty, Value = guildId });
+        }
+
         var response = await gameLift.CreateGameSessionAsync(new CreateGameSessionRequest
         {
             FleetId = GameLift.FleetId,
             AliasId = GameLift.AliasId,
             Location = NullIfEmpty(GameLift.Location),
-            Name = world.Id,
+            Name = sessionName,
             MaximumPlayerSessionCount = world.MaxPlayers,
-            GameProperties =
-            [
-                new GameProperty { Key = WorldIdProperty, Value = world.Id },
-                new GameProperty { Key = MapProperty, Value = world.Map },
-            ],
+            GameProperties = properties,
         }, cancellationToken);
 
         return ToInfo(response.GameSession);

@@ -32,7 +32,30 @@ public sealed class Character : BaseCore
     [JsonProperty("healthPoints")]
     public int HealthPoints { get; set; } = DefaultHealthPoints;
 
+    /// <summary>The world instance the character is in or was in last; decides where Play puts it. Null before it has played.</summary>
+    [JsonProperty("lastLocation", NullValueHandling = NullValueHandling.Ignore)]
+    public CharacterLocation? LastLocation { get; set; }
+
     public static string FullName(string firstName, string lastName) => $"{firstName} {lastName}";
+}
+
+/// <summary>Where a character is (or was last): which world instance, and when it entered and left.</summary>
+public sealed class CharacterLocation
+{
+    /// <summary>The world definition, e.g. "gyllencreutz".</summary>
+    [JsonProperty("worldId")]
+    public string WorldId { get; set; } = "";
+
+    /// <summary>The instance: its GameLift game session name, e.g. "gyllencreutz-guild-{guid}".</summary>
+    [JsonProperty("sessionName")]
+    public string SessionName { get; set; } = "";
+
+    [JsonProperty("enteredAt")]
+    public DateTime EnteredAt { get; set; }
+
+    /// <summary>When it left (logged out, lost the connection); null while it's in the world.</summary>
+    [JsonProperty("leftAt", NullValueHandling = NullValueHandling.Ignore)]
+    public DateTime? LeftAt { get; set; }
 }
 
 /// <summary>Changes to a character. Fields left null are kept as they are.</summary>

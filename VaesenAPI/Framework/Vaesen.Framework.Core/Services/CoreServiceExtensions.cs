@@ -90,9 +90,19 @@ public static class CoreServiceExtensions
             .AddPolicy(Policies.Player, policy => policy
                 .RequireAuthenticatedUser()
                 .RequireAssertion(context => context.User.IsPlayer()))
-            .AddPolicy(Policies.GameServer, policy => policy
-                .RequireAuthenticatedUser()
-                .RequireAssertion(context => context.User.HasScope(Auth0Options.GameServerScope)))
+            .AddPolicy(Policies.GameServer, policy =>
+            {
+                if (environment.IsDevelopment())
+                {
+                    // Open in Development, so local and GameLift Anywhere servers can report without machine credentials.
+                    policy.RequireAssertion(_ => true);
+                }
+                else
+                {
+                    policy.RequireAuthenticatedUser()
+                        .RequireAssertion(context => context.User.HasScope(Auth0Options.GameServerScope));
+                }
+            })
             .AddPolicy(Policies.Admin, policy =>
             {
                 if (environment.IsDevelopment())
