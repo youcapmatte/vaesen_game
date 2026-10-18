@@ -21,8 +21,8 @@ public sealed class AwsGameLiftGateway(IAmazonGameLift gameLift, IOptions<Sessio
         {
             var response = await gameLift.DescribeGameSessionsAsync(new DescribeGameSessionsRequest
             {
-                FleetId = GameLift.FleetId,
-                AliasId = GameLift.AliasId,
+                FleetId = NullIfEmpty(GameLift.FleetId),
+                AliasId = NullIfEmpty(GameLift.AliasId),
                 Location = NullIfEmpty(GameLift.Location),
                 NextToken = nextToken,
             }, cancellationToken);
@@ -56,8 +56,8 @@ public sealed class AwsGameLiftGateway(IAmazonGameLift gameLift, IOptions<Sessio
 
         var response = await gameLift.CreateGameSessionAsync(new CreateGameSessionRequest
         {
-            FleetId = GameLift.FleetId,
-            AliasId = GameLift.AliasId,
+            FleetId = NullIfEmpty(GameLift.FleetId),
+            AliasId = NullIfEmpty(GameLift.AliasId),
             Location = NullIfEmpty(GameLift.Location),
             Name = sessionName,
             MaximumPlayerSessionCount = world.MaxPlayers,
