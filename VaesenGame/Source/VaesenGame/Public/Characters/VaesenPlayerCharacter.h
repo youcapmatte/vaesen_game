@@ -14,7 +14,8 @@ struct FInputActionValue;
  *
  * The mouse wheel (ZoomAction) moves the camera in and out smoothly between MinThirdPersonDistance and
  * MaxCameraDistance. Zooming in past the closest distance glides the camera into the head and switches to first
- * person: the head is hidden for this player only and the body turns with the view. One step out returns to third
+ * person: the body turns with the view, and this player sees a headless copy of the body (FirstPersonBody) while the
+ * real body is hidden from their camera but still casts the full shadow, head included. Others see the normal body. One step out returns to third
  * person. The view mode replicates, so the server and other players see the character turn the right way.
  *
  * First-person camera motion: the eyes sit at a steady point in the body (not on the animated head, which jitters)
@@ -58,6 +59,14 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
 	TObjectPtr<UCameraComponent> FollowCamera;
 
+	/**
+	 * First person only, owner only: a copy of the body without the head, so the view never looks into it. Uses the
+	 * main mesh's skeletal mesh and animation (it runs its own copy of the animation Blueprint) and casts no shadow;
+	 * the main mesh casts the shadow instead.
+	 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
+	TObjectPtr<USkeletalMeshComponent> FirstPersonBody;
+
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<UInputAction> MoveAction;
 
@@ -91,7 +100,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Camera|First Person", meta = (ClampMin = "0", Units = "cm"))
 	float FirstPersonSwitchDistance = 30.0f;
 
-	/** Bone hidden for the owner in first person (the head and everything attached to it). */
+	/** Bone hidden on the first-person body (the head and everything attached to it). */
 	UPROPERTY(EditDefaultsOnly, Category = "Camera|First Person")
 	FName HeadBoneName = TEXT("head");
 
