@@ -96,8 +96,6 @@ namespace VaesenFakeLogin
 			LOCTEXT("StepAuthenticating", "Authenticating..."),
 			LOCTEXT("StepVerifyingAccount", "Verifying account..."),
 			LOCTEXT("StepCheckingSubscription", "Checking subscription..."),
-			LOCTEXT("StepRetrievingRealms", "Retrieving realm list..."),
-			LOCTEXT("StepRetrievingCharacters", "Retrieving character list..."),
 			LOCTEXT("StepSuccess", "Success!"),
 		};
 	}
