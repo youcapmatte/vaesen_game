@@ -6,6 +6,7 @@
 #include "Items/VaesenConsumableItem.h"
 #include "Items/VaesenItem.h"
 #include "Items/VaesenPickup.h"
+#include "Items/VaesenPouchItem.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/VaesenPlayerController.h"
 
@@ -37,6 +38,12 @@ bool UVaesenInventoryComponent::ReplicateSubobjects(UActorChannel* Channel, FOut
 		if (Item)
 		{
 			bWroteSomething |= Channel->ReplicateSubobject(Item, *Bunch, *RepFlags);
+			TArray<UVaesenItem*> Nested;
+			Item->GetNestedItems(Nested);
+			for (UVaesenItem* Inner : Nested)
+			{
+				bWroteSomething |= Channel->ReplicateSubobject(Inner, *Bunch, *RepFlags);
+			}
 		}
 	}
 	return bWroteSomething;
@@ -101,9 +108,19 @@ int32 UVaesenInventoryComponent::GetItemCount(TSubclassOf<UVaesenItem> ItemClass
 	int32 Count = 0;
 	for (const UVaesenItem* Item : Slots)
 	{
-		if (Item && ItemClass && Item->IsA(ItemClass))
+		if (!Item || !ItemClass)
+		{
+			continue;
+		}
+		if (Item->IsA(ItemClass))
 		{
 			Count += Item->GetQuantity();
+		}
+		TArray<UVaesenItem*> Nested;
+		Item->GetNestedItems(Nested);
+		for (const UVaesenItem* Inner : Nested)
+		{
+			Count += Inner->IsA(ItemClass) ? Inner->GetQuantity() : 0;
 		}
 	}
 	return Count;
@@ -141,24 +158,50 @@ AVaesenPlayerCharacter* UVaesenInventoryComponent::GetOwningCharacter() const
 
 int32 UVaesenInventoryComponent::GetWeightRoomFor(const UVaesenItem* Item) const
 {
-	if (!Item || WeightCapacity <= 0.0f || Item->Weight <= 0.0f)
+	// Per item, including anything inside it (a full pouch weighs more than an empty one).
+	const float UnitWeight = Item ? Item->GetStackWeight() / FMath::Max(Item->GetQuantity(), 1) : 0.0f;
+	if (WeightCapacity <= 0.0f || UnitWeight <= 0.0f)
 	{
 		return MAX_int32;
 	}
 	const float Room = WeightCapacity - GetCurrentWeight();
-	return FMath::Max(0, FMath::FloorToInt32(Room / Item->Weight + KINDA_SMALL_NUMBER));
+	return FMath::Max(0, FMath::FloorToInt32(Room / UnitWeight + KINDA_SMALL_NUMBER));
 }
 
 UVaesenItem* UVaesenInventoryComponent::MakeStack(const UVaesenItem* Template, int32 Quantity)
 {
-	// A class default object is only a source of values, not a template object to copy flags from.
-	const bool bFromDefaults = Template->HasAnyFlags(RF_ClassDefaultObject);
-	UVaesenItem* Item = NewObject<UVaesenItem>(GetOwner(), Template->GetClass(), NAME_None, RF_Transient,
-		bFromDefaults ? nullptr : const_cast<UVaesenItem*>(Template));
-	// Don't inherit whoever listened to the original (e.g. the pickup it came from).
-	Item->OnItemModified.Clear();
-	Item->SetQuantity(Quantity);
+	UVaesenItem* Item = Template->DuplicateItem(GetOwner(), Quantity);
+	if (UVaesenPouchItem* Pouch = Cast<UVaesenPouchItem>(Item))
+	{
+		Pouch->EnsurePouchSlots();
+	}
 	return Item;
+}
+
+void UVaesenInventoryComponent::RegisterItem(UVaesenItem* Item)
+{
+	AddReplicatedSubObject(Item);
+	Item->SetOwningInventory(this);
+	TArray<UVaesenItem*> Nested;
+	Item->GetNestedItems(Nested);
+	for (UVaesenItem* Inner : Nested)
+	{
+		AddReplicatedSubObject(Inner);
+		Inner->SetOwningInventory(this);
+	}
+}
+
+void UVaesenInventoryComponent::UnregisterItem(UVaesenItem* Item)
+{
+	TArray<UVaesenItem*> Nested;
+	Item->GetNestedItems(Nested);
+	for (UVaesenItem* Inner : Nested)
+	{
+		RemoveReplicatedSubObject(Inner);
+		Inner->SetOwningInventory(nullptr);
+	}
+	RemoveReplicatedSubObject(Item);
+	Item->SetOwningInventory(nullptr);
 }
 
 void UVaesenInventoryComponent::SetSlot(int32 SlotIndex, UVaesenItem* Item)
@@ -170,16 +213,117 @@ void UVaesenInventoryComponent::SetSlot(int32 SlotIndex, UVaesenItem* Item)
 
 	if (UVaesenItem* Old = Slots[SlotIndex])
 	{
-		RemoveReplicatedSubObject(Old);
-		Old->SetOwningInventory(nullptr);
+		UnregisterItem(Old);
 	}
 	Slots[SlotIndex] = Item;
 	if (Item)
 	{
-		AddReplicatedSubObject(Item);
-		Item->SetOwningInventory(this);
+		RegisterItem(Item);
 	}
 	NotifyChanged();
+}
+
+void UVaesenInventoryComponent::SetPouchSlot(UVaesenPouchItem* Pouch, int32 SlotIndex, UVaesenItem* Item)
+{
+	Pouch->EnsurePouchSlots();
+	const TArray<UVaesenItem*>& Contents = Pouch->GetContents();
+	if (!Contents.IsValidIndex(SlotIndex) || Contents[SlotIndex] == Item)
+	{
+		return;
+	}
+
+	if (UVaesenItem* Old = Contents[SlotIndex])
+	{
+		UnregisterItem(Old);
+	}
+	Pouch->SetPouchSlot(SlotIndex, Item);
+	if (Item)
+	{
+		RegisterItem(Item);
+	}
+	NotifyChanged();
+}
+
+bool UVaesenInventoryComponent::FindItem(const UVaesenItem* Item, UVaesenPouchItem*& OutPouch, int32& OutSlotIndex) const
+{
+	OutPouch = nullptr;
+	OutSlotIndex = FindSlotOf(Item);
+	if (!Item || OutSlotIndex != INDEX_NONE)
+	{
+		return OutSlotIndex != INDEX_NONE;
+	}
+	for (UVaesenItem* SlotItem : Slots)
+	{
+		if (UVaesenPouchItem* Pouch = Cast<UVaesenPouchItem>(SlotItem))
+		{
+			const int32 Inside = Pouch->GetContents().IndexOfByKey(Item);
+			if (Inside != INDEX_NONE)
+			{
+				OutPouch = Pouch;
+				OutSlotIndex = Inside;
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+int32 UVaesenInventoryComponent::AddToPouch(UVaesenPouchItem* Pouch, const UVaesenItem* Template, int32 Quantity)
+{
+	if (!Pouch || !Template || Quantity <= 0 || !Pouch->Accepts(Template))
+	{
+		return 0;
+	}
+	Pouch->EnsurePouchSlots();
+
+	const int32 MaxStack = Template->GetMaxStack();
+	int32 Remaining = Quantity;
+
+	// Top up stacks of the same item inside first.
+	for (UVaesenItem* Inner : Pouch->GetContents())
+	{
+		if (Remaining <= 0)
+		{
+			break;
+		}
+		if (Inner && Inner->GetClass() == Template->GetClass() && Inner->GetQuantity() < MaxStack)
+		{
+			const int32 Amount = FMath::Min(Remaining, MaxStack - Inner->GetQuantity());
+			Inner->SetQuantity(Inner->GetQuantity() + Amount);
+			Remaining -= Amount;
+		}
+	}
+
+	// Then empty pouch slots.
+	for (int32 SlotIndex = 0; SlotIndex < Pouch->GetContents().Num() && Remaining > 0; ++SlotIndex)
+	{
+		if (!Pouch->GetContents()[SlotIndex])
+		{
+			const int32 Amount = FMath::Min(Remaining, MaxStack);
+			SetPouchSlot(Pouch, SlotIndex, MakeStack(Template, Amount));
+			Remaining -= Amount;
+		}
+	}
+	return Quantity - Remaining;
+}
+
+void UVaesenInventoryComponent::EmptyPouch(UVaesenPouchItem* Pouch)
+{
+	if (!Pouch || !GetOwner()->HasAuthority() || FindSlotOf(Pouch) == INDEX_NONE)
+	{
+		return;
+	}
+
+	for (UVaesenItem* Inner : TArray<UVaesenItem*>(Pouch->GetContents()))
+	{
+		if (Inner)
+		{
+			// Into the slots (not back into a pouch); whatever doesn't fit stays in the pouch.
+			FText Error;
+			const int32 Moved = AddInternal(Inner, Inner->GetQuantity(), Error, false);
+			RemoveItem(Inner, Moved);
+		}
+	}
 }
 
 int32 UVaesenInventoryComponent::FindEmptySlot() const
@@ -187,7 +331,7 @@ int32 UVaesenInventoryComponent::FindEmptySlot() const
 	return Slots.IndexOfByPredicate([](const UVaesenItem* Item) { return Item == nullptr; });
 }
 
-int32 UVaesenInventoryComponent::AddInternal(const UVaesenItem* Template, int32 Quantity, FText& OutError)
+int32 UVaesenInventoryComponent::AddInternal(const UVaesenItem* Template, int32 Quantity, FText& OutError, bool bIntoPouches)
 {
 	if (!Template || Quantity <= 0)
 	{
@@ -198,6 +342,24 @@ int32 UVaesenInventoryComponent::AddInternal(const UVaesenItem* Template, int32 
 	int32 Remaining = FMath::Min(Quantity, WeightRoom);
 	const int32 MaxStack = Template->GetMaxStack();
 	int32 Given = 0;
+
+	// Into pouches that take it, so it doesn't use up slots.
+	if (bIntoPouches)
+	{
+		for (UVaesenItem* Item : Slots)
+		{
+			if (Remaining <= 0)
+			{
+				break;
+			}
+			if (UVaesenPouchItem* Pouch = Cast<UVaesenPouchItem>(Item))
+			{
+				const int32 Amount = AddToPouch(Pouch, Template, Remaining);
+				Given += Amount;
+				Remaining -= Amount;
+			}
+		}
+	}
 
 	// Top up stacks of the same item first.
 	if (MaxStack > 1)
@@ -262,8 +424,9 @@ FVaesenItemAddResult UVaesenInventoryComponent::TryAddItem(const UVaesenItem* It
 
 int32 UVaesenInventoryComponent::RemoveItem(UVaesenItem* Item, int32 Quantity)
 {
-	const int32 SlotIndex = FindSlotOf(Item);
-	if (SlotIndex == INDEX_NONE || !GetOwner()->HasAuthority())
+	UVaesenPouchItem* Pouch = nullptr;
+	int32 SlotIndex = INDEX_NONE;
+	if (!GetOwner()->HasAuthority() || !FindItem(Item, Pouch, SlotIndex))
 	{
 		return 0;
 	}
@@ -272,7 +435,14 @@ int32 UVaesenInventoryComponent::RemoveItem(UVaesenItem* Item, int32 Quantity)
 	const int32 Taken = (Quantity < 0 || Quantity >= Have) ? Have : Quantity;
 	if (Taken == Have)
 	{
-		SetSlot(SlotIndex, nullptr);
+		if (Pouch)
+		{
+			SetPouchSlot(Pouch, SlotIndex, nullptr);
+		}
+		else
+		{
+			SetSlot(SlotIndex, nullptr);
+		}
 	}
 	else
 	{
@@ -283,11 +453,31 @@ int32 UVaesenInventoryComponent::RemoveItem(UVaesenItem* Item, int32 Quantity)
 
 int32 UVaesenInventoryComponent::RemoveItemsOfClass(TSubclassOf<UVaesenItem> ItemClass, int32 Quantity)
 {
-	int32 Taken = 0;
-	for (int32 SlotIndex = Slots.Num() - 1; SlotIndex >= 0 && Taken < Quantity; --SlotIndex)
+	// Pouch contents first (that's where the small things are), then the slots, last slot first.
+	TArray<UVaesenItem*> Candidates;
+	for (UVaesenItem* Item : Slots)
 	{
-		UVaesenItem* Item = Slots[SlotIndex];
-		if (Item && ItemClass && Item->IsA(ItemClass))
+		if (Item)
+		{
+			Item->GetNestedItems(Candidates);
+		}
+	}
+	for (int32 SlotIndex = Slots.Num() - 1; SlotIndex >= 0; --SlotIndex)
+	{
+		if (Slots[SlotIndex])
+		{
+			Candidates.Add(Slots[SlotIndex]);
+		}
+	}
+
+	int32 Taken = 0;
+	for (UVaesenItem* Item : Candidates)
+	{
+		if (Taken >= Quantity)
+		{
+			break;
+		}
+		if (ItemClass && Item->IsA(ItemClass))
 		{
 			Taken += RemoveItem(Item, Quantity - Taken);
 		}
@@ -364,6 +554,15 @@ bool UVaesenInventoryComponent::MoveItem(int32 FromIndex, UVaesenInventoryCompon
 		return true;
 	}
 
+	// Onto a pouch that takes it: inside.
+	if (UVaesenPouchItem* Pouch = Cast<UVaesenPouchItem>(Target); Pouch && Pouch->Accepts(Source))
+	{
+		const int32 Moving = bSameInventory ? Amount : FMath::Min(Amount, To->GetWeightRoomFor(Source));
+		const int32 Stored = To->AddToPouch(Pouch, Source, Moving);
+		RemoveItem(Source, Stored);
+		return Stored > 0;
+	}
+
 	// Onto another item: swap whole stacks.
 	if (Amount != SourceQuantity)
 	{
@@ -438,7 +637,7 @@ AVaesenPickup* UVaesenInventoryComponent::DropItem(int32 SlotIndex, int32 Amount
 	{
 		return nullptr;
 	}
-	Pickup->InitializePickup(Item->GetClass(), Dropping);
+	Pickup->InitializePickupFromItem(Item, Dropping);
 
 	// Resting on the ground rather than half in it.
 	const FBox Bounds = Pickup->GetComponentsBoundingBox(false);
@@ -543,6 +742,12 @@ void UVaesenInventoryComponent::OnRep_Slots()
 		if (Item)
 		{
 			Item->SetOwningInventory(this);
+			TArray<UVaesenItem*> Nested;
+			Item->GetNestedItems(Nested);
+			for (UVaesenItem* Inner : Nested)
+			{
+				Inner->SetOwningInventory(this);
+			}
 		}
 	}
 	NotifyChanged();

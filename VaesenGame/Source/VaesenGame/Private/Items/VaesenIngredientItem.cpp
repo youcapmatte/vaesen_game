@@ -2,5 +2,6 @@
 
 UVaesenIngredientItem::UVaesenIngredientItem()
 {
-	MaxStackSize = 20;
+	bStackable = true;
+	MaxStackSize = 10;
 }

@@ -7,6 +7,7 @@
 #include "Framework/Application/SlateApplication.h"
 #include "Inventory/VaesenInventoryComponent.h"
 #include "Items/VaesenItem.h"
+#include "Items/VaesenPouchItem.h"
 #include "UI/Inventory/VaesenItemDragDropOperation.h"
 #include "UI/Inventory/VaesenItemTooltipWidget.h"
 
@@ -48,7 +49,16 @@ void UVaesenInventorySlotWidget::Refresh()
 		NameText->SetText(bShowName ? Item->ItemName : FText::GetEmpty());
 		NameText->SetVisibility(bShowName ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Hidden);
 	}
-	ShowQuantity(Item ? Item->GetQuantity() : 0);
+	if (const UVaesenPouchItem* Pouch = Cast<UVaesenPouchItem>(Item); Pouch && QuantityText)
+	{
+		// A pouch shows how full it is.
+		QuantityText->SetText(FText::Format(INVTEXT("{0}/{1}"), FText::AsNumber(Pouch->GetUsedPouchSlots()), FText::AsNumber(Pouch->PouchSlots)));
+		QuantityText->SetVisibility(ESlateVisibility::HitTestInvisible);
+	}
+	else
+	{
+		ShowQuantity(Item ? Item->GetQuantity() : 0);
+	}
 
 	if (Item && TooltipClass)
 	{

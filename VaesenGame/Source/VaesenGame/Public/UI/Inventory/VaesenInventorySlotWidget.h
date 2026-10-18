@@ -12,15 +12,16 @@ class UVaesenItem;
 class UVaesenItemTooltipWidget;
 
 /**
- * One slot of an inventory. Drag to move (onto an empty slot), merge (onto the same item) or swap; hold Ctrl while
- * starting a drag to take half the stack. Right-click uses the item; Shift-click sends it to the other open
- * inventory (chest <-> player). Hover shows the item's tooltip.
+ * One slot of an inventory. Drag to move (onto an empty slot), merge (onto the same item), put inside (onto a pouch
+ * that takes it) or swap; hold Ctrl while starting a drag to take half the stack. Right-click uses the item (a
+ * pouch: empties it); Shift-click sends it to the other open inventory (chest <-> player). Hover shows the item's
+ * tooltip.
  *
  * Widget Blueprint (e.g. WBP_InventorySlot, parent class VaesenInventorySlotWidget), controls by these exact names:
  *   SlotBorder      (Border)  - the slot's background; tinted on hover
  *   ThumbnailImage  (Image)   - the item's thumbnail; hidden when it has none
  *   NameText        (Text)    - the item's name, shown when it has no thumbnail
- *   QuantityText    (Text)    - the stack's count; hidden for single items
+ *   QuantityText    (Text)    - the stack's count (hidden for single items); for a pouch, used / total pouch slots
  *
  * TEMPORARY: all bindings are BindWidgetOptional while the UI is being built. Make them BindWidget when it's done.
  */

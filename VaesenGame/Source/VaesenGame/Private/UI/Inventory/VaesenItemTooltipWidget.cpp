@@ -6,6 +6,7 @@
 #include "Items/VaesenConsumableItem.h"
 #include "Items/VaesenContainerItem.h"
 #include "Items/VaesenIngredientItem.h"
+#include "Items/VaesenPouchItem.h"
 #include "Items/VaesenReadableItem.h"
 #include "Items/VaesenTalismanItem.h"
 #include "Items/VaesenToolItem.h"
@@ -33,6 +34,7 @@ FText UVaesenItemTooltipWidget::GetCategoryText(const UVaesenItem* Item)
 	{
 		return UEnum::GetDisplayValueAsText(Consumable->ConsumableType);
 	}
+	if (Item->IsA<UVaesenPouchItem>())      { return LOCTEXT("Pouch", "Pouch"); }
 	if (Item->IsA<UVaesenWeaponItem>())     { return LOCTEXT("Weapon", "Weapon"); }
 	if (Item->IsA<UVaesenArmorItem>())      { return LOCTEXT("Armor", "Clothing"); }
 	if (Item->IsA<UVaesenToolItem>())       { return LOCTEXT("Tool", "Tool"); }
@@ -69,7 +71,25 @@ void UVaesenItemTooltipWidget::UpdateTooltip_Implementation()
 	OneDecimal.MaximumFractionalDigits = 1;
 
 	TArray<FText> Lines;
-	if (Item->Weight > 0.0f)
+
+	// What's in a pouch, one line per stack.
+	if (const UVaesenPouchItem* Pouch = Cast<UVaesenPouchItem>(Item))
+	{
+		Lines.Add(FText::Format(LOCTEXT("PouchSlots", "Holds {0} / {1}"), FText::AsNumber(Pouch->GetUsedPouchSlots()), FText::AsNumber(Pouch->PouchSlots)));
+		for (const UVaesenItem* Inner : Pouch->GetContents())
+		{
+			if (Inner)
+			{
+				Lines.Add(FText::Format(LOCTEXT("PouchLine", "  {0} x {1}"), FText::AsNumber(Inner->GetQuantity()), Inner->ItemName));
+			}
+		}
+	}
+
+	if (Item->IsA<UVaesenPouchItem>())
+	{
+		Lines.Add(FText::Format(LOCTEXT("PouchWeight", "Weight {0} kg"), FText::AsNumber(Item->GetStackWeight(), &OneDecimal)));
+	}
+	else if (Item->Weight > 0.0f)
 	{
 		Lines.Add(Item->GetQuantity() > 1
 			? FText::Format(LOCTEXT("WeightStack", "Weight {0} kg ({1} kg)"), FText::AsNumber(Item->Weight, &OneDecimal), FText::AsNumber(Item->GetStackWeight(), &OneDecimal))

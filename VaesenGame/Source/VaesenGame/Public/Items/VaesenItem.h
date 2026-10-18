@@ -21,6 +21,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FVaesenItemModified);
  *   Equippable (slot, equip/unequip)  ->  Weapon, Armor (clothes too), Tool (lantern, spyglass...), Talisman,
  *                                         Container (satchel, backpack)
  *   Consumable (food, drink, medicine, poison), Ammo, Readable (letters, books, clues), Ingredient
+ *   Pouch (a herb pouch, a sack: holds other items in its own slots)
+ * Only consumables, ingredients and ammo stack by default (10 per stack).
  *
  * Instances are created with the actor that holds them as their outer (the pickup now, an inventory later) and
  * replicate as that actor's registered subobjects (see AVaesenPickup). Moving an item to another actor means a new
@@ -94,10 +96,10 @@ public:
 
 	/** Several fit in one stack (up to MaxStackSize). Off: one per stack, and MaxStackSize is locked at 1. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
-	bool bStackable = true;
+	bool bStackable = false;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item", meta = (ClampMin = "1", EditCondition = "bStackable"))
-	int32 MaxStackSize = 20;
+	int32 MaxStackSize = 1;
 
 	/** Most that fit in one stack: MaxStackSize, or 1 when not stackable. */
 	UFUNCTION(BlueprintPure, Category = "Item")
@@ -106,9 +108,18 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Item")
 	int32 GetQuantity() const { return Quantity; }
 
-	/** Weight of the whole stack. */
+	/** Weight of the whole stack (and of anything inside it). */
 	UFUNCTION(BlueprintPure, Category = "Item")
-	float GetStackWeight() const { return Weight * Quantity; }
+	virtual float GetStackWeight() const { return Weight * Quantity; }
+
+	/** Items held inside this one (a pouch's contents); they replicate along with it. */
+	virtual void GetNestedItems(TArray<UVaesenItem*>& OutItems) const {}
+
+	/**
+	 * A new instance like this one (its values, anything inside it copied too) with Quantity, owned by NewOuter (the
+	 * actor that will hold it). This can be the class default object, for a fresh item of this kind.
+	 */
+	virtual UVaesenItem* DuplicateItem(UObject* NewOuter, int32 NewQuantity) const;
 
 	/** Whether Character can use it now (has a use action by default). */
 	UFUNCTION(BlueprintNativeEvent, BlueprintPure, Category = "Item")

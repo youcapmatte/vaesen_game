@@ -31,6 +31,18 @@ void UVaesenItem::SetOwningInventory(UVaesenInventoryComponent* Inventory)
 	OwningInventory = Inventory;
 }
 
+UVaesenItem* UVaesenItem::DuplicateItem(UObject* NewOuter, int32 NewQuantity) const
+{
+	// A class default object only gives the values; it's not an object to copy flags from.
+	const bool bFromDefaults = HasAnyFlags(RF_ClassDefaultObject);
+	UVaesenItem* Item = NewObject<UVaesenItem>(NewOuter, GetClass(), NAME_None, RF_Transient,
+		bFromDefaults ? nullptr : const_cast<UVaesenItem*>(this));
+	// Don't inherit whoever listened to the original (e.g. the pickup it came from).
+	Item->OnItemModified.Clear();
+	Item->SetQuantity(NewQuantity);
+	return Item;
+}
+
 void UVaesenItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -77,9 +89,10 @@ void UVaesenItem::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedE
 
 	// Not stackable: one per stack (MaxStackSize is greyed out in the details panel meanwhile).
 	const FName Changed = PropertyChangedEvent.GetMemberPropertyName();
-	if (Changed == GET_MEMBER_NAME_CHECKED(UVaesenItem, bStackable) && !bStackable)
+	if (Changed == GET_MEMBER_NAME_CHECKED(UVaesenItem, bStackable))
 	{
-		MaxStackSize = 1;
+		// Not stackable: one per stack. Stackable again: the usual 10.
+		MaxStackSize = bStackable ? FMath::Max(MaxStackSize, 10) : 1;
 	}
 
 	// Quest items never leave the inventory.

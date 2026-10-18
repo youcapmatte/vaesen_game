@@ -32,6 +32,9 @@
 #include "Interaction/VaesenInteractionComponent.h"
 #include "Items/VaesenItem.h"
 #include "Items/VaesenPickup.h"
+#include "Items/VaesenIngredientItem.h"
+#include "Items/VaesenPouchItem.h"
+#include "GameplayTagContainer.h"
 #include "Inventory/VaesenInventoryComponent.h"
 #include "Inventory/VaesenLootContainer.h"
 #include "MaterialEditingLibrary.h"
@@ -1249,6 +1252,99 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 			Finish(Blueprint);
 		}
 	}
+
+	const TCHAR* HerbPouchPath = TEXT("/Game/Vaesen/Blueprints/Items/BP_Item_HerbPouch");
+	const TCHAR* YarrowPath = TEXT("/Game/Vaesen/Blueprints/Items/Herbs/BP_Item_Yarrow");
+
+	/** A pickup Blueprint of Quantity x ItemClass, scaled down from a basic shape, with its card just above it. */
+	void CreateTestPickup(const TCHAR* PackagePath, UClass* ItemClass, int32 Quantity, UStaticMesh* Mesh, const FVector& Scale)
+	{
+		UBlueprint* Blueprint = CreateActorBlueprint(PackagePath, AVaesenPickup::StaticClass());
+		if (!Blueprint || !ItemClass)
+		{
+			return;
+		}
+		AVaesenPickup* Defaults = CastChecked<AVaesenPickup>(Blueprint->GeneratedClass->GetDefaultObject());
+		SetDefault(Defaults, TEXT("ItemTemplate"), ItemClass);
+		if (FIntProperty* QuantityProperty = FindFProperty<FIntProperty>(Defaults->GetClass(), TEXT("Quantity")))
+		{
+			QuantityProperty->SetPropertyValue_InContainer(Defaults, Quantity);
+		}
+		Defaults->GetRootComponent()->SetRelativeScale3D(Scale);
+		if (UStaticMeshComponent* MeshComponent = Cast<UStaticMeshComponent>(Defaults->GetRootComponent()))
+		{
+			MeshComponent->SetStaticMesh(Mesh);
+		}
+		if (const FObjectPropertyBase* Property = FindFProperty<FObjectPropertyBase>(Defaults->GetClass(), TEXT("InteractionComponent")))
+		{
+			if (USceneComponent* Card = Cast<USceneComponent>(Property->GetObjectPropertyValue_InContainer(Defaults)))
+			{
+				// 30 cm above the pickup's centre, whatever its scale.
+				Card->SetRelativeLocation(FVector(0.0, 0.0, 30.0 / FMath::Max(Scale.Z, 0.01)));
+			}
+		}
+		Finish(Blueprint);
+	}
+
+	/**
+	 * Pouches: BP_Item_HerbPouch (4 slots, takes Item.Herb), BP_Item_Yarrow (a herb), and pickups of both. Also keeps
+	 * BP_Item_LampOil stackable now that plain items aren't by default.
+	 */
+	void SetupPouches()
+	{
+		const FGameplayTag HerbTag = FGameplayTag::RequestGameplayTag(TEXT("Item.Herb"), false);
+		if (!HerbTag.IsValid())
+		{
+			UE_LOG(LogVaesenCreateWidgets, Warning, TEXT("Gameplay tag Item.Herb is missing (Config/DefaultGameplayTags.ini)."));
+		}
+
+		if (UBlueprint* Blueprint = CreateActorBlueprint(HerbPouchPath, UVaesenPouchItem::StaticClass()))
+		{
+			UVaesenPouchItem* Defaults = CastChecked<UVaesenPouchItem>(Blueprint->GeneratedClass->GetDefaultObject());
+			Defaults->ItemName = LOCTEXT("HerbPouchName", "Herb pouch");
+			Defaults->Description = LOCTEXT("HerbPouchDescription", "A small leather pouch. Herbs you pick go in here while there's room.");
+			Defaults->PickupMesh = Cast<UStaticMesh>(LoadAsset(TEXT("/Engine/BasicShapes/Sphere.Sphere")));
+			Defaults->Weight = 0.2f;
+			Defaults->PouchSlots = 4;
+			if (HerbTag.IsValid())
+			{
+				Defaults->AcceptedItemTags.AddTag(HerbTag);
+			}
+			Finish(Blueprint);
+		}
+
+		if (UBlueprint* Blueprint = CreateActorBlueprint(YarrowPath, UVaesenIngredientItem::StaticClass()))
+		{
+			UVaesenIngredientItem* Defaults = CastChecked<UVaesenIngredientItem>(Blueprint->GeneratedClass->GetDefaultObject());
+			Defaults->ItemName = LOCTEXT("YarrowName", "Yarrow");
+			Defaults->Description = LOCTEXT("YarrowDescription", "A white-flowered herb, good for wounds.");
+			Defaults->PickupMesh = Cast<UStaticMesh>(LoadAsset(TEXT("/Engine/BasicShapes/Cone.Cone")));
+			Defaults->Weight = 0.05f;
+			if (HerbTag.IsValid())
+			{
+				Defaults->ItemTags.AddTag(HerbTag);
+			}
+			Finish(Blueprint);
+		}
+
+		CreateTestPickup(TEXT("/Game/Vaesen/Blueprints/Interaction/BP_Pickup_HerbPouch"), LoadBlueprintClass(HerbPouchPath), 1,
+			Cast<UStaticMesh>(LoadAsset(TEXT("/Engine/BasicShapes/Sphere.Sphere"))), FVector(0.2));
+		CreateTestPickup(TEXT("/Game/Vaesen/Blueprints/Interaction/BP_Pickup_Yarrow"), LoadBlueprintClass(YarrowPath), 3,
+			Cast<UStaticMesh>(LoadAsset(TEXT("/Engine/BasicShapes/Cone.Cone"))), FVector(0.15, 0.15, 0.25));
+
+		// Plain items used to stack by default; lamp oil should keep doing so.
+		const FString LampOilObject = FString(TestItemPath) + TEXT(".") + FPackageName::GetShortName(TestItemPath);
+		if (UBlueprint* LampOil = LoadObject<UBlueprint>(nullptr, *LampOilObject))
+		{
+			UVaesenItem* Defaults = CastChecked<UVaesenItem>(LampOil->GeneratedClass->GetDefaultObject());
+			if (!Defaults->bStackable)
+			{
+				Defaults->bStackable = true;
+				Defaults->MaxStackSize = 10;
+				Finish(LampOil);
+			}
+		}
+	}
 }
 
 UVaesenCreateWidgetsCommandlet::UVaesenCreateWidgetsCommandlet()
@@ -1275,6 +1371,7 @@ int32 UVaesenCreateWidgetsCommandlet::Main(const FString& Params)
 	SetupInteraction();
 	SetupPickups();
 	SetupInventory();
+	SetupPouches();
 	return 0;
 }
 

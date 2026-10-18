@@ -60,17 +60,39 @@ void AVaesenPickup::InitializePickup(TSubclassOf<UVaesenItem> Template, int32 In
 		return;
 	}
 
+	SetItem(Template->GetDefaultObject<UVaesenItem>()->DuplicateItem(this, InQuantity));
+}
+
+void AVaesenPickup::InitializePickupFromItem(const UVaesenItem* Source, int32 InQuantity)
+{
+	if (HasAuthority() && Source)
+	{
+		SetItem(Source->DuplicateItem(this, InQuantity));
+	}
+}
+
+void AVaesenPickup::SetItem(UVaesenItem* NewItem)
+{
+	const auto ForEachReplicated = [](UVaesenItem* Root, TFunctionRef<void(UVaesenItem*)> Function)
+	{
+		TArray<UVaesenItem*> Items{ Root };
+		Root->GetNestedItems(Items);
+		for (UVaesenItem* Each : Items)
+		{
+			Function(Each);
+		}
+	};
+
 	if (Item)
 	{
 		Item->OnItemModified.RemoveDynamic(this, &AVaesenPickup::UpdateFromItem);
-		RemoveReplicatedSubObject(Item);
+		ForEachReplicated(Item, [this](UVaesenItem* Each) { RemoveReplicatedSubObject(Each); });
 	}
 
-	ItemTemplate = Template;
-	Item = NewObject<UVaesenItem>(this, Template);
-	Item->SetQuantity(InQuantity);
+	Item = NewItem;
+	ItemTemplate = Item->GetClass();
 	Quantity = Item->GetQuantity();
-	AddReplicatedSubObject(Item);
+	ForEachReplicated(Item, [this](UVaesenItem* Each) { AddReplicatedSubObject(Each); });
 	Item->OnItemModified.AddDynamic(this, &AVaesenPickup::UpdateFromItem);
 	UpdateFromItem();
 }

@@ -5,6 +5,7 @@
 UVaesenConsumableItem::UVaesenConsumableItem()
 {
 	UseActionText = LOCTEXT("ConsumableUse", "Consume");
+	bStackable = true;
 	MaxStackSize = 10;
 }
 

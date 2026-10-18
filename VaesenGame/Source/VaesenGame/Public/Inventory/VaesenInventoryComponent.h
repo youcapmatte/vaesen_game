@@ -7,6 +7,7 @@
 class AVaesenPickup;
 class AVaesenPlayerCharacter;
 class UVaesenItem;
+class UVaesenPouchItem;
 
 UENUM(BlueprintType)
 enum class EVaesenAddItemOutcome : uint8
@@ -57,6 +58,10 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FVaesenContainerOpened, UVaesenInven
  * A slot-based inventory that can go on any actor: the player, a chest, a corpse, a cart. Each slot holds one item
  * stack (or nothing); stacks of the same item merge up to the item's stack size, and the total weight can be
  * limited. Items are instances owned by this actor and replicate as its subobjects, so everyone sees the contents.
+ *
+ * Pouches (UVaesenPouchItem) in the slots hold items of their own: new items go into a pouch that accepts them
+ * first, and only take a slot when no pouch has room. Counting and removing items (GetItemCount,
+ * RemoveItemsOfClass) include what's in pouches.
  *
  * Changes happen on the server. A player changes inventories through their own inventory's Request functions
  * (move, split, use, drop), which go to the server and are checked there: a player may touch their own inventory
@@ -120,7 +125,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Inventory")
 	int32 GetUsedSlotCount() const;
 
-	/** How many of this kind of item it holds, across stacks. */
+	/** How many of this kind of item it holds, across stacks (pouches included). */
 	UFUNCTION(BlueprintPure, Category = "Inventory")
 	int32 GetItemCount(TSubclassOf<UVaesenItem> ItemClass) const;
 
@@ -149,16 +154,21 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory")
 	int32 RemoveItem(UVaesenItem* Item, int32 Quantity = -1);
 
-	/** Takes Quantity of ItemClass, from any stacks. Returns how many were taken. */
+	/** Takes Quantity of ItemClass, from any stacks (pouches included). Returns how many were taken. */
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory")
 	int32 RemoveItemsOfClass(TSubclassOf<UVaesenItem> ItemClass, int32 Quantity = 1);
 
 	/**
 	 * Moves Amount (-1 = the whole stack) from a slot here to a slot in To (which may be this inventory). Into an
 	 * empty slot: moves or splits. Onto the same item: merges as far as the stack allows. Onto another item: swaps
-	 * (whole stacks only). ToIndex -1: wherever it fits. Returns whether anything changed.
+	 * (whole stacks only), unless it's a pouch that takes it: then it goes inside. ToIndex -1: wherever it fits.
+	 * Returns whether anything changed.
 	 */
 	bool MoveItem(int32 FromIndex, UVaesenInventoryComponent* To, int32 ToIndex, int32 Amount = -1);
+
+	/** Tips a pouch's contents out into this inventory's slots, as far as they fit. */
+	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory")
+	void EmptyPouch(UVaesenPouchItem* Pouch);
 
 	/** Uses the item in a slot for Character (eats it, reads it...). Used-up consumables leave the stack. */
 	bool UseItem(int32 SlotIndex, AVaesenPlayerCharacter* Character);
@@ -206,13 +216,26 @@ private:
 	/** A new stack in this inventory: a copy of Template with Quantity. */
 	UVaesenItem* MakeStack(const UVaesenItem* Template, int32 Quantity);
 
+	/** Starts (or stops) replicating Item and anything inside it as this actor's subobjects. */
+	void RegisterItem(UVaesenItem* Item);
+	void UnregisterItem(UVaesenItem* Item);
+
 	/** Puts Item (owned by this actor) in a slot, or empties it (null), keeping replication in step. */
 	void SetSlot(int32 SlotIndex, UVaesenItem* Item);
 
+	/** The same for a slot inside a pouch. */
+	void SetPouchSlot(UVaesenPouchItem* Pouch, int32 SlotIndex, UVaesenItem* Item);
+
 	int32 FindEmptySlot() const;
 
-	/** Adds up to Quantity copies of Template; returns how many. */
-	int32 AddInternal(const UVaesenItem* Template, int32 Quantity, FText& OutError);
+	/** Where Item is: a slot here (OutPouch null), or a slot inside a pouch here. False if it's not in this inventory. */
+	bool FindItem(const UVaesenItem* Item, UVaesenPouchItem*& OutPouch, int32& OutSlotIndex) const;
+
+	/** Adds up to Quantity copies of Template into a pouch (topping up stacks first); returns how many. */
+	int32 AddToPouch(UVaesenPouchItem* Pouch, const UVaesenItem* Template, int32 Quantity);
+
+	/** Adds up to Quantity copies of Template (into pouches first if bIntoPouches); returns how many. */
+	int32 AddInternal(const UVaesenItem* Template, int32 Quantity, FText& OutError, bool bIntoPouches = true);
 
 	UFUNCTION(Server, Reliable)
 	void ServerMoveItem(UVaesenInventoryComponent* From, int32 FromIndex, UVaesenInventoryComponent* To, int32 ToIndex, int32 Amount);

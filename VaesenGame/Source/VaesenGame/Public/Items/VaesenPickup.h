@@ -37,6 +37,9 @@ public:
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Pickup")
 	void InitializePickup(TSubclassOf<UVaesenItem> Template, int32 InQuantity);
 
+	/** Server: makes this pickup hold a copy of Source (Quantity of it), contents and all, e.g. a dropped pouch. */
+	void InitializePickupFromItem(const UVaesenItem* Source, int32 InQuantity);
+
 	/** The item instance (null until the server has created it). */
 	UFUNCTION(BlueprintPure, Category = "Pickup")
 	UVaesenItem* GetItem() const { return Item; }
@@ -63,6 +66,9 @@ protected:
 	TObjectPtr<UVaesenInteractionComponent> InteractionComponent;
 
 private:
+	/** Holds NewItem from now on, replicating it (and what's inside it). */
+	void SetItem(UVaesenItem* NewItem);
+
 	/** Mesh and card from the item (or the template's defaults before there is one). */
 	UFUNCTION()
 	void UpdateFromItem();

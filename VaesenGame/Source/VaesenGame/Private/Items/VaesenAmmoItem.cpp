@@ -2,5 +2,6 @@
 
 UVaesenAmmoItem::UVaesenAmmoItem()
 {
-	MaxStackSize = 50;
+	bStackable = true;
+	MaxStackSize = 10;
 }
