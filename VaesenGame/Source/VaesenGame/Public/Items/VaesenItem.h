@@ -1,10 +1,13 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayTagContainer.h"
 #include "UObject/Object.h"
 #include "VaesenItem.generated.h"
 
+class AVaesenPlayerCharacter;
 class UStaticMesh;
+class UTexture2D;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FVaesenItemModified);
 
@@ -12,6 +15,11 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FVaesenItemModified);
  * An item: what it is (name, description, look) and how many of it there are. Each kind of item is a Blueprint
  * subclass (e.g. BP_Item_Lantern) with its values set in Class Defaults; that class is the item's template.
  * Actual items in the world (in a pickup, later an inventory) are instances of it, with their own Quantity.
+ *
+ * Kinds of item (subclass when an item behaves differently, use properties and ItemTags for variants):
+ *   Equippable (slot, equip/unequip)  ->  Weapon, Armor (clothes too), Tool (lantern, spyglass...), Talisman,
+ *                                         Container (satchel, backpack)
+ *   Consumable (food, drink, medicine, poison), Ammo, Readable (letters, books, clues), Ingredient
  *
  * Instances are created with the actor that holds them as their outer (the pickup now, an inventory later) and
  * replicate as that actor's registered subobjects (see AVaesenPickup). Moving an item to another actor means a new
@@ -48,6 +56,34 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
 	TObjectPtr<UStaticMesh> PickupMesh;
 
+	/** Shown in the inventory. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
+	TObjectPtr<UTexture2D> Thumbnail;
+
+	/** Per item, in kilograms. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item", meta = (ClampMin = "0", Units = "kg"))
+	float Weight = 0.0f;
+
+	/** What one is worth when bought or sold. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item", meta = (ClampMin = "0"))
+	int32 Value = 0;
+
+	/** Traits shared across kinds of item, e.g. Item.Material.Iron (what a vaesen fears), Item.Light. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
+	FGameplayTagContainer ItemTags;
+
+	/** The verb for using it, e.g. "Eat", "Read", "Light". Empty = it can't be used on its own. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
+	FText UseActionText;
+
+	/** Needed for an investigation or quest: can't be dropped or sold. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
+	bool bQuestItem = false;
+
+	/** Off: it stays in the inventory (always off for quest items). */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item", meta = (EditCondition = "!bQuestItem"))
+	bool bCanBeDropped = true;
+
 	/** Several fit in one stack (up to MaxStackSize). Off: one per stack, and MaxStackSize is locked at 1. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
 	bool bStackable = true;
@@ -61,6 +97,18 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Item")
 	int32 GetQuantity() const { return Quantity; }
+
+	/** Weight of the whole stack. */
+	UFUNCTION(BlueprintPure, Category = "Item")
+	float GetStackWeight() const { return Weight * Quantity; }
+
+	/** Whether Character can use it now (has a use action by default). */
+	UFUNCTION(BlueprintNativeEvent, BlueprintPure, Category = "Item")
+	bool CanUse(const AVaesenPlayerCharacter* Character) const;
+
+	/** Uses it (eat, read, light...). Called on the server by the inventory; subclasses and Blueprints say what happens. */
+	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, BlueprintAuthorityOnly, Category = "Item")
+	void Use(AVaesenPlayerCharacter* Character);
 
 	/** Clamped to 1..GetMaxStack(). Server only (it replicates). */
 	UFUNCTION(BlueprintCallable, Category = "Item")

@@ -36,6 +36,15 @@ void UVaesenItem::SetQuantity(int32 NewQuantity)
 	}
 }
 
+bool UVaesenItem::CanUse_Implementation(const AVaesenPlayerCharacter* Character) const
+{
+	return Character && !UseActionText.IsEmpty();
+}
+
+void UVaesenItem::Use_Implementation(AVaesenPlayerCharacter* Character)
+{
+}
+
 void UVaesenItem::OnRep_Quantity()
 {
 	OnItemModified.Broadcast();
@@ -47,9 +56,16 @@ void UVaesenItem::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedE
 	Super::PostEditChangeProperty(PropertyChangedEvent);
 
 	// Not stackable: one per stack (MaxStackSize is greyed out in the details panel meanwhile).
-	if (PropertyChangedEvent.GetMemberPropertyName() == GET_MEMBER_NAME_CHECKED(UVaesenItem, bStackable) && !bStackable)
+	const FName Changed = PropertyChangedEvent.GetMemberPropertyName();
+	if (Changed == GET_MEMBER_NAME_CHECKED(UVaesenItem, bStackable) && !bStackable)
 	{
 		MaxStackSize = 1;
+	}
+
+	// Quest items never leave the inventory.
+	if (Changed == GET_MEMBER_NAME_CHECKED(UVaesenItem, bQuestItem) && bQuestItem)
+	{
+		bCanBeDropped = false;
 	}
 }
 #endif

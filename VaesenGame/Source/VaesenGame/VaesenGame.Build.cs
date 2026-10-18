@@ -8,7 +8,7 @@ public class VaesenGame : ModuleRules
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "AIModule", "UMG", "DeveloperSettings", "HTTP", "SlateCore" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "AIModule", "UMG", "DeveloperSettings", "HTTP", "SlateCore", "GameplayTags" });
 
 		PrivateDependencyModuleNames.AddRange(new string[] { "Slate", "Json", "JsonUtilities", "RenderCore", "RHI" });
 
