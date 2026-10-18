@@ -33,7 +33,7 @@ struct FVaesenItemAddResult
 	UPROPERTY(BlueprintReadOnly, Category = "Inventory")
 	EVaesenAddItemOutcome Result = EVaesenAddItemOutcome::None;
 
-	/** Why not everything fit, e.g. "Too heavy". */
+	/** Why not everything fit, e.g. "Inventory full". */
 	UPROPERTY(BlueprintReadOnly, Category = "Inventory")
 	FText ErrorText;
 };
@@ -55,9 +55,13 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FVaesenInventoryUpdated);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FVaesenContainerOpened, UVaesenInventoryComponent*, Container);
 
 /**
- * A slot-based inventory that can go on any actor: the player, a chest, a corpse, a cart. Each slot holds one item
- * stack (or nothing); stacks of the same item merge up to the item's stack size, and the total weight can be
- * limited. Items are instances owned by this actor and replicate as its subobjects, so everyone sees the contents.
+ * A slot-based inventory that can go on any actor: the player, a chest, a corpse, a cart. It holds item stacks; each
+ * stack takes its item's SlotSize in slots (0 = none, however many are in it), and the stacks together may take up
+ * to Capacity slots (-1 = unlimited). Stacks of the same item merge up to the item's stack size. Items are instances
+ * owned by this actor and replicate as its subobjects, so everyone sees the contents.
+ *
+ * The stacks are kept in a list of positions (GetSlots) so the player can arrange them; a moved or used-up stack
+ * leaves a gap (null) that new stacks fill first. Positions aren't capacity: capacity is counted in slot sizes.
  *
  * Pouches (UVaesenPouchItem) in the slots hold items of their own: new items go into a pouch that accepts them
  * first, and only take a slot when no pouch has room. Counting and removing items (GetItemCount,
@@ -84,12 +88,9 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory")
 	FText DisplayName;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory", meta = (ClampMin = "1", ClampMax = "200"))
+	/** How many slots the stacks in it may take together. -1 = unlimited (e.g. a storage chest). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory", meta = (ClampMin = "-1", ClampMax = "500"))
 	int32 Capacity = 20;
-
-	/** Most it can hold, in kg. 0 = no limit (e.g. a chest). */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory", meta = (ClampMin = "0", Units = "kg"))
-	float WeightCapacity = 0.0f;
 
 	/** Other players may take from and put into it (a chest). Off: only the owning actor (a player's own). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory")
@@ -109,7 +110,7 @@ public:
 
 	// --- Reading ---
 
-	/** One entry per slot; null = empty. */
+	/** The stacks by position; null = a gap. Not one entry per slot of capacity (see GetUsedSlotCount). */
 	UFUNCTION(BlueprintPure, Category = "Inventory")
 	const TArray<UVaesenItem*>& GetSlots() const { return ObjectPtrDecay(Slots); }
 
@@ -119,11 +120,24 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Inventory")
 	int32 FindSlotOf(const UVaesenItem* Item) const;
 
+	/** Total weight of everything in it (information only; capacity is in slots). */
 	UFUNCTION(BlueprintPure, Category = "Inventory")
 	float GetCurrentWeight() const;
 
+	/** Slots taken: the stacks' slot sizes added up. */
 	UFUNCTION(BlueprintPure, Category = "Inventory")
 	int32 GetUsedSlotCount() const;
+
+	UFUNCTION(BlueprintPure, Category = "Inventory")
+	bool HasUnlimitedCapacity() const { return Capacity < 0; }
+
+	/** Slots still free; -1 when unlimited. */
+	UFUNCTION(BlueprintPure, Category = "Inventory")
+	int32 GetFreeSlotCount() const;
+
+	/** Whether a new stack of Item fits, after FreedSlots are given up (e.g. by a stack leaving in a swap). */
+	UFUNCTION(BlueprintPure, Category = "Inventory")
+	bool HasRoomFor(const UVaesenItem* Item, int32 FreedSlots = 0) const;
 
 	/** How many of this kind of item it holds, across stacks (pouches included). */
 	UFUNCTION(BlueprintPure, Category = "Inventory")
@@ -142,7 +156,7 @@ public:
 
 	// --- Changing (server) ---
 
-	/** Adds Quantity of ItemClass: onto existing stacks first, then into empty slots, as weight allows. */
+	/** Adds Quantity of ItemClass: into pouches, onto existing stacks, then as new stacks while there's room. */
 	UFUNCTION(BlueprintCallable, BlueprintAuthorityOnly, Category = "Inventory")
 	FVaesenItemAddResult TryAddItemOfClass(TSubclassOf<UVaesenItem> ItemClass, int32 Quantity = 1);
 
@@ -159,8 +173,8 @@ public:
 	int32 RemoveItemsOfClass(TSubclassOf<UVaesenItem> ItemClass, int32 Quantity = 1);
 
 	/**
-	 * Moves Amount (-1 = the whole stack) from a slot here to a slot in To (which may be this inventory). Into an
-	 * empty slot: moves or splits. Onto the same item: merges as far as the stack allows. Onto another item: swaps
+	 * Moves Amount (-1 = the whole stack) from a position here to a position in To (which may be this inventory; a
+	 * position past the last stack is an empty one). Into an empty position: moves or splits. Onto the same item: merges as far as the stack allows. Onto another item: swaps
 	 * (whole stacks only), unless it's a pouch that takes it: then it goes inside. ToIndex -1: wherever it fits.
 	 * Returns whether anything changed.
 	 */
@@ -210,9 +224,6 @@ protected:
 private:
 	AVaesenPlayerCharacter* GetOwningCharacter() const;
 
-	/** How many of Item more the weight limit allows (MAX_int32 = no limit). */
-	int32 GetWeightRoomFor(const UVaesenItem* Item) const;
-
 	/** A new stack in this inventory: a copy of Template with Quantity. */
 	UVaesenItem* MakeStack(const UVaesenItem* Template, int32 Quantity);
 
@@ -220,18 +231,26 @@ private:
 	void RegisterItem(UVaesenItem* Item);
 	void UnregisterItem(UVaesenItem* Item);
 
-	/** Puts Item (owned by this actor) in a slot, or empties it (null), keeping replication in step. */
+	/**
+	 * Puts Item (owned by this actor) at a position, or empties it (null), keeping replication in step. Positions
+	 * past the end are added; gaps at the end are dropped.
+	 */
 	void SetSlot(int32 SlotIndex, UVaesenItem* Item);
 
-	/** The same for a slot inside a pouch. */
-	void SetPouchSlot(UVaesenPouchItem* Pouch, int32 SlotIndex, UVaesenItem* Item);
+	/** Adds Item (owned by this actor) to a pouch here, or takes one out, keeping replication in step. */
+	void AddToPouchContents(UVaesenPouchItem* Pouch, UVaesenItem* Item);
+	void RemoveFromPouchContents(UVaesenPouchItem* Pouch, UVaesenItem* Item);
 
+	/** Where a new stack goes: the first gap, or a new position at the end. */
 	int32 FindEmptySlot() const;
+
+	/** Highest position a player may name (a little past the end, for the UI's empty cells). */
+	int32 GetMaxPosition() const { return Slots.Num() + 200; }
 
 	/** Where Item is: a slot here (OutPouch null), or a slot inside a pouch here. False if it's not in this inventory. */
 	bool FindItem(const UVaesenItem* Item, UVaesenPouchItem*& OutPouch, int32& OutSlotIndex) const;
 
-	/** Adds up to Quantity copies of Template into a pouch (topping up stacks first); returns how many. */
+	/** Adds up to Quantity copies of Template into a pouch (topping up stacks first, then while it has room); returns how many. */
 	int32 AddToPouch(UVaesenPouchItem* Pouch, const UVaesenItem* Template, int32 Quantity);
 
 	/** Adds up to Quantity copies of Template (into pouches first if bIntoPouches); returns how many. */

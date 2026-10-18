@@ -101,6 +101,13 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item", meta = (ClampMin = "1", EditCondition = "bStackable"))
 	int32 MaxStackSize = 1;
 
+	/**
+	 * Inventory slots one stack of it takes, however many are in the stack (a rifle might take 3, a ring 1).
+	 * 0: it takes no room at all, so any number can be carried (letters, coins, keys).
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item", meta = (ClampMin = "0", ClampMax = "20"))
+	int32 SlotSize = 1;
+
 	/** Most that fit in one stack: MaxStackSize, or 1 when not stackable. */
 	UFUNCTION(BlueprintPure, Category = "Item")
 	int32 GetMaxStack() const { return bStackable ? FMath::Max(MaxStackSize, 1) : 1; }

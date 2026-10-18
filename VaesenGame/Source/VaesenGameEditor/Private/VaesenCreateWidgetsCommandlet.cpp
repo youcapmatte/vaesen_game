@@ -1126,17 +1126,7 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 		Grid->SetSlotPadding(FMargin(2.0f));
 		FBuilder::AddRow(Content, Grid, 10.0f);
 
-		UProgressBar* WeightBar = Build.Make<UProgressBar>(TEXT("WeightBar"));
-		WeightBar->SetFillColorAndOpacity(BrassBright);
-		FProgressBarStyle BarStyle = WeightBar->GetWidgetStyle();
-		BarStyle.BackgroundImage.TintColor = FSlateColor(FLinearColor(0.0f, 0.0f, 0.0f, 0.6f));
-		WeightBar->SetWidgetStyle(BarStyle);
-		USizeBox* BarSize = Build.Make<USizeBox>();
-		BarSize->SetHeightOverride(6.0f);
-		BarSize->SetContent(WeightBar);
-		FBuilder::AddRow(Content, BarSize, 4.0f);
-
-		UTextBlock* Weight = InventoryText(Build, TEXT("WeightText"), TEXT("0 / 40 kg"), 11, TEXT("Regular"), InventoryMuted);
+		UTextBlock* Weight = InventoryText(Build, TEXT("WeightText"), TEXT("0 kg"), 11, TEXT("Regular"), InventoryMuted);
 		FBuilder::AddRow(Content, Weight, 0.0f)->SetHorizontalAlignment(HAlign_Right);
 
 		FKismetEditorUtilities::CompileBlueprint(Blueprint);

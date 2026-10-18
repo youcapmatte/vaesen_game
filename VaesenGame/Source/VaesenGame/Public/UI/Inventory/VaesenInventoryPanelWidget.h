@@ -4,21 +4,20 @@
 #include "Blueprint/UserWidget.h"
 #include "VaesenInventoryPanelWidget.generated.h"
 
-class UProgressBar;
 class UTextBlock;
 class UUniformGridPanel;
 class UVaesenInventoryComponent;
 class UVaesenInventorySlotWidget;
 
 /**
- * One inventory as a grid of slots with its name, how full it is and its weight. Dropping an item on the panel
- * (not on a slot) puts it wherever it fits.
+ * One inventory as a grid: a cell per stack, then as many empty cells as there are free slots (one spare row when
+ * the inventory is unlimited). Shows its name, how full it is and its total weight. Dropping an item on the panel
+ * (not on a cell) puts it wherever it fits.
  *
  * Widget Blueprint (e.g. WBP_InventoryPanel, parent class VaesenInventoryPanelWidget), controls by these exact names:
  *   TitleText     (Text)               - the inventory's name
- *   CapacityText  (Text)               - used / total slots
- *   WeightText    (Text)               - "12.5 / 40 kg"; hidden when there's no weight limit
- *   WeightBar     (Progress Bar)       - hidden when there's no weight limit
+ *   CapacityText  (Text)               - used / total slots ("used / unlimited" when unlimited)
+ *   WeightText    (Text)               - total weight, for information; hidden when nothing weighs anything
  *   SlotGrid      (Uniform Grid Panel) - filled with SlotWidgetClass, Columns wide
  *
  * TEMPORARY: all bindings are BindWidgetOptional while the UI is being built. Make them BindWidget when it's done.
@@ -62,9 +61,6 @@ protected:
 	TObjectPtr<UTextBlock> WeightText;
 
 	UPROPERTY(meta = (BindWidgetOptional))
-	TObjectPtr<UProgressBar> WeightBar;
-
-	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UUniformGridPanel> SlotGrid;
 
 private:
@@ -73,6 +69,9 @@ private:
 	void Refresh();
 
 	void RebuildSlots();
+
+	/** How many cells to show: every position, plus empty ones for the free slots (a spare row when unlimited). */
+	int32 GetCellCount() const;
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UVaesenInventorySlotWidget>> SlotWidgets;

@@ -1,11 +1,11 @@
 #include "UI/Inventory/VaesenInventoryPanelWidget.h"
 
 #include "Characters/VaesenPlayerCharacter.h"
-#include "Components/ProgressBar.h"
 #include "Components/TextBlock.h"
 #include "Components/UniformGridPanel.h"
 #include "Components/UniformGridSlot.h"
 #include "Inventory/VaesenInventoryComponent.h"
+#include "Items/VaesenItem.h"
 #include "UI/Inventory/VaesenInventorySlotWidget.h"
 #include "UI/Inventory/VaesenItemDragDropOperation.h"
 
@@ -63,8 +63,8 @@ void UVaesenInventoryPanelWidget::RebuildSlots()
 		return;
 	}
 
-	const int32 SlotCount = Inventory->GetSlots().Num();
-	for (int32 SlotIndex = 0; SlotIndex < SlotCount; ++SlotIndex)
+	const int32 CellCount = GetCellCount();
+	for (int32 SlotIndex = 0; SlotIndex < CellCount; ++SlotIndex)
 	{
 		UVaesenInventorySlotWidget* SlotWidget = CreateWidget<UVaesenInventorySlotWidget>(GetOwningPlayer(), SlotWidgetClass);
 		SlotWidget->SetSlot(Inventory, SlotIndex);
@@ -74,6 +74,35 @@ void UVaesenInventoryPanelWidget::RebuildSlots()
 	}
 }
 
+int32 UVaesenInventoryPanelWidget::GetCellCount() const
+{
+	if (!Inventory)
+	{
+		return 0;
+	}
+
+	const TArray<UVaesenItem*>& Positions = Inventory->GetSlots();
+	int32 Gaps = 0;
+	for (const UVaesenItem* Item : Positions)
+	{
+		Gaps += Item ? 0 : 1;
+	}
+
+	int32 Cells;
+	if (Inventory->HasUnlimitedCapacity())
+	{
+		// Always a free row to drop into.
+		Cells = Positions.Num() + Columns;
+		Cells = FMath::DivideAndRoundUp(Cells, Columns) * Columns;
+	}
+	else
+	{
+		// Gaps already count as empty cells.
+		Cells = Positions.Num() + FMath::Max(0, Inventory->GetFreeSlotCount() - Gaps);
+	}
+	return FMath::Max(Cells, 1);
+}
+
 void UVaesenInventoryPanelWidget::Refresh()
 {
 	if (!Inventory)
@@ -81,8 +110,8 @@ void UVaesenInventoryPanelWidget::Refresh()
 		return;
 	}
 
-	// The slots arrive from the server after the panel may already be up.
-	if (SlotWidgets.Num() != Inventory->GetSlots().Num())
+	// Stacks come and go (and arrive from the server after the panel may already be up).
+	if (SlotWidgets.Num() != GetCellCount())
 	{
 		RebuildSlots();
 	}
@@ -97,23 +126,19 @@ void UVaesenInventoryPanelWidget::Refresh()
 	}
 	if (CapacityText)
 	{
-		CapacityText->SetText(FText::Format(LOCTEXT("Capacity", "{0} / {1}"), FText::AsNumber(Inventory->GetUsedSlotCount()), FText::AsNumber(Inventory->GetSlots().Num())));
+		CapacityText->SetText(Inventory->HasUnlimitedCapacity()
+			? FText::Format(LOCTEXT("CapacityUnlimited", "{0} / unlimited"), FText::AsNumber(Inventory->GetUsedSlotCount()))
+			: FText::Format(LOCTEXT("Capacity", "{0} / {1}"), FText::AsNumber(Inventory->GetUsedSlotCount()), FText::AsNumber(Inventory->Capacity)));
 	}
 
-	const bool bWeightLimit = Inventory->WeightCapacity > 0.0f;
 	const float Weight = Inventory->GetCurrentWeight();
 	if (WeightText)
 	{
 		FNumberFormattingOptions OneDecimal;
 		OneDecimal.MinimumFractionalDigits = 0;
 		OneDecimal.MaximumFractionalDigits = 1;
-		WeightText->SetText(FText::Format(LOCTEXT("Weight", "{0} / {1} kg"), FText::AsNumber(Weight, &OneDecimal), FText::AsNumber(Inventory->WeightCapacity, &OneDecimal)));
-		WeightText->SetVisibility(bWeightLimit ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
-	}
-	if (WeightBar)
-	{
-		WeightBar->SetPercent(bWeightLimit ? FMath::Clamp(Weight / Inventory->WeightCapacity, 0.0f, 1.0f) : 0.0f);
-		WeightBar->SetVisibility(bWeightLimit ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
+		WeightText->SetText(FText::Format(LOCTEXT("Weight", "{0} kg"), FText::AsNumber(Weight, &OneDecimal)));
+		WeightText->SetVisibility(Weight > 0.0f ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
 	}
 }
 

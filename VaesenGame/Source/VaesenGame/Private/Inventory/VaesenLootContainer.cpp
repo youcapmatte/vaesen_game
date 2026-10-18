@@ -26,7 +26,7 @@ AVaesenLootContainer::AVaesenLootContainer()
 	InteractionComponent->InteractionTime = 0.5f;
 
 	Inventory = CreateDefaultSubobject<UVaesenInventoryComponent>(TEXT("Inventory"));
-	Inventory->Capacity = 12;
+	Inventory->Capacity = -1;
 	Inventory->bAccessibleByOthers = true;
 }
 

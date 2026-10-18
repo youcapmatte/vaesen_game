@@ -95,6 +95,11 @@ void UVaesenItemTooltipWidget::UpdateTooltip_Implementation()
 			? FText::Format(LOCTEXT("WeightStack", "Weight {0} kg ({1} kg)"), FText::AsNumber(Item->Weight, &OneDecimal), FText::AsNumber(Item->GetStackWeight(), &OneDecimal))
 			: FText::Format(LOCTEXT("Weight", "Weight {0} kg"), FText::AsNumber(Item->Weight, &OneDecimal)));
 	}
+	if (Item->SlotSize != 1)
+	{
+		Lines.Add(Item->SlotSize == 0 ? LOCTEXT("NoSlots", "Takes no space")
+			: FText::Format(LOCTEXT("Slots", "Takes {0} slots"), FText::AsNumber(Item->SlotSize)));
+	}
 	if (Item->Value > 0)
 	{
 		Lines.Add(FText::Format(LOCTEXT("Value", "Value {0}"), FText::AsNumber(Item->Value)));

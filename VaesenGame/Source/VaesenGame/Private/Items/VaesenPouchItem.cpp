@@ -40,9 +40,14 @@ int32 UVaesenPouchItem::GetUsedPouchSlots() const
 	int32 Used = 0;
 	for (const UVaesenItem* Item : Contents)
 	{
-		Used += Item ? 1 : 0;
+		Used += Item ? Item->SlotSize : 0;
 	}
 	return Used;
+}
+
+bool UVaesenPouchItem::HasRoomFor(const UVaesenItem* Item) const
+{
+	return Accepts(Item) && (Item->SlotSize <= 0 || GetUsedPouchSlots() + Item->SlotSize <= PouchSlots);
 }
 
 int32 UVaesenPouchItem::GetContentCount() const
@@ -82,41 +87,33 @@ UVaesenItem* UVaesenPouchItem::DuplicateItem(UObject* NewOuter, int32 NewQuantit
 
 	// The copy shares the original's contents until each is copied too.
 	Copy->Contents.Reset();
-	Copy->Contents.SetNum(PouchSlots);
-	for (int32 SlotIndex = 0; SlotIndex < Contents.Num() && SlotIndex < PouchSlots; ++SlotIndex)
+	for (const UVaesenItem* Item : Contents)
 	{
-		if (const UVaesenItem* Item = Contents[SlotIndex])
+		if (Item)
 		{
-			Copy->Contents[SlotIndex] = Item->DuplicateItem(NewOuter, Item->GetQuantity());
+			Copy->Contents.Add(Item->DuplicateItem(NewOuter, Item->GetQuantity()));
 		}
 	}
 	return Copy;
 }
 
-void UVaesenPouchItem::EnsurePouchSlots()
+void UVaesenPouchItem::AddContent(UVaesenItem* Item)
 {
-	if (Contents.Num() != PouchSlots)
+	if (Item)
 	{
-		Contents.SetNum(PouchSlots);
+		Contents.Add(Item);
+		Item->SetOwningInventory(GetOwningInventory());
 	}
 }
 
-void UVaesenPouchItem::SetPouchSlot(int32 SlotIndex, UVaesenItem* Item)
+bool UVaesenPouchItem::RemoveContent(UVaesenItem* Item)
 {
-	EnsurePouchSlots();
-	if (Contents.IsValidIndex(SlotIndex))
-	{
-		Contents[SlotIndex] = Item;
-		if (Item)
-		{
-			Item->SetOwningInventory(GetOwningInventory());
-		}
-	}
+	return Contents.Remove(Item) > 0;
 }
 
 bool UVaesenPouchItem::CanUse_Implementation(const AVaesenPlayerCharacter* Character) const
 {
-	return Character && GetUsedPouchSlots() > 0;
+	return Character && Contents.Num() > 0;
 }
 
 void UVaesenPouchItem::Use_Implementation(AVaesenPlayerCharacter* Character)

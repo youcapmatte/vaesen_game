@@ -53,12 +53,6 @@ void UVaesenInventoryComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// Empty slots everywhere at first (clients get the real contents from the server).
-	if (Slots.Num() != Capacity)
-	{
-		Slots.SetNum(Capacity);
-	}
-
 	if (GetOwner()->HasAuthority())
 	{
 		for (const FVaesenItemStack& Stack : StartingItems)
@@ -98,9 +92,23 @@ int32 UVaesenInventoryComponent::GetUsedSlotCount() const
 	int32 Used = 0;
 	for (const UVaesenItem* Item : Slots)
 	{
-		Used += Item ? 1 : 0;
+		Used += Item ? Item->SlotSize : 0;
 	}
 	return Used;
+}
+
+int32 UVaesenInventoryComponent::GetFreeSlotCount() const
+{
+	return HasUnlimitedCapacity() ? -1 : FMath::Max(0, Capacity - GetUsedSlotCount());
+}
+
+bool UVaesenInventoryComponent::HasRoomFor(const UVaesenItem* Item, int32 FreedSlots) const
+{
+	if (!Item)
+	{
+		return false;
+	}
+	return HasUnlimitedCapacity() || Item->SlotSize <= 0 || GetUsedSlotCount() - FreedSlots + Item->SlotSize <= Capacity;
 }
 
 int32 UVaesenInventoryComponent::GetItemCount(TSubclassOf<UVaesenItem> ItemClass) const
@@ -156,26 +164,9 @@ AVaesenPlayerCharacter* UVaesenInventoryComponent::GetOwningCharacter() const
 
 // --- Changing ---
 
-int32 UVaesenInventoryComponent::GetWeightRoomFor(const UVaesenItem* Item) const
-{
-	// Per item, including anything inside it (a full pouch weighs more than an empty one).
-	const float UnitWeight = Item ? Item->GetStackWeight() / FMath::Max(Item->GetQuantity(), 1) : 0.0f;
-	if (WeightCapacity <= 0.0f || UnitWeight <= 0.0f)
-	{
-		return MAX_int32;
-	}
-	const float Room = WeightCapacity - GetCurrentWeight();
-	return FMath::Max(0, FMath::FloorToInt32(Room / UnitWeight + KINDA_SMALL_NUMBER));
-}
-
 UVaesenItem* UVaesenInventoryComponent::MakeStack(const UVaesenItem* Template, int32 Quantity)
 {
-	UVaesenItem* Item = Template->DuplicateItem(GetOwner(), Quantity);
-	if (UVaesenPouchItem* Pouch = Cast<UVaesenPouchItem>(Item))
-	{
-		Pouch->EnsurePouchSlots();
-	}
-	return Item;
+	return Template->DuplicateItem(GetOwner(), Quantity);
 }
 
 void UVaesenInventoryComponent::RegisterItem(UVaesenItem* Item)
@@ -206,7 +197,19 @@ void UVaesenInventoryComponent::UnregisterItem(UVaesenItem* Item)
 
 void UVaesenInventoryComponent::SetSlot(int32 SlotIndex, UVaesenItem* Item)
 {
-	if (!Slots.IsValidIndex(SlotIndex) || Slots[SlotIndex] == Item)
+	if (SlotIndex < 0 || SlotIndex > GetMaxPosition())
+	{
+		return;
+	}
+	if (SlotIndex >= Slots.Num())
+	{
+		if (!Item)
+		{
+			return;
+		}
+		Slots.SetNum(SlotIndex + 1);
+	}
+	if (Slots[SlotIndex] == Item)
 	{
 		return;
 	}
@@ -220,28 +223,29 @@ void UVaesenInventoryComponent::SetSlot(int32 SlotIndex, UVaesenItem* Item)
 	{
 		RegisterItem(Item);
 	}
+
+	// No gaps at the end.
+	while (Slots.Num() > 0 && !Slots.Last())
+	{
+		Slots.Pop();
+	}
 	NotifyChanged();
 }
 
-void UVaesenInventoryComponent::SetPouchSlot(UVaesenPouchItem* Pouch, int32 SlotIndex, UVaesenItem* Item)
+void UVaesenInventoryComponent::AddToPouchContents(UVaesenPouchItem* Pouch, UVaesenItem* Item)
 {
-	Pouch->EnsurePouchSlots();
-	const TArray<UVaesenItem*>& Contents = Pouch->GetContents();
-	if (!Contents.IsValidIndex(SlotIndex) || Contents[SlotIndex] == Item)
-	{
-		return;
-	}
-
-	if (UVaesenItem* Old = Contents[SlotIndex])
-	{
-		UnregisterItem(Old);
-	}
-	Pouch->SetPouchSlot(SlotIndex, Item);
-	if (Item)
-	{
-		RegisterItem(Item);
-	}
+	Pouch->AddContent(Item);
+	RegisterItem(Item);
 	NotifyChanged();
+}
+
+void UVaesenInventoryComponent::RemoveFromPouchContents(UVaesenPouchItem* Pouch, UVaesenItem* Item)
+{
+	if (Pouch->RemoveContent(Item))
+	{
+		UnregisterItem(Item);
+		NotifyChanged();
+	}
 }
 
 bool UVaesenInventoryComponent::FindItem(const UVaesenItem* Item, UVaesenPouchItem*& OutPouch, int32& OutSlotIndex) const
@@ -274,7 +278,6 @@ int32 UVaesenInventoryComponent::AddToPouch(UVaesenPouchItem* Pouch, const UVaes
 	{
 		return 0;
 	}
-	Pouch->EnsurePouchSlots();
 
 	const int32 MaxStack = Template->GetMaxStack();
 	int32 Remaining = Quantity;
@@ -286,7 +289,7 @@ int32 UVaesenInventoryComponent::AddToPouch(UVaesenPouchItem* Pouch, const UVaes
 		{
 			break;
 		}
-		if (Inner && Inner->GetClass() == Template->GetClass() && Inner->GetQuantity() < MaxStack)
+		if (Inner->GetClass() == Template->GetClass() && Inner->GetQuantity() < MaxStack)
 		{
 			const int32 Amount = FMath::Min(Remaining, MaxStack - Inner->GetQuantity());
 			Inner->SetQuantity(Inner->GetQuantity() + Amount);
@@ -294,15 +297,12 @@ int32 UVaesenInventoryComponent::AddToPouch(UVaesenPouchItem* Pouch, const UVaes
 		}
 	}
 
-	// Then empty pouch slots.
-	for (int32 SlotIndex = 0; SlotIndex < Pouch->GetContents().Num() && Remaining > 0; ++SlotIndex)
+	// Then new stacks while the pouch has room.
+	while (Remaining > 0 && Pouch->HasRoomFor(Template))
 	{
-		if (!Pouch->GetContents()[SlotIndex])
-		{
-			const int32 Amount = FMath::Min(Remaining, MaxStack);
-			SetPouchSlot(Pouch, SlotIndex, MakeStack(Template, Amount));
-			Remaining -= Amount;
-		}
+		const int32 Amount = FMath::Min(Remaining, MaxStack);
+		AddToPouchContents(Pouch, MakeStack(Template, Amount));
+		Remaining -= Amount;
 	}
 	return Quantity - Remaining;
 }
@@ -316,19 +316,17 @@ void UVaesenInventoryComponent::EmptyPouch(UVaesenPouchItem* Pouch)
 
 	for (UVaesenItem* Inner : TArray<UVaesenItem*>(Pouch->GetContents()))
 	{
-		if (Inner)
-		{
-			// Into the slots (not back into a pouch); whatever doesn't fit stays in the pouch.
-			FText Error;
-			const int32 Moved = AddInternal(Inner, Inner->GetQuantity(), Error, false);
-			RemoveItem(Inner, Moved);
-		}
+		// Into the inventory (not back into a pouch); whatever doesn't fit stays in the pouch.
+		FText Error;
+		const int32 Moved = AddInternal(Inner, Inner->GetQuantity(), Error, false);
+		RemoveItem(Inner, Moved);
 	}
 }
 
 int32 UVaesenInventoryComponent::FindEmptySlot() const
 {
-	return Slots.IndexOfByPredicate([](const UVaesenItem* Item) { return Item == nullptr; });
+	const int32 Gap = Slots.IndexOfByPredicate([](const UVaesenItem* Item) { return Item == nullptr; });
+	return Gap != INDEX_NONE ? Gap : Slots.Num();
 }
 
 int32 UVaesenInventoryComponent::AddInternal(const UVaesenItem* Template, int32 Quantity, FText& OutError, bool bIntoPouches)
@@ -338,10 +336,8 @@ int32 UVaesenInventoryComponent::AddInternal(const UVaesenItem* Template, int32 
 		return 0;
 	}
 
-	const int32 WeightRoom = GetWeightRoomFor(Template);
-	int32 Remaining = FMath::Min(Quantity, WeightRoom);
+	int32 Remaining = Quantity;
 	const int32 MaxStack = Template->GetMaxStack();
-	int32 Given = 0;
 
 	// Into pouches that take it, so it doesn't use up slots.
 	if (bIntoPouches)
@@ -354,14 +350,12 @@ int32 UVaesenInventoryComponent::AddInternal(const UVaesenItem* Template, int32 
 			}
 			if (UVaesenPouchItem* Pouch = Cast<UVaesenPouchItem>(Item))
 			{
-				const int32 Amount = AddToPouch(Pouch, Template, Remaining);
-				Given += Amount;
-				Remaining -= Amount;
+				Remaining -= AddToPouch(Pouch, Template, Remaining);
 			}
 		}
 	}
 
-	// Top up stacks of the same item first.
+	// Top up stacks of the same item.
 	if (MaxStack > 1)
 	{
 		for (UVaesenItem* Item : Slots)
@@ -374,32 +368,25 @@ int32 UVaesenInventoryComponent::AddInternal(const UVaesenItem* Template, int32 
 			{
 				const int32 Amount = FMath::Min(Remaining, MaxStack - Item->GetQuantity());
 				Item->SetQuantity(Item->GetQuantity() + Amount);
-				Given += Amount;
 				Remaining -= Amount;
 			}
 		}
 	}
 
-	// Then new stacks in empty slots.
+	// Then new stacks while there's room (always, for items that take no slots).
 	while (Remaining > 0)
 	{
-		const int32 SlotIndex = FindEmptySlot();
-		if (SlotIndex == INDEX_NONE)
+		if (!HasRoomFor(Template))
 		{
 			OutError = LOCTEXT("Full", "Inventory full");
 			break;
 		}
 		const int32 Amount = FMath::Min(Remaining, MaxStack);
-		SetSlot(SlotIndex, MakeStack(Template, Amount));
-		Given += Amount;
+		SetSlot(FindEmptySlot(), MakeStack(Template, Amount));
 		Remaining -= Amount;
 	}
 
-	if (Given < Quantity && OutError.IsEmpty())
-	{
-		OutError = LOCTEXT("TooHeavy", "Too heavy");
-	}
-	return Given;
+	return Quantity - Remaining;
 }
 
 FVaesenItemAddResult UVaesenInventoryComponent::TryAddItemOfClass(TSubclassOf<UVaesenItem> ItemClass, int32 Quantity)
@@ -426,7 +413,7 @@ int32 UVaesenInventoryComponent::RemoveItem(UVaesenItem* Item, int32 Quantity)
 {
 	UVaesenPouchItem* Pouch = nullptr;
 	int32 SlotIndex = INDEX_NONE;
-	if (!GetOwner()->HasAuthority() || !FindItem(Item, Pouch, SlotIndex))
+	if (Quantity == 0 || !GetOwner()->HasAuthority() || !FindItem(Item, Pouch, SlotIndex))
 	{
 		return 0;
 	}
@@ -437,7 +424,7 @@ int32 UVaesenInventoryComponent::RemoveItem(UVaesenItem* Item, int32 Quantity)
 	{
 		if (Pouch)
 		{
-			SetPouchSlot(Pouch, SlotIndex, nullptr);
+			RemoveFromPouchContents(Pouch, Item);
 		}
 		else
 		{
@@ -453,7 +440,7 @@ int32 UVaesenInventoryComponent::RemoveItem(UVaesenItem* Item, int32 Quantity)
 
 int32 UVaesenInventoryComponent::RemoveItemsOfClass(TSubclassOf<UVaesenItem> ItemClass, int32 Quantity)
 {
-	// Pouch contents first (that's where the small things are), then the slots, last slot first.
+	// Pouch contents first (that's where the small things are), then the stacks, last first.
 	TArray<UVaesenItem*> Candidates;
 	for (UVaesenItem* Item : Slots)
 	{
@@ -510,45 +497,45 @@ bool UVaesenInventoryComponent::MoveItem(int32 FromIndex, UVaesenInventoryCompon
 		return Given > 0;
 	}
 
-	if (!To->Slots.IsValidIndex(ToIndex) || (bSameInventory && ToIndex == FromIndex))
+	if (ToIndex < 0 || ToIndex > To->GetMaxPosition() || (bSameInventory && ToIndex == FromIndex))
 	{
 		return false;
 	}
 
-	UVaesenItem* Target = To->Slots[ToIndex];
+	UVaesenItem* Target = To->GetItemAt(ToIndex);
 
-	// Into an empty slot: move, or split off Amount.
+	// Into an empty position: move, or split off Amount (a new stack, so it needs room).
 	if (!Target)
 	{
 		if (bSameInventory && Amount == SourceQuantity)
 		{
+			// Rearranging takes no extra room.
+			if (ToIndex >= Slots.Num())
+			{
+				Slots.SetNum(ToIndex + 1);
+			}
 			Slots[ToIndex] = Source;
 			Slots[FromIndex] = nullptr;
+			while (Slots.Num() > 0 && !Slots.Last())
+			{
+				Slots.Pop();
+			}
 			NotifyChanged();
 			return true;
 		}
-		const int32 Moving = bSameInventory ? Amount : FMath::Min(Amount, To->GetWeightRoomFor(Source));
-		if (Moving <= 0)
+		if (!To->HasRoomFor(Source))
 		{
 			return false;
 		}
-		To->SetSlot(ToIndex, To->MakeStack(Source, Moving));
-		RemoveItem(Source, Moving);
+		To->SetSlot(ToIndex, To->MakeStack(Source, Amount));
+		RemoveItem(Source, Amount);
 		return true;
 	}
 
 	// Onto the same item: merge as far as the stack allows.
 	if (Target->GetClass() == Source->GetClass() && Target->GetQuantity() < Target->GetMaxStack())
 	{
-		int32 Moving = FMath::Min(Amount, Target->GetMaxStack() - Target->GetQuantity());
-		if (!bSameInventory)
-		{
-			Moving = FMath::Min(Moving, To->GetWeightRoomFor(Source));
-		}
-		if (Moving <= 0)
-		{
-			return false;
-		}
+		const int32 Moving = FMath::Min(Amount, Target->GetMaxStack() - Target->GetQuantity());
 		Target->SetQuantity(Target->GetQuantity() + Moving);
 		RemoveItem(Source, Moving);
 		return true;
@@ -557,8 +544,7 @@ bool UVaesenInventoryComponent::MoveItem(int32 FromIndex, UVaesenInventoryCompon
 	// Onto a pouch that takes it: inside.
 	if (UVaesenPouchItem* Pouch = Cast<UVaesenPouchItem>(Target); Pouch && Pouch->Accepts(Source))
 	{
-		const int32 Moving = bSameInventory ? Amount : FMath::Min(Amount, To->GetWeightRoomFor(Source));
-		const int32 Stored = To->AddToPouch(Pouch, Source, Moving);
+		const int32 Stored = To->AddToPouch(Pouch, Source, Amount);
 		RemoveItem(Source, Stored);
 		return Stored > 0;
 	}
@@ -575,12 +561,8 @@ bool UVaesenInventoryComponent::MoveItem(int32 FromIndex, UVaesenInventoryCompon
 		return true;
 	}
 
-	const auto Fits = [](const UVaesenInventoryComponent* Inventory, const UVaesenItem* Leaving, const UVaesenItem* Arriving)
-	{
-		return Inventory->WeightCapacity <= 0.0f
-			|| Inventory->GetCurrentWeight() - Leaving->GetStackWeight() + Arriving->GetStackWeight() <= Inventory->WeightCapacity + KINDA_SMALL_NUMBER;
-	};
-	if (!Fits(To, Target, Source) || !Fits(this, Source, Target))
+	// Each side gives up one stack's slots and takes the other's.
+	if (!To->HasRoomFor(Source, Target->SlotSize) || !HasRoomFor(Target, Source->SlotSize))
 	{
 		return false;
 	}

@@ -37,7 +37,6 @@ AVaesenPlayerCharacter::AVaesenPlayerCharacter()
 	Inventory = CreateDefaultSubobject<UVaesenInventoryComponent>(TEXT("Inventory"));
 	Inventory->DisplayName = NSLOCTEXT("VaesenInventory", "PlayerInventory", "Inventory");
 	Inventory->Capacity = 24;
-	Inventory->WeightCapacity = 40.0f;
 	Inventory->bAccessibleByOthers = false;
 	bReplicateUsingRegisteredSubObjectList = true;
 
