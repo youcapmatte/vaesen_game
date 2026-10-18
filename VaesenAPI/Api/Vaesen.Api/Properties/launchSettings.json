@@ -20,6 +20,19 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
+    },
+    "http (GameLift Anywhere)": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": true,
+      "launchUrl": "docs",
+      "applicationUrl": "http://localhost:5230",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "Sessions__Provider": "GameLift",
+        "Sessions__GameLift__FleetId": "fleet-dd792101-8a3f-4b59-8d51-c7e14832748d",
+        "Sessions__GameLift__Location": "custom-vaesen-dev"
+      }
     }
   }
 }
