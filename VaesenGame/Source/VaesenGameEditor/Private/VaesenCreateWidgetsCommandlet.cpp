@@ -649,7 +649,7 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 		}
 	}
 
-	const TCHAR* TestItemPath = TEXT("/Game/Vaesen/Items/BP_Item_LampOil");
+	const TCHAR* TestItemPath = TEXT("/Game/Vaesen/Blueprints/Items/BP_Item_LampOil");
 	const TCHAR* TestPickupPath = TEXT("/Game/Vaesen/Blueprints/Interaction/BP_Pickup_LampOil");
 
 	/** A test item (BP_Item_LampOil) and a pickup of 5 of it (BP_Pickup_LampOil) to drop into a level. */
