@@ -15,6 +15,10 @@ void AVaesenPlayerController::BeginPlay()
 		return;
 	}
 
+	// The front end leaves a UI-only input mode and a visible cursor behind; in the world the mouse looks around.
+	SetInputMode(FInputModeGameOnly());
+	SetShowMouseCursor(false);
+
 	// Entering a world ends the front-end music; the world plays its own.
 	if (UVaesenMusicSubsystem* Music = GetGameInstance()->GetSubsystem<UVaesenMusicSubsystem>())
 	{

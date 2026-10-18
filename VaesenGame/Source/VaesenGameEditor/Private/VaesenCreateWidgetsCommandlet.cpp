@@ -272,8 +272,8 @@ namespace VaesenCreateWidgets
 			{
 				Mesh->SetSkeletalMeshAsset(Manny);
 			}
-			// The mannequin's origin is at its feet and it faces +Y; the capsule's origin is its centre and it faces +X.
-			Mesh->SetRelativeLocationAndRotation(FVector(0.0, 0.0, -90.0), FRotator(0.0, -90.0, 0.0));
+			// The mannequin's origin is at its feet and it faces +Y; the capsule's origin is its centre (half-height 96) and it faces +X.
+			Mesh->SetRelativeLocationAndRotation(FVector(0.0, 0.0, -96.0), FRotator(0.0, -90.0, 0.0));
 			Mesh->SetAnimationMode(EAnimationMode::AnimationBlueprint);
 			Mesh->AnimClass = Cast<UClass>(LoadAsset(TEXT("/Game/Characters/Mannequins/Animations/ABP_Manny.ABP_Manny_C")));
 
