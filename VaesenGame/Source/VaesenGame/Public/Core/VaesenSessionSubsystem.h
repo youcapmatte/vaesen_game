@@ -88,6 +88,17 @@ public:
 	/** Bearer token for Vaesen.Api; empty until a character is picked. Not exposed to Blueprints. */
 	const FString& GetAccessToken() const { return AccessToken; }
 
+	/** Why the last trip into the world failed (or the connection to it was lost); shown on character select. */
+	void SetTravelError(const FText& Error) { TravelError = Error; }
+
+	/** Returns the travel error once and clears it. */
+	FText ConsumeTravelError()
+	{
+		FText Error = TravelError;
+		TravelError = FText::GetEmpty();
+		return Error;
+	}
+
 private:
 	UPROPERTY()
 	FVaesenAccount Account;
@@ -99,4 +110,5 @@ private:
 	FVaesenCharacterRef SelectedCharacter;
 
 	FString AccessToken;
+	FText TravelError;
 };

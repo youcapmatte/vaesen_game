@@ -1,6 +1,7 @@
 #include "UI/Loading/VaesenLoadingScreenSubsystem.h"
 
 #include "Core/VaesenMusicSubsystem.h"
+#include "Core/VaesenSessionSubsystem.h"
 #include "Core/VaesenSettings.h"
 #include "Engine/Engine.h"
 #include "Engine/GameInstance.h"
@@ -274,6 +275,8 @@ void UVaesenLoadingScreenSubsystem::HandlePostLoadMap(UWorld* World)
 void UVaesenLoadingScreenSubsystem::HandleTravelFailure(UWorld* World, ETravelFailure::Type FailureType, const FString& Error)
 {
 	bSkipNextLoadingScreen = false;
+	RememberTravelError(FText::Format(LOCTEXT("TravelFailed", "Couldn't enter the world: {0}"),
+		FText::FromString(Error.IsEmpty() ? ETravelFailure::ToString(FailureType) : Error)));
 	if (Phase != EPhase::Hidden)
 	{
 		UE_LOG(LogVaesenLoading, Warning, TEXT("Travel failed (%s): %s"), ETravelFailure::ToString(FailureType), *Error);
@@ -284,11 +287,25 @@ void UVaesenLoadingScreenSubsystem::HandleTravelFailure(UWorld* World, ETravelFa
 
 void UVaesenLoadingScreenSubsystem::HandleNetworkFailure(UWorld* World, UNetDriver* NetDriver, ENetworkFailure::Type FailureType, const FString& Error)
 {
+	RememberTravelError(FText::Format(LOCTEXT("ConnectionLost", "Lost the connection to the world: {0}"),
+		FText::FromString(Error.IsEmpty() ? ENetworkFailure::ToString(FailureType) : Error)));
+
 	if (Phase != EPhase::Hidden)
 	{
 		UE_LOG(LogVaesenLoading, Warning, TEXT("Network failure while loading (%s): %s"), ENetworkFailure::ToString(FailureType), *Error);
 		PreloadedMap = nullptr;
 		FinishLoading();
+	}
+}
+
+void UVaesenLoadingScreenSubsystem::RememberTravelError(const FText& Error)
+{
+	// The engine then returns to the startup map; the login screen sees we're still logged in and goes on to
+	// character select, which shows this.
+	UVaesenSessionSubsystem* Session = GetGameInstance()->GetSubsystem<UVaesenSessionSubsystem>();
+	if (Session && Session->IsLoggedIn())
+	{
+		Session->SetTravelError(Error);
 	}
 }
 

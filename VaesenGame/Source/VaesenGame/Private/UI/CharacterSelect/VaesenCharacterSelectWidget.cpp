@@ -109,6 +109,12 @@ void UVaesenCharacterSelectWidget::NativeConstruct()
 		CreateCharacterDialog->Close();
 	}
 
+	// Coming back after a failed (or lost) trip into the world: say why.
+	if (UVaesenSessionSubsystem* Session = GetGameInstance()->GetSubsystem<UVaesenSessionSubsystem>())
+	{
+		PendingStatus = Session->ConsumeTravelError();
+	}
+
 	PendingLoads = 0;
 	if (LoadingThrobber)
 	{
@@ -257,6 +263,11 @@ void UVaesenCharacterSelectWidget::LoadCharacters(const FString& CharacterIdToSe
 			This->SetStatus(LoadedRoster.IsEmpty()
 				? LOCTEXT("NoCharacters", "This guild has no characters yet. Create one.")
 				: FText::GetEmpty());
+			if (!This->PendingStatus.IsEmpty())
+			{
+				This->SetStatus(This->PendingStatus);
+				This->PendingStatus = FText::GetEmpty();
+			}
 			This->ShowRoster(LoadedRoster, CharacterIdToSelect);
 		});
 }

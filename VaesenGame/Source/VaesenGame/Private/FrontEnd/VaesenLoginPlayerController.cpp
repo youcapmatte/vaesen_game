@@ -17,6 +17,16 @@ void AVaesenLoginPlayerController::BeginPlay()
 
 	if (IsLocalController())
 	{
+		// Back here while still logged in: Unreal returns to the startup map when a server connection fails or
+		// drops. Carry on to character select, which shows what went wrong.
+		const UVaesenSessionSubsystem* Session = GetGameInstance()->GetSubsystem<UVaesenSessionSubsystem>();
+		if (Session && Session->IsLoggedIn())
+		{
+			GetGameInstance()->GetSubsystem<UVaesenLoadingScreenSubsystem>()->TravelToMap(
+				UVaesenSettings::Get()->CharacterSelectMap, /*bShowLoadingScreen*/ false);
+			return;
+		}
+
 		if (UVaesenMusicSubsystem* Music = GetGameInstance()->GetSubsystem<UVaesenMusicSubsystem>())
 		{
 			Music->PlayMusic(UVaesenSettings::Get()->LoginMusic.LoadSynchronous());
@@ -27,6 +37,12 @@ void AVaesenLoginPlayerController::BeginPlay()
 
 TSubclassOf<UUserWidget> AVaesenLoginPlayerController::GetDefaultScreenWidgetClass() const
 {
+	// Still logged in: going straight on to character select (see BeginPlay), so don't flash the login form.
+	const UVaesenSessionSubsystem* Session = GetGameInstance() ? GetGameInstance()->GetSubsystem<UVaesenSessionSubsystem>() : nullptr;
+	if (Session && Session->IsLoggedIn())
+	{
+		return nullptr;
+	}
 	return UVaesenSettings::Get()->LoginScreenWidget.LoadSynchronous();
 }
 

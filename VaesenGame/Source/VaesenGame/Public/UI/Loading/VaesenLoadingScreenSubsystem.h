@@ -75,6 +75,9 @@ private:
 	void HandleTravelFailure(UWorld* World, ETravelFailure::Type FailureType, const FString& Error);
 	void HandleNetworkFailure(UWorld* World, UNetDriver* NetDriver, ENetworkFailure::Type FailureType, const FString& Error);
 
+	/** Keeps a travel/connection error for character select to show. */
+	void RememberTravelError(const FText& Error);
+
 	/** Creates the widget and puts it on top of the game viewport. False when there's no widget class or viewport. */
 	bool ShowWidget(const FString& MapPackageName, bool bFadeIn);
 	void RemoveWidget();

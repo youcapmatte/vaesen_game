@@ -137,6 +137,9 @@ private:
 	FTimerHandle RosterRefreshTimer;
 	FTimerHandle EnterRetryTimer;
 
+	/** Shown once the characters have loaded, e.g. why entering the world failed. */
+	FText PendingStatus;
+
 	/** True once the selected guild's characters have loaded. */
 	bool bCharactersLoaded = false;
 	bool bGuildsLoaded = false;
