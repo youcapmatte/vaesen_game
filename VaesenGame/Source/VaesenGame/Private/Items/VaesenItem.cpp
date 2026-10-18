@@ -1,6 +1,24 @@
 #include "Items/VaesenItem.h"
 
+#include "GameFramework/Actor.h"
 #include "Net/UnrealNetwork.h"
+
+UWorld* UVaesenItem::GetWorld() const
+{
+	// Not calling Super (even for the class default object, which has no owner) is what tells the Blueprint editor
+	// this class provides a world, so item Blueprints get world nodes.
+	if (HasAnyFlags(RF_ClassDefaultObject))
+	{
+		return nullptr;
+	}
+	const AActor* Owner = GetOwningActor();
+	return Owner ? Owner->GetWorld() : nullptr;
+}
+
+AActor* UVaesenItem::GetOwningActor() const
+{
+	return GetTypedOuter<AActor>();
+}
 
 void UVaesenItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {

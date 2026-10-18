@@ -13,7 +13,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FVaesenItemModified);
  * subclass (e.g. BP_Item_Lantern) with its values set in Class Defaults; that class is the item's template.
  * Actual items in the world (in a pickup, later an inventory) are instances of it, with their own Quantity.
  *
- * Instances replicate as subobjects of the actor that owns them (see AVaesenPickup).
+ * Instances are created with the actor that holds them as their outer (the pickup now, an inventory later) and
+ * replicate as that actor's registered subobjects (see AVaesenPickup). Moving an item to another actor means a new
+ * instance there (or re-registering it).
  */
 UCLASS(Abstract, Blueprintable, BlueprintType)
 class VAESENGAME_API UVaesenItem : public UObject
@@ -22,6 +24,14 @@ class VAESENGAME_API UVaesenItem : public UObject
 
 public:
 	virtual bool IsSupportedForNetworking() const override { return true; }
+
+	/** The owning actor's world, so Blueprint items can use world nodes (timers, spawning, players...). */
+	virtual UWorld* GetWorld() const override;
+
+	/** The actor holding this item (its outer), e.g. a pickup. */
+	UFUNCTION(BlueprintPure, Category = "Item")
+	AActor* GetOwningActor() const;
+
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 #if WITH_EDITOR
