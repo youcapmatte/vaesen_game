@@ -520,10 +520,10 @@ void UVaesenCharacterSelectWidget::EnterWorld(const FString& CharacterId, const 
 		This->SetStatus(FText::Format(LOCTEXT("Entering", "Entering {0} as {1}..."), WorldName, FText::FromString(CharacterName)));
 		UE_LOG(LogVaesenApi, Log, TEXT("Entering %s (%s) at %s"), *Response.WorldId, *Response.Map, *Response.ConnectUrl);
 
-		// The server knows which character joined from the CharacterId option; the map is preloaded meanwhile.
+		// The server knows which character joined from the CharacterId option (Unreal URL options are separated by "?"); the map is preloaded meanwhile.
 		const TSoftObjectPtr<UWorld> Map(FSoftObjectPath(Response.Map + TEXT(".") + FPackageName::GetShortName(Response.Map)));
 		This->GetGameInstance()->GetSubsystem<UVaesenLoadingScreenSubsystem>()->TravelToServer(
-			Response.ConnectUrl, Map, FString::Printf(TEXT("&CharacterId=%s"), *CharacterId));
+			Response.ConnectUrl, Map, FString::Printf(TEXT("?CharacterId=%s"), *CharacterId));
 	});
 }
 
