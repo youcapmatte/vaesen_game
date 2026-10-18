@@ -22,7 +22,19 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/Blueprint.h"
 #include "Engine/BlueprintGeneratedClass.h"
+#include "Engine/SimpleConstructionScript.h"
+#include "Engine/SCS_Node.h"
 #include "Engine/SkeletalMesh.h"
+#include "Engine/StaticMesh.h"
+#include "Engine/StaticMeshActor.h"
+#include "Interaction/VaesenInteractableComponent.h"
+#include "MaterialEditingLibrary.h"
+#include "Materials/Material.h"
+#include "MaterialDomain.h"
+#include "Materials/MaterialExpressionCustom.h"
+#include "Materials/MaterialExpressionScalarParameter.h"
+#include "Materials/MaterialExpressionSceneTexture.h"
+#include "Materials/MaterialExpressionVectorParameter.h"
 #include "Characters/VaesenPlayerCharacter.h"
 #include "Game/VaesenGameModeBase.h"
 #include "VaesenMannequinSplitter.h"
@@ -408,6 +420,121 @@ namespace VaesenCreateWidgets
 		}
 	}
 
+	const TCHAR* OutlineMaterialPath = TEXT("/Game/Vaesen/Materials/PP_InteractionOutline");
+	const TCHAR* InteractableTestPath = TEXT("/Game/Vaesen/Blueprints/Interaction/BP_InteractableTest");
+
+	/**
+	 * Post-process outline for UVaesenInteractableComponent: pixels just outside meshes drawn with its stencil value
+	 * become OutlineColor (a faint tint covers the mesh itself). After tonemapping, so the colour is exactly what's set.
+	 */
+	UMaterial* CreateOutlineMaterial()
+	{
+		if (AssetExists(OutlineMaterialPath))
+		{
+			UE_LOG(LogVaesenCreateWidgets, Display, TEXT("%s already exists; leaving it alone."), OutlineMaterialPath);
+			return LoadObject<UMaterial>(nullptr, *(FString(OutlineMaterialPath) + TEXT(".PP_InteractionOutline")));
+		}
+
+		UPackage* Package = CreatePackage(OutlineMaterialPath);
+		UMaterial* Material = NewObject<UMaterial>(Package, TEXT("PP_InteractionOutline"), RF_Public | RF_Standalone);
+		Material->MaterialDomain = MD_PostProcess;
+		Material->BlendableLocation = BL_SceneColorAfterTonemapping;
+
+		const auto Add = [Material](TSubclassOf<UMaterialExpression> Class, int32 X, int32 Y)
+		{
+			return UMaterialEditingLibrary::CreateMaterialExpression(Material, Class, X, Y);
+		};
+
+		// The scene textures are also fed in as inputs so the shader binds them (Custom code alone doesn't).
+		UMaterialExpressionSceneTexture* SceneColor = CastChecked<UMaterialExpressionSceneTexture>(Add(UMaterialExpressionSceneTexture::StaticClass(), -600, -200));
+		SceneColor->SceneTextureId = PPI_PostProcessInput0;
+		UMaterialExpressionSceneTexture* Stencil = CastChecked<UMaterialExpressionSceneTexture>(Add(UMaterialExpressionSceneTexture::StaticClass(), -600, 0));
+		Stencil->SceneTextureId = PPI_CustomStencil;
+
+		UMaterialExpressionVectorParameter* Color = CastChecked<UMaterialExpressionVectorParameter>(Add(UMaterialExpressionVectorParameter::StaticClass(), -600, 200));
+		Color->ParameterName = TEXT("OutlineColor");
+		Color->DefaultValue = FLinearColor(1.0f, 0.78f, 0.2f);
+
+		const auto Scalar = [&Add](const TCHAR* Name, float Value, int32 Y)
+		{
+			UMaterialExpressionScalarParameter* Parameter = CastChecked<UMaterialExpressionScalarParameter>(Add(UMaterialExpressionScalarParameter::StaticClass(), -600, Y));
+			Parameter->ParameterName = Name;
+			Parameter->DefaultValue = Value;
+			return Parameter;
+		};
+		UMaterialExpressionScalarParameter* Thickness = Scalar(TEXT("Thickness"), 2.0f, 400);
+		UMaterialExpressionScalarParameter* Fill = Scalar(TEXT("FillOpacity"), 0.06f, 500);
+		UMaterialExpressionScalarParameter* StencilValue = Scalar(TEXT("StencilValue"), UVaesenInteractableComponent::HighlightStencilValue, 600);
+
+		UMaterialExpressionCustom* Outline = CastChecked<UMaterialExpressionCustom>(Add(UMaterialExpressionCustom::StaticClass(), -250, 0));
+		Outline->Description = TEXT("Outline");
+		Outline->OutputType = CMOT_Float3;
+		Outline->Inputs.Reset();
+		for (const TCHAR* Name : { TEXT("SceneColor"), TEXT("Stencil"), TEXT("Color"), TEXT("Thickness"), TEXT("Fill"), TEXT("StencilValue") })
+		{
+			FCustomInput& Input = Outline->Inputs.AddDefaulted_GetRef();
+			Input.InputName = Name;
+		}
+		Outline->Code = TEXT(R"(float Inside = abs(Stencil.r - StencilValue) < 0.5 ? 1.0 : 0.0;
+float Edge = 0.0;
+float Radius = max(Thickness, 1.0);
+for (int i = 0; i < 8; i++)
+{
+	float Angle = i * 0.7853982;
+	float Neighbour = SceneTextureFetch(PPI_CustomStencil, float2(cos(Angle), sin(Angle)) * Radius).r;
+	Edge = max(Edge, abs(Neighbour - StencilValue) < 0.5 ? 1.0 : 0.0);
+}
+float Amount = max(Edge * (1.0 - Inside), Inside * Fill);
+return lerp(SceneColor.rgb, Color.rgb, Amount);)");
+
+		UMaterialEditingLibrary::ConnectMaterialExpressions(SceneColor, TEXT("Color"), Outline, TEXT("SceneColor"));
+		UMaterialEditingLibrary::ConnectMaterialExpressions(Stencil, TEXT("Color"), Outline, TEXT("Stencil"));
+		UMaterialEditingLibrary::ConnectMaterialExpressions(Color, TEXT(""), Outline, TEXT("Color"));
+		UMaterialEditingLibrary::ConnectMaterialExpressions(Thickness, TEXT(""), Outline, TEXT("Thickness"));
+		UMaterialEditingLibrary::ConnectMaterialExpressions(Fill, TEXT(""), Outline, TEXT("Fill"));
+		UMaterialEditingLibrary::ConnectMaterialExpressions(StencilValue, TEXT(""), Outline, TEXT("StencilValue"));
+		UMaterialEditingLibrary::ConnectMaterialProperty(Outline, TEXT(""), MP_EmissiveColor);
+
+		UMaterialEditingLibrary::RecompileMaterial(Material);
+		FAssetRegistryModule::AssetCreated(Material);
+		Save(Material);
+		return Material;
+	}
+
+	/**
+	 * Interaction outline: the PP_InteractionOutline material, set on BP_VaesenPlayerCharacter, and
+	 * BP_InteractableTest (a cube with UVaesenInteractableComponent) to drop into a level and try it on.
+	 */
+	void SetupInteractionOutline()
+	{
+		UMaterial* Material = CreateOutlineMaterial();
+
+		if (UBlueprint* Character = LoadObject<UBlueprint>(nullptr, *(FString(PlayerCharacterPath) + TEXT(".BP_VaesenPlayerCharacter"))))
+		{
+			UObject* Defaults = Character->GeneratedClass->GetDefaultObject();
+			const FObjectPropertyBase* Property = FindFProperty<FObjectPropertyBase>(Defaults->GetClass(), TEXT("InteractionOutlineMaterial"));
+			if (Material && Property && !Property->GetObjectPropertyValue_InContainer(Defaults))
+			{
+				SetDefault(Defaults, TEXT("InteractionOutlineMaterial"), Material);
+				Finish(Character);
+			}
+		}
+
+		if (UBlueprint* Blueprint = CreateActorBlueprint(InteractableTestPath, AStaticMeshActor::StaticClass()))
+		{
+			AStaticMeshActor* Defaults = CastChecked<AStaticMeshActor>(Blueprint->GeneratedClass->GetDefaultObject());
+			if (UStaticMesh* Cube = Cast<UStaticMesh>(LoadAsset(TEXT("/Engine/BasicShapes/Cube.Cube"))))
+			{
+				Defaults->GetStaticMeshComponent()->SetStaticMesh(Cube);
+			}
+			Defaults->GetStaticMeshComponent()->SetMobility(EComponentMobility::Movable);
+
+			USCS_Node* Node = Blueprint->SimpleConstructionScript->CreateNode(UVaesenInteractableComponent::StaticClass(), TEXT("Interactable"));
+			Blueprint->SimpleConstructionScript->AddNode(Node);
+			Finish(Blueprint);
+		}
+	}
+
 	UClass* LoadWidgetClass(const FString& PackagePath)
 	{
 		const FString ObjectPath = PackagePath + TEXT(".") + FPackageName::GetShortName(PackagePath);
@@ -719,6 +846,7 @@ int32 UVaesenCreateWidgetsCommandlet::Main(const FString& Params)
 	CreatePlayerBlueprints();
 	SetupZoomInput();
 	SetupModularCharacter();
+	SetupInteractionOutline();
 	return 0;
 }
 
