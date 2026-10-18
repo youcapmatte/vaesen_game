@@ -43,8 +43,8 @@ namespace VaesenMannequinSplitter
 		{ EPart::Feet, TEXT("SKM_Manny_Feet") },
 	};
 
-	/** Which part a bone belongs to (UE5 mannequin bone names). */
-	EPart ClassifyBone(const FName BoneName)
+	/** Which part a bone with this name starts, if any (UE5 mannequin bone names). */
+	TOptional<EPart> PartOfBoneName(const FName BoneName)
 	{
 		const FString Name = BoneName.ToString().ToLower();
 		const auto StartsWithAny = [&Name](std::initializer_list<const TCHAR*> Prefixes)
@@ -75,7 +75,26 @@ namespace VaesenMannequinSplitter
 		{
 			return EPart::Arms;
 		}
-		// Spine, clavicles, root and anything unexpected.
+		if (StartsWithAny({ TEXT("spine"), TEXT("clavicle") }))
+		{
+			return EPart::Torso;
+		}
+		return {};
+	}
+
+	/**
+	 * Which part a bone belongs to: the first bone up its parent chain (itself included) whose name says it.
+	 * Helper/corrective bones (e.g. ankle_bck_l under calf_l) follow their parent's part; anything else is Torso.
+	 */
+	EPart ClassifyBone(const FReferenceSkeleton& RefSkeleton, int32 BoneIndex)
+	{
+		for (int32 Index = BoneIndex; Index != INDEX_NONE; Index = RefSkeleton.GetParentIndex(Index))
+		{
+			if (const TOptional<EPart> Part = PartOfBoneName(RefSkeleton.GetBoneName(Index)))
+			{
+				return *Part;
+			}
+		}
 		return EPart::Torso;
 	}
 
@@ -247,7 +266,7 @@ namespace VaesenMannequinSplitter
 		TArray<EPart> BoneParts;
 		for (int32 BoneIndex = 0; BoneIndex < RefSkeleton.GetNum(); ++BoneIndex)
 		{
-			BoneParts.Add(ClassifyBone(RefSkeleton.GetBoneName(BoneIndex)));
+			BoneParts.Add(ClassifyBone(RefSkeleton, BoneIndex));
 		}
 
 		IAssetTools& AssetTools = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools").Get();
@@ -276,6 +295,9 @@ namespace VaesenMannequinSplitter
 			{
 				FLODUtilities::RemoveLOD(UpdateContext, LODIndex);
 			}
+			// Manny asks for LOD 2 on some platforms; the part only has LOD 0.
+			Target->SetMinLod(FPerPlatformInt(0));
+			Target->SetQualityLevelMinLod(FPerQualityLevelInt(0));
 
 			UDynamicMesh* Mesh = NewObject<UDynamicMesh>();
 			EGeometryScriptOutcomePins Outcome = EGeometryScriptOutcomePins::Failure;
@@ -307,6 +329,27 @@ namespace VaesenMannequinSplitter
 			int32 Filled = 0;
 			int32 FailedFills = 0;
 			UGeometryScriptLibrary_MeshRepairFunctions::FillAllMeshHoles(Mesh, FillOptions, Filled, FailedFills);
+			// Height range of the part (Manny stands on Z = 0), to spot stray pieces: e.g. the torso should stay between the hips and the neck.
+			Mesh->ProcessMesh([&](const UE::Geometry::FDynamicMesh3& ReadMesh)
+			{
+				UE::Geometry::FAxisAlignedBox3d Bounds = UE::Geometry::FAxisAlignedBox3d::Empty();
+				int32 LooseVertices = 0;
+				for (const int32 TriangleID : ReadMesh.TriangleIndicesItr())
+				{
+					const UE::Geometry::FIndex3i Corners = ReadMesh.GetTriangle(TriangleID);
+					Bounds.Contain(ReadMesh.GetVertex(Corners.A));
+					Bounds.Contain(ReadMesh.GetVertex(Corners.B));
+					Bounds.Contain(ReadMesh.GetVertex(Corners.C));
+				}
+				for (const int32 VertexID : ReadMesh.VertexIndicesItr())
+				{
+					LooseVertices += ReadMesh.GetVtxEdgeCount(VertexID) == 0 ? 1 : 0;
+				}
+				UE_LOG(LogVaesenMannequinSplitter, Display, TEXT("%s: %d loose vertices."), Info.AssetName, LooseVertices);
+				UE_LOG(LogVaesenMannequinSplitter, Display, TEXT("%s: spans Z %.0f..%.0f cm, X %.0f..%.0f, Y %.0f..%.0f."),
+					Info.AssetName, Bounds.Min.Z, Bounds.Max.Z, Bounds.Min.X, Bounds.Max.X, Bounds.Min.Y, Bounds.Max.Y);
+			});
+
 			int32 NewVertices = 0;
 			Mesh->EditMesh([&](UE::Geometry::FDynamicMesh3& EditMesh) { NewVertices = SkinNewVertices(EditMesh, FirstNewVertex); });
 

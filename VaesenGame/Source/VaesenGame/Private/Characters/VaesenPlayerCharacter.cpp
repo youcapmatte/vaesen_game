@@ -261,10 +261,12 @@ void AVaesenPlayerCharacter::ApplyViewMode()
 	}
 
 	// Owner only: in first person the head isn't drawn for this camera (the torso's neck is closed, so there's no
-	// hole) but keeps casting its shadow. Everyone else keeps seeing the head.
+	// hole) but keeps casting its shadow. Its depth must go too: the camera sits inside the head, and depth alone
+	// would black out the view. Everyone else keeps seeing the head.
 	if (HeadMesh)
 	{
 		HeadMesh->SetRenderInMainPass(!bFirstPerson);
+		HeadMesh->SetRenderInDepthPass(!bFirstPerson);
 	}
 	if (!bFirstPerson)
 	{
