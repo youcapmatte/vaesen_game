@@ -25,6 +25,7 @@
 #include "Engine/SkeletalMesh.h"
 #include "Characters/VaesenPlayerCharacter.h"
 #include "Game/VaesenGameModeBase.h"
+#include "VaesenMannequinSplitter.h"
 #include "InputAction.h"
 #include "InputCoreTypes.h"
 #include "InputMappingContext.h"
@@ -351,6 +352,62 @@ namespace VaesenCreateWidgets
 		}
 	}
 
+	/**
+	 * Modular body: splits Manny into parts (once) and puts them on BP_VaesenPlayerCharacter: the Torso as the
+	 * character's Mesh, the rest on the Head/Arms/Legs/Feet parts. Only fills in what's still the whole Manny or empty.
+	 */
+	void SetupModularCharacter()
+	{
+		if (!VaesenMannequinSplitter::SplitMannequin())
+		{
+			UE_LOG(LogVaesenCreateWidgets, Warning, TEXT("Splitting the mannequin had problems; see above."));
+		}
+
+		UBlueprint* Character = LoadObject<UBlueprint>(nullptr, *(FString(PlayerCharacterPath) + TEXT(".BP_VaesenPlayerCharacter")));
+		AVaesenBaseCharacter* Defaults = Character ? Cast<AVaesenBaseCharacter>(Character->GeneratedClass->GetDefaultObject()) : nullptr;
+		if (!Defaults)
+		{
+			return;
+		}
+
+		const auto LoadPart = [](const TCHAR* Name)
+		{
+			const FString Path = FString(VaesenMannequinSplitter::PartsFolder) / Name + TEXT(".") + Name;
+			return LoadObject<USkeletalMesh>(nullptr, *Path);
+		};
+
+		bool bChanged = false;
+		const auto Assign = [&bChanged](USkeletalMeshComponent* Component, USkeletalMesh* Part, bool bReplaceWholeManny)
+		{
+			if (!Component || !Part)
+			{
+				return;
+			}
+			const USkeletalMesh* Current = Component->GetSkeletalMeshAsset();
+			const bool bIsWholeManny = Current && Current->GetName() == TEXT("SKM_Manny");
+			if (!Current || (bReplaceWholeManny && bIsWholeManny))
+			{
+				Component->SetSkeletalMeshAsset(Part);
+				bChanged = true;
+			}
+		};
+
+		Assign(Defaults->GetTorsoMesh(), LoadPart(TEXT("SKM_Manny_Torso")), true);
+		Assign(Defaults->GetHeadMesh(), LoadPart(TEXT("SKM_Manny_Head")), false);
+		Assign(Defaults->GetArmsMesh(), LoadPart(TEXT("SKM_Manny_Arms")), false);
+		Assign(Defaults->GetLegsMesh(), LoadPart(TEXT("SKM_Manny_Legs")), false);
+		Assign(Defaults->GetFeetMesh(), LoadPart(TEXT("SKM_Manny_Feet")), false);
+
+		if (bChanged)
+		{
+			Finish(Character);
+		}
+		else
+		{
+			UE_LOG(LogVaesenCreateWidgets, Display, TEXT("BP_VaesenPlayerCharacter already has its body parts."));
+		}
+	}
+
 	UClass* LoadWidgetClass(const FString& PackagePath)
 	{
 		const FString ObjectPath = PackagePath + TEXT(".") + FPackageName::GetShortName(PackagePath);
@@ -661,6 +718,7 @@ int32 UVaesenCreateWidgetsCommandlet::Main(const FString& Params)
 	UpdateCharacterSelect();
 	CreatePlayerBlueprints();
 	SetupZoomInput();
+	SetupModularCharacter();
 	return 0;
 }
 

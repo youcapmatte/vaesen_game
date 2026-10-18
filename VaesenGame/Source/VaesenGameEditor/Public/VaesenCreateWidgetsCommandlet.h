@@ -15,7 +15,8 @@
  * the same names and removes the obsolete GuildComboBox; everything else there is left alone. Other existing
  * blueprints are never replaced.
  * Also creates the data-only player Blueprints (defaults only, no graph logic): BP_VaesenPlayerCharacter (UE
- * mannequin, ABP_Manny, template input actions), BP_VaesenPlayerController (IMC_Default) and BP_VaesenGameMode.
+ * mannequin, ABP_Manny, template input actions), BP_VaesenPlayerController (IMC_Default) and BP_VaesenGameMode;
+ * the camera zoom input; and the modular body (Manny split into Head/Torso/Arms/Legs/Feet, set on the character).
  *
  * Run with the editor closed:
  *   UnrealEditor-Cmd.exe VaesenGame.uproject -run=VaesenCreateWidgets

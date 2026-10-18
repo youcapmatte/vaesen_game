@@ -1,4 +1,4 @@
-using UnrealBuildTool;
+﻿using UnrealBuildTool;
 
 /** Editor-only tools for Vaesen (never in game, client or server builds). */
 public class VaesenGameEditor : ModuleRules
@@ -8,6 +8,7 @@ public class VaesenGameEditor : ModuleRules
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
 
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine" });
-		PrivateDependencyModuleNames.AddRange(new string[] { "UnrealEd", "UMG", "UMGEditor", "Slate", "SlateCore", "AssetRegistry", "EnhancedInput", "InputCore", "VaesenGame" });
+		PrivateDependencyModuleNames.AddRange(new string[] { "UnrealEd", "UMG", "UMGEditor", "Slate", "SlateCore", "AssetRegistry", "EnhancedInput", "InputCore", "VaesenGame",
+			"AssetTools", "AnimationCore", "GeometryCore", "GeometryFramework", "GeometryScriptingCore", "SkeletalMeshDescription", "SkeletalMeshUtilitiesCommon", "MeshConversion", "MeshDescription", "RenderCore", "DynamicMesh" });
 	}
 }

@@ -27,16 +27,6 @@ AVaesenPlayerCharacter::AVaesenPlayerCharacter()
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false;
 
-	// Same place and pose as the main mesh; turned on only for the owner in first person (see ApplyViewMode).
-	FirstPersonBody = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("FirstPersonBody"));
-	FirstPersonBody->SetupAttachment(GetMesh());
-	FirstPersonBody->SetOnlyOwnerSee(true);
-	FirstPersonBody->SetCastShadow(false);
-	FirstPersonBody->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	FirstPersonBody->SetVisibility(false);
-	FirstPersonBody->SetComponentTickEnabled(false);
-	FirstPersonBody->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
-
 	// Movement feel (UE Third Person template values; tune in BP_VaesenPlayerCharacter).
 	UCharacterMovementComponent* Movement = GetCharacterMovement();
 	Movement->MaxWalkSpeed = 500.f;
@@ -270,27 +260,16 @@ void AVaesenPlayerCharacter::ApplyViewMode()
 		return;
 	}
 
-	// Owner only: in first person the camera sees a headless copy of the body, while the real body is hidden from
-	// the camera but keeps casting its full shadow (head included). Everyone else keeps seeing the real body.
-	if (bFirstPerson)
+	// Owner only: in first person the head isn't drawn for this camera (the torso's neck is closed, so there's no
+	// hole) but keeps casting its shadow. Everyone else keeps seeing the head.
+	if (HeadMesh)
 	{
-		if (FirstPersonBody->GetSkeletalMeshAsset() != GetMesh()->GetSkeletalMeshAsset())
-		{
-			FirstPersonBody->SetSkeletalMeshAsset(GetMesh()->GetSkeletalMeshAsset());
-		}
-		if (FirstPersonBody->GetAnimClass() != GetMesh()->GetAnimClass())
-		{
-			FirstPersonBody->SetAnimInstanceClass(GetMesh()->GetAnimClass());
-		}
-		FirstPersonBody->HideBoneByName(HeadBoneName, EPhysBodyOp::PBO_None);
+		HeadMesh->SetRenderInMainPass(!bFirstPerson);
 	}
-	else
+	if (!bFirstPerson)
 	{
 		FollowCamera->SetRelativeLocation(FVector::ZeroVector);
 	}
-	FirstPersonBody->SetComponentTickEnabled(bFirstPerson);
-	FirstPersonBody->SetVisibility(bFirstPerson);
-	GetMesh()->SetRenderInMainPass(!bFirstPerson);
 	FollowCamera->bUsePawnControlRotation = bFirstPerson;
 
 	// Limit looking down in first person; the camera manager applies it to the view (and the control rotation).
