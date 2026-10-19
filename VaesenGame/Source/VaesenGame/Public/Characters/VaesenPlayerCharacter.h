@@ -62,6 +62,10 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	/** Server: connects to the player state's ability system. */
+	virtual void PossessedBy(AController* NewController) override;
+	/** The owning client: the same, once the player state has arrived. */
+	virtual void OnRep_PlayerState() override;
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 	virtual void Landed(const FHitResult& Hit) override;
 

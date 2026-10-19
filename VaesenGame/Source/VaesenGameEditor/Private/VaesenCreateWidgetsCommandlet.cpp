@@ -62,6 +62,7 @@
 #include "UI/Inventory/VaesenDropZoneWidget.h"
 #include "UI/Inventory/VaesenQuickBarWidget.h"
 #include "UI/Minimap/VaesenMinimapWidget.h"
+#include "UI/VaesenHUDWidget.h"
 #include "Materials/MaterialExpressionComponentMask.h"
 #include "Materials/MaterialExpressionTextureCoordinate.h"
 #include "Materials/MaterialExpressionTextureSampleParameter2D.h"
@@ -1359,7 +1360,7 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 		Finish(Blueprint);
 	}
 
-	/** The quick slots in a row: at the bottom centre of the screen during play, and in the inventory screen. */
+	/** The quick slots in a framed row: on the HUD (bottom centre) and in the inventory screen. */
 	void CreateQuickBar()
 	{
 		UWidgetBlueprint* Blueprint = CreateBlueprint(QuickBarPath, UVaesenQuickBarWidget::StaticClass());
@@ -1369,37 +1370,13 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 		}
 		const FBuilder Build{ Blueprint->WidgetTree };
 
-		// Fills the screen when used on its own (the HUD), the row sitting at the bottom centre.
-		UCanvasPanel* Canvas = Build.Make<UCanvasPanel>();
-		Canvas->bIsVariable = false;
-		Blueprint->WidgetTree->RootWidget = Canvas;
 		UBorder* Frame = Build.Make<UBorder>(TEXT("Frame"));
 		Frame->bIsVariable = false;
 		Frame->SetBrush(FSlateRoundedBoxBrush(FLinearColor(0.02f, 0.015f, 0.01f, 0.55f), 6.0f));
 		Frame->SetPadding(FMargin(8.0f));
-		UHorizontalBox* Row = Build.Make<UHorizontalBox>(TEXT("SlotRow"));
-		Frame->SetContent(Row);
-		UCanvasPanelSlot* FrameSlot = Canvas->AddChildToCanvas(Frame);
-		FrameSlot->SetAnchors(FAnchors(0.5f, 1.0f));
-		FrameSlot->SetAlignment(FVector2D(0.5f, 1.0f));
-		FrameSlot->SetPosition(FVector2D(0.0f, -24.0f));
-		FrameSlot->SetAutoSize(true);
+		Frame->SetContent(Build.Make<UHorizontalBox>(TEXT("SlotRow")));
+		Blueprint->WidgetTree->RootWidget = Frame;
 
-		FKismetEditorUtilities::CompileBlueprint(Blueprint);
-		SetDefault(Blueprint->GeneratedClass->GetDefaultObject(), TEXT("SlotWidgetClass"), LoadWidgetClass(QuickSlotPath));
-		Finish(Blueprint);
-	}
-
-	/** The quick bar for inside the inventory screen: just the row, no full-screen canvas. */
-	void CreateQuickBarInline()
-	{
-		UWidgetBlueprint* Blueprint = CreateBlueprint(TEXT("/Game/Vaesen/UI/Inventory/WBP_QuickBarInline"), UVaesenQuickBarWidget::StaticClass());
-		if (!Blueprint)
-		{
-			return;
-		}
-		const FBuilder Build{ Blueprint->WidgetTree };
-		Blueprint->WidgetTree->RootWidget = Build.Make<UHorizontalBox>(TEXT("SlotRow"));
 		FKismetEditorUtilities::CompileBlueprint(Blueprint);
 		SetDefault(Blueprint->GeneratedClass->GetDefaultObject(), TEXT("SlotWidgetClass"), LoadWidgetClass(QuickSlotPath));
 		Finish(Blueprint);
@@ -1506,12 +1483,9 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 		ContainerSlot->SetVerticalAlignment(VAlign_Top);
 		FBuilder::AddRow(Content, Panels, 14.0f);
 
-		// The quick slots, to drag usable things onto. (A bar of its own here, not the HUD's full-screen one.)
-		UHorizontalBox* QuickRow = Build.Make<UHorizontalBox>();
+		// The quick slots, to drag usable things onto.
 		FBuilder::AddRow(Content, InventoryText(Build, NAME_None, TEXT("Quick slots"), 11, TEXT("Bold"), InventoryMuted), 4.0f)->SetHorizontalAlignment(HAlign_Center);
-		UVaesenQuickBarWidget* ScreenBar = Build.Make<UVaesenQuickBarWidget>(TEXT("QuickBar"), LoadWidgetClass(TEXT("/Game/Vaesen/UI/Inventory/WBP_QuickBarInline")));
-		QuickRow->AddChildToHorizontalBox(ScreenBar);
-		FBuilder::AddRow(Content, QuickRow, 14.0f)->SetHorizontalAlignment(HAlign_Center);
+		FBuilder::AddRow(Content, Build.Make<UVaesenQuickBarWidget>(TEXT("QuickBar"), LoadWidgetClass(QuickBarPath)), 14.0f)->SetHorizontalAlignment(HAlign_Center);
 
 		UTextBlock* Hint = InventoryText(Build, TEXT("HintText"),
 			TEXT("Drag: move, equip, quick slot   Ctrl+drag: split   Shift+click: transfer   Right-click: use, equip, take off, clear   Drag to Drop or outside: drop   1-8: quick slots   I: close"),
@@ -1593,7 +1567,6 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 		CreateDropZone();
 		CreateQuickSlot();
 		CreateQuickBar();
-		CreateQuickBarInline();
 		CreateInventoryScreen();
 		SetupQuickSlotInput();
 		SetupButtonInput(TEXT("IA_Inventory"), EKeys::I, TEXT("InventoryAction"), { EKeys::Tab });
@@ -1839,7 +1812,37 @@ return float4(Rgb, Alpha);)");
 		return Material;
 	}
 
-	/** WBP_Minimap: the round map, 220 px, in the top right corner. */
+	/** WBP_HUD: the in-game HUD, full screen: the minimap in the top right, the quick bar at the bottom centre. */
+	void CreateHUD()
+	{
+		UWidgetBlueprint* Blueprint = CreateBlueprint(TEXT("/Game/Vaesen/UI/WBP_HUD"), UVaesenHUDWidget::StaticClass());
+		UClass* MinimapClass = LoadWidgetClass(MinimapWidgetPath);
+		UClass* QuickBarClass = LoadWidgetClass(QuickBarPath);
+		if (!Blueprint || !MinimapClass || !QuickBarClass)
+		{
+			return;
+		}
+		const FBuilder Build{ Blueprint->WidgetTree };
+
+		UCanvasPanel* Canvas = Build.Make<UCanvasPanel>(TEXT("Canvas"));
+		Blueprint->WidgetTree->RootWidget = Canvas;
+
+		UCanvasPanelSlot* MapSlot = Canvas->AddChildToCanvas(Build.Make<UVaesenMinimapWidget>(TEXT("Minimap"), MinimapClass));
+		MapSlot->SetAnchors(FAnchors(1.0f, 0.0f));
+		MapSlot->SetAlignment(FVector2D(1.0f, 0.0f));
+		MapSlot->SetPosition(FVector2D(-28.0f, 28.0f));
+		MapSlot->SetAutoSize(true);
+
+		UCanvasPanelSlot* BarSlot = Canvas->AddChildToCanvas(Build.Make<UVaesenQuickBarWidget>(TEXT("QuickBar"), QuickBarClass));
+		BarSlot->SetAnchors(FAnchors(0.5f, 1.0f));
+		BarSlot->SetAlignment(FVector2D(0.5f, 1.0f));
+		BarSlot->SetPosition(FVector2D(0.0f, -24.0f));
+		BarSlot->SetAutoSize(true);
+
+		Finish(Blueprint);
+	}
+
+	/** WBP_Minimap: the round map, 220 px (the HUD places it). */
 	void CreateMinimap()
 	{
 		UMaterial* Material = CreateMinimapMaterial();
@@ -1851,19 +1854,11 @@ return float4(Rgb, Alpha);)");
 		}
 		const FBuilder Build{ Blueprint->WidgetTree };
 
-		UCanvasPanel* Canvas = Build.Make<UCanvasPanel>();
-		Canvas->bIsVariable = false;
-		Blueprint->WidgetTree->RootWidget = Canvas;
-
 		USizeBox* Size = Build.Make<USizeBox>();
 		Size->SetWidthOverride(220.0f);
 		Size->SetHeightOverride(220.0f);
 		Size->SetContent(Build.Make<UImage>(TEXT("MapImage")));
-		UCanvasPanelSlot* MapSlot = Canvas->AddChildToCanvas(Size);
-		MapSlot->SetAnchors(FAnchors(1.0f, 0.0f));
-		MapSlot->SetAlignment(FVector2D(1.0f, 0.0f));
-		MapSlot->SetPosition(FVector2D(-28.0f, 28.0f));
-		MapSlot->SetAutoSize(true);
+		Blueprint->WidgetTree->RootWidget = Size;
 
 		FKismetEditorUtilities::CompileBlueprint(Blueprint);
 		SetDefault(Blueprint->GeneratedClass->GetDefaultObject(), TEXT("MapMaterial"), Material);
@@ -1897,6 +1892,7 @@ int32 UVaesenCreateWidgetsCommandlet::Main(const FString& Params)
 	SetupInventory();
 	SetupPouches();
 	CreateMinimap();
+	CreateHUD();
 	return 0;
 }
 

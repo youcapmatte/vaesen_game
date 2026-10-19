@@ -9,8 +9,7 @@
 #include "InputMappingContext.h"
 #include "Inventory/VaesenInventoryComponent.h"
 #include "UI/Inventory/VaesenInventoryScreenWidget.h"
-#include "UI/Inventory/VaesenQuickBarWidget.h"
-#include "UI/Minimap/VaesenMinimapWidget.h"
+#include "UI/VaesenHUD.h"
 
 void AVaesenPlayerController::BeginPlay()
 {
@@ -29,17 +28,6 @@ void AVaesenPlayerController::BeginPlay()
 	if (UVaesenMusicSubsystem* Music = GetGameInstance()->GetSubsystem<UVaesenMusicSubsystem>())
 	{
 		Music->StopMusic();
-	}
-
-	if (const TSubclassOf<UVaesenQuickBarWidget> QuickBarClass = UVaesenSettings::Get()->QuickBarWidget.LoadSynchronous())
-	{
-		QuickBar = CreateWidget<UVaesenQuickBarWidget>(this, QuickBarClass);
-		QuickBar->AddToViewport(1);
-	}
-	if (const TSubclassOf<UVaesenMinimapWidget> MinimapClass = UVaesenSettings::Get()->MinimapWidget.LoadSynchronous())
-	{
-		Minimap = CreateWidget<UVaesenMinimapWidget>(this, MinimapClass);
-		Minimap->AddToViewport(1);
 	}
 
 	if (!DefaultMappingContext)
@@ -92,13 +80,9 @@ void AVaesenPlayerController::OpenInventory(UVaesenInventoryComponent* Container
 	if (!InventoryScreen->IsInViewport())
 	{
 		InventoryScreen->AddToViewport(10);
-		if (QuickBar)
+		if (AVaesenHUD* GameHUD = GetHUD<AVaesenHUD>())
 		{
-			QuickBar->SetVisibility(ESlateVisibility::Collapsed);
-		}
-		if (Minimap)
-		{
-			Minimap->SetVisibility(ESlateVisibility::Collapsed);
+			GameHUD->SetHUDVisible(false);
 		}
 
 		// Mouse for the UI, keys still walk; the view doesn't turn while the cursor is out.
@@ -120,13 +104,9 @@ void AVaesenPlayerController::CloseInventory()
 	}
 
 	InventoryScreen->RemoveFromParent();
-	if (QuickBar)
+	if (AVaesenHUD* GameHUD = GetHUD<AVaesenHUD>())
 	{
-		QuickBar->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
-	}
-	if (Minimap)
-	{
-		Minimap->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+		GameHUD->SetHUDVisible(true);
 	}
 	SetInputMode(FInputModeGameOnly());
 	SetShowMouseCursor(false);

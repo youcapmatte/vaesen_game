@@ -1,5 +1,7 @@
 #include "Characters/VaesenBaseCharacter.h"
 
+#include "AbilitySystemComponent.h"
+#include "Abilities/VaesenAttributeSet.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -74,6 +76,58 @@ USkeletalMeshComponent* AVaesenBaseCharacter::GetWornOverLayerFor(EVaesenEquipme
 	case EVaesenEquipmentSlot::Legs:  return LegsOverMesh;
 	case EVaesenEquipmentSlot::Feet:  return FeetOverMesh;
 	default:                          return nullptr;
+	}
+}
+
+UAbilitySystemComponent* AVaesenBaseCharacter::GetAbilitySystemComponent() const
+{
+	return AbilitySystem.Get();
+}
+
+UVaesenAttributeSet* AVaesenBaseCharacter::GetAttributes() const
+{
+	const UAbilitySystemComponent* System = AbilitySystem.Get();
+	return System ? const_cast<UVaesenAttributeSet*>(System->GetSet<UVaesenAttributeSet>()) : nullptr;
+}
+
+void AVaesenBaseCharacter::InitAbilitySystem(UAbilitySystemComponent* InAbilitySystem, AActor* OwnerActor)
+{
+	if (!InAbilitySystem)
+	{
+		return;
+	}
+	AbilitySystem = InAbilitySystem;
+	InAbilitySystem->InitAbilityActorInfo(OwnerActor, this);
+
+	if (!HasAuthority())
+	{
+		return;
+	}
+	for (const TSubclassOf<UGameplayAbility>& Ability : StartupAbilities)
+	{
+		if (Ability && !InAbilitySystem->FindAbilitySpecFromClass(Ability))
+		{
+			InAbilitySystem->GiveAbility(FGameplayAbilitySpec(Ability, 1, INDEX_NONE, this));
+		}
+	}
+	// Once per ability system: a player's outlasts their character.
+	static const FName StartupEffectsAppliedTag(TEXT("VaesenStartupEffectsApplied"));
+	if (!InAbilitySystem->ComponentTags.Contains(StartupEffectsAppliedTag))
+	{
+		InAbilitySystem->ComponentTags.Add(StartupEffectsAppliedTag);
+		FGameplayEffectContextHandle Context = InAbilitySystem->MakeEffectContext();
+		Context.AddSourceObject(this);
+		for (const TSubclassOf<UGameplayEffect>& Effect : StartupEffects)
+		{
+			if (Effect)
+			{
+				const FGameplayEffectSpecHandle Spec = InAbilitySystem->MakeOutgoingSpec(Effect, 1.0f, Context);
+				if (Spec.IsValid())
+				{
+					InAbilitySystem->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
+				}
+			}
+		}
 	}
 }
 

@@ -10,6 +10,7 @@
 #include "TimerManager.h"
 #include "Player/VaesenPlayerController.h"
 #include "Player/VaesenPlayerState.h"
+#include "UI/VaesenHUD.h"
 
 const TCHAR* AVaesenGameModeBase::PlayerSessionIdOption = TEXT("PlayerSessionId");
 const TCHAR* AVaesenGameModeBase::CharacterIdOption = TEXT("CharacterId");
@@ -37,6 +38,7 @@ AVaesenGameModeBase::AVaesenGameModeBase()
 	PlayerStateClass = AVaesenPlayerState::StaticClass();
 	PlayerControllerClass = AVaesenPlayerController::StaticClass();
 	DefaultPawnClass = AVaesenPlayerCharacter::StaticClass();
+	HUDClass = AVaesenHUD::StaticClass();
 }
 
 void AVaesenGameModeBase::BeginPlay()

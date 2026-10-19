@@ -10,9 +10,8 @@ class UVaesenQuickSlotComponent;
 class UVaesenQuickSlotWidget;
 
 /**
- * The player's quick slots in a row, keys 1-8. On screen during play (shown by AVaesenPlayerController, from Project
- * Settings > Vaesen > Quick Bar Widget) and inside the inventory screen, where items are dragged onto it. Follows the
- * player's character by itself, and keeps the counts up to date.
+ * The player's quick slots in a row, keys 1-8. On the HUD (WBP_HUD) during play and inside the inventory screen,
+ * where items are dragged onto it. Follows the player's character by itself, and keeps the counts up to date.
  *
  * Widget Blueprint (e.g. WBP_QuickBar, parent class VaesenQuickBarWidget), controls by these exact names:
  *   SlotRow  (any panel, e.g. Horizontal Box) - filled with SlotWidgetClass, one per quick slot

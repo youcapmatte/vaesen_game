@@ -352,7 +352,7 @@ Potions, food and other things you use often can't go in equipment (they aren't 
 - **Using:** keys **1 to 8**, or clicking the slot in the inventory screen, use one of them, from wherever in the inventory it is. When the last one is gone (eaten, dropped or put in a chest), the slot empties.
 - **What fits:** anything usable that isn't worn: potions, food, remedies, letters. Not clothing, weapons or tools (they go in equipment), and not pouches.
 - **How many:** four to start with. A belt or bandolier worn in the **Bag** slot can add more (its **extra quick slots**), up to eight.
-- **The quick bar:** the slots are shown at the bottom of the screen during play, and in the inventory screen under the panels. There you **drag an item onto a slot** to put that kind there (a kind of item is in one slot at most), and **right-click** a slot to clear it.
+- **The quick bar:** the slots are shown at the bottom of the screen during play (on the HUD), and in the inventory screen under the panels. There you **drag an item onto a slot** to put that kind there (a kind of item is in one slot at most), and **right-click** a slot to clear it.
 
 The quick slot component keeps the assignments on the server; only the owning player receives them. A radial menu (hold a key and pick with the mouse) could be added later on top of the same slots.
 
@@ -407,7 +407,15 @@ Every one of these is a request to the server through the player's own inventory
 
 ---
 
-## 10. Test assets
+## 10. The HUD
+
+All gameplay UI lives on one **HUD widget** (`WBP_HUD`, a C++ class `VaesenHUDWidget`), put on screen by the player's **HUD actor** (`VaesenHUD`, set as the game mode's HUD class) from Project Settings → Vaesen → HUD Widget. It holds the **minimap** (top right: a live, round map of the level around the player from above, with a brass ring and the player's arrow, turning with the view) and the **quick bar** (bottom centre). Future parts such as health bars go on it too. It's hidden while the inventory screen is open.
+
+## 11. Abilities and vitals
+
+The project uses Unreal's **Gameplay Ability System**. Every character has an ability system and **vitals**: **Health** and **Mental**, each with a maximum (100 to start), kept between zero and the maximum and replicated. A player's ability system lives on their **player state**, so it outlasts their character; an NPC's lives on the character. Characters have **startup abilities** and **startup effects**, given on the server when the character connects to its ability system. New abilities derive from `VaesenGameplayAbility` (predicted on the player's machine, confirmed by the server). Nothing uses them yet: consumable effects and damage are the natural first users, as Gameplay Effects changing the vitals.
+
+## 12. Test assets
 
 These were created by the project's asset-building commandlet.
 
@@ -428,7 +436,7 @@ A good test: place pickups of the herb pouch, yarrow, boots and bread. Pick up t
 
 ---
 
-## 11. Where to find things
+## 13. Where to find things
 
 C++ lives in `VaesenGame/Source/VaesenGame`:
 - **`Interaction/`:** the interaction component and the interactor component.
@@ -447,7 +455,7 @@ The **commandlet** in the editor module (`VaesenCreateWidgetsCommandlet`) builds
 
 ---
 
-## 12. Not done yet
+## 14. Not done yet
 
 - **Clothing meshes.** The slots and the swapping work, but there are no clothing meshes yet; the test clothing keeps the plain body.
 - **Bags adding slots.** A worn bag doesn't enlarge the inventory yet.

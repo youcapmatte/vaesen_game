@@ -11,6 +11,7 @@
 #include "InputActionValue.h"
 #include "Interaction/VaesenInteractorComponent.h"
 #include "Inventory/VaesenEquipmentComponent.h"
+#include "Player/VaesenPlayerState.h"
 #include "Inventory/VaesenInventoryComponent.h"
 #include "Inventory/VaesenQuickSlotComponent.h"
 #include "Player/VaesenPlayerController.h"
@@ -74,6 +75,24 @@ void AVaesenPlayerCharacter::BeginPlay()
 	if (InteractionOutlineMaterial)
 	{
 		FollowCamera->PostProcessSettings.AddBlendable(InteractionOutlineMaterial, 1.0f);
+	}
+}
+
+void AVaesenPlayerCharacter::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+	if (AVaesenPlayerState* State = GetPlayerState<AVaesenPlayerState>())
+	{
+		InitAbilitySystem(State->GetAbilitySystemComponent(), State);
+	}
+}
+
+void AVaesenPlayerCharacter::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+	if (AVaesenPlayerState* State = GetPlayerState<AVaesenPlayerState>())
+	{
+		InitAbilitySystem(State->GetAbilitySystemComponent(), State);
 	}
 }
 

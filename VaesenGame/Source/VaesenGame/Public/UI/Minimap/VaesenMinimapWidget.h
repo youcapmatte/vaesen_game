@@ -14,8 +14,7 @@ class UMaterialInterface;
  * ring border and the player's arrow in the middle. It turns with the player's view, so up is where they look (or
  * stays north-up, with bRotateWithView off).
  *
- * Shown during play by AVaesenPlayerController (Project Settings > Vaesen > Minimap Widget). The camera is spawned on
- * this player's machine while the widget is on screen.
+ * Part of the HUD (WBP_HUD). The camera is spawned on this player's machine while the widget is on screen.
  *
  * Widget Blueprint (e.g. WBP_Minimap, parent class VaesenMinimapWidget), controls by these exact names:
  *   MapImage  (Image)  - drawn with MapMaterial, which gets the live map as its MapTexture parameter

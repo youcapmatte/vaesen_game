@@ -1,10 +1,15 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "AbilitySystemInterface.h"
 #include "GameFramework/Character.h"
 #include "VaesenBaseCharacter.generated.h"
 
+class UAbilitySystemComponent;
+class UGameplayAbility;
+class UGameplayEffect;
 class USkeletalMeshComponent;
+class UVaesenAttributeSet;
 class UVaesenEquipmentComponent;
 enum class EVaesenEquipmentSlot : uint8;
 
@@ -18,9 +23,13 @@ enum class EVaesenEquipmentSlot : uint8;
  * has an empty "worn over" layer on top, for armor that doesn't replace the part (a hat over the head); Back is such
  * a layer for cloaks. Assign the parts' meshes in the Blueprint (the SKM_Manny_* parts). What's worn is the Equipment
  * component's business.
+ *
+ * Gameplay Ability System: every character has an ability system and vitals (UVaesenAttributeSet). A player's live on
+ * their player state (they outlast the character); an NPC's on the character itself. Startup Abilities are given and
+ * Startup Effects applied (on the server) when the character connects to its ability system.
  */
 UCLASS(Abstract)
-class VAESENGAME_API AVaesenBaseCharacter : public ACharacter
+class VAESENGAME_API AVaesenBaseCharacter : public ACharacter, public IAbilitySystemInterface
 {
 	GENERATED_BODY()
 
@@ -47,6 +56,12 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Equipment")
 	UVaesenEquipmentComponent* GetEquipment() const { return Equipment; }
+
+	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+
+	/** The character's vitals (Health, Mental), or null before it's connected to its ability system. */
+	UFUNCTION(BlueprintPure, Category = "Abilities")
+	UVaesenAttributeSet* GetAttributes() const;
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Body")
@@ -86,6 +101,23 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Equipment")
 	TObjectPtr<UVaesenEquipmentComponent> Equipment;
 
+	/** Abilities the character has from the start. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Abilities")
+	TArray<TSubclassOf<UGameplayAbility>> StartupAbilities;
+
+	/** Effects applied from the start (e.g. starting vitals, a lasting trait). */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Abilities")
+	TArray<TSubclassOf<UGameplayEffect>> StartupEffects;
+
+	/**
+	 * Connects the character to its ability system, owned by OwnerActor (the player state for players, the character
+	 * for NPCs). Call on the server and the owning client; the server also gives the startup abilities and effects
+	 * (once per ability system).
+	 */
+	void InitAbilitySystem(UAbilitySystemComponent* InAbilitySystem, AActor* OwnerActor);
+
 private:
 	USkeletalMeshComponent* CreateBodyPart(FName Name);
+
+	TWeakObjectPtr<UAbilitySystemComponent> AbilitySystem;
 };
