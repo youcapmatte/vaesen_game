@@ -349,13 +349,14 @@ While it's open:
 
 **I or Escape** close it.
 
-The screen shows the player's **equipment** on the left and their **inventory** beside it. When a chest is opened, the chest's inventory appears too, on the right. If the player walks out of reach, or the chest disappears, the chest side closes by itself.
+The screen shows the player's **equipment** on the left, as a paper doll around a live picture of their character, and their **inventory** beside it. When a chest is opened, the chest's inventory appears too, on the right. If the player walks out of reach, or the chest disappears, the chest side closes by itself.
 
 ### Building blocks
 
 The screen is made of six widget classes, each a C++ class with a Widget Blueprint made from it. Each Blueprint only needs controls with specific names; the C++ does the work.
 - **Inventory screen** (`WBP_InventoryScreen`): the full-screen root, lightly darkened, with the equipment panel, the player's panel, the container's panel and a line of hints. Dropping an inventory item anywhere outside the panels drops it on the ground.
-- **Equipment panel** (`WBP_EquipmentPanel`): the player's equipment slots, two per row: head and back, chest and hands, legs and feet, main and off hand, talisman and bag. Dropping an item on the panel itself puts it on in its own slot.
+- **Equipment panel** (`WBP_EquipmentPanel`): a paper doll like The Witcher 3's. In the middle, in a dark frame, is a **live picture of the player's character** in an idle pose, wearing what's equipped. **Dragging on it turns the character.** The armor slots run down the left (head, chest, hands, legs, feet) and the others down the right (back, main hand, off hand, talisman, bag). Dropping an item on the character or the panel puts it on in its own slot.
+  - The picture comes from a **character preview** (`VaesenCharacterPreview`): a copy of the character's body, every part and worn-over layer plus attached weapons and tools, standing in a small studio of its own far above the map, with a warm key light, a cool fill light and a rim light, filmed by a camera onto a texture. It's created only on the player's own machine while the inventory is open, and removed when it closes. Its meshes and lights use their own lighting channel, so the level's sun, sky and fog don't touch it. It updates whenever something is put on or taken off. A Blueprint of it can tune the lights, framing and exposure.
 - **Equipment slot** (`WBP_EquipmentSlot`): one slot, with its name in the corner and the worn item's thumbnail or name. It lights up when hovered, and turns red while dragging something that doesn't belong in it.
 - **Inventory panel** (`WBP_InventoryPanel`): one inventory as a grid, six columns wide.
   - **Cells:** one cell per stack, then as many empty cells as there are free slots. An unlimited inventory always shows a spare empty row.

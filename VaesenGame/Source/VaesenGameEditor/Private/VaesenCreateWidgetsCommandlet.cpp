@@ -1196,15 +1196,51 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 		}
 		const FBuilder Build{ Blueprint->WidgetTree };
 
-		UBorder* Panel = InventoryPanelBorder(Build, TEXT("Panel"), 14.0f);
+		// The paper doll: armor slots | the live character in a dark frame | the other slots.
+		UBorder* Panel = InventoryPanelBorder(Build, TEXT("Panel"), 16.0f);
 		Blueprint->WidgetTree->RootWidget = Panel;
 		UVerticalBox* Content = Build.Make<UVerticalBox>();
 		Panel->SetContent(Content);
 
-		FBuilder::AddRow(Content, InventoryText(Build, TEXT("TitleText"), TEXT("Equipment"), 18, TEXT("Bold"), InventoryParchment), 10.0f);
-		UUniformGridPanel* Grid = Build.Make<UUniformGridPanel>(TEXT("SlotGrid"));
-		Grid->SetSlotPadding(FMargin(3.0f));
-		FBuilder::AddRow(Content, Grid, 0.0f);
+		FBuilder::AddRow(Content, InventoryText(Build, TEXT("TitleText"), TEXT("Equipment"), 18, TEXT("Bold"), InventoryParchment), 6.0f);
+		UBorder* Rule = Build.Make<UBorder>();
+		Rule->SetBrushColor(FLinearColor(Brass.R, Brass.G, Brass.B, 0.45f));
+		Rule->SetPadding(FMargin(0.0f));
+		USizeBox* RuleSize = Build.Make<USizeBox>();
+		RuleSize->SetHeightOverride(1.0f);
+		RuleSize->SetContent(Rule);
+		FBuilder::AddRow(Content, RuleSize, 12.0f);
+
+		UHorizontalBox* Doll = Build.Make<UHorizontalBox>();
+
+		UVerticalBox* Left = Build.Make<UVerticalBox>(TEXT("LeftSlots"));
+		UHorizontalBoxSlot* LeftSlot = Doll->AddChildToHorizontalBox(Left);
+		LeftSlot->SetVerticalAlignment(VAlign_Center);
+		LeftSlot->SetPadding(FMargin(0.0f, 0.0f, 14.0f, 0.0f));
+
+		USizeBox* Frame = Build.Make<USizeBox>();
+		Frame->SetWidthOverride(300.0f);
+		Frame->SetHeightOverride(450.0f);
+		UBorder* FrameBorder = Build.Make<UBorder>();
+		FrameBorder->SetBrush(FSlateRoundedBoxBrush(FLinearColor::Black, 6.0f, FLinearColor(0.35f, 0.29f, 0.20f), 1.0f));
+		FrameBorder->SetPadding(FMargin(1.0f));
+		UImage* Picture = Build.Make<UImage>(TEXT("PreviewImage"));
+		FrameBorder->SetContent(Picture);
+		Frame->SetContent(FrameBorder);
+		UVerticalBox* Middle = Build.Make<UVerticalBox>();
+		Middle->AddChildToVerticalBox(Frame);
+		UTextBlock* TurnHint = InventoryText(Build, NAME_None, TEXT("Drag to turn"), 9, TEXT("Italic"), InventoryMuted);
+		UVerticalBoxSlot* TurnHintSlot = Middle->AddChildToVerticalBox(TurnHint);
+		TurnHintSlot->SetHorizontalAlignment(HAlign_Center);
+		TurnHintSlot->SetPadding(FMargin(0.0f, 6.0f, 0.0f, 0.0f));
+		Doll->AddChildToHorizontalBox(Middle)->SetVerticalAlignment(VAlign_Center);
+
+		UVerticalBox* Right = Build.Make<UVerticalBox>(TEXT("RightSlots"));
+		UHorizontalBoxSlot* RightSlot = Doll->AddChildToHorizontalBox(Right);
+		RightSlot->SetVerticalAlignment(VAlign_Center);
+		RightSlot->SetPadding(FMargin(14.0f, 0.0f, 0.0f, 0.0f));
+
+		FBuilder::AddRow(Content, Doll, 0.0f);
 
 		FKismetEditorUtilities::CompileBlueprint(Blueprint);
 		SetDefault(Blueprint->GeneratedClass->GetDefaultObject(), TEXT("SlotWidgetClass"), LoadWidgetClass(EquipmentSlotPath));
@@ -1225,7 +1261,7 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 		// Full screen and hit-testable, so dropping outside the panels lands here (on the ground).
 		UBorder* Backdrop = Build.Make<UBorder>(TEXT("Backdrop"));
 		Backdrop->bIsVariable = false;
-		Backdrop->SetBrushColor(FLinearColor(0.0f, 0.0f, 0.0f, 0.35f));
+		Backdrop->SetBrushColor(FLinearColor(0.0f, 0.0f, 0.0f, 0.62f));
 		Backdrop->SetPadding(FMargin(0.0f));
 		Backdrop->SetHorizontalAlignment(HAlign_Center);
 		Backdrop->SetVerticalAlignment(VAlign_Center);
@@ -1234,6 +1270,9 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 
 		UVerticalBox* Content = Build.Make<UVerticalBox>();
 		Backdrop->SetContent(Content);
+
+		UTextBlock* Heading = InventoryText(Build, NAME_None, TEXT("INVENTORY"), 22, TEXT("Bold"), BrassBright);
+		FBuilder::AddRow(Content, Heading, 16.0f)->SetHorizontalAlignment(HAlign_Center);
 
 		UHorizontalBox* Panels = Build.Make<UHorizontalBox>();
 		UHorizontalBoxSlot* EquipmentSlot = Panels->AddChildToHorizontalBox(Build.Make<UVaesenEquipmentPanelWidget>(TEXT("EquipmentPanel"), EquipmentPanelClass));

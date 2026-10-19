@@ -57,12 +57,11 @@ void UVaesenEquipmentComponent::BeginPlay()
 
 TArray<EVaesenEquipmentSlot> UVaesenEquipmentComponent::GetPlayerSlots()
 {
-	// In pairs, as the panel shows them: two per row.
+	// The armor from head to feet, then the back, the hands, the talisman and the bag.
 	return {
-		EVaesenEquipmentSlot::Head, EVaesenEquipmentSlot::Back,
-		EVaesenEquipmentSlot::Chest, EVaesenEquipmentSlot::Hands,
+		EVaesenEquipmentSlot::Head, EVaesenEquipmentSlot::Chest, EVaesenEquipmentSlot::Hands,
 		EVaesenEquipmentSlot::Legs, EVaesenEquipmentSlot::Feet,
-		EVaesenEquipmentSlot::MainHand, EVaesenEquipmentSlot::OffHand,
+		EVaesenEquipmentSlot::Back, EVaesenEquipmentSlot::MainHand, EVaesenEquipmentSlot::OffHand,
 		EVaesenEquipmentSlot::Talisman, EVaesenEquipmentSlot::Bag,
 	};
 }
