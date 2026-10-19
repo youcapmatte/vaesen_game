@@ -349,7 +349,7 @@ Whether full-body armor is allowed is a setting on the component; it's off on pl
 Potions, food and other things you use often can't go in equipment (they aren't worn), so they have **quick slots**: shortcuts, like the potion slots in The Witcher 3.
 
 - **What a slot holds:** a **kind** of item, not the item itself. The items stay in the inventory (pouches included); the slot shows how many you have in total.
-- **Using:** keys **1 to 8**, or clicking the slot in the inventory screen, use one of them, from wherever in the inventory it is. When you run out, the slot stays assigned but greys out, and fills again when you pick more up.
+- **Using:** keys **1 to 8**, or clicking the slot in the inventory screen, use one of them, from wherever in the inventory it is. When the last one is gone (eaten, dropped or put in a chest), the slot empties.
 - **What fits:** anything usable that isn't worn: potions, food, remedies, letters. Not clothing, weapons or tools (they go in equipment), and not pouches.
 - **How many:** four to start with. A belt or bandolier worn in the **Bag** slot can add more (its **extra quick slots**), up to eight.
 - **The quick bar:** the slots are shown at the bottom of the screen during play, and in the inventory screen under the panels. There you **drag an item onto a slot** to put that kind there (a kind of item is in one slot at most), and **right-click** a slot to clear it.

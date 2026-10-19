@@ -13,8 +13,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FVaesenQuickSlotsChanged);
 /**
  * The player's quick slots: shortcuts (keys 1-8, and the quick bar) to usable things in their inventory, like potions
  * in The Witcher 3. A slot remembers a kind of item, not an item: the items stay in the inventory (pouches
- * included), the slot shows how many there are, and using it uses one of them. When they run out the slot stays
- * assigned, greyed out, and fills again when more are picked up.
+ * included), the slot shows how many there are, and using it uses one of them. When the last one is gone (used,
+ * dropped, put away) the slot empties.
  *
  * What fits: anything usable that isn't worn (UVaesenItem::CanBeQuickSlotted): potions, food, remedies, letters.
  * How many: BaseSlots, plus what a belt or bag worn in the Bag slot adds (UVaesenContainerItem::ExtraQuickSlots),
@@ -82,6 +82,10 @@ private:
 	/** Server: BaseSlots plus what the worn bag adds; assignments past the end are dropped. */
 	UFUNCTION()
 	void UpdateSlotCount();
+
+	/** Server: empties slots whose kind of item the player no longer has. */
+	UFUNCTION()
+	void ClearRunOutSlots();
 
 	void Assign(int32 Index, TSubclassOf<UVaesenItem> ItemClass);
 

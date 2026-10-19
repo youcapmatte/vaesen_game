@@ -33,6 +33,11 @@ void UVaesenQuickSlotComponent::BeginPlay()
 				Equipment->OnEquipmentChanged.AddUniqueDynamic(this, &UVaesenQuickSlotComponent::UpdateSlotCount);
 			}
 		}
+		// Running out of something empties its slot.
+		if (UVaesenInventoryComponent* Inventory = GetInventory())
+		{
+			Inventory->OnInventoryUpdated.AddUniqueDynamic(this, &UVaesenQuickSlotComponent::ClearRunOutSlots);
+		}
 		UpdateSlotCount();
 	}
 }
@@ -83,6 +88,23 @@ void UVaesenQuickSlotComponent::UpdateSlotCount()
 	if (Slots.Num() != Count)
 	{
 		Slots.SetNum(Count);
+		OnQuickSlotsChanged.Broadcast();
+	}
+}
+
+void UVaesenQuickSlotComponent::ClearRunOutSlots()
+{
+	bool bChanged = false;
+	for (int32 Index = 0; Index < Slots.Num(); ++Index)
+	{
+		if (Slots[Index] && GetSlotCount(Index) == 0)
+		{
+			Slots[Index] = nullptr;
+			bChanged = true;
+		}
+	}
+	if (bChanged)
+	{
 		OnQuickSlotsChanged.Broadcast();
 	}
 }

@@ -11,7 +11,8 @@ class UVaesenItemTooltipWidget;
 class UVaesenQuickSlotComponent;
 
 /**
- * One quick slot: its key, the item's picture (or name) and how many the player has; greyed out when they have none.
+ * One quick slot: its key, the item's picture (or name) and how many the player has (faded for a moment at 0,
+ * until the server empties the slot).
  * Drop an item from an inventory on it to put that kind of item there (only usable, unworn things fit); right-click
  * clears it; clicking uses one (in the inventory screen).
  *
