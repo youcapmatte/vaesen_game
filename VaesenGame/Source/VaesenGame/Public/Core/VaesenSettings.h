@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DeveloperSettings.h"
+#include "GameplayTagContainer.h"
 #include "VaesenSettings.generated.h"
 
 class USoundBase;
@@ -84,6 +85,10 @@ public:
 	/** The in-game HUD all gameplay UI lives on (minimap, quick bar...), e.g. WBP_HUD. Empty = none. */
 	UPROPERTY(Config, EditAnywhere, Category = "UI")
 	TSoftClassPtr<UVaesenHUDWidget> HUDWidget;
+
+	/** Icons for the status badges under the health bar (Status.* tags); one without shows its name's first letters. */
+	UPROPERTY(Config, EditAnywhere, Category = "UI", meta = (Categories = "Status"))
+	TMap<FGameplayTag, TSoftObjectPtr<UTexture2D>> StatusIcons;
 
 	/** Front-end music: starts on the login screen and carries on through character select. Leave empty for silence. Looping is set on the sound asset. */
 	UPROPERTY(Config, EditAnywhere, Category = "Audio")

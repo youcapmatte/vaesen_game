@@ -1,5 +1,7 @@
 #include "Player/VaesenPlayerController.h"
 
+#include "AbilitySystemComponent.h"
+#include "Abilities/VaesenAttributeSet.h"
 #include "Characters/VaesenPlayerCharacter.h"
 #include "Core/VaesenMusicSubsystem.h"
 #include "Core/VaesenSettings.h"
@@ -111,4 +113,53 @@ void AVaesenPlayerController::CloseInventory()
 	SetInputMode(FInputModeGameOnly());
 	SetShowMouseCursor(false);
 	ResetIgnoreLookInput();
+}
+
+void AVaesenPlayerController::VaesenHealth(float Amount)
+{
+	ServerChangeVital(false, Amount);
+}
+
+void AVaesenPlayerController::VaesenStamina(float Amount)
+{
+	ServerChangeVital(true, Amount);
+}
+
+void AVaesenPlayerController::VaesenStatus(const FString& Tag)
+{
+	ServerToggleStatus(FName(*Tag));
+}
+
+void AVaesenPlayerController::ServerChangeVital_Implementation(bool bStamina, float Amount)
+{
+#if !UE_BUILD_SHIPPING
+	const AVaesenPlayerCharacter* PlayerCharacter = Cast<AVaesenPlayerCharacter>(GetPawn());
+	UAbilitySystemComponent* AbilitySystem = PlayerCharacter ? PlayerCharacter->GetAbilitySystemComponent() : nullptr;
+	if (AbilitySystem)
+	{
+		const FGameplayAttribute Attribute = bStamina ? UVaesenAttributeSet::GetStaminaAttribute() : UVaesenAttributeSet::GetHealthAttribute();
+		AbilitySystem->SetNumericAttributeBase(Attribute, AbilitySystem->GetNumericAttributeBase(Attribute) + Amount);
+	}
+#endif
+}
+
+void AVaesenPlayerController::ServerToggleStatus_Implementation(FName Tag)
+{
+#if !UE_BUILD_SHIPPING
+	const AVaesenPlayerCharacter* PlayerCharacter = Cast<AVaesenPlayerCharacter>(GetPawn());
+	UAbilitySystemComponent* AbilitySystem = PlayerCharacter ? PlayerCharacter->GetAbilitySystemComponent() : nullptr;
+	const FGameplayTag Status = FGameplayTag::RequestGameplayTag(Tag, false);
+	if (!AbilitySystem || !Status.IsValid())
+	{
+		return;
+	}
+	if (AbilitySystem->HasMatchingGameplayTag(Status))
+	{
+		AbilitySystem->RemoveReplicatedLooseGameplayTag(Status);
+	}
+	else
+	{
+		AbilitySystem->AddReplicatedLooseGameplayTag(Status);
+	}
+#endif
 }

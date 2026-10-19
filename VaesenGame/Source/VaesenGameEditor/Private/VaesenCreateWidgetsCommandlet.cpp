@@ -41,6 +41,8 @@
 #include "MaterialEditingLibrary.h"
 #include "Materials/Material.h"
 #include "MaterialDomain.h"
+#include "MaterialShared.h"
+#include "ShaderCompiler.h"
 #include "Materials/MaterialExpressionCustom.h"
 #include "Materials/MaterialExpressionScalarParameter.h"
 #include "Materials/MaterialExpressionSceneTexture.h"
@@ -63,6 +65,7 @@
 #include "UI/Inventory/VaesenQuickBarWidget.h"
 #include "UI/Minimap/VaesenMinimapWidget.h"
 #include "UI/VaesenHUDWidget.h"
+#include "UI/VaesenVitalsWidget.h"
 #include "Materials/MaterialExpressionComponentMask.h"
 #include "Materials/MaterialExpressionTextureCoordinate.h"
 #include "Materials/MaterialExpressionWorldPosition.h"
@@ -1933,13 +1936,294 @@ return Colour;)");
 		return Material;
 	}
 
-	/** WBP_HUD: the in-game HUD, full screen: the minimap in the top right, the quick bar at the bottom centre. */
+	/** Compiles Material's shaders now and logs any errors (the hand-written HLSL would otherwise only fail in play). */
+	bool ValidateMaterial(UMaterial* Material)
+	{
+		if (!Material)
+		{
+			return false;
+		}
+		Material->ForceRecompileForRendering();
+		if (GShaderCompilingManager)
+		{
+			GShaderCompilingManager->FinishAllCompilation();
+		}
+		const FMaterialResource* Resource = Material->GetMaterialResource(GMaxRHIFeatureLevel);
+		const TArray<FString> Errors = Resource ? Resource->GetCompileErrors() : TArray<FString>();
+		for (const FString& Error : Errors)
+		{
+			UE_LOG(LogVaesenCreateWidgets, Error, TEXT("%s: %s"), *Material->GetName(), *Error);
+		}
+		if (Errors.Num() == 0)
+		{
+			UE_LOG(LogVaesenCreateWidgets, Display, TEXT("%s compiles."), *Material->GetName());
+		}
+		return Errors.Num() == 0;
+	}
+
+	/** A UI material made of one Custom HLSL node (float4: colour and opacity) fed by texture coordinates and parameters. */
+	struct FUIMaterialParameter
+	{
+		const TCHAR* Name;
+		bool bColour;
+		FLinearColor Colour;
+		float Number;
+	};
+
+	UMaterial* CreateCustomUIMaterial(const TCHAR* PackagePath, const TCHAR* Description, const TArray<FUIMaterialParameter>& Parameters, const TCHAR* Code)
+	{
+		const FString Name = FPackageName::GetShortName(PackagePath);
+		if (AssetExists(PackagePath))
+		{
+			UE_LOG(LogVaesenCreateWidgets, Display, TEXT("%s already exists; leaving it alone."), PackagePath);
+			return LoadObject<UMaterial>(nullptr, *(FString(PackagePath) + TEXT(".") + Name));
+		}
+
+		UPackage* Package = CreatePackage(PackagePath);
+		UMaterial* Material = NewObject<UMaterial>(Package, *Name, RF_Public | RF_Standalone);
+		Material->MaterialDomain = MD_UI;
+		Material->BlendMode = BLEND_Translucent;
+
+		const auto Add = [Material](TSubclassOf<UMaterialExpression> Class, int32 X, int32 Y)
+		{
+			return UMaterialEditingLibrary::CreateMaterialExpression(Material, Class, X, Y);
+		};
+
+		UMaterialExpressionCustom* Node = CastChecked<UMaterialExpressionCustom>(Add(UMaterialExpressionCustom::StaticClass(), -300, 0));
+		Node->Description = Description;
+		Node->OutputType = CMOT_Float4;
+		Node->Code = Code;
+		Node->Inputs.Reset();
+		Node->Inputs.AddDefaulted_GetRef().InputName = TEXT("UV");
+		for (const FUIMaterialParameter& Parameter : Parameters)
+		{
+			Node->Inputs.AddDefaulted_GetRef().InputName = Parameter.Name;
+		}
+
+		UMaterialEditingLibrary::ConnectMaterialExpressions(Add(UMaterialExpressionTextureCoordinate::StaticClass(), -700, -100), TEXT(""), Node, TEXT("UV"));
+		int32 Y = 0;
+		for (const FUIMaterialParameter& Parameter : Parameters)
+		{
+			UMaterialExpression* Input;
+			if (Parameter.bColour)
+			{
+				UMaterialExpressionVectorParameter* Vector = CastChecked<UMaterialExpressionVectorParameter>(Add(UMaterialExpressionVectorParameter::StaticClass(), -700, Y));
+				Vector->ParameterName = Parameter.Name;
+				Vector->DefaultValue = Parameter.Colour;
+				Input = Vector;
+			}
+			else
+			{
+				UMaterialExpressionScalarParameter* Scalar = CastChecked<UMaterialExpressionScalarParameter>(Add(UMaterialExpressionScalarParameter::StaticClass(), -700, Y));
+				Scalar->ParameterName = Parameter.Name;
+				Scalar->DefaultValue = Parameter.Number;
+				Input = Scalar;
+			}
+			UMaterialEditingLibrary::ConnectMaterialExpressions(Input, TEXT(""), Node, Parameter.Name);
+			Y += 120;
+		}
+
+		UMaterialExpressionComponentMask* Colour = CastChecked<UMaterialExpressionComponentMask>(Add(UMaterialExpressionComponentMask::StaticClass(), -50, -60));
+		Colour->R = Colour->G = Colour->B = 1;
+		Colour->A = 0;
+		UMaterialExpressionComponentMask* Opacity = CastChecked<UMaterialExpressionComponentMask>(Add(UMaterialExpressionComponentMask::StaticClass(), -50, 60));
+		Opacity->R = Opacity->G = Opacity->B = 0;
+		Opacity->A = 1;
+		UMaterialEditingLibrary::ConnectMaterialExpressions(Node, TEXT(""), Colour, TEXT(""));
+		UMaterialEditingLibrary::ConnectMaterialExpressions(Node, TEXT(""), Opacity, TEXT(""));
+		UMaterialEditingLibrary::ConnectMaterialProperty(Colour, TEXT(""), MP_EmissiveColor);
+		UMaterialEditingLibrary::ConnectMaterialProperty(Opacity, TEXT(""), MP_Opacity);
+
+		UMaterialEditingLibrary::RecompileMaterial(Material);
+		FAssetRegistryModule::AssetCreated(Material);
+		Save(Material);
+		return Material;
+	}
+
+	/** A vital's bar: flat left end, pointed right end, a sheen along the top, a dark edge, and a lingering lost chunk. */
+	UMaterial* CreateVitalBarMaterial()
+	{
+		return CreateCustomUIMaterial(TEXT("/Game/Vaesen/Materials/M_VitalBar"), TEXT("Vital bar"), {
+			{ TEXT("Percent"), false, {}, 1.0f },
+			{ TEXT("Trail"), false, {}, 1.0f },
+			{ TEXT("FillColor"), true, FLinearColor(0.55f, 0.04f, 0.03f), 0.0f },
+			{ TEXT("TrailColor"), true, FLinearColor(0.95f, 0.78f, 0.55f), 0.0f },
+			{ TEXT("BackColor"), true, FLinearColor(0.035f, 0.025f, 0.02f), 0.0f },
+			{ TEXT("TipLength"), false, {}, 0.035f },
+		}, TEXT(R"(float Px = max(fwidth(UV.x), 0.0001);
+float Py = max(fwidth(UV.y), 0.0001);
+float Across = abs(UV.y - 0.5) * 2.0;
+
+// The shape: flat on the left, a point on the right.
+float RightEdge = 1.0 - TipLength * Across;
+float Inside = (1.0 - smoothstep(RightEdge - Px, RightEdge, UV.x)) * (1.0 - smoothstep(1.0 - Py * 2.0, 1.0, Across));
+
+// The fill reaches the tip when full; the lost chunk lingers behind it.
+float FillEnd = Percent * RightEdge;
+float TrailEnd = Trail * RightEdge;
+float Filled = 1.0 - smoothstep(FillEnd - Px, FillEnd, UV.x);
+float Trailing = (1.0 - smoothstep(TrailEnd - Px, TrailEnd, UV.x)) * (1.0 - Filled);
+
+// Sheen along the top, shade along the bottom, faint streaks along the length.
+float SheenAt = (UV.y - 0.3) / 0.17;
+float Sheen = 0.78 + 0.55 * exp(-SheenAt * SheenAt);
+Sheen *= lerp(1.0, 0.55, smoothstep(0.55, 1.0, UV.y));
+float Streaks = 1.0 + 0.05 * sin(UV.x * 140.0 + sin(UV.x * 17.0) * 3.0);
+
+float3 Colour = BackColor.rgb * (0.8 + 0.4 * (1.0 - UV.y));
+Colour = lerp(Colour, TrailColor.rgb * 0.85 * Sheen, Trailing);
+Colour = lerp(Colour, FillColor.rgb * Sheen * Streaks, Filled);
+
+// A brighter line where the fill ends (not when full), and a dark edge all round.
+float EndLine = (1.0 - smoothstep(0.0, Px * 1.5, abs(UV.x - FillEnd))) * step(0.001, Percent) * step(Percent, 0.999);
+Colour = lerp(Colour, FillColor.rgb * 2.2 + 0.1, EndLine * 0.6);
+float Edge = max(smoothstep(1.0 - Py * 3.0, 1.0 - Py, Across), max(1.0 - smoothstep(0.0, Px * 2.0, UV.x), smoothstep(RightEdge - Px * 3.0, RightEdge - Px, UV.x)));
+Colour = lerp(Colour, float3(0.01, 0.008, 0.006), Edge * 0.9);
+
+return float4(Colour, Inside * 0.96);)"));
+	}
+
+	/** The medallion: an iron plate in a riveted brass ring, with a silver horned monster's head and glowing red eyes. */
+	UMaterial* CreateVitalsEmblemMaterial()
+	{
+		return CreateCustomUIMaterial(TEXT("/Game/Vaesen/Materials/M_VitalsEmblem"), TEXT("Monster medallion"), {
+			{ TEXT("RingColor"), true, FLinearColor(0.62f, 0.48f, 0.28f), 0.0f },
+			{ TEXT("SilverColor"), true, FLinearColor(0.78f, 0.78f, 0.82f), 0.0f },
+			{ TEXT("EyeColor"), true, FLinearColor(1.0f, 0.12f, 0.05f), 0.0f },
+		}, TEXT(R"(float2 P = (UV - 0.5) * 2.0;
+P.y = -P.y;
+float Px = max(fwidth(P.x), 0.0001) * 1.5;
+float R = length(P);
+float Alpha = 1.0 - smoothstep(1.0 - Px, 1.0, R);
+float2 LightDir = normalize(float2(-0.5, 0.8));
+
+// The plate: dark iron, lighter towards the top left.
+float3 Colour = lerp(float3(0.13, 0.12, 0.12), float3(0.035, 0.035, 0.04), saturate(R / 0.84 * 0.8 + 0.2 - 0.25 * dot(P, LightDir)));
+
+// The brass ring, rounded, with eight rivets.
+float RingIn = 0.84;
+float Ring = smoothstep(RingIn - Px, RingIn, R);
+float Across = saturate((R - RingIn) / (1.0 - RingIn));
+float Facing = 0.6 + 0.45 * dot(P / max(R, 0.0001), LightDir);
+float3 Brass = RingColor.rgb * (0.45 + 0.75 * sin(Across * 3.14159)) * Facing;
+float Sector = 6.2831853 / 8.0;
+float Angle = atan2(P.y, P.x);
+float Local = fmod(Angle + 6.2831853 + Sector * 0.5, Sector) - Sector * 0.5;
+float2 Rivet = float2(cos(Local), sin(Local)) * R - float2(0.92, 0.0);
+float RivetMask = 1.0 - smoothstep(0.03 - Px, 0.03, length(Rivet));
+Brass = lerp(Brass, RingColor.rgb * (1.1 + 0.6 * dot(normalize(Rivet + 0.0001), LightDir)), RivetMask);
+Colour = lerp(Colour, Brass, Ring);
+Colour *= lerp(0.3, 1.0, smoothstep(0.0, Px * 2.0, abs(R - RingIn)));
+
+// The monster's head: a skull, a jaw and two curling horns.
+float2 H = P / 0.8;
+float2 M = float2(abs(H.x), H.y);
+float Skull = (length((H - float2(0.0, 0.06)) / float2(0.38, 0.44)) - 1.0) * 0.38;
+float Jaw = (length((H - float2(0.0, -0.30)) / float2(0.29, 0.22)) - 1.0) * 0.22;
+float Cheek = (length((M - float2(0.25, -0.10)) / float2(0.13, 0.15)) - 1.0) * 0.13;
+float Head = min(min(Skull, Jaw), Cheek);
+float Horn = 10.0;
+for (int i = 0; i <= 16; i++)
+{
+	float t = i / 16.0;
+	float2 B = (1.0 - t) * (1.0 - t) * float2(0.26, 0.30) + 2.0 * (1.0 - t) * t * float2(0.78, 0.26) + t * t * float2(0.60, 0.82);
+	Horn = min(Horn, length(M - B) - lerp(0.10, 0.012, t));
+}
+float Body = min(Head, Horn);
+float Fill = (1.0 - smoothstep(-Px, Px, Body)) * (1.0 - Ring);
+
+// Silver, lit from the top left, darker towards its edges; ridges along the horns.
+float Depth = saturate(-Body * 10.0);
+float3 Silver = SilverColor.rgb * (0.5 + 0.25 * saturate(dot(H, LightDir) + 0.5) + 0.35 * Depth);
+Silver *= lerp(1.0, 0.75 + 0.25 * sin(length(M - float2(0.26, 0.30)) * 70.0), step(Horn, Head) * 0.8);
+
+// Brows, eye sockets, nostrils, a grim mouth with fangs.
+float2 BrowA = float2(0.33, 0.21);
+float2 BrowB = float2(0.05, 0.07);
+float BrowT = saturate(dot(M - BrowA, BrowB - BrowA) / dot(BrowB - BrowA, BrowB - BrowA));
+float Brow = length(M - BrowA - (BrowB - BrowA) * BrowT) - 0.032;
+float Dark = 1.0 - smoothstep(-Px, Px, Brow);
+float Socket = length((M - float2(0.16, 0.0)) / float2(0.10, 0.055)) - 1.0;
+Dark = max(Dark, 1.0 - smoothstep(-0.08, 0.08, Socket));
+float Nostril = length((M - float2(0.045, -0.15)) / float2(0.022, 0.045)) - 1.0;
+Dark = max(Dark, 1.0 - smoothstep(-0.15, 0.15, Nostril));
+float Mouth = length((H - float2(0.0, -0.33)) / float2(0.20, 0.045)) - 1.0;
+Dark = max(Dark, 1.0 - smoothstep(-0.12, 0.12, Mouth));
+Silver = lerp(Silver, float3(0.03, 0.025, 0.025), Dark * 0.92);
+float2 Fang = M - float2(0.11, -0.29);
+float FangMask = (Fang.y < 0.0 && Fang.y > -0.11 && abs(Fang.x) < 0.03 * (1.0 + Fang.y / 0.11)) ? 1.0 : 0.0;
+Silver = lerp(Silver, SilverColor.rgb * 1.05, FangMask);
+
+// Glowing eyes, with a little glow around them.
+float Eye = length((M - float2(0.16, 0.0)) / float2(0.06, 0.03));
+Silver = lerp(Silver, EyeColor.rgb * 1.6, 1.0 - smoothstep(0.55, 1.0, Eye));
+Silver += EyeColor.rgb * 0.35 * exp(-Eye * Eye * 0.25);
+
+Colour = lerp(Colour, Silver, Fill);
+// A dark outline round the head.
+Colour = lerp(Colour, float3(0.015, 0.015, 0.015), (1.0 - smoothstep(0.0, Px * 2.5, abs(Body))) * (1.0 - Ring) * 0.85);
+
+return float4(Colour, Alpha);)"));
+	}
+
+	const TCHAR* VitalsWidgetPath = TEXT("/Game/Vaesen/UI/WBP_Vitals");
+
+	/** WBP_Vitals: the medallion with the health bar beside it, the stamina bar under it and room for statuses below. */
+	void CreateVitals()
+	{
+		UMaterial* BarMaterial = CreateVitalBarMaterial();
+		UMaterial* EmblemMaterial = CreateVitalsEmblemMaterial();
+
+		UWidgetBlueprint* Blueprint = CreateBlueprint(VitalsWidgetPath, UVaesenVitalsWidget::StaticClass());
+		if (!Blueprint)
+		{
+			return;
+		}
+		const FBuilder Build{ Blueprint->WidgetTree };
+
+		USizeBox* Size = Build.Make<USizeBox>();
+		Size->SetWidthOverride(440.0f);
+		Size->SetHeightOverride(130.0f);
+		Blueprint->WidgetTree->RootWidget = Size;
+		UCanvasPanel* Canvas = Build.Make<UCanvasPanel>();
+		Size->SetContent(Canvas);
+
+		const auto Place = [Canvas](UWidget* Widget, const FVector2D& Position, const FVector2D& WidgetSize)
+		{
+			UCanvasPanelSlot* PanelSlot = Canvas->AddChildToCanvas(Widget);
+			PanelSlot->SetPosition(Position);
+			PanelSlot->SetSize(WidgetSize);
+			return PanelSlot;
+		};
+
+		// The bars start under the medallion's right side, as in The Witcher.
+		UImage* HealthBar = Build.Make<UImage>(TEXT("HealthBar"));
+		HealthBar->SetBrushFromMaterial(BarMaterial);
+		Place(HealthBar, FVector2D(76.0f, 31.0f), FVector2D(320.0f, 12.0f));
+
+		UImage* StaminaBar = Build.Make<UImage>(TEXT("StaminaBar"));
+		StaminaBar->SetBrushFromMaterial(BarMaterial);
+		Place(StaminaBar, FVector2D(84.0f, 49.0f), FVector2D(240.0f, 7.0f));
+
+		UHorizontalBox* Statuses = Build.Make<UHorizontalBox>(TEXT("StatusRow"));
+		Place(Statuses, FVector2D(100.0f, 66.0f), FVector2D(300.0f, 34.0f));
+
+		// The medallion on top.
+		UImage* Emblem = Build.Make<UImage>(TEXT("Emblem"));
+		Emblem->SetBrushFromMaterial(EmblemMaterial);
+		Place(Emblem, FVector2D(0.0f, 0.0f), FVector2D(100.0f, 100.0f));
+
+		Finish(Blueprint);
+	}
+
+	/** WBP_HUD: the in-game HUD, full screen: vitals top left, the minimap top right, the quick bar at the bottom centre. */
 	void CreateHUD()
 	{
 		UWidgetBlueprint* Blueprint = CreateBlueprint(TEXT("/Game/Vaesen/UI/WBP_HUD"), UVaesenHUDWidget::StaticClass());
 		UClass* MinimapClass = LoadWidgetClass(MinimapWidgetPath);
 		UClass* QuickBarClass = LoadWidgetClass(QuickBarPath);
-		if (!Blueprint || !MinimapClass || !QuickBarClass)
+		UClass* VitalsClass = LoadWidgetClass(VitalsWidgetPath);
+		if (!Blueprint || !MinimapClass || !QuickBarClass || !VitalsClass)
 		{
 			return;
 		}
@@ -1947,6 +2231,11 @@ return Colour;)");
 
 		UCanvasPanel* Canvas = Build.Make<UCanvasPanel>(TEXT("Canvas"));
 		Blueprint->WidgetTree->RootWidget = Canvas;
+
+		UCanvasPanelSlot* VitalsSlot = Canvas->AddChildToCanvas(Build.Make<UVaesenVitalsWidget>(TEXT("Vitals"), VitalsClass));
+		VitalsSlot->SetAnchors(FAnchors(0.0f, 0.0f));
+		VitalsSlot->SetPosition(FVector2D(24.0f, 20.0f));
+		VitalsSlot->SetAutoSize(true);
 
 		UCanvasPanelSlot* MapSlot = Canvas->AddChildToCanvas(Build.Make<UVaesenMinimapWidget>(TEXT("Minimap"), MinimapClass));
 		MapSlot->SetAnchors(FAnchors(1.0f, 0.0f));
@@ -2027,7 +2316,16 @@ int32 UVaesenCreateWidgetsCommandlet::Main(const FString& Params)
 	SetupInventory();
 	SetupPouches();
 	CreateMinimap();
+	CreateVitals();
 	CreateHUD();
+
+	// The hand-written shaders, compiled now so mistakes show here rather than in play.
+	for (const TCHAR* Path : { TEXT("/Game/Vaesen/Materials/M_VitalBar.M_VitalBar"), TEXT("/Game/Vaesen/Materials/M_VitalsEmblem.M_VitalsEmblem"),
+		TEXT("/Game/Vaesen/Materials/M_Minimap.M_Minimap"), TEXT("/Game/Vaesen/Materials/M_MinimapInk.M_MinimapInk"),
+		TEXT("/Game/Vaesen/Materials/PP_InteractionOutline.PP_InteractionOutline") })
+	{
+		ValidateMaterial(LoadObject<UMaterial>(nullptr, Path));
+	}
 	return 0;
 }
 

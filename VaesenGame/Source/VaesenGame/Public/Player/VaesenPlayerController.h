@@ -32,6 +32,18 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Inventory")
 	bool IsInventoryOpen() const;
 
+	/** Console, for testing: changes the character's health by Amount (e.g. VaesenHealth -20). */
+	UFUNCTION(Exec)
+	void VaesenHealth(float Amount);
+
+	/** Console, for testing: changes the character's stamina by Amount (e.g. VaesenStamina -30). */
+	UFUNCTION(Exec)
+	void VaesenStamina(float Amount);
+
+	/** Console, for testing: turns a status on or off (e.g. VaesenStatus Status.Poisoned). */
+	UFUNCTION(Exec)
+	void VaesenStatus(const FString& Tag);
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -40,6 +52,12 @@ protected:
 	TObjectPtr<UInputMappingContext> DefaultMappingContext;
 
 private:
+	UFUNCTION(Server, Reliable)
+	void ServerChangeVital(bool bStamina, float Amount);
+
+	UFUNCTION(Server, Reliable)
+	void ServerToggleStatus(FName Tag);
+
 	UPROPERTY(Transient)
 	TObjectPtr<UVaesenInventoryScreenWidget> InventoryScreen;
 
