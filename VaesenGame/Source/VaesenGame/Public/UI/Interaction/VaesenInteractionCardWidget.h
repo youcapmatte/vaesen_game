@@ -5,6 +5,7 @@
 #include "VaesenInteractionCardWidget.generated.h"
 
 class UProgressBar;
+class UWidget;
 class UTextBlock;
 class UVaesenInteractionComponent;
 
@@ -14,10 +15,13 @@ class UVaesenInteractionComponent;
  *
  * Widget Blueprint (e.g. WBP_InteractionCard, parent class VaesenInteractionCardWidget), controls by these exact names:
  *   NameText             (Text)          - InteractableName
- *   ActionText           (Text)          - e.g. "[E] Pick up"; hidden when the action is empty
+ *   KeyText              (Text)          - the interact key, e.g. "E" (in a key-cap box); without it, ActionText
+ *                                          gets the key in brackets: "[E] Pick up"
+ *   ActionText           (Text)          - e.g. "Pick up"; hidden (with the key) when the action is empty
+ *   ActionRow            (any widget)    - optional: the row holding key and action, hidden with them
  *   DescriptionText      (Text)          - hidden when empty
  *   QuantityText         (Text)          - e.g. "x3"; hidden when the quantity is 0
- *   InteractionProgress  (Progress Bar)  - how long the key has been held; only for interactions that take time
+ *   InteractionProgress  (Progress Bar)  - fills while the key is held; only for interactions that take time
  * Override UpdateCard to show more (call the parent to keep the above).
  *
  * TEMPORARY: all bindings are BindWidgetOptional while the UI is being built, so each feature can be tried on its
@@ -42,15 +46,21 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Interaction")
 	TObjectPtr<UVaesenInteractionComponent> OwningInteractionComponent;
 
-	/** Text before the action, e.g. the interact key. */
+	/** The interact key as shown on the card. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction")
-	FText KeyPrefix = INVTEXT("[E] ");
+	FText KeyLabel = INVTEXT("E");
 
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UTextBlock> NameText;
 
 	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> KeyText;
+
+	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UTextBlock> ActionText;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UWidget> ActionRow;
 
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UTextBlock> DescriptionText;

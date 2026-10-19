@@ -10,8 +10,6 @@ DEFINE_LOG_CATEGORY_STATIC(LogVaesenInteraction, Log, All);
 
 UVaesenInteractionComponent::UVaesenInteractionComponent()
 {
-	SetComponentTickEnabled(false);
-
 	// Card: flat on the screen at the component's location, bottom centre on it, hidden until looked at.
 	SetWidgetSpace(EWidgetSpace::Screen);
 	SetDrawSize(FIntPoint(200, 150));

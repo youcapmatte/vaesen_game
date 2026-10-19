@@ -29,16 +29,17 @@ Every player character has a component called **VaesenInteractorComponent**. On 
 
 It does that with a **sphere sweep**, a thick line trace with a 10 cm radius, so small things are easy to aim at. The sweep follows the camera's view direction. In third person the camera sits behind the character, so the sweep starts level with the character rather than at the camera. Nothing between the camera and the character counts. The sweep reaches **200 cm in front of the character**, the same in first and third person.
 
-If the sweep hits an actor with an **interaction component**, and that component says this player may interact (`CanInteract`), it becomes the **focused** interactable. The interactor remembers it in a small struct (`FVaesenInteractionData`): what's being looked at, when the last check ran, and whether the interact key is held. If the sweep hits the same thing again, nothing new happens. If it hits nothing, or something else, the old focus ends.
+If the sweep hits an actor with an **interaction component**, and that component says this player may interact (`CanInteract`), it becomes the **focused** interactable. If the player isn't aiming at anything, for example walking up to an item on the floor while looking ahead, the **nearest interactable within reach and roughly in front** of them (within 35 degrees to either side, ignoring up and down, with nothing in the way) is focused instead. The interactor remembers it in a small struct (`FVaesenInteractionData`): what's being looked at, when the last check ran, and whether the interact key is held. If the sweep hits the same thing again, nothing new happens. If it hits nothing, or something else, the old focus ends.
 
 ### The object's side: the Interaction component
 
 Anything interactable carries a **VaesenInteractionComponent**. It's a **widget component in screen space**, which means it draws a small UI card flat on the screen at its position in the world. The card is the **interaction card**, 200 by 150 pixels, showing:
-- the name;
-- the quantity (for stacks);
-- a description;
-- the action, like "[E] Pick up";
-- a progress bar for interactions that take time.
+- the name, with the quantity on the right for stacks;
+- a short description;
+- the key in a key-cap box beside the action, like **E** Pick up;
+- a slim progress bar along the bottom edge that fills while the key is held, for interactions that take time.
+
+It's a dark rounded panel with a thin brass edge, sitting just above the object.
 
 The actor fills in that content. The component has these settings:
 - **Interaction time.** Zero means instant. Otherwise the key must be held this long.

@@ -524,7 +524,11 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 
 	const TCHAR* InteractionCardPath = TEXT("/Game/Vaesen/UI/Interaction/WBP_InteractionCard");
 
-	/** The card UVaesenInteractionComponent shows: a dark panel with name, quantity, description, action and progress. */
+	/**
+	 * The card UVaesenInteractionComponent shows: a dark rounded panel with the name (and quantity), a short
+	 * description, the key in a key-cap box beside the action, and a slim progress bar along the bottom edge that
+	 * fills while the key is held (only for interactions that take time).
+	 */
 	void CreateInteractionCard()
 	{
 		UWidgetBlueprint* Blueprint = CreateBlueprint(InteractionCardPath, UVaesenInteractionCardWidget::StaticClass());
@@ -536,6 +540,7 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 		const FBuilder Build{ Blueprint->WidgetTree };
 		UObject* FontObject = LoadObject<UObject>(nullptr, *UWidget::GetDefaultFontName());
 		const FLinearColor Parchment(0.93f, 0.88f, 0.76f);
+		const FLinearColor Muted(0.72f, 0.68f, 0.60f);
 
 		const auto Line = [&Build, FontObject](FName Name, const TCHAR* Sample, int32 Size, FName Typeface, const FLinearColor& Color)
 		{
@@ -543,41 +548,68 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 			Text->SetText(FText::FromString(Sample));
 			Text->SetFont(FSlateFontInfo(FontObject, Size, Typeface));
 			Text->SetColorAndOpacity(Color);
-			Text->SetAutoWrapText(true);
 			return Text;
 		};
 
+		// The card sits at the bottom of its 200x150 area (the component's pivot is its bottom centre).
 		UBorder* Panel = Build.Make<UBorder>(TEXT("Panel"));
 		Panel->bIsVariable = false;
-		Panel->SetBrush(FSlateRoundedBoxBrush(FLinearColor(0.06f, 0.05f, 0.04f, 0.88f), 6.0f, Brass, 1.0f));
-		Panel->SetPadding(FMargin(10.0f, 8.0f));
-		Panel->SetVerticalAlignment(VAlign_Top);
-		Blueprint->WidgetTree->RootWidget = Panel;
+		Panel->SetBrush(FSlateRoundedBoxBrush(FLinearColor(0.035f, 0.03f, 0.025f, 0.9f), 6.0f, FLinearColor(Brass.R, Brass.G, Brass.B, 0.8f), 1.0f));
+		Panel->SetPadding(FMargin(0.0f));
+		Panel->SetVerticalAlignment(VAlign_Bottom);
+		USizeBox* Area = Build.Make<USizeBox>();
+		Area->SetWidthOverride(200.0f);
+		Area->SetHeightOverride(150.0f);
+		UVerticalBox* AreaBox = Build.Make<UVerticalBox>();
+		Area->SetContent(AreaBox);
+		UVerticalBoxSlot* PanelSlot = AreaBox->AddChildToVerticalBox(Panel);
+		PanelSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+		PanelSlot->SetVerticalAlignment(VAlign_Bottom);
+		Blueprint->WidgetTree->RootWidget = Area;
 
 		UVerticalBox* Content = Build.Make<UVerticalBox>();
 		Panel->SetContent(Content);
 
 		// Name, with the quantity on the right.
 		UHorizontalBox* Header = Build.Make<UHorizontalBox>();
-		UHorizontalBoxSlot* NameSlot = Header->AddChildToHorizontalBox(Line(TEXT("NameText"), TEXT("Name"), 13, TEXT("Bold"), Parchment));
+		UTextBlock* Name = Line(TEXT("NameText"), TEXT("Name"), 13, TEXT("Bold"), Parchment);
+		Name->SetAutoWrapText(true);
+		UHorizontalBoxSlot* NameSlot = Header->AddChildToHorizontalBox(Name);
 		NameSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
-		UHorizontalBoxSlot* QuantitySlot = Header->AddChildToHorizontalBox(Line(TEXT("QuantityText"), TEXT("x1"), 11, TEXT("Regular"), BrassBright));
+		UHorizontalBoxSlot* QuantitySlot = Header->AddChildToHorizontalBox(Line(TEXT("QuantityText"), TEXT("x1"), 11, TEXT("Bold"), BrassBright));
 		QuantitySlot->SetVerticalAlignment(VAlign_Center);
 		QuantitySlot->SetPadding(FMargin(6.0f, 0.0f, 0.0f, 0.0f));
-		FBuilder::AddRow(Content, Header, 4.0f);
+		Content->AddChildToVerticalBox(Header)->SetPadding(FMargin(10.0f, 8.0f, 10.0f, 2.0f));
 
-		FBuilder::AddRow(Content, Line(TEXT("DescriptionText"), TEXT("Description"), 9, TEXT("Regular"), FLinearColor(0.80f, 0.77f, 0.70f)), 6.0f);
-		FBuilder::AddRow(Content, Line(TEXT("ActionText"), TEXT("[E] Interact"), 10, TEXT("Bold"), BrassBright), 4.0f);
+		UTextBlock* Description = Line(TEXT("DescriptionText"), TEXT("Description"), 9, TEXT("Regular"), Muted);
+		Description->SetAutoWrapText(true);
+		Content->AddChildToVerticalBox(Description)->SetPadding(FMargin(10.0f, 0.0f, 10.0f, 6.0f));
 
+		// The key in a key cap, then the action.
+		UHorizontalBox* ActionRow = Build.Make<UHorizontalBox>(TEXT("ActionRow"));
+		UBorder* KeyCap = Build.Make<UBorder>();
+		KeyCap->SetBrush(FSlateRoundedBoxBrush(FLinearColor(0.10f, 0.08f, 0.06f, 1.0f), 3.0f, BrassBright, 1.0f));
+		KeyCap->SetPadding(FMargin(6.0f, 1.0f));
+		KeyCap->SetHorizontalAlignment(HAlign_Center);
+		KeyCap->SetVerticalAlignment(VAlign_Center);
+		KeyCap->SetContent(Line(TEXT("KeyText"), TEXT("E"), 10, TEXT("Bold"), BrassBright));
+		ActionRow->AddChildToHorizontalBox(KeyCap)->SetVerticalAlignment(VAlign_Center);
+		UHorizontalBoxSlot* ActionSlot = ActionRow->AddChildToHorizontalBox(Line(TEXT("ActionText"), TEXT("Interact"), 11, TEXT("Bold"), Parchment));
+		ActionSlot->SetVerticalAlignment(VAlign_Center);
+		ActionSlot->SetPadding(FMargin(7.0f, 0.0f, 0.0f, 0.0f));
+		Content->AddChildToVerticalBox(ActionRow)->SetPadding(FMargin(10.0f, 0.0f, 10.0f, 8.0f));
+
+		// The hold progress: a slim bar along the bottom edge.
 		UProgressBar* Progress = Build.Make<UProgressBar>(TEXT("InteractionProgress"));
 		Progress->SetFillColorAndOpacity(BrassBright);
 		FProgressBarStyle ProgressStyle = Progress->GetWidgetStyle();
-		ProgressStyle.BackgroundImage.TintColor = FSlateColor(FLinearColor(0.0f, 0.0f, 0.0f, 0.6f));
+		ProgressStyle.BackgroundImage = FSlateRoundedBoxBrush(FLinearColor(0.0f, 0.0f, 0.0f, 0.55f), 2.0f);
+		ProgressStyle.FillImage = FSlateRoundedBoxBrush(FLinearColor::White, 2.0f);
 		Progress->SetWidgetStyle(ProgressStyle);
 		USizeBox* ProgressSize = Build.Make<USizeBox>();
 		ProgressSize->SetHeightOverride(4.0f);
 		ProgressSize->SetContent(Progress);
-		FBuilder::AddRow(Content, ProgressSize, 0.0f);
+		Content->AddChildToVerticalBox(ProgressSize)->SetPadding(FMargin(6.0f, 0.0f, 6.0f, 5.0f));
 
 		Finish(Blueprint);
 	}

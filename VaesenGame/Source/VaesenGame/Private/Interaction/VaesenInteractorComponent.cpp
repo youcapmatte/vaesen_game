@@ -1,6 +1,7 @@
 #include "Interaction/VaesenInteractorComponent.h"
 
 #include "Characters/VaesenPlayerCharacter.h"
+#include "Engine/OverlapResult.h"
 #include "Engine/World.h"
 #include "GameFramework/Controller.h"
 #include "Interaction/VaesenInteractionComponent.h"
@@ -71,6 +72,7 @@ void UVaesenInteractorComponent::PerformInteractionCheck()
 
 	FCollisionQueryParams Params(SCENE_QUERY_STAT(VaesenInteraction), false, Character);
 	FHitResult Hit;
+	UVaesenInteractionComponent* Found = nullptr;
 	if (GetWorld()->SweepSingleByChannel(Hit, Start, End, FQuat::Identity, ECC_Visibility, FCollisionShape::MakeSphere(TraceRadius), Params))
 	{
 		if (const AActor* HitActor = Hit.GetActor())
@@ -78,17 +80,84 @@ void UVaesenInteractorComponent::PerformInteractionCheck()
 			UVaesenInteractionComponent* Interactable = HitActor->FindComponentByClass<UVaesenInteractionComponent>();
 			if (Interactable && Interactable->CanInteract(Character))
 			{
-				// Still the same one: nothing to do.
-				if (Interactable != InteractionData.ViewedInteractionComponent)
-				{
-					FoundNewInteractable(Interactable);
-				}
-				return;
+				Found = Interactable;
 			}
 		}
 	}
 
-	CouldntFindInteractable();
+	// Not aiming at anything: the nearest thing in front, e.g. on the floor.
+	if (!Found && bFocusNearbyWhenNotAiming)
+	{
+		Found = FindNearbyInteractable(Eyes, Direction);
+	}
+
+	if (!Found)
+	{
+		CouldntFindInteractable();
+	}
+	else if (Found != InteractionData.ViewedInteractionComponent)
+	{
+		FoundNewInteractable(Found);
+	}
+}
+
+UVaesenInteractionComponent* UVaesenInteractorComponent::FindNearbyInteractable(const FVector& Eyes, const FVector& ViewDirection) const
+{
+	const AVaesenPlayerCharacter* Character = GetCharacter();
+	const FVector Forward = FVector(ViewDirection.X, ViewDirection.Y, 0.0).GetSafeNormal();
+	if (!Character || Forward.IsNearlyZero())
+	{
+		return nullptr;
+	}
+
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(VaesenInteractionNearby), false, Character);
+	TArray<FOverlapResult> Overlaps;
+	GetWorld()->OverlapMultiByChannel(Overlaps, Eyes, FQuat::Identity, ECC_Visibility, FCollisionShape::MakeSphere(TraceDistance), Params);
+
+	const float MinCosine = FMath::Cos(FMath::DegreesToRadians(NearbyAngle));
+	UVaesenInteractionComponent* Best = nullptr;
+	float BestScore = -1.0f;
+	TSet<const AActor*> Seen;
+	for (const FOverlapResult& Overlap : Overlaps)
+	{
+		const AActor* Actor = Overlap.GetActor();
+		if (!Actor || Seen.Contains(Actor))
+		{
+			continue;
+		}
+		Seen.Add(Actor);
+
+		UVaesenInteractionComponent* Interactable = Actor->FindComponentByClass<UVaesenInteractionComponent>();
+		if (!Interactable || !Interactable->CanInteract(Character))
+		{
+			continue;
+		}
+
+		// In front, within the angle (sideways only: looking up or down doesn't matter).
+		const FVector Target = Actor->GetComponentsBoundingBox(false).GetCenter();
+		const FVector Flat = FVector(Target.X - Eyes.X, Target.Y - Eyes.Y, 0.0).GetSafeNormal();
+		const float Cosine = FVector::DotProduct(Forward, Flat);
+		if (Cosine < MinCosine)
+		{
+			continue;
+		}
+
+		// In plain sight: nothing else in the way.
+		FHitResult Blocker;
+		if (GetWorld()->LineTraceSingleByChannel(Blocker, Eyes, Target, ECC_Visibility, Params) && Blocker.GetActor() != Actor)
+		{
+			continue;
+		}
+
+		// Straight ahead beats off to the side; near beats far.
+		const float Score = Cosine - Interactable->GetDistanceTo(Character) / FMath::Max(TraceDistance, 1.0f) * 0.25f;
+		if (Score > BestScore)
+		{
+			BestScore = Score;
+			Best = Interactable;
+		}
+	}
+	return Best;
 }
 
 void UVaesenInteractorComponent::FoundNewInteractable(UVaesenInteractionComponent* Interactable)

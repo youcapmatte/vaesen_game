@@ -31,6 +31,8 @@ struct FVaesenInteractionData
  * camera's view: it starts level with the character (so nothing between the camera and the character counts) and
  * reaches TraceDistance in front, the same in first and third person. The first actor hit with a
  * UVaesenInteractionComponent that allows this player (CanInteract) becomes the focus: its card and outline show.
+ * When the player isn't aiming at anything (say, an item on the floor while looking ahead), the nearest interactable
+ * within reach and roughly in front of them (within NearbyAngle, in plain sight) is focused instead.
  *
  * BeginInteract / EndInteract (the interact key) run here and on the server. Holding starts a timer of the
  * component's InteractionTime (or interacts at once); the server runs its own timer and is the one that interacts.
@@ -80,6 +82,14 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Interaction", meta = (ClampMin = "0", Units = "cm"))
 	float TraceRadius = 10.0f;
 
+	/** Focus things within reach in front of the player even when not aimed at (floor items). */
+	UPROPERTY(EditDefaultsOnly, Category = "Interaction")
+	bool bFocusNearbyWhenNotAiming = true;
+
+	/** How far to the side (from the view's direction, ignoring up and down) a nearby interactable may be. */
+	UPROPERTY(EditDefaultsOnly, Category = "Interaction", meta = (ClampMin = "0", ClampMax = "90", Units = "Degrees", EditCondition = "bFocusNearbyWhenNotAiming"))
+	float NearbyAngle = 35.0f;
+
 	/** Seconds between traces; 0 = every frame. */
 	UPROPERTY(EditDefaultsOnly, Category = "Interaction", meta = (ClampMin = "0", Units = "s"))
 	float CheckInterval = 0.0f;
@@ -90,6 +100,9 @@ private:
 	/** Traces for an interactable and moves the focus to what it finds. Local player only. */
 	void PerformInteractionCheck();
 	void FoundNewInteractable(UVaesenInteractionComponent* Interactable);
+
+	/** The best interactable within reach, roughly in front (ViewDirection) and in plain sight of Eyes, or null. */
+	UVaesenInteractionComponent* FindNearbyInteractable(const FVector& Eyes, const FVector& ViewDirection) const;
 	void CouldntFindInteractable();
 
 	/** Begins interacting with the focused component: the timer, or Interact right away. */

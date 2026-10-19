@@ -33,7 +33,21 @@ void UVaesenInteractionCardWidget::UpdateCard_Implementation()
 	}
 
 	SetLine(NameText, Component->InteractableName);
-	SetLine(ActionText, Component->ActionText.IsEmpty() ? FText::GetEmpty() : FText::Format(INVTEXT("{0}{1}"), KeyPrefix, Component->ActionText));
+	// The key in its own box when there is one, else in brackets before the action.
+	const bool bHasAction = !Component->ActionText.IsEmpty();
+	if (KeyText)
+	{
+		SetLine(KeyText, bHasAction ? KeyLabel : FText::GetEmpty());
+		SetLine(ActionText, Component->ActionText);
+	}
+	else
+	{
+		SetLine(ActionText, bHasAction ? FText::Format(INVTEXT("[{0}] {1}"), KeyLabel, Component->ActionText) : FText::GetEmpty());
+	}
+	if (ActionRow)
+	{
+		ActionRow->SetVisibility(bHasAction ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
+	}
 	SetLine(DescriptionText, Component->Description);
 	SetLine(QuantityText, Component->Quantity > 0 ? FText::Format(LOCTEXT("Quantity", "x{0}"), FText::AsNumber(Component->Quantity)) : FText::GetEmpty());
 
