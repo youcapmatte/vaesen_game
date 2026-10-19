@@ -6,7 +6,6 @@
 
 class AVaesenPickup;
 class AVaesenPlayerCharacter;
-class USoundBase;
 class UVaesenItem;
 class UVaesenPouchItem;
 
@@ -108,10 +107,6 @@ public:
 	/** What dropped items become in the world. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory")
 	TSubclassOf<AVaesenPickup> DropPickupClass;
-
-	/** Played to the player who drops something (from their own inventory component's requests). */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Sounds")
-	TObjectPtr<USoundBase> DropSound;
 
 	// --- Reading ---
 

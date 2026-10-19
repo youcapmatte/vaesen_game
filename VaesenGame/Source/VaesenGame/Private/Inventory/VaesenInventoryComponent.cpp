@@ -3,6 +3,7 @@
 #include "Characters/VaesenPlayerCharacter.h"
 #include "Engine/ActorChannel.h"
 #include "Engine/World.h"
+#include "Core/VaesenSettings.h"
 #include "Items/VaesenConsumableItem.h"
 #include "Items/VaesenItem.h"
 #include "Items/VaesenPickup.h"
@@ -641,9 +642,12 @@ void UVaesenInventoryComponent::RequestDropItem(UVaesenInventoryComponent* Inven
 {
 	// Heard straight away by the player dropping it.
 	const APawn* Pawn = Cast<APawn>(GetOwner());
-	if (DropSound && Pawn && Pawn->IsLocallyControlled() && Inventory && Inventory->GetItemAt(SlotIndex))
+	if (Pawn && Pawn->IsLocallyControlled() && Inventory && Inventory->GetItemAt(SlotIndex))
 	{
-		UGameplayStatics::PlaySound2D(this, DropSound);
+		if (USoundBase* Sound = UVaesenSettings::Get()->DropSound.LoadSynchronous())
+		{
+			UGameplayStatics::PlaySound2D(this, Sound);
+		}
 	}
 
 	if (GetOwner()->HasAuthority())

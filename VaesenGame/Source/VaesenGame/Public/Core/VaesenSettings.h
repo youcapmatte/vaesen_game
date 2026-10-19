@@ -131,6 +131,18 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Loading Screen", meta = (ClampMin = "1", Units = "s"))
 	float LoadingScreenTimeoutSeconds = 30.0f;
 
+	/** Played to a player when they put something on, unless the item has its own Equip Sound. Leave empty for none. */
+	UPROPERTY(Config, EditAnywhere, Category = "Audio|Items")
+	TSoftObjectPtr<USoundBase> DefaultEquipSound;
+
+	/** Played to a player when something can't be put on (wrong slot, no room), unless the item has its own. */
+	UPROPERTY(Config, EditAnywhere, Category = "Audio|Items")
+	TSoftObjectPtr<USoundBase> DefaultEquipRejectedSound;
+
+	/** Played to a player when they drop something on the ground. */
+	UPROPERTY(Config, EditAnywhere, Category = "Audio|Items")
+	TSoftObjectPtr<USoundBase> DropSound;
+
 	/** Played when the login button is pressed (or Enter in the password box). Leave empty for none. */
 	UPROPERTY(Config, EditAnywhere, Category = "Audio")
 	TSoftObjectPtr<USoundBase> LoginButtonSound;

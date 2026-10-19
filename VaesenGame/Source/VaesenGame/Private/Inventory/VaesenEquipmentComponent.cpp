@@ -2,6 +2,7 @@
 
 #include "Characters/VaesenBaseCharacter.h"
 #include "Characters/VaesenPlayerCharacter.h"
+#include "Core/VaesenSettings.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/ActorChannel.h"
 #include "Engine/SkeletalMesh.h"
@@ -261,7 +262,7 @@ void UVaesenEquipmentComponent::ApplyAppearance()
 	// Heard by this character's player only.
 	if (bAppearanceApplied && JustPutOn && IsLocalPlayers())
 	{
-		if (USoundBase* Sound = JustPutOn->EquipSound ? JustPutOn->EquipSound.Get() : EquipSound.Get())
+		if (USoundBase* Sound = JustPutOn->EquipSound ? JustPutOn->EquipSound.Get() : UVaesenSettings::Get()->DefaultEquipSound.LoadSynchronous())
 		{
 			UGameplayStatics::PlaySound2D(this, Sound);
 		}
@@ -340,27 +341,31 @@ void UVaesenEquipmentComponent::RequestUnequip(EVaesenEquipmentSlot Slot, UVaese
 void UVaesenEquipmentComponent::ServerEquipFromInventory_Implementation(UVaesenInventoryComponent* Inventory, int32 SlotIndex)
 {
 	const AVaesenPlayerCharacter* Player = Cast<AVaesenPlayerCharacter>(GetOwner());
-	if (!Inventory || !Inventory->CanBeAccessedBy(Player) || !EquipFromInventory(Inventory, Inventory->GetItemAt(SlotIndex)))
+	UVaesenItem* Item = Inventory ? Inventory->GetItemAt(SlotIndex) : nullptr;
+	if (!Item || !Inventory->CanBeAccessedBy(Player) || !EquipFromInventory(Inventory, Item))
 	{
-		ClientEquipRejected();
+		ClientEquipRejected(Item ? Item->GetClass() : nullptr);
 	}
 }
 
 void UVaesenEquipmentComponent::ServerUnequip_Implementation(EVaesenEquipmentSlot Slot, UVaesenInventoryComponent* To)
 {
 	const AVaesenPlayerCharacter* Player = Cast<AVaesenPlayerCharacter>(GetOwner());
+	const UVaesenEquippableItem* Worn = GetItemInSlot(Slot);
 	if ((To && !To->CanBeAccessedBy(Player)) || !UnequipToInventory(Slot, To))
 	{
-		ClientEquipRejected();
+		ClientEquipRejected(Worn ? Worn->GetClass() : nullptr);
 	}
 }
 
 void UVaesenEquipmentComponent::RequestDropEquipped(EVaesenEquipmentSlot Slot)
 {
-	const UVaesenInventoryComponent* Inventory = GetOwnInventory();
-	if (Inventory && Inventory->DropSound && IsLocalPlayers() && GetItemInSlot(Slot))
+	if (IsLocalPlayers() && GetItemInSlot(Slot))
 	{
-		UGameplayStatics::PlaySound2D(this, Inventory->DropSound);
+		if (USoundBase* Sound = UVaesenSettings::Get()->DropSound.LoadSynchronous())
+		{
+			UGameplayStatics::PlaySound2D(this, Sound);
+		}
 	}
 
 	if (GetOwner()->HasAuthority())
@@ -375,9 +380,10 @@ void UVaesenEquipmentComponent::RequestDropEquipped(EVaesenEquipmentSlot Slot)
 
 void UVaesenEquipmentComponent::ServerDropEquipped_Implementation(EVaesenEquipmentSlot Slot)
 {
+	const UVaesenEquippableItem* Worn = GetItemInSlot(Slot);
 	if (!DropEquipped(Slot))
 	{
-		ClientEquipRejected();
+		ClientEquipRejected(Worn ? Worn->GetClass() : nullptr);
 	}
 }
 
@@ -399,16 +405,22 @@ bool UVaesenEquipmentComponent::DropEquipped(EVaesenEquipmentSlot Slot)
 	return true;
 }
 
-void UVaesenEquipmentComponent::ClientEquipRejected_Implementation()
+void UVaesenEquipmentComponent::ClientEquipRejected_Implementation(TSubclassOf<UVaesenItem> ItemClass)
 {
-	PlayEquipRejectedSound();
+	PlayEquipRejectedSound(ItemClass);
 }
 
-void UVaesenEquipmentComponent::PlayEquipRejectedSound() const
+void UVaesenEquipmentComponent::PlayEquipRejectedSound(TSubclassOf<UVaesenItem> ItemClass) const
 {
-	if (EquipRejectedSound && IsLocalPlayers())
+	if (!IsLocalPlayers())
 	{
-		UGameplayStatics::PlaySound2D(this, EquipRejectedSound);
+		return;
+	}
+	const UVaesenEquippableItem* Defaults = ItemClass ? Cast<UVaesenEquippableItem>(ItemClass->GetDefaultObject()) : nullptr;
+	USoundBase* Sound = Defaults && Defaults->EquipRejectedSound ? Defaults->EquipRejectedSound.Get() : UVaesenSettings::Get()->DefaultEquipRejectedSound.LoadSynchronous();
+	if (Sound)
+	{
+		UGameplayStatics::PlaySound2D(this, Sound);
 	}
 }
 

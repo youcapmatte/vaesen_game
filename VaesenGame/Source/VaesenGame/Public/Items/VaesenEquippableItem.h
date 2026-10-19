@@ -37,9 +37,13 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equipment")
 	FName AttachSocket = TEXT("hand_r");
 
-	/** Played to the player who puts it on (chainmail rattles, a hat doesn't). Empty = the equipment's EquipSound. */
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equipment")
+	/** Played to the player who puts it on (chainmail rattles, a hat doesn't). Empty = Project Settings > Vaesen's default. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equipment|Sounds")
 	TObjectPtr<USoundBase> EquipSound;
+
+	/** Played to the player when it can't be put on (wrong slot, no room). Empty = Project Settings > Vaesen's default. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equipment|Sounds")
+	TObjectPtr<USoundBase> EquipRejectedSound;
 
 	virtual bool CanUse_Implementation(const AVaesenPlayerCharacter* Character) const override;
 	virtual void Use_Implementation(AVaesenPlayerCharacter* Character) override;

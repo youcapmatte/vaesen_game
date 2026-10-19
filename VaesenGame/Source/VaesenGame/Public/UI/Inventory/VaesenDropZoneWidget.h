@@ -8,7 +8,8 @@ class UBorder;
 
 /**
  * The "Drop" box in the inventory screen: drag an item onto it (from an inventory, or off the body) to drop it on the
- * ground in front of the character. Plays the inventory's DropSound; the item falls to the ground as a pickup.
+ * ground in front of the character. Plays the drop sound (Project Settings > Vaesen); the item falls to the ground
+ * as a pickup.
  *
  * Widget Blueprint (e.g. WBP_DropZone, parent class VaesenDropZoneWidget), controls by these exact names:
  *   ZoneBorder  (Border)  - tinted while something is dragged over it

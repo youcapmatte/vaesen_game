@@ -9,6 +9,7 @@
 #include "Engine/World.h"
 #include "Inventory/VaesenEquipmentComponent.h"
 #include "Inventory/VaesenInventoryComponent.h"
+#include "Items/VaesenItem.h"
 #include "UI/Inventory/VaesenCharacterPreview.h"
 #include "UI/Inventory/VaesenEquipmentSlotWidget.h"
 #include "UI/Inventory/VaesenItemDragDropOperation.h"
@@ -175,13 +176,14 @@ bool UVaesenEquipmentPanelWidget::NativeOnDrop(const FGeometry& InGeometry, cons
 	{
 		return true;
 	}
-	if (Equipment->CanEquip(Operation->SourceInventory->GetItemAt(Operation->SourceIndex)))
+	const UVaesenItem* Item = Operation->SourceInventory->GetItemAt(Operation->SourceIndex);
+	if (Equipment->CanEquip(Item))
 	{
 		Equipment->RequestEquipFromInventory(Operation->SourceInventory, Operation->SourceIndex);
 	}
 	else
 	{
-		Equipment->PlayEquipRejectedSound();
+		Equipment->PlayEquipRejectedSound(Item ? Item->GetClass() : nullptr);
 	}
 	return true;
 }

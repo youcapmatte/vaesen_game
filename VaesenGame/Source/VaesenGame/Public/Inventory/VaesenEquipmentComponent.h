@@ -58,17 +58,12 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Equipment")
 	TArray<TSubclassOf<UVaesenEquippableItem>> StartingEquipment;
 
-	/** Played to this character's player when something goes on (unless the item has its own EquipSound). */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Equipment|Sounds")
-	TObjectPtr<USoundBase> EquipSound;
-
-	/** Played to this character's player when something can't go on: the wrong slot, or no room for what it replaces. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Equipment|Sounds")
-	TObjectPtr<USoundBase> EquipRejectedSound;
-
-	/** Plays EquipRejectedSound, on this machine only if it's this character's player's (e.g. a slot refusing a drop). */
+	/**
+	 * Plays the sound for Item (of this kind) not going on: its own rejected sound, or the default from Project
+	 * Settings > Vaesen. Only on this character's player's machine (e.g. a slot refusing a drop).
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Equipment")
-	void PlayEquipRejectedSound() const;
+	void PlayEquipRejectedSound(TSubclassOf<UVaesenItem> ItemClass) const;
 
 	/** The slots shown in the player's equipment panel, in order. */
 	UFUNCTION(BlueprintPure, Category = "Equipment")
@@ -149,9 +144,9 @@ private:
 	UFUNCTION(Server, Reliable)
 	void ServerDropEquipped(EVaesenEquipmentSlot Slot);
 
-	/** The server refused what this player asked for. */
+	/** The server refused to put on (or take off) an item of this kind. */
 	UFUNCTION(Client, Unreliable)
-	void ClientEquipRejected();
+	void ClientEquipRejected(TSubclassOf<UVaesenItem> ItemClass);
 
 	/** Whether this is the character of the player on this machine. */
 	bool IsLocalPlayers() const;

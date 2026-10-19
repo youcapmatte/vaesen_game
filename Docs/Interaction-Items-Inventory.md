@@ -235,7 +235,7 @@ Between inventories, the target's capacity is respected.
 
 **Use item** calls the item's Use for the player. A consumable that's consumed on use then loses one from its stack.
 
-**Drop item** spawns a falling pickup in front of the player with a copy of the item (see Pickups), and removes it from the inventory. Items that can't be dropped stay. The inventory has a **drop sound**, played to the player who drops something.
+**Drop item** spawns a falling pickup in front of the player with a copy of the item (see Pickups), and removes it from the inventory. Items that can't be dropped stay. The **drop sound** (Project Settings → Vaesen → Audio → Items) is played to the player who drops something.
 
 ### How players change inventories
 
@@ -331,7 +331,7 @@ In first person the player's own head, and anything worn over it, is hidden from
 
 ### Sounds
 
-The equipment component has an **equip sound**, played to the player when something goes on, and an **equip rejected sound**, played when something can't: dragging an item onto the wrong slot, or the server refusing because there's no room for what it would replace. Each equippable item can have its own equip sound, used instead of the general one, so chainmail can rattle while a hat makes no sound. Only the player themself hears these.
+There's an **equip sound**, played to the player when something goes on, and an **equip rejected sound**, played when something can't: dragging an item onto the wrong slot, or the server refusing because there's no room for what it would replace. Each equippable item can have its own of both, so chainmail can rattle while a hat makes no sound; otherwise the **defaults in Project Settings → Vaesen → Audio → Items** are used. Only the player themself hears these.
 
 ### Equipping and taking off
 

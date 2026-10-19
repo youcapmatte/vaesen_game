@@ -117,9 +117,10 @@ bool UVaesenEquipmentSlotWidget::NativeOnDrop(const FGeometry& InGeometry, const
 	{
 		Equipment->RequestEquipFromInventory(Operation->SourceInventory, Operation->SourceIndex);
 	}
-	else if (Equipment && Operation && !Operation->bFromEquipment)
+	else if (Equipment && Operation && !Operation->bFromEquipment && Operation->SourceInventory)
 	{
-		Equipment->PlayEquipRejectedSound();
+		const UVaesenItem* Refused = Operation->SourceInventory->GetItemAt(Operation->SourceIndex);
+		Equipment->PlayEquipRejectedSound(Refused ? Refused->GetClass() : nullptr);
 	}
 	return true;
 }
