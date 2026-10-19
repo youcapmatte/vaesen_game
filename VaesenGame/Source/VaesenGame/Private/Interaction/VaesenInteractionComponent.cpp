@@ -101,7 +101,8 @@ float UVaesenInteractionComponent::GetDistanceTo(const AVaesenPlayerCharacter* C
 
 bool UVaesenInteractionComponent::CanInteract(const AVaesenPlayerCharacter* Character) const
 {
-	if (!Character || !bInteractionEnabled || !IsActive())
+	// Interaction Enabled is the switch (the component's own Active flag isn't: widget components don't start active).
+	if (!Character || !bInteractionEnabled)
 	{
 		return false;
 	}
