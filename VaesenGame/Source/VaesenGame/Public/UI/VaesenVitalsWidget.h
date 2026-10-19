@@ -17,8 +17,8 @@ struct FOnAttributeChangeData;
  * thinner stamina bar under it, and a row of status badges below (poisoned, bleeding, frightened...).
  *
  * The bars follow the Gameplay Ability System: Health / MaxHealth and Stamina / MaxStamina in the character's
- * UVaesenAttributeSet, updated whenever a gameplay effect (or anything else) changes them. A lost chunk lingers a
- * moment in a lighter colour before draining away. Status badges are the character's Status.* gameplay tags (granted by
+ * UVaesenAttributeSet, updated whenever a gameplay effect (or anything else) changes them. A loss shows at once,
+ * with the lost chunk left behind in yellow; after a moment it shrinks steadily down to the bar. Status badges are the character's Status.* gameplay tags (granted by
  * effects, or added directly), with their icon from Project Settings > Vaesen > Status Icons and the time left if an
  * effect grants them.
  *
@@ -44,11 +44,19 @@ protected:
 	FLinearColor HealthColor = FLinearColor(0.55f, 0.04f, 0.03f);
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vitals")
-	FLinearColor StaminaColor = FLinearColor(0.82f, 0.68f, 0.25f);
+	FLinearColor StaminaColor = FLinearColor(0.12f, 0.45f, 0.08f);
 
-	/** How long a lost chunk stays before draining away. */
+	/** The lost chunk left behind a bar after damage or effort, before it shrinks away. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vitals")
+	FLinearColor TrailColor = FLinearColor(1.0f, 0.78f, 0.1f);
+
+	/** How long a lost chunk stays before shrinking (more loss meanwhile starts the wait again). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vitals", meta = (ClampMin = "0", Units = "s"))
-	float TrailDelay = 0.6f;
+	float TrailDelay = 0.7f;
+
+	/** How fast a lost chunk shrinks once it starts, in bar lengths per second (steady, not easing). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vitals", meta = (ClampMin = "0.01"))
+	float TrailShrinkSpeed = 0.5f;
 
 	/** How fast bars move to their new value (higher = snappier). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Vitals", meta = (ClampMin = "0.1"))

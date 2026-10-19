@@ -140,6 +140,7 @@ void UVaesenVitalsWidget::TickBar(FBar& Bar, UImage* Image, TObjectPtr<UMaterial
 			return;
 		}
 		Material->SetVectorParameterValue(TEXT("FillColor"), Color);
+		Material->SetVectorParameterValue(TEXT("TrailColor"), TrailColor);
 	}
 
 	Bar.Shown = FMath::FInterpTo(Bar.Shown, Bar.Target, DeltaTime, BarSpeed);
@@ -149,7 +150,8 @@ void UVaesenVitalsWidget::TickBar(FBar& Bar, UImage* Image, TObjectPtr<UMaterial
 	}
 	else if ((Bar.TrailHold -= DeltaTime) <= 0.0f)
 	{
-		Bar.Trail = FMath::FInterpTo(Bar.Trail, Bar.Target, DeltaTime, BarSpeed * 0.35f);
+		// After the wait, the chunk shrinks at a steady pace.
+		Bar.Trail = FMath::Max(Bar.Target, Bar.Trail - TrailShrinkSpeed * DeltaTime);
 	}
 	Material->SetScalarParameterValue(TEXT("Percent"), Bar.Shown);
 	Material->SetScalarParameterValue(TEXT("Trail"), FMath::Max(Bar.Trail, Bar.Shown));
