@@ -18,7 +18,7 @@
  * mannequin, ABP_Manny, template input actions), BP_VaesenPlayerController (IMC_Default) and BP_VaesenGameMode;
  * the camera zoom input; the modular body (Manny split into Head/Torso/Arms/Legs/Feet, set on the character); and the
  * interaction (outline material and interact key on the character, WBP_InteractionCard, BP_InteractableTest to try it on); and a test item and
- * pickup (BP_Item_LampOil, BP_Pickup_LampOil); the inventory screen, Tab to open it and BP_LootChest;
+ * pickup (BP_Item_LampOil, BP_Pickup_LampOil); the inventory screen, I to open it and BP_LootChest;
  * and a herb pouch and a herb to try pouches with.
  *
  * Run with the editor closed:

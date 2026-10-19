@@ -51,7 +51,7 @@ void UVaesenInventoryScreenWidget::NativeTick(const FGeometry& MyGeometry, float
 FReply UVaesenInventoryScreenWidget::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
 {
 	const FKey Key = InKeyEvent.GetKey();
-	if (Key == EKeys::Tab || Key == EKeys::I || Key == EKeys::Escape)
+	if (Key == EKeys::I || Key == EKeys::Escape)
 	{
 		if (AVaesenPlayerController* Controller = Cast<AVaesenPlayerController>(GetOwningPlayer()))
 		{

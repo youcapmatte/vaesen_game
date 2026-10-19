@@ -1165,15 +1165,18 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 		FBuilder::AddRow(Content, Panels, 14.0f);
 
 		UTextBlock* Hint = InventoryText(Build, TEXT("HintText"),
-			TEXT("Drag: move   Ctrl+drag: split   Shift+click: transfer   Right-click: use   Drag outside: drop   Tab: close"),
+			TEXT("Drag: move   Ctrl+drag: split   Shift+click: transfer   Right-click: use   Drag outside: drop   I: close"),
 			11, TEXT("Regular"), InventoryMuted);
 		FBuilder::AddRow(Content, Hint, 0.0f)->SetHorizontalAlignment(HAlign_Center);
 
 		Finish(Blueprint);
 	}
 
-	/** An input action (button) mapped to Key in IMC_Default and set as PropertyName on the character. Each part only when missing. */
-	void SetupButtonInput(const TCHAR* Name, FKey Key, const TCHAR* PropertyName)
+	/**
+	 * An input action (button) mapped to Key in IMC_Default and set as PropertyName on the character. Each part only
+	 * when missing; OldKeys it used to be mapped to are unmapped.
+	 */
+	void SetupButtonInput(const TCHAR* Name, FKey Key, const TCHAR* PropertyName, TArray<FKey> OldKeys = {})
 	{
 		const FString PackagePath = FString(TEXT("/Game/Vaesen/Input/")) + Name;
 		UInputAction* Action = LoadObject<UInputAction>(nullptr, *(PackagePath + TEXT(".") + Name));
@@ -1188,13 +1191,29 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 
 		if (UInputMappingContext* Mappings = LoadObject<UInputMappingContext>(nullptr, TEXT("/Game/ThirdPerson/Input/IMC_Default.IMC_Default")))
 		{
-			const bool bMapped = Mappings->GetMappings().ContainsByPredicate([Action](const FEnhancedActionKeyMapping& Mapping)
+			const auto IsMapped = [Mappings, Action](const FKey& MappedKey)
 			{
-				return Mapping.Action == Action;
-			});
-			if (!bMapped)
+				return Mappings->GetMappings().ContainsByPredicate([Action, &MappedKey](const FEnhancedActionKeyMapping& Mapping)
+				{
+					return Mapping.Action == Action && Mapping.Key == MappedKey;
+				});
+			};
+			bool bChanged = false;
+			for (const FKey& OldKey : OldKeys)
+			{
+				if (IsMapped(OldKey))
+				{
+					Mappings->UnmapKey(Action, OldKey);
+					bChanged = true;
+				}
+			}
+			if (!IsMapped(Key))
 			{
 				Mappings->MapKey(Action, Key);
+				bChanged = true;
+			}
+			if (bChanged)
+			{
 				Save(Mappings);
 			}
 		}
@@ -1213,7 +1232,7 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 
 	/**
 	 * Inventory: the screen and its parts (WBP_ItemTooltip, WBP_InventorySlot, WBP_InventoryPanel,
-	 * WBP_InventoryScreen), Tab to open it, and BP_LootChest (a crate with some lamp oil) to loot.
+	 * WBP_InventoryScreen), I to open it, and BP_LootChest (a crate with some lamp oil) to loot.
 	 */
 	void SetupInventory()
 	{
@@ -1221,7 +1240,7 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 		CreateInventorySlot();
 		CreateInventoryPanel();
 		CreateInventoryScreen();
-		SetupButtonInput(TEXT("IA_Inventory"), EKeys::Tab, TEXT("InventoryAction"));
+		SetupButtonInput(TEXT("IA_Inventory"), EKeys::I, TEXT("InventoryAction"), { EKeys::Tab });
 
 		if (UBlueprint* Blueprint = CreateActorBlueprint(LootChestPath, AVaesenLootContainer::StaticClass()))
 		{

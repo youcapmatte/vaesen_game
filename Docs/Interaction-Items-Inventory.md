@@ -297,14 +297,14 @@ In the UI:
 
 ### Opening and closing
 
-**Tab** opens the inventory screen, through an input action called `IA_Inventory`. The player controller creates it from the widget set in Project Settings → Vaesen → Inventory Screen Widget.
+**I** opens the inventory screen, through an input action called `IA_Inventory`. The player controller creates it from the widget set in Project Settings → Vaesen → Inventory Screen Widget.
 
 While it's open:
 - the mouse cursor is free;
 - the view doesn't turn;
 - the player can still walk.
 
-**Tab, I or Escape** close it.
+**I or Escape** close it.
 
 When a chest is opened, the same screen opens with the chest's inventory beside the player's. If the player walks out of reach, or the chest disappears, the chest side closes by itself.
 
@@ -363,7 +363,7 @@ C++ lives in `VaesenGame/Source/VaesenGame`:
   - the pickup.
 - **`Inventory/`:** the inventory component and the loot container.
 - **`UI/Inventory/` and `UI/Interaction/`:** the widget classes.
-- **The player character:** has the interactor and the inventory, and binds E and Tab.
+- **The player character:** has the interactor and the inventory, and binds E (interact) and I (inventory).
 - **The player controller:** opens and closes the inventory screen.
 
 The **commandlet** in the editor module (`VaesenCreateWidgetsCommandlet`) builds the widget Blueprints, input actions and test assets. It only creates what's missing, so running it again is safe.

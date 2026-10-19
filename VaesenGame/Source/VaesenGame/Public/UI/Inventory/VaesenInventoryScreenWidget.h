@@ -9,9 +9,9 @@ class UVaesenInventoryComponent;
 class UVaesenInventoryPanelWidget;
 
 /**
- * The inventory screen (opened with Tab by AVaesenPlayerController): the player's inventory, and beside it a
+ * The inventory screen (opened with I by AVaesenPlayerController): the player's inventory, and beside it a
  * container they're looting (chest, corpse...). Dropping an item outside both panels throws it on the ground.
- * Tab, I or Escape close it; the container side closes by itself when the player walks away.
+ * I or Escape close it; the container side closes by itself when the player walks away.
  *
  * Widget Blueprint (e.g. WBP_InventoryScreen, parent class VaesenInventoryScreenWidget), controls by these exact names:
  *   PlayerPanel     (WBP_InventoryPanel)  - the player's inventory
