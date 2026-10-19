@@ -1,6 +1,7 @@
 #include "Interaction/VaesenInteractorComponent.h"
 
 #include "Characters/VaesenPlayerCharacter.h"
+#include "DrawDebugHelpers.h"
 #include "Engine/OverlapResult.h"
 #include "Engine/World.h"
 #include "GameFramework/Controller.h"
@@ -90,6 +91,25 @@ void UVaesenInteractorComponent::PerformInteractionCheck()
 	{
 		Found = FindNearbyInteractable(Eyes, Direction);
 	}
+
+#if ENABLE_DRAW_DEBUG
+	if (bDrawDebugTrace)
+	{
+		const bool bHit = Hit.bBlockingHit;
+		const FVector TraceEnd = bHit ? Hit.Location : End;
+		DrawDebugLine(GetWorld(), Start, TraceEnd, bHit ? FColor::Red : FColor::Green, false, 0.0f, 0, 1.0f);
+		DrawDebugSphere(GetWorld(), TraceEnd, TraceRadius, 8, bHit ? FColor::Red : FColor::Green, false, 0.0f);
+		if (bHit)
+		{
+			DrawDebugPoint(GetWorld(), Hit.ImpactPoint, 8.0f, FColor::Red, false, 0.0f);
+		}
+		if (Found && Found->GetOwner())
+		{
+			const FBox Bounds = Found->GetOwner()->GetComponentsBoundingBox(false);
+			DrawDebugBox(GetWorld(), Bounds.GetCenter(), Bounds.GetExtent(), FColor::Yellow, false, 0.0f, 0, 1.0f);
+		}
+	}
+#endif
 
 	if (!Found)
 	{

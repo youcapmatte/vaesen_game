@@ -12,8 +12,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FVaesenInteractionEvent, AVaesenPlay
  * Makes its actor interactable (a pickup, a door, a lever...). Add it to the actor and bind the events on the actor
  * (OnInteract is the one that does the thing); the actor fills in the card (name, description, quantity, action).
  *
- * It's a screen-space widget component: it shows an interaction card (UVaesenInteractionCardWidget, by default the
- * one in Project Settings > Vaesen) at its location while the local player looks at it, and the actor's meshes get
+ * It's a screen-space widget component: it shows an interaction card (UVaesenInteractionCardWidget; Widget Class is
+ * WBP_InteractionCard by default, else the one in Project Settings > Vaesen) at its location while the local player
+ * looks at it, and the actor's meshes get
  * the yellow outline (custom stencil HighlightStencilValue, drawn by PP_InteractionOutline on the player's camera).
  *
  * Players find it with UVaesenInteractorComponent. The flow, and where each part runs:

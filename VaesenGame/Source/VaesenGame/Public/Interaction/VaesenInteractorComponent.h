@@ -90,6 +90,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Interaction", meta = (ClampMin = "0", ClampMax = "90", Units = "Degrees", EditCondition = "bFocusNearbyWhenNotAiming"))
 	float NearbyAngle = 35.0f;
 
+	/** Draw the trace (green: nothing; red: hit something; yellow sphere: the focused interactable). Development builds only. */
+	UPROPERTY(EditAnywhere, Category = "Interaction|Debug")
+	bool bDrawDebugTrace = true;
+
 	/** Seconds between traces; 0 = every frame. */
 	UPROPERTY(EditDefaultsOnly, Category = "Interaction", meta = (ClampMin = "0", Units = "s"))
 	float CheckInterval = 0.0f;

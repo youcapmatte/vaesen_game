@@ -5,6 +5,7 @@
 #include "GameFramework/Actor.h"
 #include "Interaction/VaesenInteractorComponent.h"
 #include "UI/Interaction/VaesenInteractionCardWidget.h"
+#include "UObject/ConstructorHelpers.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogVaesenInteraction, Log, All);
 
@@ -17,11 +18,22 @@ UVaesenInteractionComponent::UVaesenInteractionComponent()
 	SetHiddenInGame(true);
 	SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	SetGenerateOverlapEvents(false);
+
+	// WBP_InteractionCard by default, so every actor with this component shows it (change it per actor if wanted).
+	// Not on dedicated servers: they never show widgets.
+	if (!IsRunningDedicatedServer())
+	{
+		static ConstructorHelpers::FClassFinder<UUserWidget> DefaultCard(TEXT("/Game/Vaesen/UI/Interaction/WBP_InteractionCard"));
+		if (DefaultCard.Succeeded())
+		{
+			SetWidgetClass(DefaultCard.Class);
+		}
+	}
 }
 
 void UVaesenInteractionComponent::BeginPlay()
 {
-	// The default card, unless the actor picked its own. Before Super, which creates the widget.
+	// The card from Project Settings if none is set (the class default normally is). Before Super, which creates the widget.
 	if (!GetWidgetClass())
 	{
 		SetWidgetClass(UVaesenSettings::Get()->InteractionCardWidget.LoadSynchronous());
