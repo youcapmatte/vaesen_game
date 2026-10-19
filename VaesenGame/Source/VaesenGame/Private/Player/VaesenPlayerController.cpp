@@ -10,6 +10,7 @@
 #include "Inventory/VaesenInventoryComponent.h"
 #include "UI/Inventory/VaesenInventoryScreenWidget.h"
 #include "UI/Inventory/VaesenQuickBarWidget.h"
+#include "UI/Minimap/VaesenMinimapWidget.h"
 
 void AVaesenPlayerController::BeginPlay()
 {
@@ -34,6 +35,11 @@ void AVaesenPlayerController::BeginPlay()
 	{
 		QuickBar = CreateWidget<UVaesenQuickBarWidget>(this, QuickBarClass);
 		QuickBar->AddToViewport(1);
+	}
+	if (const TSubclassOf<UVaesenMinimapWidget> MinimapClass = UVaesenSettings::Get()->MinimapWidget.LoadSynchronous())
+	{
+		Minimap = CreateWidget<UVaesenMinimapWidget>(this, MinimapClass);
+		Minimap->AddToViewport(1);
 	}
 
 	if (!DefaultMappingContext)
@@ -90,6 +96,10 @@ void AVaesenPlayerController::OpenInventory(UVaesenInventoryComponent* Container
 		{
 			QuickBar->SetVisibility(ESlateVisibility::Collapsed);
 		}
+		if (Minimap)
+		{
+			Minimap->SetVisibility(ESlateVisibility::Collapsed);
+		}
 
 		// Mouse for the UI, keys still walk; the view doesn't turn while the cursor is out.
 		FInputModeGameAndUI InputMode;
@@ -113,6 +123,10 @@ void AVaesenPlayerController::CloseInventory()
 	if (QuickBar)
 	{
 		QuickBar->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+	}
+	if (Minimap)
+	{
+		Minimap->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 	}
 	SetInputMode(FInputModeGameOnly());
 	SetShowMouseCursor(false);

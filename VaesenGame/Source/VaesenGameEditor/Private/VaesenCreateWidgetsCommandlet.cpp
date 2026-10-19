@@ -61,6 +61,11 @@
 #include "UI/Interaction/VaesenInteractionCardWidget.h"
 #include "UI/Inventory/VaesenDropZoneWidget.h"
 #include "UI/Inventory/VaesenQuickBarWidget.h"
+#include "UI/Minimap/VaesenMinimapWidget.h"
+#include "Materials/MaterialExpressionComponentMask.h"
+#include "Materials/MaterialExpressionTextureCoordinate.h"
+#include "Materials/MaterialExpressionTextureSampleParameter2D.h"
+#include "Engine/Texture2D.h"
 #include "UI/Inventory/VaesenQuickSlotWidget.h"
 #include "Items/VaesenConsumableItem.h"
 #include "UI/Inventory/VaesenEquipmentPanelWidget.h"
@@ -1735,6 +1740,135 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 			}
 		}
 	}
+
+	const TCHAR* MinimapMaterialPath = TEXT("/Game/Vaesen/Materials/M_Minimap");
+	const TCHAR* MinimapWidgetPath = TEXT("/Game/Vaesen/UI/Minimap/WBP_Minimap");
+
+	/**
+	 * The minimap's look (a UI material): the live map cut round, a soft shadow inside the rim, a brass ring with a
+	 * lighter band and dark edges, and the player's arrow in the middle pointing up.
+	 */
+	UMaterial* CreateMinimapMaterial()
+	{
+		if (AssetExists(MinimapMaterialPath))
+		{
+			UE_LOG(LogVaesenCreateWidgets, Display, TEXT("%s already exists; leaving it alone."), MinimapMaterialPath);
+			return LoadObject<UMaterial>(nullptr, *(FString(MinimapMaterialPath) + TEXT(".M_Minimap")));
+		}
+
+		UPackage* Package = CreatePackage(MinimapMaterialPath);
+		UMaterial* Material = NewObject<UMaterial>(Package, TEXT("M_Minimap"), RF_Public | RF_Standalone);
+		Material->MaterialDomain = MD_UI;
+		Material->BlendMode = BLEND_Translucent;
+
+		const auto Add = [Material](TSubclassOf<UMaterialExpression> Class, int32 X, int32 Y)
+		{
+			return UMaterialEditingLibrary::CreateMaterialExpression(Material, Class, X, Y);
+		};
+
+		UMaterialExpressionTextureSampleParameter2D* Map = CastChecked<UMaterialExpressionTextureSampleParameter2D>(Add(UMaterialExpressionTextureSampleParameter2D::StaticClass(), -700, -200));
+		Map->ParameterName = TEXT("MapTexture");
+		Map->Texture = Cast<UTexture2D>(LoadAsset(TEXT("/Engine/EngineResources/DefaultTexture.DefaultTexture")));
+		UMaterialExpression* Coordinates = Add(UMaterialExpressionTextureCoordinate::StaticClass(), -700, 0);
+
+		UMaterialExpressionVectorParameter* RingColor = CastChecked<UMaterialExpressionVectorParameter>(Add(UMaterialExpressionVectorParameter::StaticClass(), -700, 150));
+		RingColor->ParameterName = TEXT("RingColor");
+		RingColor->DefaultValue = FLinearColor(0.62f, 0.48f, 0.28f);
+		UMaterialExpressionScalarParameter* RingWidth = CastChecked<UMaterialExpressionScalarParameter>(Add(UMaterialExpressionScalarParameter::StaticClass(), -700, 350));
+		RingWidth->ParameterName = TEXT("RingWidth");
+		RingWidth->DefaultValue = 0.07f;
+		UMaterialExpressionVectorParameter* ArrowColor = CastChecked<UMaterialExpressionVectorParameter>(Add(UMaterialExpressionVectorParameter::StaticClass(), -700, 450));
+		ArrowColor->ParameterName = TEXT("ArrowColor");
+		ArrowColor->DefaultValue = FLinearColor(0.98f, 0.86f, 0.5f);
+
+		UMaterialExpressionCustom* Round = CastChecked<UMaterialExpressionCustom>(Add(UMaterialExpressionCustom::StaticClass(), -300, 0));
+		Round->Description = TEXT("Round minimap");
+		Round->OutputType = CMOT_Float4;
+		Round->Inputs.Reset();
+		for (const TCHAR* Name : { TEXT("MapColor"), TEXT("UV"), TEXT("RingColor"), TEXT("RingWidth"), TEXT("ArrowColor") })
+		{
+			Round->Inputs.AddDefaulted_GetRef().InputName = Name;
+		}
+		Round->Code = TEXT(R"(float2 P = UV * 2.0 - 1.0;
+float R = length(P);
+float Soft = 0.012;
+float Alpha = 1.0 - smoothstep(1.0 - Soft, 1.0, R);
+
+// The map, darkened a little towards the rim.
+float RingIn = 1.0 - RingWidth;
+float Ring = smoothstep(RingIn - Soft, RingIn, R);
+float Shadow = smoothstep(RingIn - 0.16, RingIn, R) * (1.0 - Ring);
+float3 Rgb = MapColor.rgb * (1.0 - 0.55 * Shadow);
+
+// The ring: brass, lighter along its middle, with dark edges.
+float Band = saturate(1.0 - abs(R - (RingIn + 1.0) * 0.5) / (RingWidth * 0.5));
+float Edges = smoothstep(0.0, Soft * 1.5, abs(R - RingIn)) * smoothstep(0.0, Soft * 1.5, abs(R - (1.0 - Soft)));
+float3 RingRgb = RingColor.rgb * (0.55 + 0.65 * Band) * lerp(0.3, 1.0, Edges);
+Rgb = lerp(Rgb, RingRgb, Ring);
+
+// The player: an arrow pointing up, with a dark outline.
+float2 Up = float2(P.x, -P.y);
+float2 Q = Up / 0.075;
+float Outer = (Q.y <= 1.25 && Q.y >= -0.8 + 0.5 * abs(Q.x) && abs(Q.x) <= (1.25 - Q.y) * 0.47) ? 1.0 : 0.0;
+float Inner = (Q.y <= 1.0 && Q.y >= -0.6 + 0.5 * abs(Q.x) && abs(Q.x) <= (1.0 - Q.y) * 0.44) ? 1.0 : 0.0;
+Rgb = lerp(Rgb, float3(0.05, 0.04, 0.03), Outer);
+Rgb = lerp(Rgb, ArrowColor.rgb, Inner);
+
+return float4(Rgb, Alpha);)");
+
+		UMaterialEditingLibrary::ConnectMaterialExpressions(Map, TEXT("RGB"), Round, TEXT("MapColor"));
+		UMaterialEditingLibrary::ConnectMaterialExpressions(Coordinates, TEXT(""), Round, TEXT("UV"));
+		UMaterialEditingLibrary::ConnectMaterialExpressions(RingColor, TEXT(""), Round, TEXT("RingColor"));
+		UMaterialEditingLibrary::ConnectMaterialExpressions(RingWidth, TEXT(""), Round, TEXT("RingWidth"));
+		UMaterialEditingLibrary::ConnectMaterialExpressions(ArrowColor, TEXT(""), Round, TEXT("ArrowColor"));
+
+		UMaterialExpressionComponentMask* Colour = CastChecked<UMaterialExpressionComponentMask>(Add(UMaterialExpressionComponentMask::StaticClass(), -50, -60));
+		Colour->R = Colour->G = Colour->B = 1;
+		Colour->A = 0;
+		UMaterialExpressionComponentMask* Opacity = CastChecked<UMaterialExpressionComponentMask>(Add(UMaterialExpressionComponentMask::StaticClass(), -50, 60));
+		Opacity->R = Opacity->G = Opacity->B = 0;
+		Opacity->A = 1;
+		UMaterialEditingLibrary::ConnectMaterialExpressions(Round, TEXT(""), Colour, TEXT(""));
+		UMaterialEditingLibrary::ConnectMaterialExpressions(Round, TEXT(""), Opacity, TEXT(""));
+		UMaterialEditingLibrary::ConnectMaterialProperty(Colour, TEXT(""), MP_EmissiveColor);
+		UMaterialEditingLibrary::ConnectMaterialProperty(Opacity, TEXT(""), MP_Opacity);
+
+		UMaterialEditingLibrary::RecompileMaterial(Material);
+		FAssetRegistryModule::AssetCreated(Material);
+		Save(Material);
+		return Material;
+	}
+
+	/** WBP_Minimap: the round map, 220 px, in the top right corner. */
+	void CreateMinimap()
+	{
+		UMaterial* Material = CreateMinimapMaterial();
+
+		UWidgetBlueprint* Blueprint = CreateBlueprint(MinimapWidgetPath, UVaesenMinimapWidget::StaticClass());
+		if (!Blueprint)
+		{
+			return;
+		}
+		const FBuilder Build{ Blueprint->WidgetTree };
+
+		UCanvasPanel* Canvas = Build.Make<UCanvasPanel>();
+		Canvas->bIsVariable = false;
+		Blueprint->WidgetTree->RootWidget = Canvas;
+
+		USizeBox* Size = Build.Make<USizeBox>();
+		Size->SetWidthOverride(220.0f);
+		Size->SetHeightOverride(220.0f);
+		Size->SetContent(Build.Make<UImage>(TEXT("MapImage")));
+		UCanvasPanelSlot* MapSlot = Canvas->AddChildToCanvas(Size);
+		MapSlot->SetAnchors(FAnchors(1.0f, 0.0f));
+		MapSlot->SetAlignment(FVector2D(1.0f, 0.0f));
+		MapSlot->SetPosition(FVector2D(-28.0f, 28.0f));
+		MapSlot->SetAutoSize(true);
+
+		FKismetEditorUtilities::CompileBlueprint(Blueprint);
+		SetDefault(Blueprint->GeneratedClass->GetDefaultObject(), TEXT("MapMaterial"), Material);
+		Finish(Blueprint);
+	}
 }
 
 UVaesenCreateWidgetsCommandlet::UVaesenCreateWidgetsCommandlet()
@@ -1762,6 +1896,7 @@ int32 UVaesenCreateWidgetsCommandlet::Main(const FString& Params)
 	SetupPickups();
 	SetupInventory();
 	SetupPouches();
+	CreateMinimap();
 	return 0;
 }
 

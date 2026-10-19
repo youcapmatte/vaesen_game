@@ -10,6 +10,7 @@ class UUserWidget;
 class UVaesenInteractionCardWidget;
 class UVaesenInventoryScreenWidget;
 class UVaesenQuickBarWidget;
+class UVaesenMinimapWidget;
 class UVaesenLoadingScreenWidget;
 class UVaesenUIStyle;
 
@@ -84,6 +85,10 @@ public:
 	/** The quick bar on screen during play (keys 1-8), e.g. WBP_QuickBar. Empty = none. */
 	UPROPERTY(Config, EditAnywhere, Category = "UI")
 	TSoftClassPtr<UVaesenQuickBarWidget> QuickBarWidget;
+
+	/** The round minimap on screen during play, e.g. WBP_Minimap. Empty = none. */
+	UPROPERTY(Config, EditAnywhere, Category = "UI")
+	TSoftClassPtr<UVaesenMinimapWidget> MinimapWidget;
 
 	/** Front-end music: starts on the login screen and carries on through character select. Leave empty for silence. Looping is set on the sound asset. */
 	UPROPERTY(Config, EditAnywhere, Category = "Audio")

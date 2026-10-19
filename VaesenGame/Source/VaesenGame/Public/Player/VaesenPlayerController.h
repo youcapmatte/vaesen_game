@@ -8,10 +8,11 @@ class UInputMappingContext;
 class UVaesenInventoryComponent;
 class UVaesenInventoryScreenWidget;
 class UVaesenQuickBarWidget;
+class UVaesenMinimapWidget;
 
 /**
  * Player controller used in the worlds. Adds the default Enhanced Input mapping for the local player, shows the quick
- * bar during play (Project Settings > Vaesen > Quick Bar Widget), and shows the inventory screen (Inventory Screen
+ * bar and the minimap during play (Project Settings > Vaesen > Quick Bar Widget, Minimap Widget), and shows the inventory screen (Inventory Screen
  * Widget): the mouse is free and the view stays still while it's open, but the character can still walk.
  */
 UCLASS()
@@ -46,4 +47,7 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UVaesenQuickBarWidget> QuickBar;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UVaesenMinimapWidget> Minimap;
 };

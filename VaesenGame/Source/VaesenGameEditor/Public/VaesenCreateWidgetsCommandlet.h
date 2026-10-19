@@ -19,7 +19,8 @@
  * the camera zoom input; the modular body (Manny split into Head/Torso/Hands/Legs/Feet, set on the character); and the
  * interaction (outline material and interact key on the character, WBP_InteractionCard, BP_InteractableTest to try it on); BP_Pickup (one
  * pickup for every item) and test items; the inventory screen, I to open it and BP_LootChest;
- * a herb pouch and a herb to try pouches with; the equipment panel and test clothing (boots, gloves, cloak).
+ * a herb pouch and a herb to try pouches with; the equipment panel and test clothing (boots, gloves, cloak); and the
+ * round minimap (M_Minimap, WBP_Minimap).
  *
  * Run with the editor closed:
  *   UnrealEditor-Cmd.exe VaesenGame.uproject -run=VaesenCreateWidgets
