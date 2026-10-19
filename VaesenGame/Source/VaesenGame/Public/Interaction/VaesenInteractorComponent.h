@@ -29,7 +29,8 @@ struct FVaesenInteractionData
 /**
  * The player's side of interaction (on AVaesenPlayerCharacter). The local player sweeps a small sphere along the
  * camera's view: it starts level with the character (so nothing between the camera and the character counts) and
- * reaches TraceDistance in front, the same in first and third person. The first actor hit with a
+ * reaches TraceDistance in front of the character, the same in first and third person and however far the player
+ * looks up or down (a steeper view gets a longer trace, up to twice as long). The first actor hit with a
  * UVaesenInteractionComponent that allows this player (CanInteract) becomes the focus: its card and outline show.
  * When the player isn't aiming at anything (say, an item on the floor while looking ahead), the nearest interactable
  * within reach and roughly in front of them (within NearbyAngle, in plain sight) is focused instead.
@@ -90,7 +91,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Interaction", meta = (ClampMin = "0", ClampMax = "90", Units = "Degrees", EditCondition = "bFocusNearbyWhenNotAiming"))
 	float NearbyAngle = 35.0f;
 
-	/** Draw the trace (green: nothing; red: hit something; yellow sphere: the focused interactable). Development builds only. */
+	/**
+	 * Draw the swept tube (green: nothing hit; red: up to a hit) and a yellow box round the focused interactable.
+	 * Development builds only.
+	 */
 	UPROPERTY(EditAnywhere, Category = "Interaction|Debug")
 	bool bDrawDebugTrace = true;
 

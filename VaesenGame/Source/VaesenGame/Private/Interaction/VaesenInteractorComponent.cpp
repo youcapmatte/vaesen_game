@@ -69,7 +69,9 @@ void UVaesenInteractorComponent::PerformInteractionCheck()
 	const FVector Direction = ViewRotation.Vector();
 	const FVector Eyes = Character->GetPawnViewLocation();
 	const FVector Start = ViewLocation + Direction * FMath::Max(0.0, FVector::DotProduct(Eyes - ViewLocation, Direction));
-	const FVector End = Start + Direction * TraceDistance;
+	// TraceDistance in front of the character whatever the pitch: a steep view gets a longer trace (up to twice).
+	const double Flat = FVector(Direction.X, Direction.Y, 0.0).Size();
+	const FVector End = Start + Direction * (TraceDistance / FMath::Max(Flat, 0.5));
 
 	FCollisionQueryParams Params(SCENE_QUERY_STAT(VaesenInteraction), false, Character);
 	FHitResult Hit;
@@ -95,13 +97,17 @@ void UVaesenInteractorComponent::PerformInteractionCheck()
 #if ENABLE_DRAW_DEBUG
 	if (bDrawDebugTrace)
 	{
+		// The whole swept tube: green if nothing was hit, red up to the hit (and grey beyond it).
 		const bool bHit = Hit.bBlockingHit;
 		const FVector TraceEnd = bHit ? Hit.Location : End;
-		DrawDebugLine(GetWorld(), Start, TraceEnd, bHit ? FColor::Red : FColor::Green, false, 0.0f, 0, 1.0f);
-		DrawDebugSphere(GetWorld(), TraceEnd, TraceRadius, 8, bHit ? FColor::Red : FColor::Green, false, 0.0f);
+		const FVector Segment = TraceEnd - Start;
+		const FQuat Along = FRotationMatrix::MakeFromZ(Segment.IsNearlyZero() ? Direction : Segment.GetSafeNormal()).ToQuat();
+		DrawDebugCapsule(GetWorld(), Start + Segment * 0.5, Segment.Size() * 0.5 + TraceRadius, TraceRadius, Along,
+			bHit ? FColor::Red : FColor::Green, false, 0.0f, 0, 1.0f);
 		if (bHit)
 		{
-			DrawDebugPoint(GetWorld(), Hit.ImpactPoint, 8.0f, FColor::Red, false, 0.0f);
+			DrawDebugLine(GetWorld(), TraceEnd, End, FColor(128, 128, 128), false, 0.0f, 0, 0.5f);
+			DrawDebugPoint(GetWorld(), Hit.ImpactPoint, 10.0f, FColor::Red, false, 0.0f);
 		}
 		if (Found && Found->GetOwner())
 		{
