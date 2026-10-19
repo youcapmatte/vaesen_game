@@ -33,6 +33,16 @@ inline bool IsArmorSlot(EVaesenEquipmentSlot Slot)
 	return Slot <= EVaesenEquipmentSlot::FullBody;
 }
 
+/** How a piece of armor sits on its body part. */
+UENUM(BlueprintType)
+enum class EVaesenArmorFit : uint8
+{
+	/** Takes the body part's place (a closed plate helm, full gloves, boots that include the foot). */
+	ReplacesBodyPart,
+	/** Added on top; the body part stays (a hat, a hood, a scarf, an open helmet). */
+	WornOver
+};
+
 UENUM(BlueprintType)
 enum class EVaesenWeaponType : uint8
 {

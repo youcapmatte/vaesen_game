@@ -22,6 +22,11 @@ AVaesenBaseCharacter::AVaesenBaseCharacter()
 	LegsMesh = CreateBodyPart(TEXT("LegsMesh"));
 	FeetMesh = CreateBodyPart(TEXT("FeetMesh"));
 	BackMesh = CreateBodyPart(TEXT("BackMesh"));
+	HeadOverMesh = CreateBodyPart(TEXT("HeadOverMesh"));
+	ChestOverMesh = CreateBodyPart(TEXT("ChestOverMesh"));
+	HandsOverMesh = CreateBodyPart(TEXT("HandsOverMesh"));
+	LegsOverMesh = CreateBodyPart(TEXT("LegsOverMesh"));
+	FeetOverMesh = CreateBodyPart(TEXT("FeetOverMesh"));
 
 	Equipment = CreateDefaultSubobject<UVaesenEquipmentComponent>(TEXT("Equipment"));
 	// Item subobjects (equipped items, and inventories on subclasses) replicate through the registered list.
@@ -44,9 +49,9 @@ void AVaesenBaseCharacter::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
 
-	for (USkeletalMeshComponent* Part : { HeadMesh.Get(), HandsMesh.Get(), LegsMesh.Get(), FeetMesh.Get(), BackMesh.Get() })
+	for (USkeletalMeshComponent* Part : GetBodyParts())
 	{
-		if (Part)
+		if (Part && Part != GetMesh())
 		{
 			Part->SetLeaderPoseComponent(GetMesh());
 		}
@@ -55,7 +60,21 @@ void AVaesenBaseCharacter::PostInitializeComponents()
 
 TArray<USkeletalMeshComponent*> AVaesenBaseCharacter::GetBodyParts() const
 {
-	return { GetMesh(), HeadMesh.Get(), HandsMesh.Get(), LegsMesh.Get(), FeetMesh.Get(), BackMesh.Get() };
+	return { GetMesh(), HeadMesh.Get(), HandsMesh.Get(), LegsMesh.Get(), FeetMesh.Get(), BackMesh.Get(),
+		HeadOverMesh.Get(), ChestOverMesh.Get(), HandsOverMesh.Get(), LegsOverMesh.Get(), FeetOverMesh.Get() };
+}
+
+USkeletalMeshComponent* AVaesenBaseCharacter::GetWornOverLayerFor(EVaesenEquipmentSlot Slot) const
+{
+	switch (Slot)
+	{
+	case EVaesenEquipmentSlot::Head:  return HeadOverMesh;
+	case EVaesenEquipmentSlot::Chest: return ChestOverMesh;
+	case EVaesenEquipmentSlot::Hands: return HandsOverMesh;
+	case EVaesenEquipmentSlot::Legs:  return LegsOverMesh;
+	case EVaesenEquipmentSlot::Feet:  return FeetOverMesh;
+	default:                          return nullptr;
+	}
 }
 
 USkeletalMeshComponent* AVaesenBaseCharacter::GetBodyPartFor(EVaesenEquipmentSlot Slot) const

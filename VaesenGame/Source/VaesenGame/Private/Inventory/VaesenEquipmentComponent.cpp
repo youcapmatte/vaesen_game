@@ -255,34 +255,48 @@ void UVaesenEquipmentComponent::ApplyAppearance()
 	}
 	AppliedItems = Current;
 
-	// The body: each part shows its armor, or the character's own mesh (from its class defaults). Full-body armor
-	// replaces the whole body (torso) and hides the other parts; a cloak stays on over it.
+	// The body: each part shows the character's own mesh (from its class defaults) unless armor replaces it, and its
+	// worn-over layer shows armor worn over it. Full-body armor replaces the whole body (torso) and hides the other
+	// parts and layers; a cloak stays on over it.
 	const AVaesenBaseCharacter* Defaults = GetOwner()->GetClass()->GetDefaultObject<AVaesenBaseCharacter>();
 	const UVaesenArmorItem* FullBody = Cast<UVaesenArmorItem>(GetItemInSlot(EVaesenEquipmentSlot::FullBody));
+	const auto SetMesh = [](USkeletalMeshComponent* Component, USkeletalMesh* Mesh)
+	{
+		if (Component && Component->GetSkeletalMeshAsset() != Mesh)
+		{
+			Component->SetSkeletalMeshAsset(Mesh);
+		}
+	};
+
 	for (const EVaesenEquipmentSlot Slot : { EVaesenEquipmentSlot::Head, EVaesenEquipmentSlot::Chest, EVaesenEquipmentSlot::Hands,
 		EVaesenEquipmentSlot::Legs, EVaesenEquipmentSlot::Feet, EVaesenEquipmentSlot::Back })
 	{
-		USkeletalMeshComponent* Part = Character->GetBodyPartFor(Slot);
-		if (!Part)
+		const UVaesenArmorItem* Armor = Cast<UVaesenArmorItem>(GetItemInSlot(Slot));
+		USkeletalMesh* ArmorMesh = Armor ? Armor->ArmorMesh.Get() : nullptr;
+		const bool bWornOver = Armor && Armor->IsWornOver();
+
+		// The back is a layer of its own: just the cloak.
+		if (Slot == EVaesenEquipmentSlot::Back)
 		{
+			SetMesh(Character->GetBodyPartFor(Slot), ArmorMesh);
 			continue;
 		}
 
 		const USkeletalMeshComponent* DefaultPart = Defaults ? Defaults->GetBodyPartFor(Slot) : nullptr;
-		USkeletalMesh* Mesh = DefaultPart ? DefaultPart->GetSkeletalMeshAsset() : nullptr;
-		if (const UVaesenArmorItem* Armor = Cast<UVaesenArmorItem>(GetItemInSlot(Slot)); Armor && Armor->ArmorMesh)
+		USkeletalMesh* PartMesh = DefaultPart ? DefaultPart->GetSkeletalMeshAsset() : nullptr;
+		USkeletalMesh* OverMesh = nullptr;
+		if (ArmorMesh)
 		{
-			Mesh = Armor->ArmorMesh;
+			(bWornOver ? OverMesh : PartMesh) = ArmorMesh;
 		}
-		if (FullBody && Slot != EVaesenEquipmentSlot::Back)
+		if (FullBody)
 		{
-			Mesh = Slot == EVaesenEquipmentSlot::Chest ? FullBody->ArmorMesh.Get() : nullptr;
+			PartMesh = Slot == EVaesenEquipmentSlot::Chest ? FullBody->ArmorMesh.Get() : nullptr;
+			OverMesh = nullptr;
 		}
 
-		if (Part->GetSkeletalMeshAsset() != Mesh)
-		{
-			Part->SetSkeletalMeshAsset(Mesh);
-		}
+		SetMesh(Character->GetBodyPartFor(Slot), PartMesh);
+		SetMesh(Character->GetWornOverLayerFor(Slot), OverMesh);
 	}
 }
 

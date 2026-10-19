@@ -129,7 +129,7 @@ Kinds that do something different are subclasses; variants are just settings and
   - **Equipped mesh:** an optional static mesh attached to a bone while equipped, like a revolver in the right hand.
   - **Kinds of equippable:**
     - **Weapon:** main hand; melee, firearm or thrown; damage; range; two-handed (which also takes the off hand). Ammo type and magazine size only show for firearms.
-    - **Armor:** this covers clothes too. Its slot is an armor slot: Head, Chest, Hands, Legs, Feet, Back or Full body. While worn, it **replaces that body part's mesh** on the modular character with its own skeletal mesh (a cloak on the back is worn over the body instead). The armor mesh must use the mannequin skeleton.
+    - **Armor:** this covers clothes too. Its slot is an armor slot: Head, Chest, Hands, Legs, Feet, Back or Full body. Its **fit** says how it sits on the body part: it either **replaces the body part** (a closed plate helm, full gloves) or is **worn over it** (a hat, a hood, a scarf, an open helmet), leaving the body part visible underneath. A cloak on the back is always worn over; full-body armor always replaces. The armor mesh must use the mannequin skeleton.
     - **Tool:** lantern, spyglass, compass, lockpicks. Off hand by default, and an optional item it uses up, such as lamp oil for a lantern, with how long each lasts.
     - **Talisman:** a charm against vaesen, in the talisman slot, with the tags of what it wards against and a protection value.
     - **Container:** a satchel or backpack in the bag slot, with extra slots and carry weight. Wearing one doesn't add inventory slots yet.
@@ -316,15 +316,16 @@ The other slots:
 
 ### The body
 
-The character's modular body matches the armor slots: the mannequin is split into **head, torso (with the arms), hands, legs and feet**, all following the torso's animation. There's also an empty **back** part that shows a cloak when one is worn.
+The character's modular body matches the armor slots: the mannequin is split into **head, torso (with the arms), hands, legs and feet**, all following the torso's animation. Each of those parts also has an empty **worn-over layer** on top, for armor worn over it, and there's an empty **back** layer that shows a cloak.
 
 The equipment component sets the look on every machine:
-- each body part shows its armor's mesh, or the character's own mesh when nothing is worn there;
+- each body part shows the character's own mesh, unless armor that **replaces** it is worn there, in which case it shows the armor;
+- armor **worn over** a part shows on that part's worn-over layer, with the part itself still drawn underneath;
 - a cloak shows on the back;
-- full-body armor replaces the torso with its mesh and hides the head, hands, legs and feet (a cloak stays on);
+- full-body armor replaces the torso with its mesh and hides the head, hands, legs and feet and their worn-over layers (a cloak stays on);
 - weapons, tools, talismans and bags attach their equipped meshes.
 
-In first person the player's own head is still hidden from their camera, whatever they wear on it.
+In first person the player's own head, and anything worn over it, is hidden from their camera but still casts its shadow.
 
 ### Equipping and taking off
 
