@@ -2,6 +2,7 @@
 
 #include "Components/SceneCaptureComponent2D.h"
 #include "Engine/TextureRenderTarget2D.h"
+#include "Materials/MaterialInterface.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
 #include "TimerManager.h"
@@ -88,6 +89,15 @@ void AVaesenMinimapCapture::Follow(const FVector& Location, float Yaw)
 {
 	// Looking down, with the map's up pointing along Yaw.
 	SetActorLocationAndRotation(Location + FVector(0.0, 0.0, CameraHeight), FRotator(-90.0, Yaw, 0.0));
+}
+
+void AVaesenMinimapCapture::SetStyleMaterial(UMaterialInterface* Material)
+{
+	Capture->PostProcessSettings.WeightedBlendables.Array.Reset();
+	if (Material)
+	{
+		Capture->PostProcessSettings.AddBlendable(Material, 1.0f);
+	}
 }
 
 void AVaesenMinimapCapture::CaptureNow()

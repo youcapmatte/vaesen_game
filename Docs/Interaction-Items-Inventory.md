@@ -409,7 +409,7 @@ Every one of these is a request to the server through the player's own inventory
 
 ## 10. The HUD
 
-All gameplay UI lives on one **HUD widget** (`WBP_HUD`, a C++ class `VaesenHUDWidget`), put on screen by the player's **HUD actor** (`VaesenHUD`, set as the game mode's HUD class) from Project Settings → Vaesen → HUD Widget. It holds the **minimap** (top right: a live, round map of the level around the player from above, with a brass ring and the player's arrow, turning with the view) and the **quick bar** (bottom centre). Future parts such as health bars go on it too. It's hidden while the inventory screen is open.
+All gameplay UI lives on one **HUD widget** (`WBP_HUD`, a C++ class `VaesenHUDWidget`), put on screen by the player's **HUD actor** (`VaesenHUD`, set as the game mode's HUD class) from Project Settings → Vaesen → HUD Widget. It holds the **minimap** (top right: a live, round map of the level around the player from above, with a brass ring and the player's arrow, turning with the view, drawn as **ink on parchment** by `M_MinimapInk`: paper with grain, ink outlines where height or surface direction jumps, a sepia wash on things standing above the ground under the player, and contour lines every 3 m of height) and the **quick bar** (bottom centre). Future parts such as health bars go on it too. It's hidden while the inventory screen is open.
 
 ## 11. Abilities and vitals
 

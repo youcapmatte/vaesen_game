@@ -26,6 +26,7 @@ void UVaesenMinimapWidget::NativeConstruct()
 	{
 		return;
 	}
+	MapCapture->SetStyleMaterial(MapStyle);
 
 	if (MapMaterial)
 	{

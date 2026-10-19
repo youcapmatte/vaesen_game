@@ -35,6 +35,13 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Minimap")
 	TObjectPtr<UMaterialInterface> MapMaterial;
 
+	/**
+	 * How the map is drawn: a post-process material on its camera (M_MinimapInk: ink on parchment). Empty = a plain
+	 * picture.
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Minimap")
+	TObjectPtr<UMaterialInterface> MapStyle;
+
 	/** The map camera (make a Blueprint of it to change how much it shows, how often, its exposure). */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Minimap")
 	TSubclassOf<AVaesenMinimapCapture> CaptureClass;

@@ -4,6 +4,7 @@
 #include "GameFramework/Actor.h"
 #include "VaesenMinimapCapture.generated.h"
 
+class UMaterialInterface;
 class USceneCaptureComponent2D;
 class UTextureRenderTarget2D;
 
@@ -15,6 +16,8 @@ class UTextureRenderTarget2D;
  * What it leaves out: fog, sky and atmosphere, foliage and grass (trees placed with the foliage tool or PCG), skeletal
  * meshes (characters, creatures), particles, and any actor tagged MapHidden or component with Hidden In Scene Capture
  * ticked. Buildings, rocks, terrain and roads show.
+ *
+ * A style material (a post-process material, e.g. M_MinimapInk) can redraw the picture, e.g. as ink on parchment.
  */
 UCLASS(Blueprintable)
 class VAESENGAME_API AVaesenMinimapCapture : public AActor
@@ -26,6 +29,9 @@ public:
 
 	/** Centres the map on Location, turned to Yaw (the map's up). */
 	void Follow(const FVector& Location, float Yaw);
+
+	/** Redraws the map with this post-process material (null: the plain picture). */
+	void SetStyleMaterial(UMaterialInterface* Material);
 
 	UFUNCTION(BlueprintPure, Category = "Minimap")
 	UTextureRenderTarget2D* GetRenderTarget() const { return RenderTarget; }

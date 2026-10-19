@@ -65,6 +65,7 @@
 #include "UI/VaesenHUDWidget.h"
 #include "Materials/MaterialExpressionComponentMask.h"
 #include "Materials/MaterialExpressionTextureCoordinate.h"
+#include "Materials/MaterialExpressionWorldPosition.h"
 #include "Materials/MaterialExpressionTextureSampleParameter2D.h"
 #include "Engine/Texture2D.h"
 #include "UI/Inventory/VaesenQuickSlotWidget.h"
@@ -1812,6 +1813,126 @@ return float4(Rgb, Alpha);)");
 		return Material;
 	}
 
+	const TCHAR* MinimapInkPath = TEXT("/Game/Vaesen/Materials/M_MinimapInk");
+
+	/**
+	 * The minimap's drawing style (a post-process material on the map camera): pen and ink on parchment. Paper with a
+	 * faint grain whatever the light; ink lines where height or surface direction jumps (buildings, walls, rocks,
+	 * cliffs); a sepia wash on things standing well above the ground under the player; contour lines on the ground.
+	 */
+	UMaterial* CreateMinimapInkMaterial()
+	{
+		if (AssetExists(MinimapInkPath))
+		{
+			UE_LOG(LogVaesenCreateWidgets, Display, TEXT("%s already exists; leaving it alone."), MinimapInkPath);
+			return LoadObject<UMaterial>(nullptr, *(FString(MinimapInkPath) + TEXT(".M_MinimapInk")));
+		}
+
+		UPackage* Package = CreatePackage(MinimapInkPath);
+		UMaterial* Material = NewObject<UMaterial>(Package, TEXT("M_MinimapInk"), RF_Public | RF_Standalone);
+		Material->MaterialDomain = MD_PostProcess;
+		Material->BlendableLocation = BL_SceneColorAfterTonemapping;
+
+		const auto Add = [Material](TSubclassOf<UMaterialExpression> Class, int32 X, int32 Y)
+		{
+			return UMaterialEditingLibrary::CreateMaterialExpression(Material, Class, X, Y);
+		};
+		const auto SceneTexture = [&Add](ESceneTextureId Id, int32 Y)
+		{
+			UMaterialExpressionSceneTexture* Node = CastChecked<UMaterialExpressionSceneTexture>(Add(UMaterialExpressionSceneTexture::StaticClass(), -800, Y));
+			Node->SceneTextureId = Id;
+			return Node;
+		};
+		const auto Colour = [&Add](const TCHAR* Name, const FLinearColor& Value, int32 Y)
+		{
+			UMaterialExpressionVectorParameter* Node = CastChecked<UMaterialExpressionVectorParameter>(Add(UMaterialExpressionVectorParameter::StaticClass(), -800, Y));
+			Node->ParameterName = Name;
+			Node->DefaultValue = Value;
+			return Node;
+		};
+		const auto Number = [&Add](const TCHAR* Name, float Value, int32 Y)
+		{
+			UMaterialExpressionScalarParameter* Node = CastChecked<UMaterialExpressionScalarParameter>(Add(UMaterialExpressionScalarParameter::StaticClass(), -800, Y));
+			Node->ParameterName = Name;
+			Node->DefaultValue = Value;
+			return Node;
+		};
+
+		// Fed in so the shader binds them (the code also reads around each pixel).
+		UMaterialExpressionSceneTexture* Scene = SceneTexture(PPI_PostProcessInput0, -300);
+		UMaterialExpressionSceneTexture* Depth = SceneTexture(PPI_SceneDepth, -150);
+		UMaterialExpressionSceneTexture* Normal = SceneTexture(PPI_WorldNormal, 0);
+		UMaterialExpression* WorldPosition = Add(UMaterialExpressionWorldPosition::StaticClass(), -800, 150);
+		UMaterialExpressionVectorParameter* Paper = Colour(TEXT("PaperColor"), FLinearColor(0.86f, 0.78f, 0.60f), 300);
+		UMaterialExpressionVectorParameter* Ink = Colour(TEXT("InkColor"), FLinearColor(0.20f, 0.13f, 0.07f), 450);
+		UMaterialExpressionVectorParameter* Wash = Colour(TEXT("WashColor"), FLinearColor(0.64f, 0.52f, 0.36f), 600);
+		UMaterialExpressionScalarParameter* ContourSpacing = Number(TEXT("ContourSpacing"), 300.0f, 750);
+		UMaterialExpressionScalarParameter* RaisedHeight = Number(TEXT("RaisedHeight"), 120.0f, 850);
+
+		UMaterialExpressionCustom* Draw = CastChecked<UMaterialExpressionCustom>(Add(UMaterialExpressionCustom::StaticClass(), -350, 0));
+		Draw->Description = TEXT("Ink on parchment");
+		Draw->OutputType = CMOT_Float3;
+		Draw->Inputs.Reset();
+		for (const TCHAR* Name : { TEXT("Scene"), TEXT("Depth"), TEXT("Normal"), TEXT("WorldPos"), TEXT("Paper"), TEXT("Ink"), TEXT("Wash"), TEXT("ContourSpacing"), TEXT("RaisedHeight") })
+		{
+			Draw->Inputs.AddDefaulted_GetRef().InputName = Name;
+		}
+		Draw->Code = TEXT(R"(float D = Depth.r;
+float3 N = normalize(Normal.rgb);
+
+// Ink where height or surface direction jumps between neighbouring pixels.
+float DepthJump = 0.0;
+float NormalJump = 0.0;
+for (int i = 0; i < 8; i++)
+{
+	float Angle = i * 0.7853982;
+	float2 Offset = float2(cos(Angle), sin(Angle));
+	float Dn = SceneTextureFetch(PPI_SceneDepth, Offset).r;
+	float3 Nn = normalize(SceneTextureFetch(PPI_WorldNormal, Offset).rgb);
+	DepthJump = max(DepthJump, abs(Dn - D));
+	NormalJump = max(NormalJump, 1.0 - dot(N, Nn));
+}
+float Line = max(smoothstep(25.0, 60.0, DepthJump), smoothstep(0.25, 0.5, NormalJump));
+
+// The ground under the player (the middle of the map) is the reference: things well above it get a wash.
+float GroundDepth = SceneTextureLookup(ViewportUVToBufferUV(float2(0.5, 0.5)), PPI_SceneDepth, false).r;
+float Raised = smoothstep(RaisedHeight * 0.5, RaisedHeight, GroundDepth - D);
+
+// Steep ground (slopes, cliffs) is shaded a little.
+float Steep = 1.0 - saturate(N.z);
+
+// Contour lines on the open ground.
+float Height = WorldPos.z / ContourSpacing;
+float Contour = 1.0 - saturate(abs(frac(Height - 0.5) - 0.5) / max(fwidth(Height), 0.0001));
+Contour *= (1.0 - Raised) * 0.45;
+
+// Paper with a little grain, a hint of the picture's light and shade, then wash, contours and ink.
+float2 Pixel = floor(GetDefaultSceneTextureUV(Parameters, PPI_PostProcessInput0) * View.BufferSizeAndInvSize.xy);
+float Grain = frac(sin(dot(Pixel, float2(12.9898, 78.233))) * 43758.5453) - 0.5;
+float Light = dot(Scene.rgb, float3(0.299, 0.587, 0.114));
+float3 Colour = Paper.rgb * (0.92 + 0.16 * Light + 0.05 * Grain);
+Colour = lerp(Colour, Wash.rgb, saturate(Raised * 0.85 + Steep * 0.35));
+Colour = lerp(Colour, Ink.rgb, Contour);
+Colour = lerp(Colour, Ink.rgb, Line);
+return Colour;)");
+
+		UMaterialEditingLibrary::ConnectMaterialExpressions(Scene, TEXT("Color"), Draw, TEXT("Scene"));
+		UMaterialEditingLibrary::ConnectMaterialExpressions(Depth, TEXT("Color"), Draw, TEXT("Depth"));
+		UMaterialEditingLibrary::ConnectMaterialExpressions(Normal, TEXT("Color"), Draw, TEXT("Normal"));
+		UMaterialEditingLibrary::ConnectMaterialExpressions(WorldPosition, TEXT(""), Draw, TEXT("WorldPos"));
+		UMaterialEditingLibrary::ConnectMaterialExpressions(Paper, TEXT(""), Draw, TEXT("Paper"));
+		UMaterialEditingLibrary::ConnectMaterialExpressions(Ink, TEXT(""), Draw, TEXT("Ink"));
+		UMaterialEditingLibrary::ConnectMaterialExpressions(Wash, TEXT(""), Draw, TEXT("Wash"));
+		UMaterialEditingLibrary::ConnectMaterialExpressions(ContourSpacing, TEXT(""), Draw, TEXT("ContourSpacing"));
+		UMaterialEditingLibrary::ConnectMaterialExpressions(RaisedHeight, TEXT(""), Draw, TEXT("RaisedHeight"));
+		UMaterialEditingLibrary::ConnectMaterialProperty(Draw, TEXT(""), MP_EmissiveColor);
+
+		UMaterialEditingLibrary::RecompileMaterial(Material);
+		FAssetRegistryModule::AssetCreated(Material);
+		Save(Material);
+		return Material;
+	}
+
 	/** WBP_HUD: the in-game HUD, full screen: the minimap in the top right, the quick bar at the bottom centre. */
 	void CreateHUD()
 	{
@@ -1846,6 +1967,20 @@ return float4(Rgb, Alpha);)");
 	void CreateMinimap()
 	{
 		UMaterial* Material = CreateMinimapMaterial();
+
+		// The ink-on-parchment style, also on an existing WBP_Minimap that has none yet.
+		UMaterial* Style = CreateMinimapInkMaterial();
+		const FString WidgetObject = FString(MinimapWidgetPath) + TEXT(".WBP_Minimap");
+		if (UWidgetBlueprint* Existing = LoadObject<UWidgetBlueprint>(nullptr, *WidgetObject))
+		{
+			UObject* Defaults = Existing->GeneratedClass->GetDefaultObject();
+			const FObjectPropertyBase* Property = FindFProperty<FObjectPropertyBase>(Defaults->GetClass(), TEXT("MapStyle"));
+			if (Style && Property && !Property->GetObjectPropertyValue_InContainer(Defaults))
+			{
+				SetDefault(Defaults, TEXT("MapStyle"), Style);
+				Finish(Existing);
+			}
+		}
 
 		UWidgetBlueprint* Blueprint = CreateBlueprint(MinimapWidgetPath, UVaesenMinimapWidget::StaticClass());
 		if (!Blueprint)
