@@ -10,6 +10,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "InputActionValue.h"
 #include "Interaction/VaesenInteractorComponent.h"
+#include "Inventory/VaesenEquipmentComponent.h"
 #include "Inventory/VaesenInventoryComponent.h"
 #include "Player/VaesenPlayerController.h"
 #include "Materials/MaterialInterface.h"
@@ -38,7 +39,9 @@ AVaesenPlayerCharacter::AVaesenPlayerCharacter()
 	Inventory->DisplayName = NSLOCTEXT("VaesenInventory", "PlayerInventory", "Inventory");
 	Inventory->Capacity = 24;
 	Inventory->bAccessibleByOthers = false;
-	bReplicateUsingRegisteredSubObjectList = true;
+
+	// Players dress piece by piece; full-body armor is for NPCs.
+	Equipment->bAllowFullBodyArmor = false;
 
 	// Movement feel (UE Third Person template values; tune in BP_VaesenPlayerCharacter).
 	UCharacterMovementComponent* Movement = GetCharacterMovement();

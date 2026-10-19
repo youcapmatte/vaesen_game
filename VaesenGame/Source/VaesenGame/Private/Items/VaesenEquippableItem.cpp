@@ -1,17 +1,42 @@
 #include "Items/VaesenEquippableItem.h"
 
 #include "Characters/VaesenPlayerCharacter.h"
+#include "Inventory/VaesenEquipmentComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
+
+#define LOCTEXT_NAMESPACE "VaesenItems"
 
 UVaesenEquippableItem::UVaesenEquippableItem()
 {
 	// One per stack: each is worn or held on its own.
 	bStackable = false;
 	MaxStackSize = 1;
+	UseActionText = LOCTEXT("EquipUse", "Equip");
 }
 
-void UVaesenEquippableItem::Equip(AVaesenPlayerCharacter* Character)
+#undef LOCTEXT_NAMESPACE
+
+AVaesenBaseCharacter* UVaesenEquippableItem::GetEquippedCharacter() const
+{
+	return EquippedCharacter.Get();
+}
+
+bool UVaesenEquippableItem::CanUse_Implementation(const AVaesenPlayerCharacter* Character) const
+{
+	const UVaesenEquipmentComponent* Equipment = Character ? Character->GetEquipment() : nullptr;
+	return Equipment && Equipment->CanEquip(this);
+}
+
+void UVaesenEquippableItem::Use_Implementation(AVaesenPlayerCharacter* Character)
+{
+	if (UVaesenEquipmentComponent* Equipment = Character ? Character->GetEquipment() : nullptr)
+	{
+		Equipment->EquipFromInventory(GetOwningInventory(), this);
+	}
+}
+
+void UVaesenEquippableItem::Equip(AVaesenBaseCharacter* Character)
 {
 	if (!Character || EquippedCharacter.Get() == Character)
 	{
@@ -24,14 +49,14 @@ void UVaesenEquippableItem::Equip(AVaesenPlayerCharacter* Character)
 
 void UVaesenEquippableItem::Unequip()
 {
-	if (AVaesenPlayerCharacter* Character = EquippedCharacter.Get())
+	if (AVaesenBaseCharacter* Character = EquippedCharacter.Get())
 	{
 		OnUnequipped(Character);
 	}
 	EquippedCharacter.Reset();
 }
 
-void UVaesenEquippableItem::OnEquipped_Implementation(AVaesenPlayerCharacter* Character)
+void UVaesenEquippableItem::OnEquipped_Implementation(AVaesenBaseCharacter* Character)
 {
 	if (!EquippedMesh)
 	{
@@ -46,7 +71,7 @@ void UVaesenEquippableItem::OnEquipped_Implementation(AVaesenPlayerCharacter* Ch
 	EquippedMeshComponent = Component;
 }
 
-void UVaesenEquippableItem::OnUnequipped_Implementation(AVaesenPlayerCharacter* Character)
+void UVaesenEquippableItem::OnUnequipped_Implementation(AVaesenBaseCharacter* Character)
 {
 	if (UStaticMeshComponent* Component = EquippedMeshComponent.Get())
 	{

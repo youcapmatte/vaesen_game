@@ -8,13 +8,14 @@ The game is multiplayer with a dedicated server. One rule runs through all of it
 
 ## 1. The big picture
 
-There are five layers, each built on the one before.
+There are six layers, each built on the one before.
 
 1. **Interaction.** The player looks at things. Something interactable shows a small card and a yellow outline, and the player can press or hold E to interact with it.
 2. **Items.** An item is a plain data object (a UObject, not an actor) describing one kind of thing: lamp oil, bread, a revolver, a herb pouch. Kinds of item are Blueprint subclasses.
 3. **Pickups.** A pickup is an actor in the world holding one item stack. Interacting with it picks it up.
 4. **The inventory.** A component that can go on any actor: the player, a chest, a corpse. It's **slot based**: it holds item stacks, each taking some number of slots, up to a capacity (or unlimited). It handles stacking, moving, using and dropping.
-5. **The inventory screen.** The player's survival-style UI for all of this: grids, drag and drop, tooltips, and looting containers side by side.
+5. **Equipment.** What each character wears and holds, one item per slot, each item only in its own slot, shown on the modular body.
+6. **The inventory screen.** The player's survival-style UI for all of this: grids, drag and drop, tooltips, and looting containers side by side.
 
 Pouches, such as a herb pouch, sit across layers 2 and 4. They're items that hold other items inside the inventory.
 
@@ -123,15 +124,15 @@ Items are UObjects, which Unreal doesn't replicate on their own. Each item is cr
 
 Kinds that do something different are subclasses; variants are just settings and tags. The tree is kept shallow on purpose.
 
-- **Equippable.** Goes into a slot: Head, Torso, Arms, Legs, Feet, Main hand, Off hand, Back or Talisman.
-  - **Equip and Unequip:** handle how it looks on the character, so they're meant to run on every machine.
+- **Equippable.** Goes into exactly one equipment slot, its own (see section 7, Equipment). Right-clicking it in the inventory equips it ("Equip").
+  - **Equip and Unequip:** handle what's attached to the character, so the equipment component runs them on every machine.
   - **Equipped mesh:** an optional static mesh attached to a bone while equipped, like a revolver in the right hand.
   - **Kinds of equippable:**
-    - **Weapon:** melee, firearm or thrown; damage; range; two-handed. Ammo type and magazine size only show for firearms.
-    - **Armor:** this covers clothes too. Its slot is one of the five body parts. While worn, it **replaces that body part's mesh** on the modular character with its own skeletal mesh, and unequipping restores the previous one. The armor mesh must use the mannequin skeleton.
-    - **Tool:** lantern, spyglass, compass, lockpicks. Off hand by default, "Use" action, and an optional item it uses up, such as lamp oil for a lantern, with how long each lasts.
-    - **Talisman:** a charm against vaesen, with the tags of what it wards against and a protection value.
-    - **Container:** a satchel or backpack worn on the back, giving extra slots and carry weight. This isn't wired into the inventory yet.
+    - **Weapon:** main hand; melee, firearm or thrown; damage; range; two-handed (which also takes the off hand). Ammo type and magazine size only show for firearms.
+    - **Armor:** this covers clothes too. Its slot is an armor slot: Head, Chest, Hands, Legs, Feet, Back or Full body. While worn, it **replaces that body part's mesh** on the modular character with its own skeletal mesh (a cloak on the back is worn over the body instead). The armor mesh must use the mannequin skeleton.
+    - **Tool:** lantern, spyglass, compass, lockpicks. Off hand by default, and an optional item it uses up, such as lamp oil for a lantern, with how long each lasts.
+    - **Talisman:** a charm against vaesen, in the talisman slot, with the tags of what it wards against and a protection value.
+    - **Container:** a satchel or backpack in the bag slot, with extra slots and carry weight. Wearing one doesn't add inventory slots yet.
 - **Consumable:** food, drink, medicine or poison, with a list of effects (a gameplay tag, a strength and a duration) and "consumed on use". Using one takes one from the stack.
 - **Ammo:** cartridges, powder and shot, with a damage bonus.
 - **Readable:** letters, journals, books, clues. Pages of text, an optional illustration and a clue flag. "Read".
@@ -293,7 +294,48 @@ In the UI:
 
 ---
 
-## 7. The inventory screen
+## 7. Equipment
+
+### Slots
+
+What a character wears and holds is kept by the **equipment component** (`VaesenEquipmentComponent`), which every character has, players and NPCs alike. It has one place per **equipment slot**, and an item **only ever goes into its own slot**: boots into Feet, a coat into Chest.
+
+The armor slots follow The Witcher 3, plus a head and a back:
+- **Head:** hats, hoods, helmets.
+- **Chest:** coats, shirts and armour for the body. **This covers the arms too.**
+- **Hands:** gloves.
+- **Legs:** trousers, skirts.
+- **Feet:** boots and shoes.
+- **Back:** a cloak, worn over the body rather than replacing a part.
+- **Full body:** one suit for the whole body. **NPCs only**; players always dress piece by piece.
+
+The other slots:
+- **Main hand** and **off hand:** weapons and tools. A two-handed weapon takes both hands; putting something in the off hand takes a two-handed weapon off.
+- **Talisman:** a charm.
+- **Bag:** a satchel or backpack.
+
+### The body
+
+The character's modular body matches the armor slots: the mannequin is split into **head, torso (with the arms), hands, legs and feet**, all following the torso's animation. There's also an empty **back** part that shows a cloak when one is worn.
+
+The equipment component sets the look on every machine:
+- each body part shows its armor's mesh, or the character's own mesh when nothing is worn there;
+- a cloak shows on the back;
+- full-body armor replaces the torso with its mesh and hides the head, hands, legs and feet (a cloak stays on);
+- weapons, tools, talismans and bags attach their equipped meshes.
+
+In first person the player's own head is still hidden from their camera, whatever they wear on it.
+
+### Equipping and taking off
+
+Everything happens on the server, and players ask through **request** functions on their own equipment component, which the server checks:
+- **Equip from an inventory:** the item leaves the inventory and goes on. Whatever was in its slot (and the other hand, for two-handed weapons) goes back into that inventory, and only if it all fits; otherwise nothing happens.
+- **Take off:** the item goes into an inventory, the character's own unless another is named, if there's room.
+- **Equip new:** puts on a fresh item of a kind, from nowhere. This is for NPC outfits; the component also has a list of **starting equipment** put on when play starts.
+
+Whether full-body armor is allowed is a setting on the component; it's off on players.
+
+## 8. The inventory screen
 
 ### Opening and closing
 
@@ -306,12 +348,14 @@ While it's open:
 
 **I or Escape** close it.
 
-When a chest is opened, the same screen opens with the chest's inventory beside the player's. If the player walks out of reach, or the chest disappears, the chest side closes by itself.
+The screen shows the player's **equipment** on the left and their **inventory** beside it. When a chest is opened, the chest's inventory appears too, on the right. If the player walks out of reach, or the chest disappears, the chest side closes by itself.
 
 ### Building blocks
 
-The screen is made of four widget classes, each a C++ class with a Widget Blueprint made from it. Each Blueprint only needs controls with specific names; the C++ does the work.
-- **Inventory screen** (`WBP_InventoryScreen`): the full-screen root, lightly darkened, with the player's panel, the container's panel and a line of hints. Dropping an item anywhere outside the panels drops it on the ground.
+The screen is made of six widget classes, each a C++ class with a Widget Blueprint made from it. Each Blueprint only needs controls with specific names; the C++ does the work.
+- **Inventory screen** (`WBP_InventoryScreen`): the full-screen root, lightly darkened, with the equipment panel, the player's panel, the container's panel and a line of hints. Dropping an inventory item anywhere outside the panels drops it on the ground.
+- **Equipment panel** (`WBP_EquipmentPanel`): the player's equipment slots, two per row: head and back, chest and hands, legs and feet, main and off hand, talisman and bag. Dropping an item on the panel itself puts it on in its own slot.
+- **Equipment slot** (`WBP_EquipmentSlot`): one slot, with its name in the corner and the worn item's thumbnail or name. It lights up when hovered, and turns red while dragging something that doesn't belong in it.
 - **Inventory panel** (`WBP_InventoryPanel`): one inventory as a grid, six columns wide.
   - **Cells:** one cell per stack, then as many empty cells as there are free slots. An unlimited inventory always shows a spare empty row.
   - **Header:** the inventory's name and its used and total slots, or "used / unlimited".
@@ -331,27 +375,30 @@ The screen is made of four widget classes, each a C++ class with a Widget Bluepr
 - **Drag** a slot onto another slot: move, merge, swap, or put inside a pouch.
 - **Ctrl and drag:** take half the stack.
 - **Shift and click:** send the item straight to the other open inventory, chest to player or player to chest.
-- **Right-click:** use the item. Eat it, read it, or for a pouch, empty it.
+- **Right-click:** use the item. Eat it, read it, empty a pouch, or put on clothing and weapons.
+- **Drag onto an equipment slot:** put it on, if it belongs in that slot.
+- **Drag off an equipment slot** onto an inventory, or **right-click** it: take it off.
 - **Drag outside the panels:** drop it on the ground.
 
-Every one of these is a request to the server through the player's own inventory, so the screen just shows what the server says.
+Every one of these is a request to the server through the player's own inventory or equipment, so the screen just shows what the server says.
 
 ---
 
-## 8. Test assets
+## 9. Test assets
 
 These were created by the project's asset-building commandlet and are ready to drop into a level:
 - `BP_Pickup_LampOil`: five lamp oil. Lamp oil is a plain item that stacks to ten.
 - `BP_LootChest`: a crate with unlimited space and seven lamp oil inside. Hold E to search it.
 - `BP_Pickup_HerbPouch`: a herb pouch with four slots that accepts `Item.Herb`.
 - `BP_Pickup_Yarrow`: three yarrow, a herb tagged `Item.Herb`.
+- `BP_Pickup_LeatherBoots`, `BP_Pickup_WorkGloves` and `BP_Pickup_WoolCloak`: clothing for the feet, hands and back. They have no meshes of their own yet, so the body doesn't change when they're worn, but they fill their equipment slots.
 - `BP_InteractableTest`: the earlier test crate, which just logs when interacted with.
 
-A good test: pick up the herb pouch, then the yarrow. Open the inventory. The yarrow should be inside the pouch, not in a slot of its own; the pouch shows "1/4" and its tooltip lists the yarrow. Right-click the pouch to empty it.
+A good test: pick up the herb pouch, then the yarrow. Open the inventory. The yarrow should be inside the pouch, not in a slot of its own; the pouch shows "1/4" and its tooltip lists the yarrow. Right-click the pouch to empty it. Then pick up the boots and right-click them: they go into the Feet slot. Try dragging the gloves onto the Head slot; it turns red and refuses.
 
 ---
 
-## 9. Where to find things
+## 10. Where to find things
 
 C++ lives in `VaesenGame/Source/VaesenGame`:
 - **`Interaction/`:** the interaction component and the interactor component.
@@ -361,18 +408,20 @@ C++ lives in `VaesenGame/Source/VaesenGame`:
   - the pouch;
   - the item enums and effect struct;
   - the pickup.
-- **`Inventory/`:** the inventory component and the loot container.
+- **`Inventory/`:** the inventory component, the equipment component and the loot container.
 - **`UI/Inventory/` and `UI/Interaction/`:** the widget classes.
-- **The player character:** has the interactor and the inventory, and binds E (interact) and I (inventory).
+- **The characters:** every character has the modular body and the equipment; the player character adds the interactor and the inventory, and binds E (interact) and I (inventory).
 - **The player controller:** opens and closes the inventory screen.
 
 The **commandlet** in the editor module (`VaesenCreateWidgetsCommandlet`) builds the widget Blueprints, input actions and test assets. It only creates what's missing, so running it again is safe.
 
 ---
 
-## 10. Not done yet
+## 11. Not done yet
 
-- **Equipment slots on the player.** Equip and unequip exist on items, but there's no equipment component or UI yet, and wearing a bag doesn't add slots yet.
+- **Clothing meshes.** The slots and the swapping work, but there are no clothing meshes yet; the test clothing keeps the plain body.
+- **Bags adding slots.** A worn bag doesn't enlarge the inventory yet.
+- **Armor doing anything.** Protection is data only, like consumable effects.
 - **A hotbar** for quick use.
 - **Feedback to the player** when something doesn't fit. Today it only goes to the log.
 - **Big items drawn bigger.** An item taking three slots is still one cell in the grid; the panel just shows fewer free cells.

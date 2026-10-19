@@ -3,6 +3,8 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Inventory/VaesenEquipmentComponent.h"
+#include "Items/VaesenItemTypes.h"
 
 AVaesenBaseCharacter::AVaesenBaseCharacter()
 {
@@ -16,9 +18,14 @@ AVaesenBaseCharacter::AVaesenBaseCharacter()
 	GetCharacterMovement()->RotationRate = FRotator(0.f, 500.f, 0.f);
 
 	HeadMesh = CreateBodyPart(TEXT("HeadMesh"));
-	ArmsMesh = CreateBodyPart(TEXT("ArmsMesh"));
+	HandsMesh = CreateBodyPart(TEXT("HandsMesh"));
 	LegsMesh = CreateBodyPart(TEXT("LegsMesh"));
 	FeetMesh = CreateBodyPart(TEXT("FeetMesh"));
+	BackMesh = CreateBodyPart(TEXT("BackMesh"));
+
+	Equipment = CreateDefaultSubobject<UVaesenEquipmentComponent>(TEXT("Equipment"));
+	// Item subobjects (equipped items, and inventories on subclasses) replicate through the registered list.
+	bReplicateUsingRegisteredSubObjectList = true;
 }
 
 USkeletalMeshComponent* AVaesenBaseCharacter::CreateBodyPart(FName Name)
@@ -37,7 +44,7 @@ void AVaesenBaseCharacter::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
 
-	for (USkeletalMeshComponent* Part : { HeadMesh.Get(), ArmsMesh.Get(), LegsMesh.Get(), FeetMesh.Get() })
+	for (USkeletalMeshComponent* Part : { HeadMesh.Get(), HandsMesh.Get(), LegsMesh.Get(), FeetMesh.Get(), BackMesh.Get() })
 	{
 		if (Part)
 		{
@@ -48,5 +55,19 @@ void AVaesenBaseCharacter::PostInitializeComponents()
 
 TArray<USkeletalMeshComponent*> AVaesenBaseCharacter::GetBodyParts() const
 {
-	return { GetMesh(), HeadMesh.Get(), ArmsMesh.Get(), LegsMesh.Get(), FeetMesh.Get() };
+	return { GetMesh(), HeadMesh.Get(), HandsMesh.Get(), LegsMesh.Get(), FeetMesh.Get(), BackMesh.Get() };
+}
+
+USkeletalMeshComponent* AVaesenBaseCharacter::GetBodyPartFor(EVaesenEquipmentSlot Slot) const
+{
+	switch (Slot)
+	{
+	case EVaesenEquipmentSlot::Head:  return HeadMesh;
+	case EVaesenEquipmentSlot::Chest: return GetMesh();
+	case EVaesenEquipmentSlot::Hands: return HandsMesh;
+	case EVaesenEquipmentSlot::Legs:  return LegsMesh;
+	case EVaesenEquipmentSlot::Feet:  return FeetMesh;
+	case EVaesenEquipmentSlot::Back:  return BackMesh;
+	default:                          return nullptr;
+	}
 }

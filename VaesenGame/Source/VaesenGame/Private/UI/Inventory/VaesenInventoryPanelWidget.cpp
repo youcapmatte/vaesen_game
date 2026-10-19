@@ -4,6 +4,7 @@
 #include "Components/TextBlock.h"
 #include "Components/UniformGridPanel.h"
 #include "Components/UniformGridSlot.h"
+#include "Inventory/VaesenEquipmentComponent.h"
 #include "Inventory/VaesenInventoryComponent.h"
 #include "Items/VaesenItem.h"
 #include "UI/Inventory/VaesenInventorySlotWidget.h"
@@ -151,6 +152,14 @@ bool UVaesenInventoryPanelWidget::NativeOnDrop(const FGeometry& InGeometry, cons
 	if (!Operation || !PlayerInventory || !Inventory)
 	{
 		return false;
+	}
+	if (Operation->bFromEquipment)
+	{
+		if (UVaesenEquipmentComponent* Equipment = Character->GetEquipment())
+		{
+			Equipment->RequestUnequip(Operation->EquipmentSlot, Inventory);
+		}
+		return true;
 	}
 	if (Operation->SourceInventory != Inventory)
 	{

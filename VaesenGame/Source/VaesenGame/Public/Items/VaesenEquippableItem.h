@@ -5,14 +5,17 @@
 #include "Items/VaesenItemTypes.h"
 #include "VaesenEquippableItem.generated.h"
 
+class AVaesenBaseCharacter;
 class UStaticMeshComponent;
 
 /**
- * An item that's equipped into a slot. Equip/Unequip handle the look on the character, so they're called on every
- * machine (by the inventory, from its replicated equipment); game effects belong on the server.
+ * An item that's equipped into a slot, and only that one (see UVaesenEquipmentComponent). Right-clicking it in the
+ * inventory ("Equip") puts it on. Equip/Unequip handle the look of what's attached, so the equipment component calls
+ * them on every machine; game effects belong on the server.
  *
  * Rigid things worn or held (weapons, tools, talismans, bags) set EquippedMesh: it's attached to AttachSocket (a
- * bone or socket on the character's body) while equipped. Armor replaces a body part's mesh instead.
+ * bone or socket on the character's body) while equipped. Armor replaces a body part's mesh instead (done by the
+ * equipment component).
  */
 UCLASS(Abstract)
 class VAESENGAME_API UVaesenEquippableItem : public UVaesenItem
@@ -33,8 +36,12 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equipment")
 	FName AttachSocket = TEXT("hand_r");
 
+	virtual bool CanUse_Implementation(const AVaesenPlayerCharacter* Character) const override;
+	virtual void Use_Implementation(AVaesenPlayerCharacter* Character) override;
+
+	/** Shows it on Character (called by the equipment component on every machine). */
 	UFUNCTION(BlueprintCallable, Category = "Equipment")
-	void Equip(AVaesenPlayerCharacter* Character);
+	void Equip(AVaesenBaseCharacter* Character);
 
 	UFUNCTION(BlueprintCallable, Category = "Equipment")
 	void Unequip();
@@ -43,18 +50,18 @@ public:
 	bool IsEquipped() const { return EquippedCharacter.IsValid(); }
 
 	UFUNCTION(BlueprintPure, Category = "Equipment")
-	AVaesenPlayerCharacter* GetEquippedCharacter() const { return EquippedCharacter.Get(); }
+	AVaesenBaseCharacter* GetEquippedCharacter() const;
 
 protected:
 	/** Puts it on the character (by default: attaches EquippedMesh). Call the parent when overriding. */
 	UFUNCTION(BlueprintNativeEvent, Category = "Equipment")
-	void OnEquipped(AVaesenPlayerCharacter* Character);
+	void OnEquipped(AVaesenBaseCharacter* Character);
 
 	/** Takes it off again. Call the parent when overriding. */
 	UFUNCTION(BlueprintNativeEvent, Category = "Equipment")
-	void OnUnequipped(AVaesenPlayerCharacter* Character);
+	void OnUnequipped(AVaesenBaseCharacter* Character);
 
 private:
-	TWeakObjectPtr<AVaesenPlayerCharacter> EquippedCharacter;
+	TWeakObjectPtr<AVaesenBaseCharacter> EquippedCharacter;
 	TWeakObjectPtr<UStaticMeshComponent> EquippedMeshComponent;
 };

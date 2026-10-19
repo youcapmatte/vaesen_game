@@ -6,14 +6,16 @@
 
 class UTextBlock;
 class UVaesenInventoryComponent;
+class UVaesenEquipmentPanelWidget;
 class UVaesenInventoryPanelWidget;
 
 /**
- * The inventory screen (opened with I by AVaesenPlayerController): the player's inventory, and beside it a
- * container they're looting (chest, corpse...). Dropping an item outside both panels throws it on the ground.
+ * The inventory screen (opened with I by AVaesenPlayerController): the player's equipment, their inventory, and beside
+ * it a container they're looting (chest, corpse...). Dropping an item outside both panels throws it on the ground.
  * I or Escape close it; the container side closes by itself when the player walks away.
  *
  * Widget Blueprint (e.g. WBP_InventoryScreen, parent class VaesenInventoryScreenWidget), controls by these exact names:
+ *   EquipmentPanel  (WBP_EquipmentPanel)  - what the player wears and holds
  *   PlayerPanel     (WBP_InventoryPanel)  - the player's inventory
  *   ContainerPanel  (WBP_InventoryPanel)  - the container; collapsed when there is none
  *   HintText        (Text)                - optional controls reminder
@@ -36,6 +38,9 @@ protected:
 	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 	virtual FReply NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
 	virtual bool NativeOnDrop(const FGeometry& InGeometry, const FDragDropEvent& InDragDropEvent, UDragDropOperation* InOperation) override;
+
+	UPROPERTY(meta = (BindWidgetOptional))
+	TObjectPtr<UVaesenEquipmentPanelWidget> EquipmentPanel;
 
 	UPROPERTY(meta = (BindWidgetOptional))
 	TObjectPtr<UVaesenInventoryPanelWidget> PlayerPanel;

@@ -34,6 +34,7 @@
 #include "Items/VaesenPickup.h"
 #include "Items/VaesenIngredientItem.h"
 #include "Items/VaesenPouchItem.h"
+#include "Items/VaesenArmorItem.h"
 #include "GameplayTagContainer.h"
 #include "Inventory/VaesenInventoryComponent.h"
 #include "Inventory/VaesenLootContainer.h"
@@ -58,6 +59,8 @@
 #include "UI/Guild/VaesenCreateGuildWidget.h"
 #include "UI/Guild/VaesenPickGuildWidget.h"
 #include "UI/Interaction/VaesenInteractionCardWidget.h"
+#include "UI/Inventory/VaesenEquipmentPanelWidget.h"
+#include "UI/Inventory/VaesenEquipmentSlotWidget.h"
 #include "UI/Inventory/VaesenInventoryPanelWidget.h"
 #include "UI/Inventory/VaesenInventoryScreenWidget.h"
 #include "UI/Inventory/VaesenInventorySlotWidget.h"
@@ -380,7 +383,7 @@ namespace VaesenCreateWidgets
 
 	/**
 	 * Modular body: splits Manny into parts (once) and puts them on BP_VaesenPlayerCharacter: the Torso as the
-	 * character's Mesh, the rest on the Head/Arms/Legs/Feet parts. Only fills in what's still the whole Manny or empty.
+	 * character's Mesh, the rest on the Head/Hands/Legs/Feet parts. Only fills in what's still the whole Manny or empty.
 	 */
 	void SetupModularCharacter()
 	{
@@ -420,7 +423,7 @@ namespace VaesenCreateWidgets
 
 		Assign(Defaults->GetTorsoMesh(), LoadPart(TEXT("SKM_Manny_Torso")), true);
 		Assign(Defaults->GetHeadMesh(), LoadPart(TEXT("SKM_Manny_Head")), false);
-		Assign(Defaults->GetArmsMesh(), LoadPart(TEXT("SKM_Manny_Arms")), false);
+		Assign(Defaults->GetHandsMesh(), LoadPart(TEXT("SKM_Manny_Hands")), false);
 		Assign(Defaults->GetLegsMesh(), LoadPart(TEXT("SKM_Manny_Legs")), false);
 		Assign(Defaults->GetFeetMesh(), LoadPart(TEXT("SKM_Manny_Feet")), false);
 
@@ -998,6 +1001,8 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 	const TCHAR* InventoryPanelPath = TEXT("/Game/Vaesen/UI/Inventory/WBP_InventoryPanel");
 	const TCHAR* InventoryScreenPath = TEXT("/Game/Vaesen/UI/Inventory/WBP_InventoryScreen");
 	const TCHAR* LootChestPath = TEXT("/Game/Vaesen/Blueprints/Interaction/BP_LootChest");
+	const TCHAR* EquipmentSlotPath = TEXT("/Game/Vaesen/UI/Inventory/WBP_EquipmentSlot");
+	const TCHAR* EquipmentPanelPath = TEXT("/Game/Vaesen/UI/Inventory/WBP_EquipmentPanel");
 
 	/** Plain text in the inventory UI's own sizes (the Vaesen text roles are sized for menus). */
 	UTextBlock* InventoryText(const FBuilder& Build, FName Name, const TCHAR* Sample, int32 Size, FName Typeface, const FLinearColor& Color)
@@ -1134,11 +1139,84 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 		Finish(Blueprint);
 	}
 
+	void CreateEquipmentSlot()
+	{
+		UWidgetBlueprint* Blueprint = CreateBlueprint(EquipmentSlotPath, UVaesenEquipmentSlotWidget::StaticClass());
+		if (!Blueprint)
+		{
+			return;
+		}
+		const FBuilder Build{ Blueprint->WidgetTree };
+
+		USizeBox* Size = Build.Make<USizeBox>();
+		Size->SetWidthOverride(72.0f);
+		Size->SetHeightOverride(72.0f);
+		Blueprint->WidgetTree->RootWidget = Size;
+
+		UBorder* SlotBorder = Build.Make<UBorder>(TEXT("SlotBorder"));
+		SlotBorder->SetBrush(FSlateRoundedBoxBrush(FLinearColor::White, 4.0f, Brass, 1.0f));
+		SlotBorder->SetBrushColor(FLinearColor(0.03f, 0.025f, 0.02f, 0.85f));
+		SlotBorder->SetPadding(FMargin(0.0f));
+		Size->SetContent(SlotBorder);
+
+		UOverlay* Layers = Build.Make<UOverlay>();
+		SlotBorder->SetContent(Layers);
+
+		UImage* Thumbnail = Build.Make<UImage>(TEXT("ThumbnailImage"));
+		UOverlaySlot* ThumbnailSlot = Layers->AddChildToOverlay(Thumbnail);
+		ThumbnailSlot->SetHorizontalAlignment(HAlign_Fill);
+		ThumbnailSlot->SetVerticalAlignment(VAlign_Fill);
+		ThumbnailSlot->SetPadding(FMargin(8.0f, 14.0f, 8.0f, 4.0f));
+
+		UTextBlock* Label = InventoryText(Build, TEXT("SlotLabelText"), TEXT("Head"), 8, TEXT("Regular"), InventoryMuted);
+		UOverlaySlot* LabelSlot = Layers->AddChildToOverlay(Label);
+		LabelSlot->SetHorizontalAlignment(HAlign_Left);
+		LabelSlot->SetVerticalAlignment(VAlign_Top);
+		LabelSlot->SetPadding(FMargin(4.0f, 2.0f, 0.0f, 0.0f));
+
+		UTextBlock* Name = InventoryText(Build, TEXT("NameText"), TEXT("Item"), 9, TEXT("Regular"), InventoryParchment);
+		Name->SetAutoWrapText(true);
+		Name->SetJustification(ETextJustify::Center);
+		UOverlaySlot* NameSlot = Layers->AddChildToOverlay(Name);
+		NameSlot->SetHorizontalAlignment(HAlign_Fill);
+		NameSlot->SetVerticalAlignment(VAlign_Center);
+		NameSlot->SetPadding(FMargin(3.0f, 10.0f, 3.0f, 0.0f));
+
+		FKismetEditorUtilities::CompileBlueprint(Blueprint);
+		SetDefault(Blueprint->GeneratedClass->GetDefaultObject(), TEXT("TooltipClass"), LoadWidgetClass(ItemTooltipPath));
+		Finish(Blueprint);
+	}
+
+	void CreateEquipmentPanel()
+	{
+		UWidgetBlueprint* Blueprint = CreateBlueprint(EquipmentPanelPath, UVaesenEquipmentPanelWidget::StaticClass());
+		if (!Blueprint)
+		{
+			return;
+		}
+		const FBuilder Build{ Blueprint->WidgetTree };
+
+		UBorder* Panel = InventoryPanelBorder(Build, TEXT("Panel"), 14.0f);
+		Blueprint->WidgetTree->RootWidget = Panel;
+		UVerticalBox* Content = Build.Make<UVerticalBox>();
+		Panel->SetContent(Content);
+
+		FBuilder::AddRow(Content, InventoryText(Build, TEXT("TitleText"), TEXT("Equipment"), 18, TEXT("Bold"), InventoryParchment), 10.0f);
+		UUniformGridPanel* Grid = Build.Make<UUniformGridPanel>(TEXT("SlotGrid"));
+		Grid->SetSlotPadding(FMargin(3.0f));
+		FBuilder::AddRow(Content, Grid, 0.0f);
+
+		FKismetEditorUtilities::CompileBlueprint(Blueprint);
+		SetDefault(Blueprint->GeneratedClass->GetDefaultObject(), TEXT("SlotWidgetClass"), LoadWidgetClass(EquipmentSlotPath));
+		Finish(Blueprint);
+	}
+
 	void CreateInventoryScreen()
 	{
 		UWidgetBlueprint* Blueprint = CreateBlueprint(InventoryScreenPath, UVaesenInventoryScreenWidget::StaticClass());
 		UClass* PanelClass = LoadWidgetClass(InventoryPanelPath);
-		if (!Blueprint || !PanelClass)
+		UClass* EquipmentPanelClass = LoadWidgetClass(EquipmentPanelPath);
+		if (!Blueprint || !PanelClass || !EquipmentPanelClass)
 		{
 			return;
 		}
@@ -1158,6 +1236,9 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 		Backdrop->SetContent(Content);
 
 		UHorizontalBox* Panels = Build.Make<UHorizontalBox>();
+		UHorizontalBoxSlot* EquipmentSlot = Panels->AddChildToHorizontalBox(Build.Make<UVaesenEquipmentPanelWidget>(TEXT("EquipmentPanel"), EquipmentPanelClass));
+		EquipmentSlot->SetPadding(FMargin(0.0f, 0.0f, 24.0f, 0.0f));
+		EquipmentSlot->SetVerticalAlignment(VAlign_Top);
 		Panels->AddChildToHorizontalBox(Build.Make<UVaesenInventoryPanelWidget>(TEXT("PlayerPanel"), PanelClass))->SetVerticalAlignment(VAlign_Top);
 		UHorizontalBoxSlot* ContainerSlot = Panels->AddChildToHorizontalBox(Build.Make<UVaesenInventoryPanelWidget>(TEXT("ContainerPanel"), PanelClass));
 		ContainerSlot->SetPadding(FMargin(24.0f, 0.0f, 0.0f, 0.0f));
@@ -1165,7 +1246,7 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 		FBuilder::AddRow(Content, Panels, 14.0f);
 
 		UTextBlock* Hint = InventoryText(Build, TEXT("HintText"),
-			TEXT("Drag: move   Ctrl+drag: split   Shift+click: transfer   Right-click: use   Drag outside: drop   I: close"),
+			TEXT("Drag: move, equip   Ctrl+drag: split   Shift+click: transfer   Right-click: use, equip, take off   Drag outside: drop   I: close"),
 			11, TEXT("Regular"), InventoryMuted);
 		FBuilder::AddRow(Content, Hint, 0.0f)->SetHorizontalAlignment(HAlign_Center);
 
@@ -1239,6 +1320,8 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 		CreateItemTooltip();
 		CreateInventorySlot();
 		CreateInventoryPanel();
+		CreateEquipmentSlot();
+		CreateEquipmentPanel();
 		CreateInventoryScreen();
 		SetupButtonInput(TEXT("IA_Inventory"), EKeys::I, TEXT("InventoryAction"), { EKeys::Tab });
 
@@ -1340,6 +1423,32 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 			Cast<UStaticMesh>(LoadAsset(TEXT("/Engine/BasicShapes/Sphere.Sphere"))), FVector(0.2));
 		CreateTestPickup(TEXT("/Game/Vaesen/Blueprints/Interaction/BP_Pickup_Yarrow"), LoadBlueprintClass(YarrowPath), 3,
 			Cast<UStaticMesh>(LoadAsset(TEXT("/Engine/BasicShapes/Cone.Cone"))), FVector(0.15, 0.15, 0.25));
+
+		// Clothing to try the equipment with (no meshes of their own yet, so the body doesn't change).
+		struct FTestClothing { const TCHAR* Path; const TCHAR* PickupPath; FText Name; FText Description; EVaesenEquipmentSlot Slot; };
+		const FTestClothing Clothing[] = {
+			{ TEXT("/Game/Vaesen/Blueprints/Items/Clothing/BP_Item_LeatherBoots"), TEXT("/Game/Vaesen/Blueprints/Interaction/BP_Pickup_LeatherBoots"),
+				LOCTEXT("BootsName", "Leather boots"), LOCTEXT("BootsDescription", "Sturdy boots for wet roads."), EVaesenEquipmentSlot::Feet },
+			{ TEXT("/Game/Vaesen/Blueprints/Items/Clothing/BP_Item_WorkGloves"), TEXT("/Game/Vaesen/Blueprints/Interaction/BP_Pickup_WorkGloves"),
+				LOCTEXT("GlovesName", "Work gloves"), LOCTEXT("GlovesDescription", "Worn leather gloves."), EVaesenEquipmentSlot::Hands },
+			{ TEXT("/Game/Vaesen/Blueprints/Items/Clothing/BP_Item_WoolCloak"), TEXT("/Game/Vaesen/Blueprints/Interaction/BP_Pickup_WoolCloak"),
+				LOCTEXT("CloakName", "Wool cloak"), LOCTEXT("CloakDescription", "A heavy grey cloak against the rain."), EVaesenEquipmentSlot::Back },
+		};
+		UStaticMesh* Cube = Cast<UStaticMesh>(LoadAsset(TEXT("/Engine/BasicShapes/Cube.Cube")));
+		for (const FTestClothing& Piece : Clothing)
+		{
+			if (UBlueprint* Blueprint = CreateActorBlueprint(Piece.Path, UVaesenArmorItem::StaticClass()))
+			{
+				UVaesenArmorItem* Defaults = CastChecked<UVaesenArmorItem>(Blueprint->GeneratedClass->GetDefaultObject());
+				Defaults->ItemName = Piece.Name;
+				Defaults->Description = Piece.Description;
+				Defaults->Slot = Piece.Slot;
+				Defaults->PickupMesh = Cube;
+				Defaults->Weight = 1.0f;
+				Finish(Blueprint);
+			}
+			CreateTestPickup(Piece.PickupPath, LoadBlueprintClass(Piece.Path), 1, Cube, FVector(0.3, 0.3, 0.15));
+		}
 
 		// Plain items used to stack by default; lamp oil should keep doing so.
 		const FString LampOilObject = FString(TestItemPath) + TEXT(".") + FPackageName::GetShortName(TestItemPath);

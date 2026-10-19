@@ -27,7 +27,7 @@ namespace VaesenMannequinSplitter
 	const TCHAR* const PartsFolder = TEXT("/Game/Characters/Mannequins/Meshes/Modular");
 	const TCHAR* const SourceMeshPath = TEXT("/Game/Characters/Mannequins/Meshes/SKM_Manny.SKM_Manny");
 
-	enum class EPart : uint8 { Head, Torso, Arms, Legs, Feet };
+	enum class EPart : uint8 { Head, Torso, Hands, Legs, Feet };
 
 	struct FPartInfo
 	{
@@ -38,7 +38,7 @@ namespace VaesenMannequinSplitter
 	const FPartInfo Parts[] = {
 		{ EPart::Head, TEXT("SKM_Manny_Head") },
 		{ EPart::Torso, TEXT("SKM_Manny_Torso") },
-		{ EPart::Arms, TEXT("SKM_Manny_Arms") },
+		{ EPart::Hands, TEXT("SKM_Manny_Hands") },
 		{ EPart::Legs, TEXT("SKM_Manny_Legs") },
 		{ EPart::Feet, TEXT("SKM_Manny_Feet") },
 	};
@@ -71,11 +71,12 @@ namespace VaesenMannequinSplitter
 		{
 			return EPart::Legs;
 		}
-		if (StartsWithAny({ TEXT("upperarm"), TEXT("lowerarm"), TEXT("hand"), TEXT("thumb"), TEXT("index"), TEXT("middle"), TEXT("ring"), TEXT("pinky") }))
+		if (StartsWithAny({ TEXT("hand"), TEXT("thumb"), TEXT("index"), TEXT("middle"), TEXT("ring"), TEXT("pinky") }))
 		{
-			return EPart::Arms;
+			return EPart::Hands;
 		}
-		if (StartsWithAny({ TEXT("spine"), TEXT("clavicle") }))
+		// The arms belong with the torso: a chest piece covers them (gloves are the Hands).
+		if (StartsWithAny({ TEXT("spine"), TEXT("clavicle"), TEXT("upperarm"), TEXT("lowerarm") }))
 		{
 			return EPart::Torso;
 		}

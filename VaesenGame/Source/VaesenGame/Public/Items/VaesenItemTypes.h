@@ -4,25 +4,33 @@
 #include "GameplayTagContainer.h"
 #include "VaesenItemTypes.generated.h"
 
-/** Where an equippable item goes. Head..Feet are the modular body parts (armor replaces that part's mesh). */
+/**
+ * Where an equippable item goes. The armor slots come first (like The Witcher 3, plus head and back):
+ *   Head, Chest (torso and arms), Hands, Legs, Feet  - replace that modular body part's mesh
+ *   Back                                              - a cloak, worn over the body
+ *   FullBody                                          - one suit for the whole body; NPCs only
+ * Then MainHand, OffHand (weapons, tools), Talisman (charms) and Bag (satchel, backpack).
+ */
 UENUM(BlueprintType)
 enum class EVaesenEquipmentSlot : uint8
 {
 	Head,
-	Torso,
-	Arms,
+	Chest,
+	Hands,
 	Legs,
 	Feet,
+	Back,
+	FullBody UMETA(DisplayName = "Full Body (NPC only)"),
 	MainHand,
 	OffHand,
-	Back,
-	Talisman
+	Talisman,
+	Bag
 };
 
-/** Whether the slot is one of the body parts (what armor can go in). */
-inline bool IsBodySlot(EVaesenEquipmentSlot Slot)
+/** Whether the slot is for armor (clothes): Head through FullBody. */
+inline bool IsArmorSlot(EVaesenEquipmentSlot Slot)
 {
-	return Slot <= EVaesenEquipmentSlot::Feet;
+	return Slot <= EVaesenEquipmentSlot::FullBody;
 }
 
 UENUM(BlueprintType)

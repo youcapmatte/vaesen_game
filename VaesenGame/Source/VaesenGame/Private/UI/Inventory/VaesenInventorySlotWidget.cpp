@@ -5,6 +5,7 @@
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
 #include "Framework/Application/SlateApplication.h"
+#include "Inventory/VaesenEquipmentComponent.h"
 #include "Inventory/VaesenInventoryComponent.h"
 #include "Items/VaesenItem.h"
 #include "Items/VaesenPouchItem.h"
@@ -149,6 +150,17 @@ bool UVaesenInventorySlotWidget::NativeOnDrop(const FGeometry& InGeometry, const
 	if (!Operation || !PlayerInventory || !Inventory)
 	{
 		return false;
+	}
+
+	// Off the body: taken off into this inventory.
+	if (Operation->bFromEquipment)
+	{
+		const AVaesenPlayerCharacter* Character = GetOwningPlayerPawn<AVaesenPlayerCharacter>();
+		if (UVaesenEquipmentComponent* Equipment = Character ? Character->GetEquipment() : nullptr)
+		{
+			Equipment->RequestUnequip(Operation->EquipmentSlot, Inventory);
+		}
+		return true;
 	}
 
 	PlayerInventory->RequestMoveItem(Operation->SourceInventory, Operation->SourceIndex, Inventory, SlotIndex, Operation->Amount);

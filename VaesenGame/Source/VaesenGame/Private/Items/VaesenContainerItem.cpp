@@ -2,6 +2,6 @@
 
 UVaesenContainerItem::UVaesenContainerItem()
 {
-	Slot = EVaesenEquipmentSlot::Back;
+	Slot = EVaesenEquipmentSlot::Bag;
 	AttachSocket = TEXT("spine_05");
 }

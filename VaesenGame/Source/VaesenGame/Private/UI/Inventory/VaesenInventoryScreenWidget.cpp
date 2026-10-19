@@ -3,6 +3,7 @@
 #include "Characters/VaesenPlayerCharacter.h"
 #include "Inventory/VaesenInventoryComponent.h"
 #include "Player/VaesenPlayerController.h"
+#include "UI/Inventory/VaesenEquipmentPanelWidget.h"
 #include "UI/Inventory/VaesenInventoryPanelWidget.h"
 #include "UI/Inventory/VaesenItemDragDropOperation.h"
 
@@ -17,6 +18,12 @@ void UVaesenInventoryScreenWidget::SetInventories(UVaesenInventoryComponent* Pla
 {
 	PlayerInventoryShown = PlayerInventory;
 	ContainerShown = Container;
+
+	if (EquipmentPanel)
+	{
+		const AVaesenPlayerCharacter* Character = GetOwningPlayerPawn<AVaesenPlayerCharacter>();
+		EquipmentPanel->SetEquipment(Character ? Character->GetEquipment() : nullptr);
+	}
 
 	if (PlayerPanel)
 	{
@@ -70,6 +77,11 @@ bool UVaesenInventoryScreenWidget::NativeOnDrop(const FGeometry& InGeometry, con
 	if (!Operation || !PlayerInventory)
 	{
 		return false;
+	}
+	// Worn things aren't thrown away straight off the body.
+	if (Operation->bFromEquipment)
+	{
+		return true;
 	}
 	PlayerInventory->RequestDropItem(Operation->SourceInventory, Operation->SourceIndex, Operation->Amount);
 	return true;

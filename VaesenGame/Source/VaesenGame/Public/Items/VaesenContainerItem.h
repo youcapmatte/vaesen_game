@@ -4,7 +4,7 @@
 #include "Items/VaesenEquippableItem.h"
 #include "VaesenContainerItem.generated.h"
 
-/** A satchel, bag or backpack: worn on the back, it lets the character carry more. */
+/** A satchel, bag or backpack (the Bag slot): it lets the character carry more. */
 UCLASS(Abstract)
 class VAESENGAME_API UVaesenContainerItem : public UVaesenEquippableItem
 {
