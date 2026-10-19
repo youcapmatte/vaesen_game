@@ -1,7 +1,7 @@
 @echo off
 rem Copy to Config.local.bat (git-ignored) and fill in for this machine.
 
-rem set "UE_ROOT=F:\UE_SOURCE\UE5_5\UnrealEngine"
+rem set "UE_ROOT=F:\UE_SOURCE\UE5_8"
 
 rem --- GameLift Anywhere (RegisterAnywhereCompute.bat / RunAnywhereServer.bat) ---
 rem AWS CLI profile with GameLift permissions.

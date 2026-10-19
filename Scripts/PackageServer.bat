@@ -1,7 +1,7 @@
 @echo off
 rem Builds, cooks and packages the dedicated server into Builds\Server\<Platform>\<Config>.
 rem Usage: PackageServer.bat [Win64|Linux] [Development|Shipping]
-rem Linux requires the UE 5.5 cross-compile toolchain (LINUX_MULTIARCH_ROOT).
+rem Linux requires the UE 5.8 cross-compile toolchain, v26_clang-20.1.8 (LINUX_MULTIARCH_ROOT).
 setlocal
 call "%~dp0Config.bat" || exit /b 1
 

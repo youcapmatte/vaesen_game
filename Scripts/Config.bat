@@ -4,7 +4,7 @@ rem Per-machine overrides (UE_ROOT, GameLift Anywhere settings) go in Config.loc
 
 if exist "%~dp0Config.local.bat" call "%~dp0Config.local.bat"
 
-if not defined UE_ROOT set "UE_ROOT=F:\UE_SOURCE\UE5_5\UnrealEngine"
+if not defined UE_ROOT set "UE_ROOT=F:\UE_SOURCE\UE5_8"
 
 set "VAESEN_ROOT=%~dp0.."
 for %%I in ("%VAESEN_ROOT%") do set "VAESEN_ROOT=%%~fI"
