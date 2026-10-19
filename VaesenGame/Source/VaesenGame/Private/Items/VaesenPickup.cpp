@@ -29,6 +29,8 @@ AVaesenPickup::AVaesenPickup()
 	PickupMesh->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
 	PickupMesh->SetLinearDamping(0.2f);
 	PickupMesh->SetAngularDamping(0.8f);
+	// Loose items don't belong on the map (the minimap is a scene capture).
+	PickupMesh->bHiddenInSceneCapture = true;
 	SetRootComponent(PickupMesh);
 
 	InteractionComponent = CreateDefaultSubobject<UVaesenInteractionComponent>(TEXT("InteractionComponent"));
