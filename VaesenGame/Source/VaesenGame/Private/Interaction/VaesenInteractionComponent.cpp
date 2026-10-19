@@ -125,6 +125,15 @@ void UVaesenInteractionComponent::BeginFocus(AVaesenPlayerCharacter* Character)
 	}
 
 	FocusingCharacter = Character;
+	if (bPlaceCardAboveOwner && GetOwner())
+	{
+		const FBox OwnerBounds = GetOwner()->GetComponentsBoundingBox(false);
+		if (OwnerBounds.IsValid)
+		{
+			const FVector Center = OwnerBounds.GetCenter();
+			SetWorldLocation(FVector(Center.X, Center.Y, OwnerBounds.Max.Z + CardHeightAboveOwner));
+		}
+	}
 	SetHiddenInGame(false);
 	SetHighlighted(true);
 	RefreshCard();

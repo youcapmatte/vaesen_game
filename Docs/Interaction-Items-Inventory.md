@@ -167,6 +167,8 @@ Picking up happens on the server, in OnInteract. The pickup tries to add its ite
 - **Some fits:** the pickup keeps the rest and its card updates.
 - **Nothing fits:** nothing happens, and the reason ("Inventory full") goes to the log for now.
 
+**Dropped items fall.** When something is dropped, the pickup is created at hip height a little in front of the character (pulled back if that would be inside a wall) and given a gentle toss forward and up. From there the **physics engine** takes over: it falls, lands on whatever is below, and if that's a chair or a table edge it tumbles off onto the floor, coming to rest lying naturally on the surface. As soon as it stops moving, or after eight seconds at most, physics switches off so it costs nothing. The server simulates the fall and its movement replicates, so everyone sees it land in the same place. This needs the item's mesh to have collision; a mesh without it is simply put on the ground below. Dropped items are shown at the item's **pickup scale**, so a small object doesn't appear as big as its mesh's default size. A pickup's interaction card is placed just above wherever it ended up. Pickups don't block characters or the camera, so things on the floor never get in anyone's way.
+
 There are two ways to fill a pickup from code, both server only:
 - **Initialize pickup:** from a class and a quantity.
 - **Initialize pickup from item:** from an existing item, copying it exactly. This is what dropping uses, so a dropped pouch keeps its contents.
@@ -233,7 +235,7 @@ Between inventories, the target's capacity is respected.
 
 **Use item** calls the item's Use for the player. A consumable that's consumed on use then loses one from its stack.
 
-**Drop item** spawns a pickup in front of the player, on the ground, with a copy of the item, and removes it from the inventory. Items that can't be dropped stay.
+**Drop item** spawns a falling pickup in front of the player with a copy of the item (see Pickups), and removes it from the inventory. Items that can't be dropped stay. The inventory has a **drop sound**, played to the player who drops something.
 
 ### How players change inventories
 
@@ -327,11 +329,16 @@ The equipment component sets the look on every machine:
 
 In first person the player's own head, and anything worn over it, is hidden from their camera but still casts its shadow.
 
+### Sounds
+
+The equipment component has an **equip sound**, played to the player when something goes on, and an **equip rejected sound**, played when something can't: dragging an item onto the wrong slot, or the server refusing because there's no room for what it would replace. Each equippable item can have its own equip sound, used instead of the general one, so chainmail can rattle while a hat makes no sound. Only the player themself hears these.
+
 ### Equipping and taking off
 
 Everything happens on the server, and players ask through **request** functions on their own equipment component, which the server checks:
 - **Equip from an inventory:** the item leaves the inventory and goes on. Whatever was in its slot (and the other hand, for two-handed weapons) goes back into that inventory, and only if it all fits; otherwise nothing happens.
 - **Take off:** the item goes into an inventory, the character's own unless another is named, if there's room.
+- **Drop:** a worn item can be dropped straight to the ground, as a falling pickup.
 - **Equip new:** puts on a fresh item of a kind, from nowhere. This is for NPC outfits; the component also has a list of **starting equipment** put on when play starts.
 
 Whether full-body armor is allowed is a setting on the component; it's off on players.
@@ -353,10 +360,11 @@ The screen shows the player's **equipment** on the left, as a paper doll around 
 
 ### Building blocks
 
-The screen is made of six widget classes, each a C++ class with a Widget Blueprint made from it. Each Blueprint only needs controls with specific names; the C++ does the work.
+The screen is made of seven widget classes, each a C++ class with a Widget Blueprint made from it. Each Blueprint only needs controls with specific names; the C++ does the work.
 - **Inventory screen** (`WBP_InventoryScreen`): the full-screen root, lightly darkened, with the equipment panel, the player's panel, the container's panel and a line of hints. Dropping an inventory item anywhere outside the panels drops it on the ground.
 - **Equipment panel** (`WBP_EquipmentPanel`): a paper doll like The Witcher 3's. In the middle, in a dark frame, is a **live picture of the player's character** in an idle pose, wearing what's equipped. **Dragging on it turns the character.** The armor slots run down the left (head, chest, hands, legs, feet) and the others down the right (back, main hand, off hand, talisman, bag). Dropping an item on the character or the panel puts it on in its own slot.
   - The picture comes from a **character preview** (`VaesenCharacterPreview`): a copy of the character's body, every part and worn-over layer plus attached weapons and tools, standing in a small studio of its own far above the map, with a warm key light, a cool fill light and a rim light, filmed by a camera onto a texture. It's created only on the player's own machine while the inventory is open, and removed when it closes. Its meshes and lights use their own lighting channel, so the level's sun, sky and fog don't touch it. It updates whenever something is put on or taken off. A Blueprint of it can tune the lights, framing and exposure.
+- **Drop box** (`WBP_DropZone`): a box labelled "Drop" under the player's inventory, as in The Witcher 3. Drag an item onto it, from the inventory or off the body, to drop it on the ground. It plays the drop sound.
 - **Equipment slot** (`WBP_EquipmentSlot`): one slot, with its name in the corner and the worn item's thumbnail or name. It lights up when hovered, and turns red while dragging something that doesn't belong in it.
 - **Inventory panel** (`WBP_InventoryPanel`): one inventory as a grid, six columns wide.
   - **Cells:** one cell per stack, then as many empty cells as there are free slots. An unlimited inventory always shows a spare empty row.
@@ -380,7 +388,7 @@ The screen is made of six widget classes, each a C++ class with a Widget Bluepri
 - **Right-click:** use the item. Eat it, read it, empty a pouch, or put on clothing and weapons.
 - **Drag onto an equipment slot:** put it on, if it belongs in that slot.
 - **Drag off an equipment slot** onto an inventory, or **right-click** it: take it off.
-- **Drag outside the panels:** drop it on the ground.
+- **Drag onto the Drop box, or outside the panels:** drop it on the ground.
 
 Every one of these is a request to the server through the player's own inventory or equipment, so the screen just shows what the server says.
 

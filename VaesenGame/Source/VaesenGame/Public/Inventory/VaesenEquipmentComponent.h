@@ -8,6 +8,7 @@
 class AVaesenBaseCharacter;
 class AVaesenPlayerCharacter;
 class USkeletalMesh;
+class USoundBase;
 class UVaesenEquippableItem;
 class UVaesenInventoryComponent;
 class UVaesenItem;
@@ -57,6 +58,18 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Equipment")
 	TArray<TSubclassOf<UVaesenEquippableItem>> StartingEquipment;
 
+	/** Played to this character's player when something goes on (unless the item has its own EquipSound). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Equipment|Sounds")
+	TObjectPtr<USoundBase> EquipSound;
+
+	/** Played to this character's player when something can't go on: the wrong slot, or no room for what it replaces. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Equipment|Sounds")
+	TObjectPtr<USoundBase> EquipRejectedSound;
+
+	/** Plays EquipRejectedSound, on this machine only if it's this character's player's (e.g. a slot refusing a drop). */
+	UFUNCTION(BlueprintCallable, Category = "Equipment")
+	void PlayEquipRejectedSound() const;
+
 	/** The slots shown in the player's equipment panel, in order. */
 	UFUNCTION(BlueprintPure, Category = "Equipment")
 	static TArray<EVaesenEquipmentSlot> GetPlayerSlots();
@@ -97,6 +110,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Equipment")
 	void RequestUnequip(EVaesenEquipmentSlot Slot, UVaesenInventoryComponent* To = nullptr);
 
+	/** Takes off what's in Slot and drops it on the ground. */
+	UFUNCTION(BlueprintCallable, Category = "Equipment")
+	void RequestDropEquipped(EVaesenEquipmentSlot Slot);
+
+	/** Server: takes off what's in Slot and drops it on the ground in front of the character. */
+	bool DropEquipped(EVaesenEquipmentSlot Slot);
+
 	/** Something was put on or taken off (on the server and every client). */
 	UPROPERTY(BlueprintAssignable, Category = "Equipment")
 	FVaesenEquipmentChanged OnEquipmentChanged;
@@ -125,6 +145,19 @@ private:
 
 	UFUNCTION(Server, Reliable)
 	void ServerUnequip(EVaesenEquipmentSlot Slot, UVaesenInventoryComponent* To);
+
+	UFUNCTION(Server, Reliable)
+	void ServerDropEquipped(EVaesenEquipmentSlot Slot);
+
+	/** The server refused what this player asked for. */
+	UFUNCTION(Client, Unreliable)
+	void ClientEquipRejected();
+
+	/** Whether this is the character of the player on this machine. */
+	bool IsLocalPlayers() const;
+
+	/** The first look is applied silently (joining, NPC outfits); after that, putting things on is heard. */
+	bool bAppearanceApplied = false;
 
 	UPROPERTY(ReplicatedUsing = OnRep_Equipped)
 	TArray<FVaesenEquippedItem> Equipped;

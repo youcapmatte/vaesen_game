@@ -19,6 +19,11 @@ void UVaesenInventorySlotWidget::SetSlot(UVaesenInventoryComponent* InInventory,
 	Refresh();
 }
 
+void UVaesenInventorySlotWidget::SetQuickTransferTarget(UVaesenInventoryComponent* Target)
+{
+	QuickTransferTarget = Target;
+}
+
 UVaesenItem* UVaesenInventorySlotWidget::GetItem() const
 {
 	return Inventory ? Inventory->GetItemAt(SlotIndex) : nullptr;

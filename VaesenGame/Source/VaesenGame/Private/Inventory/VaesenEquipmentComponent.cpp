@@ -8,7 +8,9 @@
 #include "Inventory/VaesenInventoryComponent.h"
 #include "Items/VaesenArmorItem.h"
 #include "Items/VaesenEquippableItem.h"
+#include "Items/VaesenPickup.h"
 #include "Items/VaesenWeaponItem.h"
+#include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
 
 UVaesenEquipmentComponent::UVaesenEquipmentComponent()
@@ -245,14 +247,26 @@ void UVaesenEquipmentComponent::ApplyAppearance()
 			Item->Unequip();
 		}
 	}
+	UVaesenEquippableItem* JustPutOn = nullptr;
 	for (UVaesenEquippableItem* Item : Current)
 	{
 		if (!AppliedItems.Contains(Item))
 		{
 			Item->Equip(Character);
+			JustPutOn = JustPutOn ? JustPutOn : Item;
 		}
 	}
 	AppliedItems = Current;
+
+	// Heard by this character's player only.
+	if (bAppearanceApplied && JustPutOn && IsLocalPlayers())
+	{
+		if (USoundBase* Sound = JustPutOn->EquipSound ? JustPutOn->EquipSound.Get() : EquipSound.Get())
+		{
+			UGameplayStatics::PlaySound2D(this, Sound);
+		}
+	}
+	bAppearanceApplied = true;
 
 	// The body: each part shows the character's own mesh (from its class defaults) unless armor replaces it, and its
 	// worn-over layer shows armor worn over it. Full-body armor replaces the whole body (torso) and hides the other
@@ -326,17 +340,80 @@ void UVaesenEquipmentComponent::RequestUnequip(EVaesenEquipmentSlot Slot, UVaese
 void UVaesenEquipmentComponent::ServerEquipFromInventory_Implementation(UVaesenInventoryComponent* Inventory, int32 SlotIndex)
 {
 	const AVaesenPlayerCharacter* Player = Cast<AVaesenPlayerCharacter>(GetOwner());
-	if (Inventory && Inventory->CanBeAccessedBy(Player))
+	if (!Inventory || !Inventory->CanBeAccessedBy(Player) || !EquipFromInventory(Inventory, Inventory->GetItemAt(SlotIndex)))
 	{
-		EquipFromInventory(Inventory, Inventory->GetItemAt(SlotIndex));
+		ClientEquipRejected();
 	}
 }
 
 void UVaesenEquipmentComponent::ServerUnequip_Implementation(EVaesenEquipmentSlot Slot, UVaesenInventoryComponent* To)
 {
 	const AVaesenPlayerCharacter* Player = Cast<AVaesenPlayerCharacter>(GetOwner());
-	if (!To || To->CanBeAccessedBy(Player))
+	if ((To && !To->CanBeAccessedBy(Player)) || !UnequipToInventory(Slot, To))
 	{
-		UnequipToInventory(Slot, To);
+		ClientEquipRejected();
 	}
+}
+
+void UVaesenEquipmentComponent::RequestDropEquipped(EVaesenEquipmentSlot Slot)
+{
+	const UVaesenInventoryComponent* Inventory = GetOwnInventory();
+	if (Inventory && Inventory->DropSound && IsLocalPlayers() && GetItemInSlot(Slot))
+	{
+		UGameplayStatics::PlaySound2D(this, Inventory->DropSound);
+	}
+
+	if (GetOwner()->HasAuthority())
+	{
+		ServerDropEquipped_Implementation(Slot);
+	}
+	else
+	{
+		ServerDropEquipped(Slot);
+	}
+}
+
+void UVaesenEquipmentComponent::ServerDropEquipped_Implementation(EVaesenEquipmentSlot Slot)
+{
+	if (!DropEquipped(Slot))
+	{
+		ClientEquipRejected();
+	}
+}
+
+bool UVaesenEquipmentComponent::DropEquipped(EVaesenEquipmentSlot Slot)
+{
+	UVaesenEquippableItem* Worn = GetItemInSlot(Slot);
+	if (!GetOwner()->HasAuthority() || !Worn || !Worn->bCanBeDropped)
+	{
+		return false;
+	}
+
+	const UVaesenInventoryComponent* Inventory = GetOwnInventory();
+	const TSubclassOf<AVaesenPickup> PickupClass = Inventory && Inventory->DropPickupClass ? Inventory->DropPickupClass : TSubclassOf<AVaesenPickup>(AVaesenPickup::StaticClass());
+	if (!AVaesenPickup::SpawnDropped(GetWorld(), PickupClass, Worn, 1, GetOwner()))
+	{
+		return false;
+	}
+	SetEquipped(Slot, nullptr);
+	return true;
+}
+
+void UVaesenEquipmentComponent::ClientEquipRejected_Implementation()
+{
+	PlayEquipRejectedSound();
+}
+
+void UVaesenEquipmentComponent::PlayEquipRejectedSound() const
+{
+	if (EquipRejectedSound && IsLocalPlayers())
+	{
+		UGameplayStatics::PlaySound2D(this, EquipRejectedSound);
+	}
+}
+
+bool UVaesenEquipmentComponent::IsLocalPlayers() const
+{
+	const APawn* Pawn = Cast<APawn>(GetOwner());
+	return Pawn && Pawn->IsLocallyControlled();
 }

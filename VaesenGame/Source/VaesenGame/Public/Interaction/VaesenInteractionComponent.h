@@ -72,6 +72,17 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction")
 	bool bInteractionEnabled = true;
 
+	/**
+	 * Show the card just above the actor's top, wherever it is and however it lies (e.g. a dropped item), instead of
+	 * at this component's own place.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction|Card")
+	bool bPlaceCardAboveOwner = false;
+
+	/** How far above the actor's top, with bPlaceCardAboveOwner. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction|Card", meta = (Units = "cm", EditCondition = "bPlaceCardAboveOwner"))
+	float CardHeightAboveOwner = 15.0f;
+
 	UFUNCTION(BlueprintCallable, Category = "Interaction")
 	void SetInteractableName(const FText& NewName);
 

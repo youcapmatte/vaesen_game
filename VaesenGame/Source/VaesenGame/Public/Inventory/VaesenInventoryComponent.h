@@ -6,6 +6,7 @@
 
 class AVaesenPickup;
 class AVaesenPlayerCharacter;
+class USoundBase;
 class UVaesenItem;
 class UVaesenPouchItem;
 
@@ -108,6 +109,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory")
 	TSubclassOf<AVaesenPickup> DropPickupClass;
 
+	/** Played to the player who drops something (from their own inventory component's requests). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|Sounds")
+	TObjectPtr<USoundBase> DropSound;
+
 	// --- Reading ---
 
 	/** The stacks by position; null = a gap. Not one entry per slot of capacity (see GetUsedSlotCount). */
@@ -187,7 +192,7 @@ public:
 	/** Uses the item in a slot for Character (eats it, reads it...). Used-up consumables leave the stack. */
 	bool UseItem(int32 SlotIndex, AVaesenPlayerCharacter* Character);
 
-	/** Drops Amount (-1 = all) from a slot as a pickup in front of the owner (or of DroppedBy). */
+	/** Drops Amount (-1 = all) from a slot as a pickup that falls to the ground in front of the owner (or DroppedBy). */
 	AVaesenPickup* DropItem(int32 SlotIndex, int32 Amount = -1, AActor* DroppedBy = nullptr);
 
 	// --- Requests from this player's own inventory (callable on their machine; the server checks access) ---

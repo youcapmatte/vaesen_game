@@ -59,6 +59,7 @@
 #include "UI/Guild/VaesenCreateGuildWidget.h"
 #include "UI/Guild/VaesenPickGuildWidget.h"
 #include "UI/Interaction/VaesenInteractionCardWidget.h"
+#include "UI/Inventory/VaesenDropZoneWidget.h"
 #include "UI/Inventory/VaesenEquipmentPanelWidget.h"
 #include "UI/Inventory/VaesenEquipmentSlotWidget.h"
 #include "UI/Inventory/VaesenInventoryPanelWidget.h"
@@ -1003,6 +1004,7 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 	const TCHAR* LootChestPath = TEXT("/Game/Vaesen/Blueprints/Interaction/BP_LootChest");
 	const TCHAR* EquipmentSlotPath = TEXT("/Game/Vaesen/UI/Inventory/WBP_EquipmentSlot");
 	const TCHAR* EquipmentPanelPath = TEXT("/Game/Vaesen/UI/Inventory/WBP_EquipmentPanel");
+	const TCHAR* DropZonePath = TEXT("/Game/Vaesen/UI/Inventory/WBP_DropZone");
 
 	/** Plain text in the inventory UI's own sizes (the Vaesen text roles are sized for menus). */
 	UTextBlock* InventoryText(const FBuilder& Build, FName Name, const TCHAR* Sample, int32 Size, FName Typeface, const FLinearColor& Color)
@@ -1247,12 +1249,45 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 		Finish(Blueprint);
 	}
 
+	/** The "Drop" box: a slot-sized box with a label, like The Witcher 3's. */
+	void CreateDropZone()
+	{
+		UWidgetBlueprint* Blueprint = CreateBlueprint(DropZonePath, UVaesenDropZoneWidget::StaticClass());
+		if (!Blueprint)
+		{
+			return;
+		}
+		const FBuilder Build{ Blueprint->WidgetTree };
+
+		USizeBox* Size = Build.Make<USizeBox>();
+		Size->SetWidthOverride(72.0f);
+		Size->SetHeightOverride(72.0f);
+		Blueprint->WidgetTree->RootWidget = Size;
+
+		UBorder* Zone = Build.Make<UBorder>(TEXT("ZoneBorder"));
+		Zone->SetBrush(FSlateRoundedBoxBrush(FLinearColor::White, 4.0f, FLinearColor(0.45f, 0.22f, 0.12f), 1.0f));
+		Zone->SetBrushColor(FLinearColor(0.03f, 0.025f, 0.02f, 0.85f));
+		Zone->SetHorizontalAlignment(HAlign_Center);
+		Zone->SetVerticalAlignment(VAlign_Center);
+		Size->SetContent(Zone);
+
+		UVerticalBox* Content = Build.Make<UVerticalBox>();
+		Zone->SetContent(Content);
+		UTextBlock* Arrow = InventoryText(Build, NAME_None, TEXT("v"), 18, TEXT("Bold"), BrassBright);
+		Content->AddChildToVerticalBox(Arrow)->SetHorizontalAlignment(HAlign_Center);
+		UTextBlock* Label = InventoryText(Build, NAME_None, TEXT("Drop"), 11, TEXT("Bold"), InventoryParchment);
+		Content->AddChildToVerticalBox(Label)->SetHorizontalAlignment(HAlign_Center);
+
+		Finish(Blueprint);
+	}
+
 	void CreateInventoryScreen()
 	{
 		UWidgetBlueprint* Blueprint = CreateBlueprint(InventoryScreenPath, UVaesenInventoryScreenWidget::StaticClass());
 		UClass* PanelClass = LoadWidgetClass(InventoryPanelPath);
 		UClass* EquipmentPanelClass = LoadWidgetClass(EquipmentPanelPath);
-		if (!Blueprint || !PanelClass || !EquipmentPanelClass)
+		UClass* DropZoneClass = LoadWidgetClass(DropZonePath);
+		if (!Blueprint || !PanelClass || !EquipmentPanelClass || !DropZoneClass)
 		{
 			return;
 		}
@@ -1278,14 +1313,20 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 		UHorizontalBoxSlot* EquipmentSlot = Panels->AddChildToHorizontalBox(Build.Make<UVaesenEquipmentPanelWidget>(TEXT("EquipmentPanel"), EquipmentPanelClass));
 		EquipmentSlot->SetPadding(FMargin(0.0f, 0.0f, 24.0f, 0.0f));
 		EquipmentSlot->SetVerticalAlignment(VAlign_Top);
-		Panels->AddChildToHorizontalBox(Build.Make<UVaesenInventoryPanelWidget>(TEXT("PlayerPanel"), PanelClass))->SetVerticalAlignment(VAlign_Top);
+		// The player's inventory with the drop box under it.
+		UVerticalBox* PlayerColumn = Build.Make<UVerticalBox>();
+		PlayerColumn->AddChildToVerticalBox(Build.Make<UVaesenInventoryPanelWidget>(TEXT("PlayerPanel"), PanelClass));
+		UVerticalBoxSlot* DropSlot = PlayerColumn->AddChildToVerticalBox(Build.Make<UVaesenDropZoneWidget>(NAME_None, DropZoneClass));
+		DropSlot->SetHorizontalAlignment(HAlign_Right);
+		DropSlot->SetPadding(FMargin(0.0f, 10.0f, 0.0f, 0.0f));
+		Panels->AddChildToHorizontalBox(PlayerColumn)->SetVerticalAlignment(VAlign_Top);
 		UHorizontalBoxSlot* ContainerSlot = Panels->AddChildToHorizontalBox(Build.Make<UVaesenInventoryPanelWidget>(TEXT("ContainerPanel"), PanelClass));
 		ContainerSlot->SetPadding(FMargin(24.0f, 0.0f, 0.0f, 0.0f));
 		ContainerSlot->SetVerticalAlignment(VAlign_Top);
 		FBuilder::AddRow(Content, Panels, 14.0f);
 
 		UTextBlock* Hint = InventoryText(Build, TEXT("HintText"),
-			TEXT("Drag: move, equip   Ctrl+drag: split   Shift+click: transfer   Right-click: use, equip, take off   Drag outside: drop   I: close"),
+			TEXT("Drag: move, equip   Ctrl+drag: split   Shift+click: transfer   Right-click: use, equip, take off   Drag to Drop or outside: drop   I: close"),
 			11, TEXT("Regular"), InventoryMuted);
 		FBuilder::AddRow(Content, Hint, 0.0f)->SetHorizontalAlignment(HAlign_Center);
 
@@ -1361,6 +1402,7 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 		CreateInventoryPanel();
 		CreateEquipmentSlot();
 		CreateEquipmentPanel();
+		CreateDropZone();
 		CreateInventoryScreen();
 		SetupButtonInput(TEXT("IA_Inventory"), EKeys::I, TEXT("InventoryAction"), { EKeys::Tab });
 
@@ -1487,6 +1529,27 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 				Finish(Blueprint);
 			}
 			CreateTestPickup(Piece.PickupPath, LoadBlueprintClass(Piece.Path), 1, Cube, FVector(0.3, 0.3, 0.15));
+		}
+
+		// Dropped test items the size their placed pickups are.
+		const TPair<const TCHAR*, FVector> DropScales[] = {
+			{ TestItemPath, FVector(0.2, 0.2, 0.25) },
+			{ HerbPouchPath, FVector(0.2) },
+			{ YarrowPath, FVector(0.15, 0.15, 0.25) },
+			{ TEXT("/Game/Vaesen/Blueprints/Items/Clothing/BP_Item_LeatherBoots"), FVector(0.3, 0.3, 0.15) },
+			{ TEXT("/Game/Vaesen/Blueprints/Items/Clothing/BP_Item_WorkGloves"), FVector(0.3, 0.3, 0.15) },
+			{ TEXT("/Game/Vaesen/Blueprints/Items/Clothing/BP_Item_WoolCloak"), FVector(0.3, 0.3, 0.15) },
+		};
+		for (const TPair<const TCHAR*, FVector>& Entry : DropScales)
+		{
+			const FString ObjectPath = FString(Entry.Key) + TEXT(".") + FPackageName::GetShortName(Entry.Key);
+			UBlueprint* ItemBlueprint = LoadObject<UBlueprint>(nullptr, *ObjectPath);
+			UVaesenItem* Defaults = ItemBlueprint ? Cast<UVaesenItem>(ItemBlueprint->GeneratedClass->GetDefaultObject()) : nullptr;
+			if (Defaults && Defaults->PickupScale.Equals(FVector::OneVector))
+			{
+				Defaults->PickupScale = Entry.Value;
+				Finish(ItemBlueprint);
+			}
 		}
 
 		// Plain items used to stack by default; lamp oil should keep doing so.

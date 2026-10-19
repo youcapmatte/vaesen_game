@@ -66,6 +66,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
 	TObjectPtr<UStaticMesh> PickupMesh;
 
+	/** Scale of PickupMesh when the item is dropped (placed pickups keep the scale they're given). */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
+	FVector PickupScale = FVector::OneVector;
+
 	/** Shown in the inventory. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
 	TObjectPtr<UTexture2D> Thumbnail;

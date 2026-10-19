@@ -6,6 +6,7 @@
 #include "VaesenEquippableItem.generated.h"
 
 class AVaesenBaseCharacter;
+class USoundBase;
 class UStaticMeshComponent;
 
 /**
@@ -35,6 +36,10 @@ public:
 	/** Bone or socket on the character's body (torso mesh) for EquippedMesh, e.g. hand_r. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equipment")
 	FName AttachSocket = TEXT("hand_r");
+
+	/** Played to the player who puts it on (chainmail rattles, a hat doesn't). Empty = the equipment's EquipSound. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equipment")
+	TObjectPtr<USoundBase> EquipSound;
 
 	virtual bool CanUse_Implementation(const AVaesenPlayerCharacter* Character) const override;
 	virtual void Use_Implementation(AVaesenPlayerCharacter* Character) override;

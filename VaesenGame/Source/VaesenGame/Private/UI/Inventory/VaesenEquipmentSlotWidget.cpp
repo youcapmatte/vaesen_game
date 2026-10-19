@@ -112,10 +112,14 @@ bool UVaesenEquipmentSlotWidget::NativeOnDrop(const FGeometry& InGeometry, const
 	}
 
 	// Handled either way: an item for another slot just doesn't go on.
+	const UVaesenItemDragDropOperation* Operation = Cast<UVaesenItemDragDropOperation>(InOperation);
 	if (Accepts(InOperation))
 	{
-		const UVaesenItemDragDropOperation* Operation = CastChecked<UVaesenItemDragDropOperation>(InOperation);
 		Equipment->RequestEquipFromInventory(Operation->SourceInventory, Operation->SourceIndex);
+	}
+	else if (Equipment && Operation && !Operation->bFromEquipment)
+	{
+		Equipment->PlayEquipRejectedSound();
 	}
 	return true;
 }

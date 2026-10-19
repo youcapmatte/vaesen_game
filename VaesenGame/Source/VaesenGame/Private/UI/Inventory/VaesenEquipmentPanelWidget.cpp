@@ -171,10 +171,17 @@ bool UVaesenEquipmentPanelWidget::NativeOnDrop(const FGeometry& InGeometry, cons
 {
 	// An item from an inventory: on, in its own slot.
 	const UVaesenItemDragDropOperation* Operation = Cast<UVaesenItemDragDropOperation>(InOperation);
-	if (Operation && !Operation->bFromEquipment && Operation->SourceInventory && Equipment
-		&& Equipment->CanEquip(Operation->SourceInventory->GetItemAt(Operation->SourceIndex)))
+	if (!Operation || Operation->bFromEquipment || !Operation->SourceInventory || !Equipment)
+	{
+		return true;
+	}
+	if (Equipment->CanEquip(Operation->SourceInventory->GetItemAt(Operation->SourceIndex)))
 	{
 		Equipment->RequestEquipFromInventory(Operation->SourceInventory, Operation->SourceIndex);
+	}
+	else
+	{
+		Equipment->PlayEquipRejectedSound();
 	}
 	return true;
 }

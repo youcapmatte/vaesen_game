@@ -2,6 +2,10 @@
 
 #include "Characters/VaesenPlayerCharacter.h"
 #include "Components/StaticMeshComponent.h"
+#include "Engine/StaticMesh.h"
+#include "Engine/World.h"
+#include "PhysicsEngine/BodySetup.h"
+#include "TimerManager.h"
 #include "Interaction/VaesenInteractionComponent.h"
 #include "Inventory/VaesenInventoryComponent.h"
 #include "Items/VaesenItem.h"
@@ -17,9 +21,14 @@ AVaesenPickup::AVaesenPickup()
 	bReplicates = true;
 	bReplicateUsingRegisteredSubObjectList = true;
 
-	// Blocks Visibility, so the interaction trace finds it.
+	// Blocks Visibility, so the interaction trace finds it, but not characters or cameras: small things on the floor
+	// shouldn't trip anyone up or push the camera around.
 	PickupMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("PickupMesh"));
 	PickupMesh->SetCollisionProfileName(UCollisionProfile::BlockAllDynamic_ProfileName);
+	PickupMesh->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
+	PickupMesh->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
+	PickupMesh->SetLinearDamping(0.2f);
+	PickupMesh->SetAngularDamping(0.8f);
 	SetRootComponent(PickupMesh);
 
 	InteractionComponent = CreateDefaultSubobject<UVaesenInteractionComponent>(TEXT("InteractionComponent"));
@@ -27,6 +36,86 @@ AVaesenPickup::AVaesenPickup()
 	InteractionComponent->SetRelativeLocation(FVector(0.0, 0.0, 50.0));
 	InteractionComponent->ActionText = LOCTEXT("PickUp", "Pick up");
 	InteractionComponent->InteractionTime = 0.0f;
+	// Wherever it ends up lying, the card goes above it.
+	InteractionComponent->bPlaceCardAboveOwner = true;
+}
+
+AVaesenPickup* AVaesenPickup::SpawnDropped(UWorld* World, TSubclassOf<AVaesenPickup> PickupClass, const UVaesenItem* SourceItem, int32 InQuantity, const AActor* DroppedBy)
+{
+	if (!World || !PickupClass || !SourceItem || !DroppedBy)
+	{
+		return nullptr;
+	}
+
+	// From hip height, a little in front; pulled back if that's inside a wall.
+	const FVector Forward = DroppedBy->GetActorForwardVector();
+	const FVector Origin = DroppedBy->GetActorLocation() + FVector(0.0, 0.0, 20.0);
+	FVector Start = Origin + Forward * 60.0;
+	FHitResult Hit;
+	FCollisionQueryParams Params(SCENE_QUERY_STAT(VaesenDropItem), false, DroppedBy);
+	if (World->SweepSingleByChannel(Hit, Origin, Start, FQuat::Identity, ECC_Visibility, FCollisionShape::MakeSphere(15.0f), Params))
+	{
+		Start = Hit.Location - Forward * 5.0;
+	}
+
+	FActorSpawnParameters SpawnParameters;
+	SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	const FTransform Transform(FRotator(0.0, DroppedBy->GetActorRotation().Yaw, 0.0), Start, SourceItem->PickupScale);
+	AVaesenPickup* Pickup = World->SpawnActor<AVaesenPickup>(PickupClass, Transform, SpawnParameters);
+	if (!Pickup)
+	{
+		return nullptr;
+	}
+	Pickup->InitializePickupFromItem(SourceItem, InQuantity);
+
+	// A gentle toss forward and up.
+	Pickup->Fall(Forward * 120.0 + FVector(0.0, 0.0, 120.0));
+	return Pickup;
+}
+
+void AVaesenPickup::Fall(const FVector& Velocity)
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	// Physics needs collision on the mesh; without it, just put it on whatever is below.
+	const UStaticMesh* Mesh = PickupMesh->GetStaticMesh();
+	if (!Mesh || !Mesh->GetBodySetup())
+	{
+		FHitResult Hit;
+		FCollisionQueryParams Params(SCENE_QUERY_STAT(VaesenPickupGround), false, this);
+		const FVector Location = GetActorLocation();
+		if (GetWorld()->LineTraceSingleByChannel(Hit, Location, Location - FVector(0.0, 0.0, 500.0), ECC_Visibility, Params))
+		{
+			SetActorLocation(Hit.ImpactPoint);
+		}
+		return;
+	}
+
+	SetReplicateMovement(true);
+	PickupMesh->SetMobility(EComponentMobility::Movable);
+	PickupMesh->SetSimulatePhysics(true);
+	PickupMesh->SetPhysicsLinearVelocity(Velocity);
+	PickupMesh->SetPhysicsAngularVelocityInDegrees(FVector(FMath::FRandRange(-180.0, 180.0), FMath::FRandRange(-180.0, 180.0), FMath::FRandRange(-90.0, 90.0)));
+	PickupMesh->OnComponentSleep.AddUniqueDynamic(this, &AVaesenPickup::OnSettled);
+	GetWorldTimerManager().SetTimer(FallTimer, this, &AVaesenPickup::StopFalling, MaxFallSeconds, false);
+}
+
+void AVaesenPickup::OnSettled(UPrimitiveComponent* SleepingComponent, FName BoneName)
+{
+	StopFalling();
+}
+
+void AVaesenPickup::StopFalling()
+{
+	GetWorldTimerManager().ClearTimer(FallTimer);
+	PickupMesh->OnComponentSleep.RemoveDynamic(this, &AVaesenPickup::OnSettled);
+	if (PickupMesh->IsSimulatingPhysics())
+	{
+		PickupMesh->SetSimulatePhysics(false);
+	}
 }
 
 void AVaesenPickup::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

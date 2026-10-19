@@ -19,6 +19,7 @@ class UVaesenInventoryPanelWidget;
  *   PlayerPanel     (WBP_InventoryPanel)  - the player's inventory
  *   ContainerPanel  (WBP_InventoryPanel)  - the container; collapsed when there is none
  *   HintText        (Text)                - optional controls reminder
+ * Add a WBP_DropZone anywhere (it needs no name) for a "Drop" box.
  * The root should be a full-screen widget that's hit-testable (e.g. a lightly tinted Border), to catch drops.
  *
  * TEMPORARY: all bindings are BindWidgetOptional while the UI is being built. Make them BindWidget when it's done.

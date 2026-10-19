@@ -35,7 +35,7 @@ public:
 	void SetSlot(UVaesenInventoryComponent* InInventory, int32 InSlotIndex);
 
 	/** Where Shift-click sends the item (the other open inventory), or null. */
-	void SetQuickTransferTarget(UVaesenInventoryComponent* Target) { QuickTransferTarget = Target; }
+	void SetQuickTransferTarget(UVaesenInventoryComponent* Target);
 
 	/** Re-reads the item. */
 	UFUNCTION(BlueprintCallable, Category = "Inventory")

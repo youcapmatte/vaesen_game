@@ -7,6 +7,7 @@
 #include "Items/VaesenItem.h"
 #include "Items/VaesenPickup.h"
 #include "Items/VaesenPouchItem.h"
+#include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
 #include "Player/VaesenPlayerController.h"
 
@@ -600,32 +601,10 @@ AVaesenPickup* UVaesenInventoryComponent::DropItem(int32 SlotIndex, int32 Amount
 	}
 
 	const int32 Dropping = (Amount <= 0 || Amount > Item->GetQuantity()) ? Item->GetQuantity() : Amount;
-
-	// In front of whoever drops it, on the ground.
-	const AActor* From = DroppedBy ? DroppedBy : GetOwner();
-	const FVector Ahead = From->GetActorLocation() + From->GetActorForwardVector() * 80.0f;
-	FVector Location = Ahead;
-	FHitResult Hit;
-	FCollisionQueryParams Params(SCENE_QUERY_STAT(VaesenDropItem), false, From);
-	if (World->LineTraceSingleByChannel(Hit, Ahead + FVector(0.0, 0.0, 50.0), Ahead - FVector(0.0, 0.0, 300.0), ECC_Visibility, Params))
-	{
-		Location = Hit.ImpactPoint;
-	}
-
-	FActorSpawnParameters SpawnParameters;
-	SpawnParameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-	AVaesenPickup* Pickup = World->SpawnActor<AVaesenPickup>(DropPickupClass, FTransform(From->GetActorRotation(), Location), SpawnParameters);
+	AVaesenPickup* Pickup = AVaesenPickup::SpawnDropped(World, DropPickupClass, Item, Dropping, DroppedBy ? DroppedBy : GetOwner());
 	if (!Pickup)
 	{
 		return nullptr;
-	}
-	Pickup->InitializePickupFromItem(Item, Dropping);
-
-	// Resting on the ground rather than half in it.
-	const FBox Bounds = Pickup->GetComponentsBoundingBox(false);
-	if (Bounds.IsValid)
-	{
-		Pickup->AddActorWorldOffset(FVector(0.0, 0.0, Location.Z - Bounds.Min.Z));
 	}
 
 	RemoveItem(Item, Dropping);
@@ -660,6 +639,13 @@ void UVaesenInventoryComponent::RequestUseItem(UVaesenInventoryComponent* Invent
 
 void UVaesenInventoryComponent::RequestDropItem(UVaesenInventoryComponent* Inventory, int32 SlotIndex, int32 Amount)
 {
+	// Heard straight away by the player dropping it.
+	const APawn* Pawn = Cast<APawn>(GetOwner());
+	if (DropSound && Pawn && Pawn->IsLocallyControlled() && Inventory && Inventory->GetItemAt(SlotIndex))
+	{
+		UGameplayStatics::PlaySound2D(this, DropSound);
+	}
+
 	if (GetOwner()->HasAuthority())
 	{
 		ServerDropItem_Implementation(Inventory, SlotIndex, Amount);
