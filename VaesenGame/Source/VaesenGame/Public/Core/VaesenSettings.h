@@ -9,6 +9,7 @@ class UTexture2D;
 class UUserWidget;
 class UVaesenInteractionCardWidget;
 class UVaesenInventoryScreenWidget;
+class UVaesenQuickBarWidget;
 class UVaesenLoadingScreenWidget;
 class UVaesenUIStyle;
 
@@ -79,6 +80,10 @@ public:
 	/** The inventory screen (player inventory, plus a container being looted), e.g. WBP_InventoryScreen. */
 	UPROPERTY(Config, EditAnywhere, Category = "UI")
 	TSoftClassPtr<UVaesenInventoryScreenWidget> InventoryScreenWidget;
+
+	/** The quick bar on screen during play (keys 1-8), e.g. WBP_QuickBar. Empty = none. */
+	UPROPERTY(Config, EditAnywhere, Category = "UI")
+	TSoftClassPtr<UVaesenQuickBarWidget> QuickBarWidget;
 
 	/** Front-end music: starts on the login screen and carries on through character select. Leave empty for silence. Looping is set on the sound asset. */
 	UPROPERTY(Config, EditAnywhere, Category = "Audio")

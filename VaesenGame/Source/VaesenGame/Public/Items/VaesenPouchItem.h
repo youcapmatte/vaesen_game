@@ -27,6 +27,7 @@ public:
 	virtual float GetStackWeight() const override;
 	virtual void GetNestedItems(TArray<UVaesenItem*>& OutItems) const override;
 	virtual UVaesenItem* DuplicateItem(UObject* NewOuter, int32 NewQuantity) const override;
+	virtual bool CanBeQuickSlotted() const override { return false; }
 	virtual bool CanUse_Implementation(const AVaesenPlayerCharacter* Character) const override;
 	virtual void Use_Implementation(AVaesenPlayerCharacter* Character) override;
 

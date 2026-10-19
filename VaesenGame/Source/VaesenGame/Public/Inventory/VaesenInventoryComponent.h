@@ -146,6 +146,10 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Inventory")
 	bool HasItem(TSubclassOf<UVaesenItem> ItemClass, int32 Quantity = 1) const { return GetItemCount(ItemClass) >= Quantity; }
 
+	/** A stack of this kind of item: in the slots first, then in pouches. Null if there's none. */
+	UFUNCTION(BlueprintPure, Category = "Inventory")
+	UVaesenItem* FindItemOfClass(TSubclassOf<UVaesenItem> ItemClass) const;
+
 	/** DisplayName, or the actor's name. */
 	UFUNCTION(BlueprintPure, Category = "Inventory")
 	FText GetDisplayName() const;
@@ -186,6 +190,9 @@ public:
 
 	/** Uses the item in a slot for Character (eats it, reads it...). Used-up consumables leave the stack. */
 	bool UseItem(int32 SlotIndex, AVaesenPlayerCharacter* Character);
+
+	/** The same for any item in this inventory, including one inside a pouch (e.g. from a quick slot). */
+	bool UseItemInstance(UVaesenItem* Item, AVaesenPlayerCharacter* Character);
 
 	/** Drops Amount (-1 = all) from a slot as a pickup that falls to the ground in front of the owner (or DroppedBy). */
 	AVaesenPickup* DropItem(int32 SlotIndex, int32 Amount = -1, AActor* DroppedBy = nullptr);

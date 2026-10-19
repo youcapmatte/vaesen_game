@@ -45,6 +45,8 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Equipment|Sounds")
 	TObjectPtr<USoundBase> EquipRejectedSound;
 
+	/** Worn things go in equipment, not quick slots. */
+	virtual bool CanBeQuickSlotted() const override { return false; }
 	virtual bool CanUse_Implementation(const AVaesenPlayerCharacter* Character) const override;
 	virtual void Use_Implementation(AVaesenPlayerCharacter* Character) override;
 

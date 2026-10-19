@@ -60,6 +60,9 @@
 #include "UI/Guild/VaesenPickGuildWidget.h"
 #include "UI/Interaction/VaesenInteractionCardWidget.h"
 #include "UI/Inventory/VaesenDropZoneWidget.h"
+#include "UI/Inventory/VaesenQuickBarWidget.h"
+#include "UI/Inventory/VaesenQuickSlotWidget.h"
+#include "Items/VaesenConsumableItem.h"
 #include "UI/Inventory/VaesenEquipmentPanelWidget.h"
 #include "UI/Inventory/VaesenEquipmentSlotWidget.h"
 #include "UI/Inventory/VaesenInventoryPanelWidget.h"
@@ -1005,6 +1008,8 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 	const TCHAR* EquipmentSlotPath = TEXT("/Game/Vaesen/UI/Inventory/WBP_EquipmentSlot");
 	const TCHAR* EquipmentPanelPath = TEXT("/Game/Vaesen/UI/Inventory/WBP_EquipmentPanel");
 	const TCHAR* DropZonePath = TEXT("/Game/Vaesen/UI/Inventory/WBP_DropZone");
+	const TCHAR* QuickSlotPath = TEXT("/Game/Vaesen/UI/Inventory/WBP_QuickSlot");
+	const TCHAR* QuickBarPath = TEXT("/Game/Vaesen/UI/Inventory/WBP_QuickBar");
 
 	/** Plain text in the inventory UI's own sizes (the Vaesen text roles are sized for menus). */
 	UTextBlock* InventoryText(const FBuilder& Build, FName Name, const TCHAR* Sample, int32 Size, FName Typeface, const FLinearColor& Color)
@@ -1281,13 +1286,171 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 		Finish(Blueprint);
 	}
 
+	/** One quick slot: key number top left, picture or name, count bottom right. */
+	void CreateQuickSlot()
+	{
+		UWidgetBlueprint* Blueprint = CreateBlueprint(QuickSlotPath, UVaesenQuickSlotWidget::StaticClass());
+		if (!Blueprint)
+		{
+			return;
+		}
+		const FBuilder Build{ Blueprint->WidgetTree };
+
+		USizeBox* Size = Build.Make<USizeBox>();
+		Size->SetWidthOverride(64.0f);
+		Size->SetHeightOverride(64.0f);
+		Blueprint->WidgetTree->RootWidget = Size;
+
+		UBorder* SlotBorder = Build.Make<UBorder>(TEXT("SlotBorder"));
+		SlotBorder->SetBrush(FSlateRoundedBoxBrush(FLinearColor::White, 4.0f, Brass, 1.0f));
+		SlotBorder->SetBrushColor(FLinearColor(0.03f, 0.025f, 0.02f, 0.85f));
+		SlotBorder->SetPadding(FMargin(0.0f));
+		Size->SetContent(SlotBorder);
+
+		UOverlay* Layers = Build.Make<UOverlay>();
+		SlotBorder->SetContent(Layers);
+
+		UOverlaySlot* ThumbnailSlot = Layers->AddChildToOverlay(Build.Make<UImage>(TEXT("ThumbnailImage")));
+		ThumbnailSlot->SetHorizontalAlignment(HAlign_Fill);
+		ThumbnailSlot->SetVerticalAlignment(VAlign_Fill);
+		ThumbnailSlot->SetPadding(FMargin(8.0f));
+
+		UTextBlock* Name = InventoryText(Build, TEXT("NameText"), TEXT("Item"), 9, TEXT("Regular"), InventoryParchment);
+		Name->SetAutoWrapText(true);
+		Name->SetJustification(ETextJustify::Center);
+		UOverlaySlot* NameSlot = Layers->AddChildToOverlay(Name);
+		NameSlot->SetHorizontalAlignment(HAlign_Fill);
+		NameSlot->SetVerticalAlignment(VAlign_Center);
+		NameSlot->SetPadding(FMargin(3.0f));
+
+		UOverlaySlot* KeySlot = Layers->AddChildToOverlay(InventoryText(Build, TEXT("KeyText"), TEXT("1"), 10, TEXT("Bold"), BrassBright));
+		KeySlot->SetHorizontalAlignment(HAlign_Left);
+		KeySlot->SetVerticalAlignment(VAlign_Top);
+		KeySlot->SetPadding(FMargin(4.0f, 2.0f, 0.0f, 0.0f));
+
+		UTextBlock* Count = InventoryText(Build, TEXT("CountText"), TEXT("3"), 11, TEXT("Bold"), InventoryParchment);
+		Count->SetShadowOffset(FVector2D(1.0f, 1.0f));
+		Count->SetShadowColorAndOpacity(FLinearColor(0.0f, 0.0f, 0.0f, 0.9f));
+		UOverlaySlot* CountSlot = Layers->AddChildToOverlay(Count);
+		CountSlot->SetHorizontalAlignment(HAlign_Right);
+		CountSlot->SetVerticalAlignment(VAlign_Bottom);
+		CountSlot->SetPadding(FMargin(0.0f, 0.0f, 4.0f, 2.0f));
+
+		FKismetEditorUtilities::CompileBlueprint(Blueprint);
+		SetDefault(Blueprint->GeneratedClass->GetDefaultObject(), TEXT("TooltipClass"), LoadWidgetClass(ItemTooltipPath));
+		Finish(Blueprint);
+	}
+
+	/** The quick slots in a row: at the bottom centre of the screen during play, and in the inventory screen. */
+	void CreateQuickBar()
+	{
+		UWidgetBlueprint* Blueprint = CreateBlueprint(QuickBarPath, UVaesenQuickBarWidget::StaticClass());
+		if (!Blueprint)
+		{
+			return;
+		}
+		const FBuilder Build{ Blueprint->WidgetTree };
+
+		// Fills the screen when used on its own (the HUD), the row sitting at the bottom centre.
+		UCanvasPanel* Canvas = Build.Make<UCanvasPanel>();
+		Canvas->bIsVariable = false;
+		Blueprint->WidgetTree->RootWidget = Canvas;
+		UBorder* Frame = Build.Make<UBorder>(TEXT("Frame"));
+		Frame->bIsVariable = false;
+		Frame->SetBrush(FSlateRoundedBoxBrush(FLinearColor(0.02f, 0.015f, 0.01f, 0.55f), 6.0f));
+		Frame->SetPadding(FMargin(8.0f));
+		UHorizontalBox* Row = Build.Make<UHorizontalBox>(TEXT("SlotRow"));
+		Frame->SetContent(Row);
+		UCanvasPanelSlot* FrameSlot = Canvas->AddChildToCanvas(Frame);
+		FrameSlot->SetAnchors(FAnchors(0.5f, 1.0f));
+		FrameSlot->SetAlignment(FVector2D(0.5f, 1.0f));
+		FrameSlot->SetPosition(FVector2D(0.0f, -24.0f));
+		FrameSlot->SetAutoSize(true);
+
+		FKismetEditorUtilities::CompileBlueprint(Blueprint);
+		SetDefault(Blueprint->GeneratedClass->GetDefaultObject(), TEXT("SlotWidgetClass"), LoadWidgetClass(QuickSlotPath));
+		Finish(Blueprint);
+	}
+
+	/** The quick bar for inside the inventory screen: just the row, no full-screen canvas. */
+	void CreateQuickBarInline()
+	{
+		UWidgetBlueprint* Blueprint = CreateBlueprint(TEXT("/Game/Vaesen/UI/Inventory/WBP_QuickBarInline"), UVaesenQuickBarWidget::StaticClass());
+		if (!Blueprint)
+		{
+			return;
+		}
+		const FBuilder Build{ Blueprint->WidgetTree };
+		Blueprint->WidgetTree->RootWidget = Build.Make<UHorizontalBox>(TEXT("SlotRow"));
+		FKismetEditorUtilities::CompileBlueprint(Blueprint);
+		SetDefault(Blueprint->GeneratedClass->GetDefaultObject(), TEXT("SlotWidgetClass"), LoadWidgetClass(QuickSlotPath));
+		Finish(Blueprint);
+	}
+
+	/** IA_QuickSlot1..8 on keys 1-8 in IMC_Default, set as the character's QuickSlotActions. Each part only when missing. */
+	void SetupQuickSlotInput()
+	{
+		const FKey Keys[] = { EKeys::One, EKeys::Two, EKeys::Three, EKeys::Four, EKeys::Five, EKeys::Six, EKeys::Seven, EKeys::Eight };
+		UInputMappingContext* Mappings = LoadObject<UInputMappingContext>(nullptr, TEXT("/Game/ThirdPerson/Input/IMC_Default.IMC_Default"));
+		TArray<UInputAction*> Actions;
+		bool bMappingsChanged = false;
+		for (int32 Index = 0; Index < UE_ARRAY_COUNT(Keys); ++Index)
+		{
+			const FString Name = FString::Printf(TEXT("IA_QuickSlot%d"), Index + 1);
+			const FString PackagePath = TEXT("/Game/Vaesen/Input/") + Name;
+			UInputAction* Action = LoadObject<UInputAction>(nullptr, *(PackagePath + TEXT(".") + Name));
+			if (!Action)
+			{
+				UPackage* Package = CreatePackage(*PackagePath);
+				Action = NewObject<UInputAction>(Package, *Name, RF_Public | RF_Standalone);
+				Action->ValueType = EInputActionValueType::Boolean;
+				FAssetRegistryModule::AssetCreated(Action);
+				Save(Action);
+			}
+			Actions.Add(Action);
+
+			const bool bMapped = Mappings && Mappings->GetMappings().ContainsByPredicate([Action](const FEnhancedActionKeyMapping& Mapping)
+			{
+				return Mapping.Action == Action;
+			});
+			if (Mappings && !bMapped)
+			{
+				Mappings->MapKey(Action, Keys[Index]);
+				bMappingsChanged = true;
+			}
+		}
+		if (bMappingsChanged)
+		{
+			Save(Mappings);
+		}
+
+		UBlueprint* Character = LoadObject<UBlueprint>(nullptr, *(FString(PlayerCharacterPath) + TEXT(".BP_VaesenPlayerCharacter")));
+		UObject* Defaults = Character ? Character->GeneratedClass->GetDefaultObject() : nullptr;
+		FArrayProperty* Property = Defaults ? FindFProperty<FArrayProperty>(Defaults->GetClass(), TEXT("QuickSlotActions")) : nullptr;
+		if (Property)
+		{
+			FScriptArrayHelper Array(Property, Property->ContainerPtrToValuePtr<void>(Defaults));
+			if (Array.Num() == 0)
+			{
+				const FObjectPropertyBase* Inner = CastFieldChecked<FObjectPropertyBase>(Property->Inner);
+				for (UInputAction* Action : Actions)
+				{
+					const int32 Added = Array.AddValue();
+					Inner->SetObjectPropertyValue(Array.GetRawPtr(Added), Action);
+				}
+				Finish(Character);
+			}
+		}
+	}
+
 	void CreateInventoryScreen()
 	{
 		UWidgetBlueprint* Blueprint = CreateBlueprint(InventoryScreenPath, UVaesenInventoryScreenWidget::StaticClass());
 		UClass* PanelClass = LoadWidgetClass(InventoryPanelPath);
 		UClass* EquipmentPanelClass = LoadWidgetClass(EquipmentPanelPath);
 		UClass* DropZoneClass = LoadWidgetClass(DropZonePath);
-		if (!Blueprint || !PanelClass || !EquipmentPanelClass || !DropZoneClass)
+		UClass* QuickSlotClass = LoadWidgetClass(QuickSlotPath);
+		if (!Blueprint || !PanelClass || !EquipmentPanelClass || !DropZoneClass || !QuickSlotClass)
 		{
 			return;
 		}
@@ -1325,8 +1488,15 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 		ContainerSlot->SetVerticalAlignment(VAlign_Top);
 		FBuilder::AddRow(Content, Panels, 14.0f);
 
+		// The quick slots, to drag usable things onto. (A bar of its own here, not the HUD's full-screen one.)
+		UHorizontalBox* QuickRow = Build.Make<UHorizontalBox>();
+		FBuilder::AddRow(Content, InventoryText(Build, NAME_None, TEXT("Quick slots"), 11, TEXT("Bold"), InventoryMuted), 4.0f)->SetHorizontalAlignment(HAlign_Center);
+		UVaesenQuickBarWidget* ScreenBar = Build.Make<UVaesenQuickBarWidget>(TEXT("QuickBar"), LoadWidgetClass(TEXT("/Game/Vaesen/UI/Inventory/WBP_QuickBarInline")));
+		QuickRow->AddChildToHorizontalBox(ScreenBar);
+		FBuilder::AddRow(Content, QuickRow, 14.0f)->SetHorizontalAlignment(HAlign_Center);
+
 		UTextBlock* Hint = InventoryText(Build, TEXT("HintText"),
-			TEXT("Drag: move, equip   Ctrl+drag: split   Shift+click: transfer   Right-click: use, equip, take off   Drag to Drop or outside: drop   I: close"),
+			TEXT("Drag: move, equip, quick slot   Ctrl+drag: split   Shift+click: transfer   Right-click: use, equip, take off, clear   Drag to Drop or outside: drop   1-8: quick slots   I: close"),
 			11, TEXT("Regular"), InventoryMuted);
 		FBuilder::AddRow(Content, Hint, 0.0f)->SetHorizontalAlignment(HAlign_Center);
 
@@ -1403,7 +1573,11 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 		CreateEquipmentSlot();
 		CreateEquipmentPanel();
 		CreateDropZone();
+		CreateQuickSlot();
+		CreateQuickBar();
+		CreateQuickBarInline();
 		CreateInventoryScreen();
+		SetupQuickSlotInput();
 		SetupButtonInput(TEXT("IA_Inventory"), EKeys::I, TEXT("InventoryAction"), { EKeys::Tab });
 
 		if (UBlueprint* Blueprint = CreateActorBlueprint(LootChestPath, AVaesenLootContainer::StaticClass()))
@@ -1530,6 +1704,26 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 			}
 			CreateTestPickup(Piece.PickupPath, LoadBlueprintClass(Piece.Path), 1, Cube, FVector(0.3, 0.3, 0.15));
 		}
+
+		// Bread: a consumable for the quick slots.
+		const TCHAR* BreadPath = TEXT("/Game/Vaesen/Blueprints/Items/Food/BP_Item_RyeBread");
+		if (UBlueprint* Blueprint = CreateActorBlueprint(BreadPath, UVaesenConsumableItem::StaticClass()))
+		{
+			UVaesenConsumableItem* Defaults = CastChecked<UVaesenConsumableItem>(Blueprint->GeneratedClass->GetDefaultObject());
+			Defaults->ItemName = LOCTEXT("BreadName", "Rye bread");
+			Defaults->Description = LOCTEXT("BreadDescription", "A dense loaf of dark rye bread.");
+			Defaults->ConsumableType = EVaesenConsumableType::Food;
+			Defaults->UseActionText = LOCTEXT("BreadUse", "Eat");
+			Defaults->PickupMesh = Cast<UStaticMesh>(LoadAsset(TEXT("/Engine/BasicShapes/Cube.Cube")));
+			Defaults->PickupScale = FVector(0.25, 0.15, 0.1);
+			Defaults->Weight = 0.3f;
+			FVaesenItemEffect& Nourish = Defaults->Effects.AddDefaulted_GetRef();
+			Nourish.Effect = FGameplayTag::RequestGameplayTag(TEXT("Effect.Nourish"), false);
+			Nourish.Magnitude = 1.0f;
+			Finish(Blueprint);
+		}
+		CreateTestPickup(TEXT("/Game/Vaesen/Blueprints/Interaction/BP_Pickup_RyeBread"), LoadBlueprintClass(BreadPath), 3,
+			Cast<UStaticMesh>(LoadAsset(TEXT("/Engine/BasicShapes/Cube.Cube"))), FVector(0.25, 0.15, 0.1));
 
 		// Dropped test items the size their placed pickups are.
 		const TPair<const TCHAR*, FVector> DropScales[] = {

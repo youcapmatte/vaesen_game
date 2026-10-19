@@ -9,6 +9,7 @@
 #include "InputMappingContext.h"
 #include "Inventory/VaesenInventoryComponent.h"
 #include "UI/Inventory/VaesenInventoryScreenWidget.h"
+#include "UI/Inventory/VaesenQuickBarWidget.h"
 
 void AVaesenPlayerController::BeginPlay()
 {
@@ -27,6 +28,12 @@ void AVaesenPlayerController::BeginPlay()
 	if (UVaesenMusicSubsystem* Music = GetGameInstance()->GetSubsystem<UVaesenMusicSubsystem>())
 	{
 		Music->StopMusic();
+	}
+
+	if (const TSubclassOf<UVaesenQuickBarWidget> QuickBarClass = UVaesenSettings::Get()->QuickBarWidget.LoadSynchronous())
+	{
+		QuickBar = CreateWidget<UVaesenQuickBarWidget>(this, QuickBarClass);
+		QuickBar->AddToViewport(1);
 	}
 
 	if (!DefaultMappingContext)
@@ -79,6 +86,10 @@ void AVaesenPlayerController::OpenInventory(UVaesenInventoryComponent* Container
 	if (!InventoryScreen->IsInViewport())
 	{
 		InventoryScreen->AddToViewport(10);
+		if (QuickBar)
+		{
+			QuickBar->SetVisibility(ESlateVisibility::Collapsed);
+		}
 
 		// Mouse for the UI, keys still walk; the view doesn't turn while the cursor is out.
 		FInputModeGameAndUI InputMode;
@@ -99,6 +110,10 @@ void AVaesenPlayerController::CloseInventory()
 	}
 
 	InventoryScreen->RemoveFromParent();
+	if (QuickBar)
+	{
+		QuickBar->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+	}
 	SetInputMode(FInputModeGameOnly());
 	SetShowMouseCursor(false);
 	ResetIgnoreLookInput();

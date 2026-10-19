@@ -10,6 +10,7 @@ class UMaterialInterface;
 class USpringArmComponent;
 class UVaesenInteractorComponent;
 class UVaesenInventoryComponent;
+class UVaesenQuickSlotComponent;
 struct FInputActionValue;
 
 /**
@@ -56,6 +57,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Inventory")
 	UVaesenInventoryComponent* GetInventory() const { return Inventory; }
 
+	UFUNCTION(BlueprintPure, Category = "Inventory")
+	UVaesenQuickSlotComponent* GetQuickSlots() const { return QuickSlots; }
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
@@ -67,6 +71,7 @@ protected:
 	void BeginInteract();
 	void EndInteract();
 	void ToggleInventory();
+	void UseQuickSlot(int32 Index);
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
 	TObjectPtr<USpringArmComponent> CameraBoom;
@@ -79,6 +84,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
 	TObjectPtr<UVaesenInventoryComponent> Inventory;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
+	TObjectPtr<UVaesenQuickSlotComponent> QuickSlots;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<UInputAction> MoveAction;
@@ -100,6 +108,10 @@ protected:
 	/** Opens and closes the inventory screen. */
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<UInputAction> InventoryAction;
+
+	/** Use quick slot 1, 2, 3... (keys 1-8): entry N uses slot N + 1. */
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TArray<TObjectPtr<UInputAction>> QuickSlotActions;
 
 	/** Farthest the camera can be pulled back. */
 	UPROPERTY(EditDefaultsOnly, Category = "Camera|Zoom", meta = (ClampMin = "0", Units = "cm"))

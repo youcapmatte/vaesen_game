@@ -136,6 +136,10 @@ public:
 	UFUNCTION(BlueprintNativeEvent, BlueprintPure, Category = "Item")
 	bool CanUse(const AVaesenPlayerCharacter* Character) const;
 
+	/** Whether a quick slot can hold this kind of item: usable and not worn (potions, food, letters). */
+	UFUNCTION(BlueprintPure, Category = "Item")
+	virtual bool CanBeQuickSlotted() const { return !UseActionText.IsEmpty(); }
+
 	/** Uses it (eat, read, light...). Called on the server by the inventory; subclasses and Blueprints say what happens. */
 	UFUNCTION(BlueprintNativeEvent, BlueprintCallable, BlueprintAuthorityOnly, Category = "Item")
 	void Use(AVaesenPlayerCharacter* Character);

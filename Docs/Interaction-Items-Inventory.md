@@ -343,7 +343,19 @@ Everything happens on the server, and players ask through **request** functions 
 
 Whether full-body armor is allowed is a setting on the component; it's off on players.
 
-## 8. The inventory screen
+## 8. Quick slots
+
+Potions, food and other things you use often can't go in equipment (they aren't worn), so they have **quick slots**: shortcuts, like the potion slots in The Witcher 3.
+
+- **What a slot holds:** a **kind** of item, not the item itself. The items stay in the inventory (pouches included); the slot shows how many you have in total.
+- **Using:** keys **1 to 8**, or clicking the slot in the inventory screen, use one of them, from wherever in the inventory it is. When you run out, the slot stays assigned but greys out, and fills again when you pick more up.
+- **What fits:** anything usable that isn't worn: potions, food, remedies, letters. Not clothing, weapons or tools (they go in equipment), and not pouches.
+- **How many:** four to start with. A belt or bandolier worn in the **Bag** slot can add more (its **extra quick slots**), up to eight.
+- **The quick bar:** the slots are shown at the bottom of the screen during play, and in the inventory screen under the panels. There you **drag an item onto a slot** to put that kind there (a kind of item is in one slot at most), and **right-click** a slot to clear it.
+
+The quick slot component keeps the assignments on the server; only the owning player receives them. A radial menu (hold a key and pick with the mouse) could be added later on top of the same slots.
+
+## 9. The inventory screen
 
 ### Opening and closing
 
@@ -394,7 +406,7 @@ Every one of these is a request to the server through the player's own inventory
 
 ---
 
-## 9. Test assets
+## 10. Test assets
 
 These were created by the project's asset-building commandlet and are ready to drop into a level:
 - `BP_Pickup_LampOil`: five lamp oil. Lamp oil is a plain item that stacks to ten.
@@ -402,13 +414,14 @@ These were created by the project's asset-building commandlet and are ready to d
 - `BP_Pickup_HerbPouch`: a herb pouch with four slots that accepts `Item.Herb`.
 - `BP_Pickup_Yarrow`: three yarrow, a herb tagged `Item.Herb`.
 - `BP_Pickup_LeatherBoots`, `BP_Pickup_WorkGloves` and `BP_Pickup_WoolCloak`: clothing for the feet, hands and back. They have no meshes of their own yet, so the body doesn't change when they're worn, but they fill their equipment slots.
+- `BP_Pickup_RyeBread`: three loaves of rye bread, a consumable ("Eat") to try the quick slots with.
 - `BP_InteractableTest`: the earlier test crate, which just logs when interacted with.
 
 A good test: pick up the herb pouch, then the yarrow. Open the inventory. The yarrow should be inside the pouch, not in a slot of its own; the pouch shows "1/4" and its tooltip lists the yarrow. Right-click the pouch to empty it. Then pick up the boots and right-click them: they go into the Feet slot. Try dragging the gloves onto the Head slot; it turns red and refuses.
 
 ---
 
-## 10. Where to find things
+## 11. Where to find things
 
 C++ lives in `VaesenGame/Source/VaesenGame`:
 - **`Interaction/`:** the interaction component and the interactor component.
@@ -418,7 +431,7 @@ C++ lives in `VaesenGame/Source/VaesenGame`:
   - the pouch;
   - the item enums and effect struct;
   - the pickup.
-- **`Inventory/`:** the inventory component, the equipment component and the loot container.
+- **`Inventory/`:** the inventory component, the equipment component, the quick slot component and the loot container.
 - **`UI/Inventory/` and `UI/Interaction/`:** the widget classes.
 - **The characters:** every character has the modular body and the equipment; the player character adds the interactor and the inventory, and binds E (interact) and I (inventory).
 - **The player controller:** opens and closes the inventory screen.
@@ -427,7 +440,7 @@ The **commandlet** in the editor module (`VaesenCreateWidgetsCommandlet`) builds
 
 ---
 
-## 11. Not done yet
+## 12. Not done yet
 
 - **Clothing meshes.** The slots and the swapping work, but there are no clothing meshes yet; the test clothing keeps the plain body.
 - **Bags adding slots.** A worn bag doesn't enlarge the inventory yet.

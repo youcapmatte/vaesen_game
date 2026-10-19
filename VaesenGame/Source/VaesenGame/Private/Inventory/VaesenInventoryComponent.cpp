@@ -575,10 +575,48 @@ bool UVaesenInventoryComponent::MoveItem(int32 FromIndex, UVaesenInventoryCompon
 	return true;
 }
 
+UVaesenItem* UVaesenInventoryComponent::FindItemOfClass(TSubclassOf<UVaesenItem> ItemClass) const
+{
+	if (!ItemClass)
+	{
+		return nullptr;
+	}
+	for (UVaesenItem* Item : Slots)
+	{
+		if (Item && Item->IsA(ItemClass))
+		{
+			return Item;
+		}
+	}
+	for (UVaesenItem* Item : Slots)
+	{
+		if (!Item)
+		{
+			continue;
+		}
+		TArray<UVaesenItem*> Nested;
+		Item->GetNestedItems(Nested);
+		for (UVaesenItem* Inner : Nested)
+		{
+			if (Inner->IsA(ItemClass))
+			{
+				return Inner;
+			}
+		}
+	}
+	return nullptr;
+}
+
 bool UVaesenInventoryComponent::UseItem(int32 SlotIndex, AVaesenPlayerCharacter* Character)
 {
-	UVaesenItem* Item = GetItemAt(SlotIndex);
-	if (!Item || !GetOwner()->HasAuthority() || !Item->CanUse(Character))
+	return UseItemInstance(GetItemAt(SlotIndex), Character);
+}
+
+bool UVaesenInventoryComponent::UseItemInstance(UVaesenItem* Item, AVaesenPlayerCharacter* Character)
+{
+	UVaesenPouchItem* Pouch = nullptr;
+	int32 SlotIndex = INDEX_NONE;
+	if (!Item || !GetOwner()->HasAuthority() || !FindItem(Item, Pouch, SlotIndex) || !Item->CanUse(Character))
 	{
 		return false;
 	}

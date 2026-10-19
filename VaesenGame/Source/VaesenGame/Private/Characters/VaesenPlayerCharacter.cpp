@@ -12,6 +12,7 @@
 #include "Interaction/VaesenInteractorComponent.h"
 #include "Inventory/VaesenEquipmentComponent.h"
 #include "Inventory/VaesenInventoryComponent.h"
+#include "Inventory/VaesenQuickSlotComponent.h"
 #include "Player/VaesenPlayerController.h"
 #include "Materials/MaterialInterface.h"
 #include "Misc/ConfigCacheIni.h"
@@ -39,6 +40,8 @@ AVaesenPlayerCharacter::AVaesenPlayerCharacter()
 	Inventory->DisplayName = NSLOCTEXT("VaesenInventory", "PlayerInventory", "Inventory");
 	Inventory->Capacity = 24;
 	Inventory->bAccessibleByOthers = false;
+
+	QuickSlots = CreateDefaultSubobject<UVaesenQuickSlotComponent>(TEXT("QuickSlots"));
 
 	// Players dress piece by piece; full-body armor is for NPCs.
 	Equipment->bAllowFullBodyArmor = false;
@@ -110,6 +113,13 @@ void AVaesenPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 	{
 		EnhancedInput->BindAction(InventoryAction, ETriggerEvent::Started, this, &AVaesenPlayerCharacter::ToggleInventory);
 	}
+	for (int32 Index = 0; Index < QuickSlotActions.Num(); ++Index)
+	{
+		if (QuickSlotActions[Index])
+		{
+			EnhancedInput->BindAction(QuickSlotActions[Index], ETriggerEvent::Started, this, &AVaesenPlayerCharacter::UseQuickSlot, Index);
+		}
+	}
 }
 
 void AVaesenPlayerCharacter::Move(const FInputActionValue& Value)
@@ -148,6 +158,11 @@ void AVaesenPlayerCharacter::ToggleInventory()
 	{
 		PlayerController->ToggleInventory();
 	}
+}
+
+void AVaesenPlayerCharacter::UseQuickSlot(int32 Index)
+{
+	QuickSlots->RequestUse(Index);
 }
 
 void AVaesenPlayerCharacter::Zoom(const FInputActionValue& Value)
