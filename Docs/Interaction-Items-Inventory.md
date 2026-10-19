@@ -408,16 +408,22 @@ Every one of these is a request to the server through the player's own inventory
 
 ## 10. Test assets
 
-These were created by the project's asset-building commandlet and are ready to drop into a level:
-- `BP_Pickup_LampOil`: five lamp oil. Lamp oil is a plain item that stacks to ten.
+These were created by the project's asset-building commandlet.
+
+**`BP_Pickup`** (in `Vaesen/Blueprints/Interaction`) is the one pickup for every item. Place it in the level, select it, and choose its **Item Template** and **Quantity** in the Details panel: the mesh changes to the item's pickup mesh straight away, the pickup takes the item's pickup size (resize it freely afterwards), and the card shows the item. An item without a mesh, or no item at all, leaves the pickup without a mesh.
+
+Items to choose, in `Vaesen/Blueprints/Items`:
+- `BP_Item_LampOil`: lamp oil, a plain item that stacks to ten.
+- `BP_Item_HerbPouch`: a herb pouch with four slots that accepts `Item.Herb`.
+- `Herbs/BP_Item_Yarrow`: yarrow, a herb tagged `Item.Herb`.
+- `Clothing/BP_Item_LeatherBoots`, `BP_Item_WorkGloves` and `BP_Item_WoolCloak`: clothing for the feet, hands and back. They have no meshes of their own yet, so the body doesn't change when they're worn, but they fill their equipment slots.
+- `Food/BP_Item_RyeBread`: rye bread, a consumable ("Eat") to try the quick slots with.
+
+Also in `Vaesen/Blueprints/Interaction`:
 - `BP_LootChest`: a crate with unlimited space and seven lamp oil inside. Hold E to search it.
-- `BP_Pickup_HerbPouch`: a herb pouch with four slots that accepts `Item.Herb`.
-- `BP_Pickup_Yarrow`: three yarrow, a herb tagged `Item.Herb`.
-- `BP_Pickup_LeatherBoots`, `BP_Pickup_WorkGloves` and `BP_Pickup_WoolCloak`: clothing for the feet, hands and back. They have no meshes of their own yet, so the body doesn't change when they're worn, but they fill their equipment slots.
-- `BP_Pickup_RyeBread`: three loaves of rye bread, a consumable ("Eat") to try the quick slots with.
 - `BP_InteractableTest`: the earlier test crate, which just logs when interacted with.
 
-A good test: pick up the herb pouch, then the yarrow. Open the inventory. The yarrow should be inside the pouch, not in a slot of its own; the pouch shows "1/4" and its tooltip lists the yarrow. Right-click the pouch to empty it. Then pick up the boots and right-click them: they go into the Feet slot. Try dragging the gloves onto the Head slot; it turns red and refuses.
+A good test: place pickups of the herb pouch, yarrow, boots and bread. Pick up the herb pouch, then the yarrow. Open the inventory. The yarrow should be inside the pouch, not in a slot of its own; the pouch shows "1/4" and its tooltip lists the yarrow. Right-click the pouch to empty it. Then pick up the boots and right-click them: they go into the Feet slot. Try dragging the gloves onto the Head slot; it turns red and refuses.
 
 ---
 

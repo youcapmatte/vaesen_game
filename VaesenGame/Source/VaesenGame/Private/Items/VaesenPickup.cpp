@@ -251,9 +251,15 @@ void AVaesenPickup::PostEditChangeProperty(FPropertyChangedEvent& PropertyChange
 	const FName Changed = PropertyChangedEvent.GetMemberPropertyName();
 	if (Changed == GET_MEMBER_NAME_CHECKED(AVaesenPickup, ItemTemplate) || Changed == GET_MEMBER_NAME_CHECKED(AVaesenPickup, Quantity))
 	{
-		if (ItemTemplate)
+		const UVaesenItem* Defaults = ItemTemplate ? ItemTemplate->GetDefaultObject<UVaesenItem>() : nullptr;
+		if (Defaults)
 		{
-			Quantity = FMath::Clamp(Quantity, 1, ItemTemplate->GetDefaultObject<UVaesenItem>()->GetMaxStack());
+			Quantity = FMath::Clamp(Quantity, 1, Defaults->GetMaxStack());
+		}
+		// A newly chosen item comes at its own size; resize the pickup freely after that.
+		if (Defaults && Changed == GET_MEMBER_NAME_CHECKED(AVaesenPickup, ItemTemplate))
+		{
+			SetActorScale3D(Defaults->PickupScale);
 		}
 		UpdateFromItem();
 	}

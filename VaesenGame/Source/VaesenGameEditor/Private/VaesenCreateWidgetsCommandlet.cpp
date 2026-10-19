@@ -667,9 +667,9 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 	}
 
 	const TCHAR* TestItemPath = TEXT("/Game/Vaesen/Blueprints/Items/BP_Item_LampOil");
-	const TCHAR* TestPickupPath = TEXT("/Game/Vaesen/Blueprints/Interaction/BP_Pickup_LampOil");
+	const TCHAR* PickupPath = TEXT("/Game/Vaesen/Blueprints/Interaction/BP_Pickup");
 
-	/** A test item (BP_Item_LampOil) and a pickup of 5 of it (BP_Pickup_LampOil) to drop into a level. */
+	/** A test item (BP_Item_LampOil), and BP_Pickup: place it and choose its Item Template (lamp oil, bread...). */
 	void SetupPickups()
 	{
 		UStaticMesh* Cylinder = Cast<UStaticMesh>(LoadAsset(TEXT("/Engine/BasicShapes/Cylinder.Cylinder")));
@@ -685,28 +685,9 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 			Finish(Blueprint);
 		}
 
-		if (UBlueprint* Blueprint = CreateActorBlueprint(TestPickupPath, AVaesenPickup::StaticClass()))
+		// The pickup: one for every item; each placed one picks its item (and so its mesh) in the level.
+		if (UBlueprint* Blueprint = CreateActorBlueprint(PickupPath, AVaesenPickup::StaticClass()))
 		{
-			AVaesenPickup* Defaults = CastChecked<AVaesenPickup>(Blueprint->GeneratedClass->GetDefaultObject());
-			SetDefault(Defaults, TEXT("ItemTemplate"), LoadBlueprintClass(TestItemPath));
-			if (FIntProperty* QuantityProperty = FindFProperty<FIntProperty>(Defaults->GetClass(), TEXT("Quantity")))
-			{
-				QuantityProperty->SetPropertyValue_InContainer(Defaults, 5);
-			}
-
-			// The basic cylinder is a metre tall; a flask-sized pickup, with its card just above it.
-			Defaults->GetRootComponent()->SetRelativeScale3D(FVector(0.2, 0.2, 0.25));
-			if (UStaticMeshComponent* Mesh = Cast<UStaticMeshComponent>(Defaults->GetRootComponent()))
-			{
-				Mesh->SetStaticMesh(Cylinder);
-			}
-			if (const FObjectPropertyBase* Property = FindFProperty<FObjectPropertyBase>(Defaults->GetClass(), TEXT("InteractionComponent")))
-			{
-				if (USceneComponent* Card = Cast<USceneComponent>(Property->GetObjectPropertyValue_InContainer(Defaults)))
-				{
-					Card->SetRelativeLocation(FVector(0.0, 0.0, 120.0));
-				}
-			}
 			Finish(Blueprint);
 		}
 	}
@@ -1603,39 +1584,10 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 	const TCHAR* HerbPouchPath = TEXT("/Game/Vaesen/Blueprints/Items/BP_Item_HerbPouch");
 	const TCHAR* YarrowPath = TEXT("/Game/Vaesen/Blueprints/Items/Herbs/BP_Item_Yarrow");
 
-	/** A pickup Blueprint of Quantity x ItemClass, scaled down from a basic shape, with its card just above it. */
-	void CreateTestPickup(const TCHAR* PackagePath, UClass* ItemClass, int32 Quantity, UStaticMesh* Mesh, const FVector& Scale)
-	{
-		UBlueprint* Blueprint = CreateActorBlueprint(PackagePath, AVaesenPickup::StaticClass());
-		if (!Blueprint || !ItemClass)
-		{
-			return;
-		}
-		AVaesenPickup* Defaults = CastChecked<AVaesenPickup>(Blueprint->GeneratedClass->GetDefaultObject());
-		SetDefault(Defaults, TEXT("ItemTemplate"), ItemClass);
-		if (FIntProperty* QuantityProperty = FindFProperty<FIntProperty>(Defaults->GetClass(), TEXT("Quantity")))
-		{
-			QuantityProperty->SetPropertyValue_InContainer(Defaults, Quantity);
-		}
-		Defaults->GetRootComponent()->SetRelativeScale3D(Scale);
-		if (UStaticMeshComponent* MeshComponent = Cast<UStaticMeshComponent>(Defaults->GetRootComponent()))
-		{
-			MeshComponent->SetStaticMesh(Mesh);
-		}
-		if (const FObjectPropertyBase* Property = FindFProperty<FObjectPropertyBase>(Defaults->GetClass(), TEXT("InteractionComponent")))
-		{
-			if (USceneComponent* Card = Cast<USceneComponent>(Property->GetObjectPropertyValue_InContainer(Defaults)))
-			{
-				// 30 cm above the pickup's centre, whatever its scale.
-				Card->SetRelativeLocation(FVector(0.0, 0.0, 30.0 / FMath::Max(Scale.Z, 0.01)));
-			}
-		}
-		Finish(Blueprint);
-	}
-
 	/**
-	 * Pouches: BP_Item_HerbPouch (4 slots, takes Item.Herb), BP_Item_Yarrow (a herb), and pickups of both. Also keeps
-	 * BP_Item_LampOil stackable now that plain items aren't by default.
+	 * Test items: BP_Item_HerbPouch (4 slots, takes Item.Herb), BP_Item_Yarrow (a herb), clothing and rye bread, each
+	 * with its dropped size (place them with BP_Pickup). Also keeps BP_Item_LampOil stackable now that plain items
+	 * aren't by default.
 	 */
 	void SetupPouches()
 	{
@@ -1674,19 +1626,14 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 			Finish(Blueprint);
 		}
 
-		CreateTestPickup(TEXT("/Game/Vaesen/Blueprints/Interaction/BP_Pickup_HerbPouch"), LoadBlueprintClass(HerbPouchPath), 1,
-			Cast<UStaticMesh>(LoadAsset(TEXT("/Engine/BasicShapes/Sphere.Sphere"))), FVector(0.2));
-		CreateTestPickup(TEXT("/Game/Vaesen/Blueprints/Interaction/BP_Pickup_Yarrow"), LoadBlueprintClass(YarrowPath), 3,
-			Cast<UStaticMesh>(LoadAsset(TEXT("/Engine/BasicShapes/Cone.Cone"))), FVector(0.15, 0.15, 0.25));
-
 		// Clothing to try the equipment with (no meshes of their own yet, so the body doesn't change).
-		struct FTestClothing { const TCHAR* Path; const TCHAR* PickupPath; FText Name; FText Description; EVaesenEquipmentSlot Slot; };
+		struct FTestClothing { const TCHAR* Path; FText Name; FText Description; EVaesenEquipmentSlot Slot; };
 		const FTestClothing Clothing[] = {
-			{ TEXT("/Game/Vaesen/Blueprints/Items/Clothing/BP_Item_LeatherBoots"), TEXT("/Game/Vaesen/Blueprints/Interaction/BP_Pickup_LeatherBoots"),
+			{ TEXT("/Game/Vaesen/Blueprints/Items/Clothing/BP_Item_LeatherBoots"),
 				LOCTEXT("BootsName", "Leather boots"), LOCTEXT("BootsDescription", "Sturdy boots for wet roads."), EVaesenEquipmentSlot::Feet },
-			{ TEXT("/Game/Vaesen/Blueprints/Items/Clothing/BP_Item_WorkGloves"), TEXT("/Game/Vaesen/Blueprints/Interaction/BP_Pickup_WorkGloves"),
+			{ TEXT("/Game/Vaesen/Blueprints/Items/Clothing/BP_Item_WorkGloves"),
 				LOCTEXT("GlovesName", "Work gloves"), LOCTEXT("GlovesDescription", "Worn leather gloves."), EVaesenEquipmentSlot::Hands },
-			{ TEXT("/Game/Vaesen/Blueprints/Items/Clothing/BP_Item_WoolCloak"), TEXT("/Game/Vaesen/Blueprints/Interaction/BP_Pickup_WoolCloak"),
+			{ TEXT("/Game/Vaesen/Blueprints/Items/Clothing/BP_Item_WoolCloak"),
 				LOCTEXT("CloakName", "Wool cloak"), LOCTEXT("CloakDescription", "A heavy grey cloak against the rain."), EVaesenEquipmentSlot::Back },
 		};
 		UStaticMesh* Cube = Cast<UStaticMesh>(LoadAsset(TEXT("/Engine/BasicShapes/Cube.Cube")));
@@ -1702,7 +1649,6 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 				Defaults->Weight = 1.0f;
 				Finish(Blueprint);
 			}
-			CreateTestPickup(Piece.PickupPath, LoadBlueprintClass(Piece.Path), 1, Cube, FVector(0.3, 0.3, 0.15));
 		}
 
 		// Bread: a consumable for the quick slots.
@@ -1722,10 +1668,8 @@ return lerp(SceneColor.rgb, Color.rgb, Amount);)");
 			Nourish.Magnitude = 1.0f;
 			Finish(Blueprint);
 		}
-		CreateTestPickup(TEXT("/Game/Vaesen/Blueprints/Interaction/BP_Pickup_RyeBread"), LoadBlueprintClass(BreadPath), 3,
-			Cast<UStaticMesh>(LoadAsset(TEXT("/Engine/BasicShapes/Cube.Cube"))), FVector(0.25, 0.15, 0.1));
 
-		// Dropped test items the size their placed pickups are.
+		// Test items at a sensible size (basic shapes are a metre across) when placed or dropped.
 		const TPair<const TCHAR*, FVector> DropScales[] = {
 			{ TestItemPath, FVector(0.2, 0.2, 0.25) },
 			{ HerbPouchPath, FVector(0.2) },

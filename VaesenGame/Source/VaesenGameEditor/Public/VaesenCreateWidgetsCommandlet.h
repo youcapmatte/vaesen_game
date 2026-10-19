@@ -17,9 +17,9 @@
  * Also creates the data-only player Blueprints (defaults only, no graph logic): BP_VaesenPlayerCharacter (UE
  * mannequin, ABP_Manny, template input actions), BP_VaesenPlayerController (IMC_Default) and BP_VaesenGameMode;
  * the camera zoom input; the modular body (Manny split into Head/Torso/Hands/Legs/Feet, set on the character); and the
- * interaction (outline material and interact key on the character, WBP_InteractionCard, BP_InteractableTest to try it on); and a test item and
- * pickup (BP_Item_LampOil, BP_Pickup_LampOil); the inventory screen, I to open it and BP_LootChest;
- * a herb pouch and a herb to try pouches with; and the equipment panel and test clothing (boots, gloves, cloak).
+ * interaction (outline material and interact key on the character, WBP_InteractionCard, BP_InteractableTest to try it on); BP_Pickup (one
+ * pickup for every item) and test items; the inventory screen, I to open it and BP_LootChest;
+ * a herb pouch and a herb to try pouches with; the equipment panel and test clothing (boots, gloves, cloak).
  *
  * Run with the editor closed:
  *   UnrealEditor-Cmd.exe VaesenGame.uproject -run=VaesenCreateWidgets

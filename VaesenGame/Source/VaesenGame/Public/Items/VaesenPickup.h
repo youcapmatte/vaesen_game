@@ -10,9 +10,9 @@ class UVaesenInteractionComponent;
 class UVaesenItem;
 
 /**
- * An item lying in the world that players can pick up. Place it (or a Blueprint of it) in a level and choose the
- * Item Template and Quantity: the mesh and the interaction card (name, description, quantity) follow the item, in
- * the editor too. Dropped items are spawned on the server with SpawnDropped: tossed out in front of whoever dropped
+ * An item lying in the world that players can pick up. One pickup serves every item: place it (BP_Pickup) in a level,
+ * select it and choose its Item Template and Quantity. The mesh becomes the item's Pickup Mesh (none if the item has
+ * none), it takes the item's Pickup Scale, and the interaction card shows the item; all in the editor too. Dropped items are spawned on the server with SpawnDropped: tossed out in front of whoever dropped
  * them, they fall with physics (off a chair onto the floor, say) and come to rest lying naturally on what they land
  * on; then physics switches off. Everyone sees the same fall (the movement replicates). The mesh needs collision.
  *
@@ -63,7 +63,7 @@ protected:
 	UFUNCTION()
 	void OnTakePickup(AVaesenPlayerCharacter* Taker);
 
-	/** Which item this is. Sets the mesh and the card. */
+	/** Which item this is. Sets the mesh, the size (once, when chosen) and the card. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Pickup")
 	TSubclassOf<UVaesenItem> ItemTemplate;
 
