@@ -17,6 +17,9 @@
 #include "Materials/MaterialInterface.h"
 #include "Misc/ConfigCacheIni.h"
 #include "Net/UnrealNetwork.h"
+#include "Combat/VaesenAbilitySystemComponent.h"
+#include "Combat/VaesenGameplayTags.h"
+#include "Items/VaesenRangedWeaponItem.h"
 
 AVaesenPlayerCharacter::AVaesenPlayerCharacter()
 {
@@ -69,6 +72,8 @@ void AVaesenPlayerCharacter::BeginPlay()
 	Super::BeginPlay();
 	DesiredCameraDistance = FMath::Clamp(CameraBoom->TargetArmLength, MinThirdPersonDistance, MaxCameraDistance);
 	CameraBoom->TargetArmLength = DesiredCameraDistance;
+	DefaultFieldOfView = FollowCamera->FieldOfView;
+	DefaultSocketOffset = CameraBoom->SocketOffset;
 
 	// Only matters while this camera is the view, i.e. for this character's own player.
 	if (InteractionOutlineMaterial)
@@ -113,6 +118,27 @@ void AVaesenPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 	{
 		EnhancedInput->BindAction(InventoryAction, ETriggerEvent::Started, this, &AVaesenPlayerCharacter::ToggleInventory);
 	}
+	const auto BindAbility = [this, EnhancedInput](UInputAction* Action, EVaesenAbilityInput Input)
+	{
+		if (Action)
+		{
+			EnhancedInput->BindAction(Action, ETriggerEvent::Started, this, &AVaesenPlayerCharacter::PressAbility, Input);
+			EnhancedInput->BindAction(Action, ETriggerEvent::Completed, this, &AVaesenPlayerCharacter::ReleaseAbility, Input);
+			EnhancedInput->BindAction(Action, ETriggerEvent::Canceled, this, &AVaesenPlayerCharacter::ReleaseAbility, Input);
+		}
+	};
+	BindAbility(AttackAction, EVaesenAbilityInput::Attack);
+	BindAbility(HeavyAttackAction, EVaesenAbilityInput::HeavyAttack);
+	BindAbility(AimOrBlockAction, EVaesenAbilityInput::AimOrBlock);
+	BindAbility(ReloadAction, EVaesenAbilityInput::Reload);
+	BindAbility(ThrowAction, EVaesenAbilityInput::Throw);
+	BindAbility(HolsterAction, EVaesenAbilityInput::Holster);
+	BindAbility(SwapWeaponAction, EVaesenAbilityInput::SwapWeapon);
+	if (TriggerAttackAction)
+	{
+		EnhancedInput->BindAction(TriggerAttackAction, ETriggerEvent::Started, this, &AVaesenPlayerCharacter::PressTriggerAttack);
+		EnhancedInput->BindAction(TriggerAttackAction, ETriggerEvent::Completed, this, &AVaesenPlayerCharacter::ReleaseTriggerAttack);
+	}
 	for (int32 Index = 0; Index < QuickSlotActions.Num(); ++Index)
 	{
 		if (QuickSlotActions[Index])
@@ -145,6 +171,8 @@ void AVaesenPlayerCharacter::Look(const FInputActionValue& Value)
 void AVaesenPlayerCharacter::BeginInteract()
 {
 	Interactor->BeginInteract();
+	// Hands free for doors, chests and people.
+	Equipment->RequestSheathe();
 }
 
 void AVaesenPlayerCharacter::EndInteract()
@@ -201,7 +229,13 @@ void AVaesenPlayerCharacter::Tick(float DeltaSeconds)
 		return;
 	}
 
-	CameraBoom->TargetArmLength = FMath::FInterpTo(CameraBoom->TargetArmLength, DesiredCameraDistance, DeltaSeconds, ZoomInterpSpeed);
+	UpdateAimCamera(DeltaSeconds);
+
+	// Aiming pulls the camera in over the shoulder (third person only).
+	const float WantedDistance = DesiredCameraDistance > 0.0f
+		? FMath::Lerp(DesiredCameraDistance, FMath::Min(DesiredCameraDistance, AimCameraDistance), AimAlpha)
+		: DesiredCameraDistance;
+	CameraBoom->TargetArmLength = FMath::FInterpTo(CameraBoom->TargetArmLength, WantedDistance, DeltaSeconds, ZoomInterpSpeed);
 
 	// Gliding into the head: switch to first person once the camera is nearly there.
 	if (!bFirstPerson && DesiredCameraDistance <= 0.0f && CameraBoom->TargetArmLength <= FirstPersonSwitchDistance)
@@ -316,8 +350,7 @@ void AVaesenPlayerCharacter::ApplyViewMode()
 {
 	// Everyone (owner, server, other players): in first person the body turns with the view, otherwise it turns
 	// toward where it walks. Must match on owner and server for movement to replicate smoothly.
-	bUseControllerRotationYaw = bFirstPerson;
-	GetCharacterMovement()->bOrientRotationToMovement = !bFirstPerson;
+	UpdateRotationMode();
 
 	if (!IsLocallyControlled())
 	{
@@ -346,5 +379,52 @@ void AVaesenPlayerCharacter::ApplyViewMode()
 	if (APlayerCameraManager* CameraManager = PlayerController ? PlayerController->PlayerCameraManager.Get() : nullptr)
 	{
 		CameraManager->ViewPitchMin = bFirstPerson ? FirstPersonMinPitch : GetDefault<APlayerCameraManager>()->ViewPitchMin;
+	}
+}
+
+// --- Combat input and the aiming camera ---
+
+void AVaesenPlayerCharacter::PressAbility(EVaesenAbilityInput Input)
+{
+	if (AbilitySystem)
+	{
+		AbilitySystem->PressAbilityInput(Input);
+	}
+}
+
+void AVaesenPlayerCharacter::ReleaseAbility(EVaesenAbilityInput Input)
+{
+	if (AbilitySystem)
+	{
+		AbilitySystem->ReleaseAbilityInput(Input);
+	}
+}
+
+void AVaesenPlayerCharacter::PressTriggerAttack()
+{
+	// The right trigger fires a gun, and is the heavy attack with anything else.
+	const UVaesenWeaponItem* Weapon = Equipment->GetDrawnWeapon();
+	TriggerAttackInput = Weapon && Weapon->IsRanged() ? EVaesenAbilityInput::Attack : EVaesenAbilityInput::HeavyAttack;
+	PressAbility(TriggerAttackInput);
+}
+
+void AVaesenPlayerCharacter::ReleaseTriggerAttack()
+{
+	ReleaseAbility(TriggerAttackInput);
+	TriggerAttackInput = EVaesenAbilityInput::None;
+}
+
+void AVaesenPlayerCharacter::UpdateAimCamera(float DeltaSeconds)
+{
+	const bool bAiming = AbilitySystem && (AbilitySystem->HasMatchingGameplayTag(VaesenTags::State_Aiming)
+		|| AbilitySystem->HasMatchingGameplayTag(VaesenTags::State_DrawingBow) || AbilitySystem->HasMatchingGameplayTag(VaesenTags::State_Throwing));
+	AimAlpha = FMath::FInterpTo(AimAlpha, bAiming ? 1.0f : 0.0f, DeltaSeconds, AimInterpSpeed);
+
+	const UVaesenRangedWeaponItem* Ranged = Cast<UVaesenRangedWeaponItem>(Equipment->GetDrawnWeapon());
+	const float AimFieldOfView = Ranged ? Ranged->AimFieldOfView : DefaultAimFieldOfView;
+	FollowCamera->SetFieldOfView(FMath::Lerp(DefaultFieldOfView, AimFieldOfView, AimAlpha));
+	if (!bFirstPerson)
+	{
+		CameraBoom->SocketOffset = FMath::Lerp(DefaultSocketOffset, AimSocketOffset, AimAlpha);
 	}
 }

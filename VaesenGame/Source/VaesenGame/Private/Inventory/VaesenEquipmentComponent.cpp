@@ -11,8 +11,17 @@
 #include "Items/VaesenEquippableItem.h"
 #include "Items/VaesenPickup.h"
 #include "Items/VaesenWeaponItem.h"
+#include "Items/VaesenMeleeWeaponItem.h"
+#include "AbilitySystemComponent.h"
+#include "AbilitySystemGlobals.h"
+#include "Animation/AnimInstance.h"
+#include "Animation/AnimMontage.h"
+#include "Combat/VaesenCombatLibrary.h"
+#include "Combat/VaesenGameplayTags.h"
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
+#include "TimerManager.h"
+#include "Weapons/VaesenWeaponActor.h"
 
 UVaesenEquipmentComponent::UVaesenEquipmentComponent()
 {
@@ -24,6 +33,7 @@ void UVaesenEquipmentComponent::GetLifetimeReplicatedProps(TArray<FLifetimePrope
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(UVaesenEquipmentComponent, Equipped);
+	DOREPLIFETIME(UVaesenEquipmentComponent, DrawState);
 }
 
 bool UVaesenEquipmentComponent::ReplicateSubobjects(UActorChannel* Channel, FOutBunch* Bunch, FReplicationFlags* RepFlags)
@@ -56,15 +66,17 @@ void UVaesenEquipmentComponent::BeginPlay()
 		}
 	}
 	ApplyAppearance();
+	ApplyDrawState(false);
+	bDrawStateInitialized = true;
 }
 
 TArray<EVaesenEquipmentSlot> UVaesenEquipmentComponent::GetPlayerSlots()
 {
-	// The armor from head to feet, then the back, the hands, the talisman and the bag.
+	// The armor from head to feet, then the back, the hands and the sidearm, the talisman and the bag.
 	return {
 		EVaesenEquipmentSlot::Head, EVaesenEquipmentSlot::Chest, EVaesenEquipmentSlot::Hands,
 		EVaesenEquipmentSlot::Legs, EVaesenEquipmentSlot::Feet,
-		EVaesenEquipmentSlot::Back, EVaesenEquipmentSlot::MainHand, EVaesenEquipmentSlot::OffHand,
+		EVaesenEquipmentSlot::Back, EVaesenEquipmentSlot::MainHand, EVaesenEquipmentSlot::OffHand, EVaesenEquipmentSlot::Sidearm,
 		EVaesenEquipmentSlot::Talisman, EVaesenEquipmentSlot::Bag,
 	};
 }
@@ -215,6 +227,13 @@ void UVaesenEquipmentComponent::SetEquipped(EVaesenEquipmentSlot Slot, UVaesenEq
 	}
 
 	ApplyAppearance();
+
+	// The drawn weapon went (taken off, dropped, thrown): nothing is in the hand any more.
+	if (DrawState.bDrawn && !HasWeaponSet(DrawState.WeaponSlot))
+	{
+		DrawState.bDrawn = false;
+		ApplyDrawState(false);
+	}
 	OnEquipmentChanged.Broadcast();
 }
 
@@ -268,6 +287,7 @@ void UVaesenEquipmentComponent::ApplyAppearance()
 		}
 	}
 	bAppearanceApplied = true;
+	RefreshWeaponAttachments();
 
 	// The body: each part shows the character's own mesh (from its class defaults) unless armor replaces it, and its
 	// worn-over layer shows armor worn over it. Full-body armor replaces the whole body (torso) and hides the other
@@ -428,4 +448,368 @@ bool UVaesenEquipmentComponent::IsLocalPlayers() const
 {
 	const APawn* Pawn = Cast<APawn>(GetOwner());
 	return Pawn && Pawn->IsLocallyControlled();
+}
+
+void UVaesenEquipmentComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (const UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(GrabTimer);
+		World->GetTimerManager().ClearTimer(StepTimer);
+	}
+	Super::EndPlay(EndPlayReason);
+}
+
+// --- Weapons: drawn and sheathed ---
+
+UVaesenWeaponItem* UVaesenEquipmentComponent::GetWeaponInSlot(EVaesenEquipmentSlot Slot) const
+{
+	return Cast<UVaesenWeaponItem>(GetItemInSlot(Slot));
+}
+
+bool UVaesenEquipmentComponent::IsInSet(EVaesenEquipmentSlot Slot, EVaesenEquipmentSlot SetSlot)
+{
+	return SetSlot == EVaesenEquipmentSlot::Sidearm
+		? Slot == EVaesenEquipmentSlot::Sidearm
+		: Slot == EVaesenEquipmentSlot::MainHand || Slot == EVaesenEquipmentSlot::OffHand;
+}
+
+bool UVaesenEquipmentComponent::HasWeaponSet(EVaesenEquipmentSlot WeaponSlot) const
+{
+	if (WeaponSlot == EVaesenEquipmentSlot::Sidearm)
+	{
+		return GetWeaponInSlot(EVaesenEquipmentSlot::Sidearm) != nullptr;
+	}
+	return GetWeaponInSlot(EVaesenEquipmentSlot::MainHand) || GetWeaponInSlot(EVaesenEquipmentSlot::OffHand);
+}
+
+EVaesenEquipmentSlot UVaesenEquipmentComponent::GetDefaultDrawSlot() const
+{
+	return HasWeaponSet(EVaesenEquipmentSlot::MainHand) ? EVaesenEquipmentSlot::MainHand : EVaesenEquipmentSlot::Sidearm;
+}
+
+bool UVaesenEquipmentComponent::IsInHand(EVaesenEquipmentSlot Slot) const
+{
+	return AppliedDrawState.bDrawn && IsInSet(Slot, AppliedDrawState.WeaponSlot);
+}
+
+UVaesenWeaponItem* UVaesenEquipmentComponent::GetDrawnWeapon() const
+{
+	if (!AppliedDrawState.bDrawn)
+	{
+		return nullptr;
+	}
+	if (AppliedDrawState.WeaponSlot == EVaesenEquipmentSlot::Sidearm)
+	{
+		return GetWeaponInSlot(EVaesenEquipmentSlot::Sidearm);
+	}
+	UVaesenWeaponItem* MainHand = GetWeaponInSlot(EVaesenEquipmentSlot::MainHand);
+	return MainHand ? MainHand : GetWeaponInSlot(EVaesenEquipmentSlot::OffHand);
+}
+
+UVaesenMeleeWeaponItem* UVaesenEquipmentComponent::GetDrawnShield() const
+{
+	if (!IsInHand(EVaesenEquipmentSlot::OffHand))
+	{
+		return nullptr;
+	}
+	UVaesenMeleeWeaponItem* Shield = Cast<UVaesenMeleeWeaponItem>(GetWeaponInSlot(EVaesenEquipmentSlot::OffHand));
+	return Shield && Shield->IsShield() ? Shield : nullptr;
+}
+
+void UVaesenEquipmentComponent::RequestToggleWeapon()
+{
+	const bool bDraw = !DrawState.bDrawn;
+	const EVaesenEquipmentSlot WeaponSlot = GetDefaultDrawSlot();
+	if (bDraw && !HasWeaponSet(WeaponSlot))
+	{
+		return;
+	}
+	if (GetOwner()->HasAuthority())
+	{
+		SetWeaponDrawn(bDraw, WeaponSlot);
+	}
+	else
+	{
+		ServerSetWeaponDrawn(bDraw, WeaponSlot);
+	}
+}
+
+void UVaesenEquipmentComponent::RequestSwapWeapon()
+{
+	// The other set from the one drawn (or that would be drawn by default).
+	const EVaesenEquipmentSlot Current = DrawState.bDrawn ? DrawState.WeaponSlot : GetDefaultDrawSlot();
+	const EVaesenEquipmentSlot Other = Current == EVaesenEquipmentSlot::Sidearm ? EVaesenEquipmentSlot::MainHand : EVaesenEquipmentSlot::Sidearm;
+	if (!HasWeaponSet(Other))
+	{
+		return;
+	}
+	if (GetOwner()->HasAuthority())
+	{
+		SetWeaponDrawn(true, Other);
+	}
+	else
+	{
+		ServerSetWeaponDrawn(true, Other);
+	}
+}
+
+void UVaesenEquipmentComponent::RequestSheathe()
+{
+	if (!DrawState.bDrawn)
+	{
+		return;
+	}
+	if (GetOwner()->HasAuthority())
+	{
+		SetWeaponDrawn(false);
+	}
+	else
+	{
+		ServerSetWeaponDrawn(false, EVaesenEquipmentSlot::MainHand);
+	}
+}
+
+void UVaesenEquipmentComponent::ServerSetWeaponDrawn_Implementation(bool bDraw, EVaesenEquipmentSlot WeaponSlot)
+{
+	SetWeaponDrawn(bDraw, WeaponSlot);
+}
+
+bool UVaesenEquipmentComponent::SetWeaponDrawn(bool bDraw, EVaesenEquipmentSlot WeaponSlot)
+{
+	if (!GetOwner()->HasAuthority())
+	{
+		return false;
+	}
+	if (WeaponSlot != EVaesenEquipmentSlot::Sidearm)
+	{
+		WeaponSlot = EVaesenEquipmentSlot::MainHand;
+	}
+	if (bDraw && !HasWeaponSet(WeaponSlot))
+	{
+		return false;
+	}
+
+	FVaesenDrawState NewState;
+	NewState.bDrawn = bDraw;
+	NewState.WeaponSlot = WeaponSlot;
+	if (NewState == DrawState)
+	{
+		return false;
+	}
+	DrawState = NewState;
+	ApplyDrawState(true);
+	return true;
+}
+
+UVaesenItem* UVaesenEquipmentComponent::TakeOutForThrow(EVaesenEquipmentSlot Slot, UObject* NewOuter)
+{
+	UVaesenEquippableItem* Item = GetItemInSlot(Slot);
+	if (!GetOwner()->HasAuthority() || !Item || !Item->CanBeThrown())
+	{
+		return nullptr;
+	}
+	UVaesenItem* Copy = Item->DuplicateItem(NewOuter, 1);
+	SetEquipped(Slot, nullptr);
+	return Copy;
+}
+
+void UVaesenEquipmentComponent::OnRep_DrawState()
+{
+	// Joining (or the first update): straight to the right state, no montages.
+	ApplyDrawState(bDrawStateInitialized && HasBegunPlay());
+}
+
+void UVaesenEquipmentComponent::ApplyDrawState(bool bAnimate)
+{
+	UWorld* World = GetWorld();
+	if (!bAnimate || !World)
+	{
+		DrawSteps.Reset();
+		bStepRunning = false;
+		if (World)
+		{
+			World->GetTimerManager().ClearTimer(GrabTimer);
+			World->GetTimerManager().ClearTimer(StepTimer);
+		}
+		const bool bChanged = AppliedDrawState != DrawState;
+		AppliedDrawState = DrawState;
+		RefreshWeaponAttachments();
+		ApplyDrawnLook();
+		if (bChanged)
+		{
+			OnDrawStateChanged.Broadcast();
+		}
+		return;
+	}
+
+	// Where the hand will be once the running step has grabbed; from there: sheathe what's drawn, draw what's wanted.
+	FVaesenDrawState From = AppliedDrawState;
+	if (bStepRunning && !bStepGrabbed)
+	{
+		From.bDrawn = CurrentStep.bDraw;
+		From.WeaponSlot = CurrentStep.WeaponSlot;
+	}
+	DrawSteps.Reset();
+	if (From != DrawState)
+	{
+		if (From.bDrawn)
+		{
+			DrawSteps.Add({ false, From.WeaponSlot });
+		}
+		if (DrawState.bDrawn)
+		{
+			DrawSteps.Add({ true, DrawState.WeaponSlot });
+		}
+	}
+	if (!bStepRunning)
+	{
+		RunNextDrawStep();
+	}
+}
+
+void UVaesenEquipmentComponent::RunNextDrawStep()
+{
+	AVaesenBaseCharacter* Character = GetCharacter();
+	UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner());
+	if (DrawSteps.Num() == 0 || !Character)
+	{
+		bStepRunning = false;
+		if (ASC)
+		{
+			ASC->SetLooseGameplayTagCount(VaesenTags::State_SwitchingWeapon, 0);
+		}
+		return;
+	}
+
+	CurrentStep = DrawSteps[0];
+	DrawSteps.RemoveAt(0);
+	bStepRunning = true;
+	bStepGrabbed = false;
+	if (ASC)
+	{
+		ASC->SetLooseGameplayTagCount(VaesenTags::State_SwitchingWeapon, 1);
+		if (!CurrentStep.bDraw)
+		{
+			// Whatever the weapon was doing stops (reloading, aiming, blocking).
+			const FGameplayTagContainer WeaponAbilities(VaesenTags::Ability_Weapon);
+			ASC->CancelAbilities(&WeaponAbilities);
+		}
+	}
+
+	// The weapon leading the motion: the main hand (or a lone shield), or the sidearm.
+	const UVaesenWeaponItem* Weapon = CurrentStep.WeaponSlot == EVaesenEquipmentSlot::Sidearm
+		? GetWeaponInSlot(EVaesenEquipmentSlot::Sidearm)
+		: (GetWeaponInSlot(EVaesenEquipmentSlot::MainHand) ? GetWeaponInSlot(EVaesenEquipmentSlot::MainHand) : GetWeaponInSlot(EVaesenEquipmentSlot::OffHand));
+	if (!Weapon)
+	{
+		GrabForCurrentStep();
+		FinishCurrentStep();
+		return;
+	}
+
+	const FVaesenSheathLocation* Location = UVaesenWeaponCategoryDefaults::Get()->FindSheathLocation(Weapon->SheathSocket);
+	const float FallbackGrab = Location ? Location->GrabTime : 0.25f;
+	const float FallbackDuration = Location ? FMath::Max(Location->Duration, FallbackGrab) : 0.5f;
+
+	UAnimMontage* Montage = Weapon->GetDrawMontage(CurrentStep.bDraw);
+	const float Length = Montage ? Character->PlayAnimMontage(Montage) : 0.0f;
+
+	FTimerManager& Timers = GetWorld()->GetTimerManager();
+	if (Length > 0.0f && UVaesenCombatLibrary::MontageHasWeaponHandoffNotify(Montage))
+	{
+		// The notify swaps it at the right frame; this only catches a montage cut short.
+		Timers.SetTimer(GrabTimer, this, &UVaesenEquipmentComponent::GrabForCurrentStep, Length * 0.95f, false);
+		Timers.SetTimer(StepTimer, this, &UVaesenEquipmentComponent::FinishCurrentStep, Length, false);
+	}
+	else
+	{
+		const float Duration = Length > 0.0f ? Length : FallbackDuration;
+		Timers.SetTimer(GrabTimer, this, &UVaesenEquipmentComponent::GrabForCurrentStep, FMath::Clamp(FallbackGrab, 0.01f, Duration), false);
+		Timers.SetTimer(StepTimer, this, &UVaesenEquipmentComponent::FinishCurrentStep, Duration, false);
+	}
+}
+
+void UVaesenEquipmentComponent::HandleWeaponGrabNotify()
+{
+	if (bStepRunning && !bStepGrabbed)
+	{
+		GrabForCurrentStep();
+	}
+}
+
+void UVaesenEquipmentComponent::GrabForCurrentStep()
+{
+	if (!bStepRunning || bStepGrabbed)
+	{
+		return;
+	}
+	bStepGrabbed = true;
+	GetWorld()->GetTimerManager().ClearTimer(GrabTimer);
+
+	AppliedDrawState.bDrawn = CurrentStep.bDraw;
+	AppliedDrawState.WeaponSlot = CurrentStep.WeaponSlot;
+	RefreshWeaponAttachments();
+	ApplyDrawnLook();
+
+	// Every machine runs this, so the sound plays locally on each.
+	const UVaesenWeaponItem* Weapon = CurrentStep.WeaponSlot == EVaesenEquipmentSlot::Sidearm
+		? GetWeaponInSlot(EVaesenEquipmentSlot::Sidearm) : GetWeaponInSlot(EVaesenEquipmentSlot::MainHand);
+	if (AVaesenWeaponActor* Actor = Weapon ? Weapon->GetWeaponActor() : nullptr)
+	{
+		Actor->PlayWeaponSound(CurrentStep.bDraw ? EVaesenWeaponSound::Draw : EVaesenWeaponSound::Sheath);
+	}
+	OnDrawStateChanged.Broadcast();
+}
+
+void UVaesenEquipmentComponent::FinishCurrentStep()
+{
+	GrabForCurrentStep();
+	GetWorld()->GetTimerManager().ClearTimer(StepTimer);
+	bStepRunning = false;
+	RunNextDrawStep();
+}
+
+void UVaesenEquipmentComponent::RefreshWeaponAttachments()
+{
+	for (const FVaesenEquippedItem& Entry : Equipped)
+	{
+		const UVaesenWeaponItem* Weapon = Cast<UVaesenWeaponItem>(Entry.Item);
+		if (AVaesenWeaponActor* Actor = Weapon ? Weapon->GetWeaponActor() : nullptr)
+		{
+			Actor->AttachToOwner(IsInHand(Entry.Slot));
+		}
+	}
+}
+
+void UVaesenEquipmentComponent::ApplyDrawnLook()
+{
+	if (UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner()))
+	{
+		ASC->SetLooseGameplayTagCount(VaesenTags::State_WeaponDrawn, AppliedDrawState.bDrawn ? 1 : 0);
+	}
+
+	// The drawn weapon's anim layer, or the unarmed one; sheathed means normal unarmed locomotion.
+	AVaesenBaseCharacter* Character = GetCharacter();
+	USkeletalMeshComponent* Mesh = Character ? Character->GetMesh() : nullptr;
+	if (!Mesh)
+	{
+		return;
+	}
+	const UVaesenWeaponItem* Weapon = GetDrawnWeapon();
+	const TSubclassOf<UAnimInstance> Layer = Weapon ? Weapon->GetAnimLayer()
+		: UVaesenWeaponCategoryDefaults::Get()->GetCategory(EVaesenWeaponCategory::Unarmed).AnimLayer;
+	if (Layer == LinkedAnimLayer)
+	{
+		return;
+	}
+	if (LinkedAnimLayer)
+	{
+		Mesh->UnlinkAnimClassLayers(LinkedAnimLayer);
+	}
+	if (Layer)
+	{
+		Mesh->LinkAnimClassLayers(Layer);
+	}
+	LinkedAnimLayer = Layer;
 }

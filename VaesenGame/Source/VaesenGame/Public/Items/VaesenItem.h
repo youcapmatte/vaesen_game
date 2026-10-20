@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
+#include "Weapons/VaesenWeaponTypes.h"
 #include "UObject/Object.h"
 #include "VaesenItem.generated.h"
 
@@ -111,6 +112,13 @@ public:
 	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item", meta = (ClampMin = "0", ClampMax = "20"))
 	int32 SlotSize = 1;
+
+	/** Whether (and how) it can be thrown: a stone, a club, a sword. G (hold to aim, release) throws one. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Throwing")
+	FVaesenThrowSettings Throwing;
+
+	UFUNCTION(BlueprintPure, Category = "Item")
+	bool CanBeThrown() const { return Throwing.bCanBeThrown; }
 
 	/** Most that fit in one stack: MaxStackSize, or 1 when not stackable. */
 	UFUNCTION(BlueprintPure, Category = "Item")

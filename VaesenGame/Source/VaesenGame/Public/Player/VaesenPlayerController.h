@@ -8,6 +8,7 @@ class UInputMappingContext;
 class UVaesenInventoryComponent;
 class UVaesenInventoryScreenWidget;
 class UVaesenQuickBarWidget;
+class UVaesenCombatHUDWidget;
 
 /**
  * Player controller used in the worlds. Adds the default Enhanced Input mapping for the local player, shows the quick
@@ -46,4 +47,7 @@ private:
 
 	UPROPERTY(Transient)
 	TObjectPtr<UVaesenQuickBarWidget> QuickBar;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UVaesenCombatHUDWidget> CombatHUD;
 };

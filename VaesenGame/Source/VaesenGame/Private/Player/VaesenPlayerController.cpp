@@ -10,6 +10,8 @@
 #include "Inventory/VaesenInventoryComponent.h"
 #include "UI/Inventory/VaesenInventoryScreenWidget.h"
 #include "UI/Inventory/VaesenQuickBarWidget.h"
+#include "UI/Combat/VaesenCombatHUDWidget.h"
+#include "Inventory/VaesenEquipmentComponent.h"
 
 void AVaesenPlayerController::BeginPlay()
 {
@@ -35,6 +37,11 @@ void AVaesenPlayerController::BeginPlay()
 		QuickBar = CreateWidget<UVaesenQuickBarWidget>(this, QuickBarClass);
 		QuickBar->AddToViewport(1);
 	}
+
+	// Crosshair, ammo and hit markers; the C++ class draws it all when no Blueprint is set.
+	TSubclassOf<UVaesenCombatHUDWidget> CombatHUDClass = UVaesenSettings::Get()->CombatHUDWidget.LoadSynchronous();
+	CombatHUD = CreateWidget<UVaesenCombatHUDWidget>(this, CombatHUDClass ? CombatHUDClass : TSubclassOf<UVaesenCombatHUDWidget>(UVaesenCombatHUDWidget::StaticClass()));
+	CombatHUD->AddToViewport(0);
 
 	if (!DefaultMappingContext)
 	{
@@ -82,6 +89,11 @@ void AVaesenPlayerController::OpenInventory(UVaesenInventoryComponent* Container
 		InventoryScreen = CreateWidget<UVaesenInventoryScreenWidget>(this, ScreenClass);
 	}
 
+	// Weapons go away while looking through things.
+	if (UVaesenEquipmentComponent* Equipment = PlayerCharacter->GetEquipment())
+	{
+		Equipment->RequestSheathe();
+	}
 	InventoryScreen->SetInventories(PlayerCharacter->GetInventory(), Container);
 	if (!InventoryScreen->IsInViewport())
 	{

@@ -11,6 +11,7 @@
 #include "Items/VaesenTalismanItem.h"
 #include "Items/VaesenToolItem.h"
 #include "Items/VaesenWeaponItem.h"
+#include "Items/VaesenRangedWeaponItem.h"
 
 #define LOCTEXT_NAMESPACE "VaesenItemTooltip"
 
@@ -83,6 +84,22 @@ void UVaesenItemTooltipWidget::UpdateTooltip_Implementation()
 				Lines.Add(FText::Format(LOCTEXT("PouchLine", "  {0} x {1}"), FText::AsNumber(Inner->GetQuantity()), Inner->ItemName));
 			}
 		}
+	}
+
+	// Weapons: how worn (or broken), and what's loaded.
+	if (const UVaesenWeaponItem* Weapon = Cast<UVaesenWeaponItem>(Item))
+	{
+		Lines.Add(Weapon->IsBroken() ? LOCTEXT("Broken", "Broken: can't attack or block (can still be thrown)")
+			: FText::Format(LOCTEXT("Durability", "Durability {0} / {1}{2}"), FText::AsNumber(FMath::CeilToInt(Weapon->GetDurability())),
+				FText::AsNumber(FMath::RoundToInt(Weapon->MaxDurability)), Weapon->IsNearBreaking() ? LOCTEXT("NearBreak", " (close to breaking)") : FText::GetEmpty()));
+		if (const UVaesenRangedWeaponItem* Ranged = Cast<UVaesenRangedWeaponItem>(Weapon); Ranged && !Ranged->IsBow())
+		{
+			Lines.Add(FText::Format(LOCTEXT("Loaded", "Loaded {0} / {1}"), FText::AsNumber(Ranged->GetLoadedRounds()), FText::AsNumber(Ranged->MagazineSize)));
+		}
+	}
+	if (Item->CanBeThrown())
+	{
+		Lines.Add(LOCTEXT("Throwable", "G: throw"));
 	}
 
 	if (Item->IsA<UVaesenPouchItem>())

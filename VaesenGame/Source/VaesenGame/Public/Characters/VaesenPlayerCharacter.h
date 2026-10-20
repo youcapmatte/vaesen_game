@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Characters/VaesenBaseCharacter.h"
+#include "Combat/VaesenAbilitySystemComponent.h"
 #include "VaesenPlayerCharacter.generated.h"
 
 class UCameraComponent;
@@ -60,6 +61,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Inventory")
 	UVaesenQuickSlotComponent* GetQuickSlots() const { return QuickSlots; }
 
+	/** First person always faces the view; otherwise only while aiming, blocking, drawing or throwing. */
+	virtual bool WantsToFaceAim() const override { return bFirstPerson || Super::WantsToFaceAim(); }
+
+	/** 0..1 how far into the aiming camera (zoom, over the shoulder) it is now. */
+	UFUNCTION(BlueprintPure, Category = "Camera")
+	float GetAimAlpha() const { return AimAlpha; }
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
@@ -108,6 +116,55 @@ protected:
 	/** Opens and closes the inventory screen. */
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<UInputAction> InventoryAction;
+
+	// --- Combat input (each goes to the abilities bound to it) ---
+
+	/** Left mouse: fire, or light attack. */
+	UPROPERTY(EditDefaultsOnly, Category = "Input|Combat")
+	TObjectPtr<UInputAction> AttackAction;
+
+	/** Shift + left mouse: heavy attack. */
+	UPROPERTY(EditDefaultsOnly, Category = "Input|Combat")
+	TObjectPtr<UInputAction> HeavyAttackAction;
+
+	/** Gamepad right trigger: fire with a ranged weapon, heavy attack otherwise. */
+	UPROPERTY(EditDefaultsOnly, Category = "Input|Combat")
+	TObjectPtr<UInputAction> TriggerAttackAction;
+
+	/** Right mouse (hold): aim, or block and parry. */
+	UPROPERTY(EditDefaultsOnly, Category = "Input|Combat")
+	TObjectPtr<UInputAction> AimOrBlockAction;
+
+	/** R: reload, or work the bolt. */
+	UPROPERTY(EditDefaultsOnly, Category = "Input|Combat")
+	TObjectPtr<UInputAction> ReloadAction;
+
+	/** G (hold to aim, release to throw). */
+	UPROPERTY(EditDefaultsOnly, Category = "Input|Combat")
+	TObjectPtr<UInputAction> ThrowAction;
+
+	/** H: draw or sheathe. */
+	UPROPERTY(EditDefaultsOnly, Category = "Input|Combat")
+	TObjectPtr<UInputAction> HolsterAction;
+
+	/** Q: draw the other carried weapon. */
+	UPROPERTY(EditDefaultsOnly, Category = "Input|Combat")
+	TObjectPtr<UInputAction> SwapWeaponAction;
+
+	/** Third-person camera distance while aiming (closer, over the shoulder). */
+	UPROPERTY(EditDefaultsOnly, Category = "Camera|Aim", meta = (ClampMin = "0", Units = "cm"))
+	float AimCameraDistance = 180.0f;
+
+	/** Camera boom offset while aiming: over the right shoulder. */
+	UPROPERTY(EditDefaultsOnly, Category = "Camera|Aim")
+	FVector AimSocketOffset = FVector(0.0, 55.0, 65.0);
+
+	/** Field of view while aiming a throw or with a weapon that doesn't set its own. */
+	UPROPERTY(EditDefaultsOnly, Category = "Camera|Aim", meta = (ClampMin = "10", ClampMax = "120", Units = "Degrees"))
+	float DefaultAimFieldOfView = 70.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Camera|Aim", meta = (ClampMin = "0.1"))
+	float AimInterpSpeed = 10.0f;
 
 	/** Use quick slot 1, 2, 3... (keys 1-8): entry N uses slot N + 1. */
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
@@ -194,6 +251,19 @@ private:
 
 	/** First-person eye position plus motion for this frame. */
 	FVector GetFirstPersonEyeLocation(float DeltaSeconds);
+
+	void PressAbility(EVaesenAbilityInput Input);
+	void ReleaseAbility(EVaesenAbilityInput Input);
+	void PressTriggerAttack();
+	void ReleaseTriggerAttack();
+
+	/** Zoom and shoulder while aiming (local player only). */
+	void UpdateAimCamera(float DeltaSeconds);
+
+	EVaesenAbilityInput TriggerAttackInput = EVaesenAbilityInput::None;
+	float AimAlpha = 0.0f;
+	float DefaultFieldOfView = 90.0f;
+	FVector DefaultSocketOffset = FVector::ZeroVector;
 
 	// First-person motion state (local player only).
 	float BobPhase = 0.0f;

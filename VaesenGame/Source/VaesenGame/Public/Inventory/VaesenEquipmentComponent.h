@@ -12,6 +12,9 @@ class USoundBase;
 class UVaesenEquippableItem;
 class UVaesenInventoryComponent;
 class UVaesenItem;
+class UVaesenMeleeWeaponItem;
+class UVaesenWeaponItem;
+class UAnimInstance;
 
 /** One worn or held item and the slot it's in. */
 USTRUCT(BlueprintType)
@@ -26,7 +29,25 @@ struct FVaesenEquippedItem
 	TObjectPtr<UVaesenEquippableItem> Item;
 };
 
+/** Which carried weapon is in the hand: the main-hand set (main hand and an off-hand shield) or the sidearm. */
+USTRUCT(BlueprintType)
+struct FVaesenDrawState
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly, Category = "Equipment")
+	bool bDrawn = false;
+
+	/** MainHand (with the off hand) or Sidearm. */
+	UPROPERTY(BlueprintReadOnly, Category = "Equipment")
+	EVaesenEquipmentSlot WeaponSlot = EVaesenEquipmentSlot::MainHand;
+
+	bool operator==(const FVaesenDrawState& Other) const { return bDrawn == Other.bDrawn && (!bDrawn || WeaponSlot == Other.WeaponSlot); }
+	bool operator!=(const FVaesenDrawState& Other) const { return !(*this == Other); }
+};
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FVaesenEquipmentChanged);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FVaesenDrawStateChanged);
 
 /**
  * What a character (player or NPC) wears and holds, one item per slot. An item only ever goes in its own slot
@@ -116,8 +137,70 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Equipment")
 	FVaesenEquipmentChanged OnEquipmentChanged;
 
+	// --- Weapons: drawn and sheathed ---
+	//
+	// Every weapon worn (main hand, off-hand shield, sidearm) hangs in its sheath socket. One set at a time is drawn:
+	// the main-hand set (main hand + an off-hand shield) or the sidearm. The server decides; every machine plays the
+	// draw or sheath montage of the weapon's sheath location and moves the weapon to the hand (or back) at the grab
+	// moment: the montage's AN_WeaponGrab / AN_WeaponRelease notify, or the location's GrabTime without one.
+
+	/** A weapon is in the hand now (the grab moment has passed). */
+	UFUNCTION(BlueprintPure, Category = "Equipment|Weapons")
+	bool IsWeaponDrawn() const { return AppliedDrawState.bDrawn; }
+
+	/** Drawing or sheathing right now. */
+	UFUNCTION(BlueprintPure, Category = "Equipment|Weapons")
+	bool IsSwitchingWeapon() const { return DrawSteps.Num() > 0 || bStepRunning; }
+
+	/** The weapon in the hand (main hand or sidearm; an off-hand shield on its own counts). Null when sheathed or unarmed. */
+	UFUNCTION(BlueprintPure, Category = "Equipment|Weapons")
+	UVaesenWeaponItem* GetDrawnWeapon() const;
+
+	/** The shield in the off hand while the main-hand set is drawn. */
+	UFUNCTION(BlueprintPure, Category = "Equipment|Weapons")
+	UVaesenMeleeWeaponItem* GetDrawnShield() const;
+
+	/** The weapon worn in Slot (main hand, off hand, sidearm), if any. */
+	UFUNCTION(BlueprintPure, Category = "Equipment|Weapons")
+	UVaesenWeaponItem* GetWeaponInSlot(EVaesenEquipmentSlot Slot) const;
+
+	/** Whether the weapon in this slot is in the hand now (as opposed to in its sheath). */
+	bool IsInHand(EVaesenEquipmentSlot Slot) const;
+
+	UFUNCTION(BlueprintPure, Category = "Equipment|Weapons")
+	const FVaesenDrawState& GetDrawState() const { return AppliedDrawState; }
+
+	/** H: draw the main-hand set (or the sidearm if that's all there is), or sheathe what's drawn. */
+	UFUNCTION(BlueprintCallable, Category = "Equipment|Weapons")
+	void RequestToggleWeapon();
+
+	/** Q: draw the other carried weapon (sidearm <-> main hand). */
+	UFUNCTION(BlueprintCallable, Category = "Equipment|Weapons")
+	void RequestSwapWeapon();
+
+	/** Sheathes whatever is drawn (opening the inventory, interacting). */
+	UFUNCTION(BlueprintCallable, Category = "Equipment|Weapons")
+	void RequestSheathe();
+
+	/** Server: draws the set in WeaponSlot (MainHand or Sidearm), or sheathes. Returns whether anything changes. */
+	bool SetWeaponDrawn(bool bDraw, EVaesenEquipmentSlot WeaponSlot = EVaesenEquipmentSlot::MainHand);
+
+	/** Server: takes the item out of Slot for throwing (no inventory involved); returns a copy owned by NewOuter. */
+	UVaesenItem* TakeOutForThrow(EVaesenEquipmentSlot Slot, UObject* NewOuter);
+
+	/** The draw or sheath montage reached its grab frame (AN_WeaponGrab / AN_WeaponRelease), on every machine. */
+	void HandleWeaponGrabNotify();
+
+	/** Puts every weapon actor where it belongs now (hand or sheath). Called when one arrives on a client too. */
+	void RefreshWeaponAttachments();
+
+	/** A weapon was drawn or sheathed (at the grab moment, on every machine). */
+	UPROPERTY(BlueprintAssignable, Category = "Equipment|Weapons")
+	FVaesenDrawStateChanged OnDrawStateChanged;
+
 protected:
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 
 private:
 	AVaesenBaseCharacter* GetCharacter() const;
@@ -160,4 +243,61 @@ private:
 	/** The items whose look is on the character now (so the ones taken off can be removed). */
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<UVaesenEquippableItem>> AppliedItems;
+
+	// --- Drawing and sheathing ---
+
+	/** The set to draw by default: the main-hand set if there is one, else the sidearm. */
+	EVaesenEquipmentSlot GetDefaultDrawSlot() const;
+
+	/** Whether there's a weapon to draw in this set. */
+	bool HasWeaponSet(EVaesenEquipmentSlot WeaponSlot) const;
+
+	/** The slots a drawn set holds: MainHand (and OffHand), or Sidearm. */
+	static bool IsInSet(EVaesenEquipmentSlot Slot, EVaesenEquipmentSlot SetSlot);
+
+	UFUNCTION(Server, Reliable)
+	void ServerSetWeaponDrawn(bool bDraw, EVaesenEquipmentSlot WeaponSlot);
+
+	UFUNCTION()
+	void OnRep_DrawState();
+
+	/** Works toward DrawState from AppliedDrawState: sheathe what's drawn, draw what's wanted (bAnimate = with montages). */
+	void ApplyDrawState(bool bAnimate);
+
+	/** Starts the next queued draw or sheath. */
+	void RunNextDrawStep();
+
+	/** The grab moment of the running step: the weapon changes hands. */
+	void GrabForCurrentStep();
+
+	/** The running step is over. */
+	void FinishCurrentStep();
+
+	/** Sets the drawn tag and the weapon's anim layer to match AppliedDrawState. */
+	void ApplyDrawnLook();
+
+	struct FDrawStep
+	{
+		bool bDraw = false;
+		EVaesenEquipmentSlot WeaponSlot = EVaesenEquipmentSlot::MainHand;
+	};
+
+	/** What the server wants. */
+	UPROPERTY(ReplicatedUsing = OnRep_DrawState)
+	FVaesenDrawState DrawState;
+
+	/** What's in the hand on this machine now. */
+	FVaesenDrawState AppliedDrawState;
+
+	TArray<FDrawStep> DrawSteps;
+	FDrawStep CurrentStep;
+	bool bStepRunning = false;
+	bool bStepGrabbed = false;
+	bool bDrawStateInitialized = false;
+	FTimerHandle GrabTimer;
+	FTimerHandle StepTimer;
+
+	/** The anim layer linked now (to unlink it again). */
+	UPROPERTY(Transient)
+	TSubclassOf<UAnimInstance> LinkedAnimLayer;
 };

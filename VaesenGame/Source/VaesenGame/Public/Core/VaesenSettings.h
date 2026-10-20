@@ -12,6 +12,9 @@ class UVaesenInventoryScreenWidget;
 class UVaesenQuickBarWidget;
 class UVaesenLoadingScreenWidget;
 class UVaesenUIStyle;
+class UVaesenWeaponCategoryDefaults;
+class UVaesenCombatHUDWidget;
+class UGameplayEffect;
 
 /** How a map looks on the loading screen. */
 USTRUCT()
@@ -151,4 +154,16 @@ public:
 	/** Played when the login button is pressed (or Enter in the password box). Leave empty for none. */
 	UPROPERTY(Config, EditAnywhere, Category = "Audio")
 	TSoftObjectPtr<USoundBase> LoginButtonSound;
+
+	/** Per weapon category: anim layers, montages, attacks, block profiles, sounds; per sheath socket: draw montages. Empty = built-in grey-box defaults. */
+	UPROPERTY(Config, EditAnywhere, Category = "Combat")
+	TSoftObjectPtr<UVaesenWeaponCategoryDefaults> WeaponCategoryDefaults;
+
+	/** Crosshair, ammo, hit markers and the throw arc (parent class VaesenCombatHUDWidget). Empty = the C++ class itself, which draws everything. */
+	UPROPERTY(Config, EditAnywhere, Category = "Combat")
+	TSoftClassPtr<UVaesenCombatHUDWidget> CombatHUDWidget;
+
+	/** The damage effect (GE_Damage). Empty = the C++ UVaesenGE_Damage. */
+	UPROPERTY(Config, EditAnywhere, Category = "Combat")
+	TSoftClassPtr<UGameplayEffect> DamageEffect;
 };

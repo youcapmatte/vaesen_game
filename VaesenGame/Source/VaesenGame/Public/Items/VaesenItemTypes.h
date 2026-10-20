@@ -9,7 +9,8 @@
  *   Head, Chest (torso and arms), Hands, Legs, Feet  - replace that modular body part's mesh
  *   Back                                              - a cloak, worn over the body
  *   FullBody                                          - one suit for the whole body; NPCs only
- * Then MainHand, OffHand (weapons, tools), Talisman (charms) and Bag (satchel, backpack).
+ * Then MainHand, OffHand (weapons, tools), Talisman (charms), Bag (satchel, backpack) and Sidearm (a second weapon,
+ * carried in its own sheath while the main-hand one is in use).
  */
 UENUM(BlueprintType)
 enum class EVaesenEquipmentSlot : uint8
@@ -24,7 +25,9 @@ enum class EVaesenEquipmentSlot : uint8
 	MainHand,
 	OffHand,
 	Talisman,
-	Bag
+	Bag,
+	/** A second weapon carried alongside the main hand one (a pistol on the hip with a rifle on the back). */
+	Sidearm
 };
 
 /** Whether the slot is for armor (clothes): Head through FullBody. */
@@ -41,14 +44,6 @@ enum class EVaesenArmorFit : uint8
 	ReplacesBodyPart,
 	/** Added on top; the body part stays (a hat, a hood, a scarf, an open helmet). */
 	WornOver
-};
-
-UENUM(BlueprintType)
-enum class EVaesenWeaponType : uint8
-{
-	Melee,
-	Firearm,
-	Thrown
 };
 
 /** For sorting and the inventory; what it does comes from its effects. */
