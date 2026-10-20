@@ -24,7 +24,7 @@
 
 namespace VaesenCombatTests
 {
-	constexpr EAutomationTestFlags Flags = EAutomationTestFlags::EditorContext | EAutomationTestFlags::ClientContext | EAutomationTestFlags::EngineFilter;
+	constexpr EAutomationTestFlags CombatTestFlags = EAutomationTestFlags::EditorContext | EAutomationTestFlags::ClientContext | EAutomationTestFlags::EngineFilter;
 
 	FVaesenDamagePacket Packet(std::initializer_list<FVaesenDamageEntry> Entries)
 	{
@@ -95,7 +95,7 @@ namespace VaesenCombatTests
 
 using namespace VaesenCombatTests;
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenDamageProtectionTest, "Vaesen.Combat.Damage.Protection", Flags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenDamageProtectionTest, "Vaesen.Combat.Damage.Protection", CombatTestFlags)
 bool FVaesenDamageProtectionTest::RunTest(const FString& Parameters)
 {
 	// Each entry is reduced by its own protection, never below zero; a weakness adds.
@@ -110,7 +110,7 @@ bool FVaesenDamageProtectionTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenDamageUnprotectedTypeTest, "Vaesen.Combat.Damage.TypeWithoutProtection", Flags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenDamageUnprotectedTypeTest, "Vaesen.Combat.Damage.TypeWithoutProtection", CombatTestFlags)
 bool FVaesenDamageUnprotectedTypeTest::RunTest(const FString& Parameters)
 {
 	// An iron blade: Slashing is reduced by armor, Iron isn't (no protection attribute for it).
@@ -122,7 +122,7 @@ bool FVaesenDamageUnprotectedTypeTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenDamageBlockTest, "Vaesen.Combat.Damage.Block", Flags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenDamageBlockTest, "Vaesen.Combat.Damage.Block", CombatTestFlags)
 bool FVaesenDamageBlockTest::RunTest(const FString& Parameters)
 {
 	const FVaesenBlockProfile Block = SwordBlock();
@@ -137,7 +137,7 @@ bool FVaesenDamageBlockTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenDamageProtectionThenBlockTest, "Vaesen.Combat.Damage.ProtectionThenBlock", Flags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenDamageProtectionThenBlockTest, "Vaesen.Combat.Damage.ProtectionThenBlock", CombatTestFlags)
 bool FVaesenDamageProtectionThenBlockTest::RunTest(const FString& Parameters)
 {
 	// Protection first, then the block takes its share of what's left.
@@ -149,7 +149,7 @@ bool FVaesenDamageProtectionThenBlockTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenDamageParryTest, "Vaesen.Combat.Damage.Parry", Flags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenDamageParryTest, "Vaesen.Combat.Damage.Parry", CombatTestFlags)
 bool FVaesenDamageParryTest::RunTest(const FString& Parameters)
 {
 	const FVaesenBlockProfile Block = SwordBlock();
@@ -161,7 +161,7 @@ bool FVaesenDamageParryTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenBlockProfileTest, "Vaesen.Combat.Damage.BlockProfileLookup", Flags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenBlockProfileTest, "Vaesen.Combat.Damage.BlockProfileLookup", CombatTestFlags)
 bool FVaesenBlockProfileTest::RunTest(const FString& Parameters)
 {
 	FVaesenBlockProfile Block;
@@ -175,7 +175,7 @@ bool FVaesenBlockProfileTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenFacingTest, "Vaesen.Combat.Damage.BlockFacing", Flags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenFacingTest, "Vaesen.Combat.Damage.BlockFacing", CombatTestFlags)
 bool FVaesenFacingTest::RunTest(const FString& Parameters)
 {
 	const FVector Blocker = FVector::ZeroVector;
@@ -188,7 +188,7 @@ bool FVaesenFacingTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenPacketTest, "Vaesen.Combat.Damage.Packet", Flags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenPacketTest, "Vaesen.Combat.Damage.Packet", CombatTestFlags)
 bool FVaesenPacketTest::RunTest(const FString& Parameters)
 {
 	FVaesenDamagePacket Damage = Packet({ { VaesenTags::Damage_Piercing, 20.0f } });
@@ -202,7 +202,7 @@ bool FVaesenPacketTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenDurabilityTest, "Vaesen.Combat.Durability", Flags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenDurabilityTest, "Vaesen.Combat.Durability", CombatTestFlags)
 bool FVaesenDurabilityTest::RunTest(const FString& Parameters)
 {
 	TestEqual(TEXT("Wear"), VaesenDamageMath::ApplyWear(100.0f, 12.5f), 87.5f);
@@ -217,7 +217,7 @@ bool FVaesenDurabilityTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenCategoryDefaultsTest, "Vaesen.Combat.CategoryDefaults", Flags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenCategoryDefaultsTest, "Vaesen.Combat.CategoryDefaults", CombatTestFlags)
 bool FVaesenCategoryDefaultsTest::RunTest(const FString& Parameters)
 {
 	// Without any asset every category still has an attack, and every sheath location exists.
@@ -238,7 +238,7 @@ bool FVaesenCategoryDefaultsTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenImpactTableTest, "Vaesen.Combat.ImpactTable", Flags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenImpactTableTest, "Vaesen.Combat.ImpactTable", CombatTestFlags)
 bool FVaesenImpactTableTest::RunTest(const FString& Parameters)
 {
 	UVaesenImpactEffects* Table = NewObject<UVaesenImpactEffects>();
@@ -259,7 +259,7 @@ bool FVaesenImpactTableTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenAmmoAcceptTest, "Vaesen.Combat.Ammo.Accepts", Flags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenAmmoAcceptTest, "Vaesen.Combat.Ammo.Accepts", CombatTestFlags)
 bool FVaesenAmmoAcceptTest::RunTest(const FString& Parameters)
 {
 	const UVaesenTestRevolver* Revolver = GetDefault<UVaesenTestRevolver>();
@@ -273,7 +273,7 @@ bool FVaesenAmmoAcceptTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenAmmoInventoryTest, "Vaesen.Combat.Ammo.CountingThroughPouches", Flags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenAmmoInventoryTest, "Vaesen.Combat.Ammo.CountingThroughPouches", CombatTestFlags)
 bool FVaesenAmmoInventoryTest::RunTest(const FString& Parameters)
 {
 	FTestWorld TestWorld;
@@ -306,7 +306,7 @@ bool FVaesenAmmoInventoryTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenDamageExecutionTest, "Vaesen.Combat.Damage.ExecutionOnDummy", Flags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenDamageExecutionTest, "Vaesen.Combat.Damage.ExecutionOnDummy", CombatTestFlags)
 bool FVaesenDamageExecutionTest::RunTest(const FString& Parameters)
 {
 	FTestWorld TestWorld;
@@ -364,7 +364,7 @@ namespace VaesenCombatTests
 	}
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenFlowRevolverTest, "Vaesen.Combat.Flow.EquipDrawLoadFire", Flags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenFlowRevolverTest, "Vaesen.Combat.Flow.EquipDrawLoadFire", CombatTestFlags)
 bool FVaesenFlowRevolverTest::RunTest(const FString& Parameters)
 {
 	FTestWorld TestWorld;
@@ -445,7 +445,7 @@ bool FVaesenFlowRevolverTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenFlowBoltActionTest, "Vaesen.Combat.Flow.BoltActionNeedsCycle", Flags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenFlowBoltActionTest, "Vaesen.Combat.Flow.BoltActionNeedsCycle", CombatTestFlags)
 bool FVaesenFlowBoltActionTest::RunTest(const FString& Parameters)
 {
 	FTestWorld TestWorld;
@@ -475,7 +475,7 @@ bool FVaesenFlowBoltActionTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenFlowBlockParryTest, "Vaesen.Combat.Flow.BlockParryDurability", Flags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenFlowBlockParryTest, "Vaesen.Combat.Flow.BlockParryDurability", CombatTestFlags)
 bool FVaesenFlowBlockParryTest::RunTest(const FString& Parameters)
 {
 	FTestWorld TestWorld;
@@ -548,7 +548,7 @@ bool FVaesenFlowBlockParryTest::RunTest(const FString& Parameters)
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenFlowStaminaTest, "Vaesen.Combat.Flow.StaminaCostAndRegen", Flags)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenFlowStaminaTest, "Vaesen.Combat.Flow.StaminaCostAndRegen", CombatTestFlags)
 bool FVaesenFlowStaminaTest::RunTest(const FString& Parameters)
 {
 	FTestWorld TestWorld;
