@@ -34,6 +34,9 @@ public:
 		Category = EVaesenWeaponCategory::Revolver;
 		Slot = EVaesenEquipmentSlot::Sidearm;
 		MagazineSize = 6;
+		ReloadTime = 0.2f;
+		SpreadHip = 0.0f;
+		SpreadMoving = 0.0f;
 		AcceptedAmmo = UVaesenTestCartridge::StaticClass();
 		ReloadStyle = EVaesenReloadStyle::Cylinder;
 		CasingEjection = EVaesenCasingEjection::OnReload;
@@ -69,6 +72,59 @@ public:
 		Category = EVaesenWeaponCategory::OneHandedSword;
 		Slot = EVaesenEquipmentSlot::MainHand;
 		Throwing.bCanBeThrown = true;
+	}
+};
+
+/** Arrows: stick and can be picked up again. */
+UCLASS(NotBlueprintable, HideDropdown, meta = (HiddenNode))
+class UVaesenTestArrow : public UVaesenAmmoItem
+{
+	GENERATED_BODY()
+
+public:
+	UVaesenTestArrow()
+	{
+		bSticksInSurfaces = true;
+		bRecoverable = true;
+	}
+};
+
+UCLASS(NotBlueprintable, HideDropdown, meta = (HiddenNode))
+class UVaesenTestBow : public UVaesenRangedWeaponItem
+{
+	GENERATED_BODY()
+
+public:
+	UVaesenTestBow()
+	{
+		Category = EVaesenWeaponCategory::Bow;
+		Slot = EVaesenEquipmentSlot::MainHand;
+		bTwoHanded = true;
+		Action = EVaesenWeaponAction::Draw;
+		ShotType = EVaesenShotType::Projectile;
+		LaunchSpeed = 6000.0f;
+		AcceptedAmmo = UVaesenTestArrow::StaticClass();
+		SpreadHip = 0.0f;
+		SpreadAimed = 0.0f;
+		SpreadMoving = 0.0f;
+	}
+};
+
+/** A throwable stone (stacks). */
+UCLASS(NotBlueprintable, HideDropdown, meta = (HiddenNode))
+class UVaesenTestStone : public UVaesenItem
+{
+	GENERATED_BODY()
+
+public:
+	UVaesenTestStone()
+	{
+		bStackable = true;
+		MaxStackSize = 10;
+		Throwing.bCanBeThrown = true;
+		Throwing.Style = EVaesenThrowStyle::Lob;
+		Throwing.Speed = 1300.0f;
+		Throwing.Damage.Entries.Emplace(VaesenTags::Damage_Blunt, 6.0f);
 	}
 };
 

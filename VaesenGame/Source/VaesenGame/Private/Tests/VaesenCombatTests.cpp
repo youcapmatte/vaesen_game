@@ -13,6 +13,15 @@
 #include "Inventory/VaesenLootContainer.h"
 #include "Items/VaesenMeleeWeaponItem.h"
 #include "Misc/AutomationTest.h"
+#include "AIController.h"
+#include "EngineUtils.h"
+#include "Engine/StaticMesh.h"
+#include "Engine/StaticMeshActor.h"
+#include "Components/StaticMeshComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "Items/VaesenPickup.h"
+#include "Weapons/VaesenProjectile.h"
+#include "Weapons/VaesenThrownItem.h"
 #include "Abilities/VaesenMeleeAbilities.h"
 #include "Abilities/VaesenRangedAbilities.h"
 #include "Characters/VaesenPlayerCharacter.h"
@@ -78,6 +87,15 @@ namespace VaesenCombatTests
 			FActorSpawnParameters Params;
 			Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 			return World->SpawnActor<T>(T::StaticClass(), FTransform(Rotation, Location), Params);
+		}
+
+		/** A big floor just under the feet of characters standing at Z = 0 (controlled characters fall otherwise). */
+		void AddFloor()
+		{
+			AStaticMeshActor* Floor = World->SpawnActor<AStaticMeshActor>(FVector(0.0, 0.0, -146.0), FRotator::ZeroRotator);
+			Floor->GetStaticMeshComponent()->SetMobility(EComponentMobility::Movable);
+			Floor->GetStaticMeshComponent()->SetStaticMesh(LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cube.Cube")));
+			Floor->SetActorScale3D(FVector(100.0, 100.0, 1.0));
 		}
 
 		/** Runs the world for Seconds (timers, ticks), in small steps. */
@@ -582,6 +600,356 @@ bool FVaesenFlowStaminaTest::RunTest(const FString& Parameters)
 	TestWorld.Run(2.0f);
 	ASC->SetNumericAttributeBase(UVaesenAttributeSet::GetStaminaAttribute(), 0.0f);
 	TestFalse(TEXT("No stamina, no punch"), ASC->TryActivateAbilityByClass(UVaesenGA_MeleeLight::StaticClass()));
+	return true;
+}
+
+// --- Ability tests: the real abilities, through the ability inputs, on an AI-controlled character (locally
+// controlled on the server, so every ability runs its whole path: input, cost, aim, timers, effects) ---
+
+namespace VaesenCombatTests
+{
+	/** A player character possessed by an AI controller, facing +X with a level view. */
+	AVaesenPlayerCharacter* SpawnFighter(FTestWorld& TestWorld, const FVector& Location = FVector::ZeroVector)
+	{
+		TestWorld.AddFloor();
+		AVaesenPlayerCharacter* Character = TestWorld.Spawn<AVaesenPlayerCharacter>(Location);
+		AAIController* Controller = TestWorld.Spawn<AAIController>(Location);
+		if (Character && Controller)
+		{
+			Controller->Possess(Character);
+			Controller->SetControlRotation(FRotator::ZeroRotator);
+		}
+		return Character;
+	}
+
+	float HealthOf(const AVaesenTrainingDummy* Dummy)
+	{
+		return Dummy->GetVaesenAbilitySystem()->GetNumericAttribute(UVaesenAttributeSet::GetHealthAttribute());
+	}
+
+	int32 CountActors(UWorld* World, TSubclassOf<AActor> Class)
+	{
+		int32 Count = 0;
+		for (TActorIterator<AActor> It(World, Class); It; ++It)
+		{
+			Count += IsValid(*It) ? 1 : 0;
+		}
+		return Count;
+	}
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenAbilityRangedTest, "Vaesen.Combat.Abilities.ReloadFireInterrupt", CombatTestFlags)
+bool FVaesenAbilityRangedTest::RunTest(const FString& Parameters)
+{
+	FTestWorld TestWorld;
+	AVaesenPlayerCharacter* Player = SpawnFighter(TestWorld);
+	AVaesenTrainingDummy* Dummy = TestWorld.Spawn<AVaesenTrainingDummy>(FVector(400.0, 0.0, 0.0));
+	UVaesenRangedWeaponItem* Revolver = Cast<UVaesenRangedWeaponItem>(GiveAndEquip(Player, UVaesenTestRevolver::StaticClass()));
+	UVaesenAbilitySystemComponent* ASC = Player->GetVaesenAbilitySystem();
+	if (!TestNotNull(TEXT("Revolver"), Revolver) || !TestTrue(TEXT("Locally controlled on the server"), Player->IsLocallyControlled()))
+	{
+		return false;
+	}
+
+	// H draws (through GA_Holster).
+	ASC->PressAbilityInput(EVaesenAbilityInput::Holster);
+	ASC->ReleaseAbilityInput(EVaesenAbilityInput::Holster);
+	TestWorld.Run(1.0f);
+	TestTrue(TEXT("H drew the revolver"), Player->GetEquipment()->GetDrawnWeapon() == Revolver);
+
+	// Fire with nothing loaded: nothing.
+	ASC->PressAbilityInput(EVaesenAbilityInput::Attack);
+	ASC->ReleaseAbilityInput(EVaesenAbilityInput::Attack);
+	TestEqual(TEXT("Dry: dummy untouched"), HealthOf(Dummy), 100.0f);
+
+	// R with no ammo: nothing starts.
+	ASC->PressAbilityInput(EVaesenAbilityInput::Reload);
+	TestFalse(TEXT("No ammo, no reload"), ASC->HasMatchingGameplayTag(VaesenTags::State_Reloading));
+	ASC->ReleaseAbilityInput(EVaesenAbilityInput::Reload);
+
+	// R with ammo: a cylinder fills round by round.
+	Player->GetInventory()->TryAddItemOfClass(UVaesenTestCartridge::StaticClass(), 10);
+	ASC->PressAbilityInput(EVaesenAbilityInput::Reload);
+	ASC->ReleaseAbilityInput(EVaesenAbilityInput::Reload);
+	TestTrue(TEXT("Reloading"), ASC->HasMatchingGameplayTag(VaesenTags::State_Reloading));
+	TestWorld.Run(0.3f);
+	TestEqual(TEXT("One round after one reload time"), Revolver->GetLoadedRounds(), 1);
+	TestWorld.Run(1.5f);
+	TestEqual(TEXT("Full"), Revolver->GetLoadedRounds(), 6);
+	TestFalse(TEXT("Reload ended by itself"), ASC->HasMatchingGameplayTag(VaesenTags::State_Reloading));
+	TestEqual(TEXT("4 cartridges left"), Player->GetInventory()->GetItemCount(UVaesenTestCartridge::StaticClass()), 4);
+
+	// Fire: through the ability, the aim and the server.
+	ASC->PressAbilityInput(EVaesenAbilityInput::Attack);
+	ASC->ReleaseAbilityInput(EVaesenAbilityInput::Attack);
+	TestEqual(TEXT("Hit the dummy"), HealthOf(Dummy), 80.0f);
+	TestEqual(TEXT("Round used"), Revolver->GetLoadedRounds(), 5);
+
+	// Again at once: the fire interval holds it back.
+	ASC->PressAbilityInput(EVaesenAbilityInput::Attack);
+	ASC->ReleaseAbilityInput(EVaesenAbilityInput::Attack);
+	TestEqual(TEXT("Too soon"), Revolver->GetLoadedRounds(), 5);
+
+	// Firing interrupts a cylinder reload between rounds.
+	TestWorld.Run(Revolver->FireInterval + 0.05f);
+	ASC->PressAbilityInput(EVaesenAbilityInput::Attack);
+	ASC->ReleaseAbilityInput(EVaesenAbilityInput::Attack);
+	TestEqual(TEXT("Fired again"), Revolver->GetLoadedRounds(), 4);
+	TestWorld.Run(Revolver->FireInterval + 0.05f);
+	ASC->PressAbilityInput(EVaesenAbilityInput::Reload);
+	ASC->ReleaseAbilityInput(EVaesenAbilityInput::Reload);
+	TestWorld.Run(0.25f);
+	TestEqual(TEXT("A round in"), Revolver->GetLoadedRounds(), 5);
+	ASC->PressAbilityInput(EVaesenAbilityInput::Attack);
+	ASC->ReleaseAbilityInput(EVaesenAbilityInput::Attack);
+	TestFalse(TEXT("Reload interrupted"), ASC->HasMatchingGameplayTag(VaesenTags::State_Reloading));
+	TestEqual(TEXT("And the shot went"), Revolver->GetLoadedRounds(), 4);
+
+	// Aim: right mouse with a gun aims (and never blocks).
+	ASC->PressAbilityInput(EVaesenAbilityInput::AimOrBlock);
+	TestTrue(TEXT("Aiming"), ASC->HasMatchingGameplayTag(VaesenTags::State_Aiming));
+	TestFalse(TEXT("Not blocking"), ASC->HasMatchingGameplayTag(VaesenTags::State_Blocking));
+	TestTrue(TEXT("Faces the aim"), Player->bUseControllerRotationYaw);
+	ASC->ReleaseAbilityInput(EVaesenAbilityInput::AimOrBlock);
+	TestFalse(TEXT("Aim released"), ASC->HasMatchingGameplayTag(VaesenTags::State_Aiming));
+
+	// Sheathing cancels a reload in progress.
+	TestWorld.Run(0.5f);
+	ASC->PressAbilityInput(EVaesenAbilityInput::Reload);
+	ASC->ReleaseAbilityInput(EVaesenAbilityInput::Reload);
+	TestTrue(TEXT("Reloading again"), ASC->HasMatchingGameplayTag(VaesenTags::State_Reloading));
+	Player->GetEquipment()->RequestSheathe();
+	TestFalse(TEXT("Sheathing stopped the reload"), ASC->HasMatchingGameplayTag(VaesenTags::State_Reloading));
+	TestWorld.Run(1.0f);
+	TestFalse(TEXT("Sheathed"), Player->GetEquipment()->IsWeaponDrawn());
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenAbilityBoltTest, "Vaesen.Combat.Abilities.AutoCycle", CombatTestFlags)
+bool FVaesenAbilityBoltTest::RunTest(const FString& Parameters)
+{
+	FTestWorld TestWorld;
+	AVaesenPlayerCharacter* Player = SpawnFighter(TestWorld);
+	UVaesenRangedWeaponItem* Rifle = Cast<UVaesenRangedWeaponItem>(GiveAndEquip(Player, UVaesenTestRifle::StaticClass()));
+	UVaesenAbilitySystemComponent* ASC = Player->GetVaesenAbilitySystem();
+	Player->GetEquipment()->RequestToggleWeapon();
+	TestWorld.Run(1.0f);
+	Player->GetInventory()->TryAddItemOfClass(UVaesenTestBullet::StaticClass(), 5);
+	ASC->PressAbilityInput(EVaesenAbilityInput::Reload);
+	ASC->ReleaseAbilityInput(EVaesenAbilityInput::Reload);
+	TestWorld.Run(Rifle->ReloadTime + 0.1f);
+	TestEqual(TEXT("Magazine loaded at once"), Rifle->GetLoadedRounds(), 5);
+
+	ASC->PressAbilityInput(EVaesenAbilityInput::Attack);
+	ASC->ReleaseAbilityInput(EVaesenAbilityInput::Attack);
+	TestEqual(TEXT("Fired"), Rifle->GetLoadedRounds(), 4);
+	TestWorld.Run(0.1f);
+	TestTrue(TEXT("The bolt is worked by itself"), ASC->HasMatchingGameplayTag(VaesenTags::State_Cycling));
+	ASC->PressAbilityInput(EVaesenAbilityInput::Attack);
+	ASC->ReleaseAbilityInput(EVaesenAbilityInput::Attack);
+	TestEqual(TEXT("Can't fire while cycling"), Rifle->GetLoadedRounds(), 4);
+	TestWorld.Run(Rifle->CycleTime + 0.1f);
+	TestFalse(TEXT("Cycled"), Rifle->NeedsCycle());
+	ASC->PressAbilityInput(EVaesenAbilityInput::Attack);
+	ASC->ReleaseAbilityInput(EVaesenAbilityInput::Attack);
+	TestEqual(TEXT("Fires after the cycle"), Rifle->GetLoadedRounds(), 3);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenAbilityMeleeTest, "Vaesen.Combat.Abilities.MeleeLightHeavyPunch", CombatTestFlags)
+bool FVaesenAbilityMeleeTest::RunTest(const FString& Parameters)
+{
+	FTestWorld TestWorld;
+	AVaesenPlayerCharacter* Player = SpawnFighter(TestWorld);
+	AVaesenTrainingDummy* Dummy = TestWorld.Spawn<AVaesenTrainingDummy>(FVector(100.0, 0.0, 0.0));
+	UVaesenAbilitySystemComponent* ASC = Player->GetVaesenAbilitySystem();
+	const auto Stamina = [ASC]() { return ASC->GetNumericAttribute(UVaesenAttributeSet::GetStaminaAttribute()); };
+	const UVaesenWeaponCategoryDefaults* Defaults = UVaesenWeaponCategoryDefaults::Get();
+
+	// Bare hands: a punch.
+	ASC->PressAbilityInput(EVaesenAbilityInput::Attack);
+	ASC->ReleaseAbilityInput(EVaesenAbilityInput::Attack);
+	TestTrue(TEXT("Punching"), ASC->HasMatchingGameplayTag(VaesenTags::State_Attacking));
+	TestWorld.Run(1.0f);
+	TestEqual(TEXT("Punch"), 100.0f - HealthOf(Dummy), Defaults->GetCategory(EVaesenWeaponCategory::Unarmed).LightAttack.Damage.GetTotal());
+	TestFalse(TEXT("Punch over"), ASC->HasMatchingGameplayTag(VaesenTags::State_Attacking));
+	Dummy->GetVaesenAbilitySystem()->ResetVitals();
+
+	// A sword: light (Slashing), with stamina and durability.
+	UVaesenWeaponItem* Sword = GiveAndEquip(Player, UVaesenTestSword::StaticClass());
+	Player->GetEquipment()->RequestToggleWeapon();
+	TestWorld.Run(1.0f);
+	ASC->SetNumericAttributeBase(UVaesenAttributeSet::GetStaminaAttribute(), 100.0f);
+	const FVaesenCategoryDefaults& SwordDefaults = Defaults->GetCategory(EVaesenWeaponCategory::OneHandedSword);
+	ASC->PressAbilityInput(EVaesenAbilityInput::Attack);
+	ASC->ReleaseAbilityInput(EVaesenAbilityInput::Attack);
+	TestEqual(TEXT("Light stamina"), Stamina(), 100.0f - SwordDefaults.LightAttack.StaminaCost);
+	TestWorld.Run(SwordDefaults.LightAttack.Duration + SwordDefaults.LightAttack.Cooldown + 0.1f);
+	TestEqual(TEXT("Sword light"), 100.0f - HealthOf(Dummy), SwordDefaults.LightAttack.Damage.GetTotal());
+	TestEqual(TEXT("Sword wore"), Sword->GetDurability(), Sword->MaxDurability - SwordDefaults.LightAttack.DurabilityCostPerHit);
+	Dummy->GetVaesenAbilitySystem()->ResetVitals();
+
+	// Heavy (Shift + left mouse).
+	ASC->SetNumericAttributeBase(UVaesenAttributeSet::GetStaminaAttribute(), 100.0f);
+	ASC->PressAbilityInput(EVaesenAbilityInput::HeavyAttack);
+	ASC->ReleaseAbilityInput(EVaesenAbilityInput::HeavyAttack);
+	TestEqual(TEXT("Heavy stamina"), Stamina(), 100.0f - SwordDefaults.HeavyAttack.StaminaCost);
+	TestWorld.Run(SwordDefaults.HeavyAttack.Duration + 0.2f);
+	TestEqual(TEXT("Sword heavy"), 100.0f - HealthOf(Dummy), SwordDefaults.HeavyAttack.Damage.GetTotal());
+	Dummy->GetVaesenAbilitySystem()->ResetVitals();
+
+	// No stamina: no attack.
+	ASC->SetNumericAttributeBase(UVaesenAttributeSet::GetStaminaAttribute(), 0.0f);
+	ASC->PressAbilityInput(EVaesenAbilityInput::Attack);
+	ASC->ReleaseAbilityInput(EVaesenAbilityInput::Attack);
+	TestFalse(TEXT("No stamina, no swing"), ASC->HasMatchingGameplayTag(VaesenTags::State_Attacking));
+
+	// Broken: no attack either.
+	ASC->SetNumericAttributeBase(UVaesenAttributeSet::GetStaminaAttribute(), 100.0f);
+	Sword->ApplyWear(1000.0f);
+	ASC->PressAbilityInput(EVaesenAbilityInput::Attack);
+	ASC->ReleaseAbilityInput(EVaesenAbilityInput::Attack);
+	TestFalse(TEXT("Broken, no swing"), ASC->HasMatchingGameplayTag(VaesenTags::State_Attacking));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenAbilityBlockTest, "Vaesen.Combat.Abilities.BlockAndParryInput", CombatTestFlags)
+bool FVaesenAbilityBlockTest::RunTest(const FString& Parameters)
+{
+	FTestWorld TestWorld;
+	AVaesenPlayerCharacter* Player = SpawnFighter(TestWorld);
+	AVaesenTrainingDummy* Attacker = TestWorld.Spawn<AVaesenTrainingDummy>(FVector(150.0, 0.0, 0.0));
+	UVaesenWeaponItem* Sword = GiveAndEquip(Player, UVaesenTestSword::StaticClass());
+	UVaesenAbilitySystemComponent* ASC = Player->GetVaesenAbilitySystem();
+	Player->GetEquipment()->RequestToggleWeapon();
+	TestWorld.Run(1.0f);
+	const auto Health = [ASC]() { return ASC->GetNumericAttribute(UVaesenAttributeSet::GetHealthAttribute()); };
+	const FVaesenDamagePacket Swing = Packet({ { VaesenTags::Damage_Slashing, 10.0f } });
+	const float BaseSpeed = Player->GetCharacterMovement()->MaxWalkSpeed;
+
+	// Right mouse with a sword: block, and at first the parry window.
+	ASC->PressAbilityInput(EVaesenAbilityInput::AimOrBlock);
+	TestTrue(TEXT("Blocking"), ASC->HasMatchingGameplayTag(VaesenTags::State_Blocking));
+	TestTrue(TEXT("Parry window"), ASC->HasMatchingGameplayTag(VaesenTags::State_ParryWindow));
+	TestTrue(TEXT("Slower while blocking"), Player->GetCharacterMovement()->MaxWalkSpeed < BaseSpeed);
+	float Before = Health();
+	UVaesenCombatLibrary::ApplyDamagePacket(Attacker, Player, Swing, FHitResult(), nullptr);
+	TestEqual(TEXT("Parried"), Before - Health(), 0.0f);
+	TestTrue(TEXT("Attacker staggered"), Attacker->GetVaesenAbilitySystem()->HasMatchingGameplayTag(VaesenTags::State_Staggered));
+
+	// After the window: a plain block.
+	TestWorld.Run(0.5f);
+	TestFalse(TEXT("Window closed"), ASC->HasMatchingGameplayTag(VaesenTags::State_ParryWindow));
+	Before = Health();
+	UVaesenCombatLibrary::ApplyDamagePacket(Attacker, Player, Swing, FHitResult(), nullptr);
+	TestEqual(TEXT("Blocked"), Before - Health(), 3.0f);
+	TestEqual(TEXT("Wear"), Sword->GetDurability(), Sword->MaxDurability - 7.0f);
+
+	// Holding block costs stamina and stops regen.
+	const float StaminaBefore = ASC->GetNumericAttribute(UVaesenAttributeSet::GetStaminaAttribute());
+	TestWorld.Run(1.0f);
+	TestTrue(TEXT("Stamina drains while holding"), ASC->GetNumericAttribute(UVaesenAttributeSet::GetStaminaAttribute()) < StaminaBefore);
+
+	// Release: no longer blocking, full speed again.
+	ASC->ReleaseAbilityInput(EVaesenAbilityInput::AimOrBlock);
+	TestFalse(TEXT("Released"), ASC->HasMatchingGameplayTag(VaesenTags::State_Blocking));
+	TestEqual(TEXT("Speed back"), Player->GetCharacterMovement()->MaxWalkSpeed, BaseSpeed);
+	Before = Health();
+	UVaesenCombatLibrary::ApplyDamagePacket(Attacker, Player, Swing, FHitResult(), nullptr);
+	TestEqual(TEXT("Not blocking any more"), Before - Health(), 10.0f);
+
+	// Attacking out of a block drops it.
+	ASC->PressAbilityInput(EVaesenAbilityInput::AimOrBlock);
+	ASC->PressAbilityInput(EVaesenAbilityInput::Attack);
+	TestFalse(TEXT("Attack cancels the block"), ASC->HasMatchingGameplayTag(VaesenTags::State_Blocking));
+	TestTrue(TEXT("Attacking"), ASC->HasMatchingGameplayTag(VaesenTags::State_Attacking));
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenAbilityThrowTest, "Vaesen.Combat.Abilities.Throw", CombatTestFlags)
+bool FVaesenAbilityThrowTest::RunTest(const FString& Parameters)
+{
+	FTestWorld TestWorld;
+	AVaesenPlayerCharacter* Player = SpawnFighter(TestWorld);
+	AVaesenTrainingDummy* Dummy = TestWorld.Spawn<AVaesenTrainingDummy>(FVector(300.0, 0.0, 0.0));
+	UVaesenAbilitySystemComponent* ASC = Player->GetVaesenAbilitySystem();
+	Player->GetController()->SetControlRotation(FRotator(-10.0, 0.0, 0.0));
+
+	// Nothing to throw: G does nothing.
+	ASC->PressAbilityInput(EVaesenAbilityInput::Throw);
+	TestFalse(TEXT("Nothing to throw"), ASC->HasMatchingGameplayTag(VaesenTags::State_Throwing));
+	ASC->ReleaseAbilityInput(EVaesenAbilityInput::Throw);
+
+	// A stone off the stack: aimed while held, thrown on release.
+	Player->GetInventory()->TryAddItemOfClass(UVaesenTestStone::StaticClass(), 3);
+	ASC->PressAbilityInput(EVaesenAbilityInput::Throw);
+	TestTrue(TEXT("Aiming the throw"), ASC->HasMatchingGameplayTag(VaesenTags::State_Throwing));
+	TestEqual(TEXT("Not thrown yet"), Player->GetInventory()->GetItemCount(UVaesenTestStone::StaticClass()), 3);
+	ASC->ReleaseAbilityInput(EVaesenAbilityInput::Throw);
+	TestEqual(TEXT("One off the stack"), Player->GetInventory()->GetItemCount(UVaesenTestStone::StaticClass()), 2);
+	TestEqual(TEXT("In flight"), CountActors(TestWorld.World, AVaesenThrownItem::StaticClass()), 1);
+	TestWorld.Run(0.6f);
+	TestEqual(TEXT("Hit the dummy (Blunt 6)"), 100.0f - HealthOf(Dummy), 6.0f);
+	TestWorld.Run(9.0f);
+	TestEqual(TEXT("Landed"), CountActors(TestWorld.World, AVaesenThrownItem::StaticClass()), 0);
+	TestEqual(TEXT("Became a pickup"), CountActors(TestWorld.World, AVaesenPickup::StaticClass()), 1);
+
+	// A drawn sword: unequipped first, then thrown.
+	GiveAndEquip(Player, UVaesenTestSword::StaticClass());
+	Player->GetEquipment()->RequestToggleWeapon();
+	TestWorld.Run(1.0f);
+	ASC->PressAbilityInput(EVaesenAbilityInput::Throw);
+	ASC->ReleaseAbilityInput(EVaesenAbilityInput::Throw);
+	TestNull(TEXT("Sword no longer equipped"), Player->GetEquipment()->GetItemInSlot(EVaesenEquipmentSlot::MainHand));
+	TestFalse(TEXT("Nothing drawn"), Player->GetEquipment()->IsWeaponDrawn());
+	TestEqual(TEXT("Stones untouched"), Player->GetInventory()->GetItemCount(UVaesenTestStone::StaticClass()), 2);
+	TestEqual(TEXT("Sword in flight"), CountActors(TestWorld.World, AVaesenThrownItem::StaticClass()), 1);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenAbilityBowTest, "Vaesen.Combat.Abilities.BowDraw", CombatTestFlags)
+bool FVaesenAbilityBowTest::RunTest(const FString& Parameters)
+{
+	FTestWorld TestWorld;
+	AVaesenPlayerCharacter* Player = SpawnFighter(TestWorld);
+	AVaesenTrainingDummy* Dummy = TestWorld.Spawn<AVaesenTrainingDummy>(FVector(400.0, 0.0, 0.0));
+	UVaesenRangedWeaponItem* Bow = Cast<UVaesenRangedWeaponItem>(GiveAndEquip(Player, UVaesenTestBow::StaticClass()));
+	UVaesenAbilitySystemComponent* ASC = Player->GetVaesenAbilitySystem();
+	Player->GetEquipment()->RequestToggleWeapon();
+	TestWorld.Run(1.0f);
+	if (!TestTrue(TEXT("Bow drawn"), Player->GetEquipment()->GetDrawnWeapon() == Bow))
+	{
+		return false;
+	}
+
+	// No arrows: no draw.
+	ASC->PressAbilityInput(EVaesenAbilityInput::Attack);
+	TestFalse(TEXT("No arrows"), ASC->HasMatchingGameplayTag(VaesenTags::State_DrawingBow));
+	ASC->ReleaseAbilityInput(EVaesenAbilityInput::Attack);
+
+	Player->GetInventory()->TryAddItemOfClass(UVaesenTestArrow::StaticClass(), 5);
+
+	// Let go while still nocking: let down, no shot.
+	ASC->PressAbilityInput(EVaesenAbilityInput::Attack);
+	TestTrue(TEXT("Drawing"), ASC->HasMatchingGameplayTag(VaesenTags::State_DrawingBow));
+	TestWorld.Run(0.2f);
+	ASC->ReleaseAbilityInput(EVaesenAbilityInput::Attack);
+	TestFalse(TEXT("Let down"), ASC->HasMatchingGameplayTag(VaesenTags::State_DrawingBow));
+	TestEqual(TEXT("Arrow kept"), Player->GetInventory()->GetItemCount(UVaesenTestArrow::StaticClass()), 5);
+	TestEqual(TEXT("No projectile"), CountActors(TestWorld.World, AVaesenProjectile::StaticClass()), 0);
+
+	// Full draw and release: a strong shot that sticks and becomes a pickup.
+	TestWorld.Run(Bow->FireInterval + 0.1f);
+	const float StaminaBefore = ASC->GetNumericAttribute(UVaesenAttributeSet::GetStaminaAttribute());
+	ASC->PressAbilityInput(EVaesenAbilityInput::Attack);
+	TestWorld.Run(Bow->NockTime + Bow->DrawTime + 0.2f);
+	TestTrue(TEXT("Holding a drawn bow costs stamina"), ASC->GetNumericAttribute(UVaesenAttributeSet::GetStaminaAttribute()) < StaminaBefore);
+	ASC->ReleaseAbilityInput(EVaesenAbilityInput::Attack);
+	TestEqual(TEXT("Arrow used"), Player->GetInventory()->GetItemCount(UVaesenTestArrow::StaticClass()), 4);
+	TestEqual(TEXT("Arrow in flight"), CountActors(TestWorld.World, AVaesenProjectile::StaticClass()), 1);
+	TestWorld.Run(0.5f);
+	TestEqual(TEXT("Full draw: full damage"), 100.0f - HealthOf(Dummy), 20.0f);
+	TestEqual(TEXT("Stuck arrow became a pickup"), CountActors(TestWorld.World, AVaesenPickup::StaticClass()), 1);
 	return true;
 }
 
