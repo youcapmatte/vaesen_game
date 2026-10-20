@@ -26,6 +26,7 @@ enum class EVaesenWeaponCategory : uint8
 	Bow,
 	Crossbow
 };
+ENUM_RANGE_BY_FIRST_AND_LAST(EVaesenWeaponCategory, EVaesenWeaponCategory::Unarmed, EVaesenWeaponCategory::Crossbow);
 
 /** How a shot reaches its target. */
 UENUM(BlueprintType)
@@ -139,6 +140,7 @@ enum class EVaesenWeaponSound : uint8
 	GearRattle,
 	GunshotEcho
 };
+ENUM_RANGE_BY_FIRST_AND_LAST(EVaesenWeaponSound, EVaesenWeaponSound::Draw, EVaesenWeaponSound::GunshotEcho);
 
 /** The weapon montages that can be overridden per weapon (empty = the category's from DA_WeaponCategoryDefaults). */
 USTRUCT(BlueprintType)

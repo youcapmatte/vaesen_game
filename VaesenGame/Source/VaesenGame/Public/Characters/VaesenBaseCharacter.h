@@ -80,6 +80,11 @@ public:
 	/** Faces where it aims (strafes) rather than where it walks: aiming, blocking, drawing a bow, throwing. */
 	virtual bool WantsToFaceAim() const;
 
+#if WITH_EDITOR
+	/** For the asset commandlet: grants To instead of From (a GA_ Blueprint instead of its C++ class). */
+	void ReplaceDefaultAbility(UClass* From, UClass* To);
+#endif
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void PossessedBy(AController* NewController) override;

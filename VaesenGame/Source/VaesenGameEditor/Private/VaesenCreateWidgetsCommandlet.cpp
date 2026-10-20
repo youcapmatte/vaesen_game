@@ -48,6 +48,7 @@
 #include "Characters/VaesenPlayerCharacter.h"
 #include "Game/VaesenGameModeBase.h"
 #include "VaesenMannequinSplitter.h"
+#include "VaesenCombatAssets.h"
 #include "InputAction.h"
 #include "InputCoreTypes.h"
 #include "InputMappingContext.h"
@@ -1762,6 +1763,7 @@ int32 UVaesenCreateWidgetsCommandlet::Main(const FString& Params)
 	SetupPickups();
 	SetupInventory();
 	SetupPouches();
+	VaesenCombatAssets::SetupCombat();
 	return 0;
 }
 

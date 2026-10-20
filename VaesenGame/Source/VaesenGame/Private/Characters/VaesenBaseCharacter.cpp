@@ -264,3 +264,16 @@ void AVaesenBaseCharacter::PlayVocal(bool bPain)
 		UGameplayStatics::SpawnSoundAttached(Sound, GetMesh(), TEXT("head"));
 	}
 }
+
+#if WITH_EDITOR
+void AVaesenBaseCharacter::ReplaceDefaultAbility(UClass* From, UClass* To)
+{
+	for (TSubclassOf<UVaesenGameplayAbility>& Ability : DefaultAbilities)
+	{
+		if (Ability.Get() == From && To && To->IsChildOf(UVaesenGameplayAbility::StaticClass()))
+		{
+			Ability = To;
+		}
+	}
+}
+#endif

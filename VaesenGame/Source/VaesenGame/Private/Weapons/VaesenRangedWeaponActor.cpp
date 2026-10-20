@@ -241,7 +241,7 @@ bool AVaesenRangedWeaponActor::ServerFire(const FVector& AimOrigin, const FVecto
 		Params.AddIgnoredActor(Shooter);
 		Params.bReturnPhysicalMaterial = true;
 		const FVector ShotDirection = (AimPoint - Muzzle).GetSafeNormal();
-		if (GetWorld()->LineTraceSingleByChannel(Hit, Muzzle, Muzzle + ShotDirection * Item->MaxRange, ECC_Visibility, Params))
+		if (GetWorld()->LineTraceSingleByChannel(Hit, Muzzle, Muzzle + ShotDirection * Item->MaxRange, ECC_Pawn, Params))
 		{
 			TraceEnd = Hit.ImpactPoint;
 			// Full damage out to the effective range, falling to half at the longest.
