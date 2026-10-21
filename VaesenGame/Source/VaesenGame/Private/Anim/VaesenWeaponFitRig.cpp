@@ -324,21 +324,25 @@ void AVaesenWeaponFitRig::OnHandleMoved(UVaesenFitHandleComponent* Handle, bool 
 	}
 	else
 	{
-		// Aimed: the Sight that lays it here (its place, and its line along the aim), and the Stock slid along the
-		// line to meet the shoulder (the sums of UVaesenAnimInstance::PlaceShouldered, backwards).
+		// Aimed (the sums of UVaesenAnimInstance::PlaceShouldered, backwards): the Sight's line turned so the weapon lies
+		// as it was put, and the Stock socket moved to where the shoulder pocket now is on the weapon. Without a Stock,
+		// the Sight moves to the point in front of the eye instead.
 		const FVaesenWeaponHold& Hold = Defaults->Hold;
 		const FRotator Aim = GetAim();
-		const FVector Along = Aim.Vector();
-		const FVector EyePoint = Body->GetSocketLocation(TEXT("head")) + Aim.RotateVector(Hold.AimSightOffset);
 		const FQuat Line = Aim.Quaternion() * Hold.AimRotation.Quaternion();
-		SetSocketFromGrip(VaesenWeaponFitRig::Sight, FTransform(Moved.GetRotation().Inverse() * Line, Moved.InverseTransformPosition(EyePoint)));
-
+		FTransform SightLocal(FVector(0.0, 0.0, 6.0));
+		Held.GetLocalSocketTransform(VaesenWeaponFitRig::Sight, SightLocal);
 		FVector StockLocal;
 		if (Held.GetLocalSocket(VaesenWeaponFitRig::Stock, StockLocal))
 		{
-			const FVector Stock = Moved.TransformPosition(StockLocal);
-			const float Slide = Hold.StockToShoulder - FVector::DotProduct(Stock - Body->GetSocketLocation(TEXT("upperarm_r")), Along);
-			SetSocketFromGrip(VaesenWeaponFitRig::Stock, FTransform(StockLocal + Moved.InverseTransformVector(Along) * Slide));
+			const FVector Pocket = UVaesenAnimInstance::ShoulderPocket(Body, Aim) + Aim.RotateVector(Hold.ShoulderOffset);
+			SetSocketFromGrip(VaesenWeaponFitRig::Stock, FTransform(Moved.InverseTransformPosition(Pocket)));
+			SetSocketFromGrip(VaesenWeaponFitRig::Sight, FTransform(Moved.GetRotation().Inverse() * Line, SightLocal.GetLocation()));
+		}
+		else
+		{
+			const FVector EyePoint = Body->GetSocketLocation(TEXT("head")) + Aim.RotateVector(Hold.AimSightOffset);
+			SetSocketFromGrip(VaesenWeaponFitRig::Sight, FTransform(Moved.GetRotation().Inverse() * Line, Moved.InverseTransformPosition(EyePoint)));
 		}
 	}
 	ApplyPose();

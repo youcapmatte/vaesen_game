@@ -1000,10 +1000,12 @@ bool FVaesenWeaponFitRigTest::RunTest(const FString& Parameters)
 		const FVector Muzzle = Weapon->GetSocketLocation(TEXT("Muzzle"));
 		const FVector Stock = Weapon->GetSocketLocation(TEXT("Stock"));
 		const float Along = FVector::DotProduct((Muzzle - Stock).GetSafeNormal(), Rig->GetAim().Vector());
-		const float ToShoulder = FVector::Dist(Stock, Body->GetSocketLocation(TEXT("upperarm_r")));
+		const float ToShoulder = FVector::Dist(Stock, UVaesenAnimInstance::ShoulderPocket(Body, Rig->GetAim()));
+		const float BelowHead = Body->GetSocketLocation(TEXT("head")).Z - Stock.Z;
 		TestTrue(FString::Printf(TEXT("%s: barrel along the aim (%.3f)"), When, Along), Along > 0.98f);
-		TestTrue(FString::Printf(TEXT("%s: stock at the shoulder (%.0f cm)"), When, ToShoulder), ToShoulder < 25.0f);
-		UE_LOG(LogTemp, Display, TEXT("WeaponFitRig %s: barrel along the aim %.3f, stock %.1f cm from the shoulder"), When, Along, ToShoulder);
+		TestTrue(FString::Printf(TEXT("%s: stock in the shoulder pocket (%.1f cm)"), When, ToShoulder), ToShoulder < 2.0f);
+		TestTrue(FString::Printf(TEXT("%s: stock well below the head (%.0f cm)"), When, BelowHead), BelowHead > 10.0f);
+		UE_LOG(LogTemp, Display, TEXT("WeaponFitRig %s: barrel along the aim %.3f, stock %.1f cm from the shoulder pocket, %.0f cm below the head"), When, Along, ToShoulder, BelowHead);
 	};
 	// The left palm (hand_l_weapon) on LeftGrip, turned as it is.
 	const auto LeftPalmOnGrip = [&](const TCHAR* When)
@@ -1019,15 +1021,15 @@ bool FVaesenWeaponFitRigTest::RunTest(const FString& Parameters)
 	Shouldered(TEXT("Aimed"));
 	LeftPalmOnGrip(TEXT("Aimed"));
 
-	// Aimed: move the weapon 5 cm up; Sight moves on the weapon, and the weapon stays where it was put.
+	// Aimed: move the weapon 5 cm up; Stock moves on the weapon, and the weapon stays where it was put.
 	const FVector Before = Grip->GetComponentLocation();
-	const FVector SightBefore = Mesh->FindSocket(TEXT("Sight"))->RelativeLocation;
+	const FVector StockBefore = Mesh->FindSocket(TEXT("Stock"))->RelativeLocation;
 	Weapon->SetWorldLocation(Weapon->GetComponentLocation() + FVector(0.0, 0.0, 5.0));
 	Rig->OnHandleMoved(Weapon, true);
 	TestWorld.Run(0.3f);
 	const float Raised = Grip->GetComponentLocation().Z - Before.Z;
 	TestTrue(FString::Printf(TEXT("Moved up while aimed: it stays up (%.1f cm)"), Raised), FMath::Abs(Raised - 5.0f) < 1.5f);
-	TestTrue(TEXT("Moving it while aimed moved the Sight socket"), !Mesh->FindSocket(TEXT("Sight"))->RelativeLocation.Equals(SightBefore, 0.5));
+	TestTrue(TEXT("Moving it while aimed moved the Stock socket (where the shoulder now is on it)"), !Mesh->FindSocket(TEXT("Stock"))->RelativeLocation.Equals(StockBefore, 0.5));
 	Shouldered(TEXT("After the move"));
 
 	// From the hip: slide the weapon 3 cm back in the hand; the Grip socket moves 3 cm forward on the weapon.

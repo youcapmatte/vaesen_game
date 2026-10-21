@@ -942,6 +942,24 @@ namespace VaesenAnimSetup
 	}
 
 	/** Sets a socket that's missing (with bOverwrite, also one that exists: it may have been tuned by hand). */
+	/**
+	 * Where a rifle butt goes, on clavicle_r (so it follows the shoulder as it lifts to aim): in front of the right
+	 * shoulder joint and a little inside it, worked out in Manny's mesh space (he faces +Y; his right is -X).
+	 */
+	FTransform ComputeShoulderPocket(const USkeleton* Skeleton)
+	{
+		const FReferenceSkeleton& Reference = Skeleton->GetReferenceSkeleton();
+		const int32 Shoulder = Reference.FindBoneIndex(TEXT("upperarm_r"));
+		const int32 Clavicle = Reference.FindBoneIndex(TEXT("clavicle_r"));
+		if (Shoulder == INDEX_NONE || Clavicle == INDEX_NONE)
+		{
+			return FTransform::Identity;
+		}
+		const FVector Joint = FAnimationRuntime::GetComponentSpaceTransformRefPose(Reference, Shoulder).GetLocation();
+		const FTransform Pocket(Joint + FVector(5.0, 6.0, 0.0));
+		return Pocket.GetRelativeTransform(FAnimationRuntime::GetComponentSpaceTransformRefPose(Reference, Clavicle));
+	}
+
 	void SetSkeletonSocket(USkeleton* Skeleton, FName Name, FName Bone, const FTransform& Relative, bool bOverwrite)
 	{
 		USkeletalMeshSocket* Socket = Skeleton->FindSocket(Name);
@@ -1010,6 +1028,7 @@ namespace VaesenAnimSetup
 			SetSkeletonSocket(Skeleton, TEXT("hand_l_weapon"), TEXT("hand_l"), LeftPalmSocket, bResetSockets);
 		}
 		SetSkeletonSocket(Skeleton, TEXT("Sheath_BackSling"), TEXT("spine_04"), ComputeBackSling(Skeleton, TEXT("spine_04")), bResetSockets);
+		SetSkeletonSocket(Skeleton, TEXT("ShoulderPocket"), TEXT("clavicle_r"), ComputeShoulderPocket(Skeleton), bResetSockets);
 		Save(Skeleton);
 
 		// The grey-box long guns, from their shapes: LeftGrip under the fore-end (the palm's middle a couple of cm below

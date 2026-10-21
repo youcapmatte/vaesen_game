@@ -309,9 +309,9 @@ struct FVaesenThrowSettings
  * In the hand: InHand moves it from the hand socket (hand_r_weapon) in every pose. The off hand goes to the mesh's
  * LeftGrip socket (+ LeftHandOffset), turned as the socket is.
  *
- * Shoulder aim (two-handed guns while aiming): the weapon is laid along the aim, its Sight socket in front of the eye
- * (AimSightOffset, from the head) and its Stock socket at the shoulder (StockToShoulder); the right hand is moved to
- * hold it there. Without a Stock socket, AimSightOffset.X says how far in front of the head it is.
+ * Shoulder aim (two-handed guns while aiming): the weapon is laid along the aim (its Sight socket's line), its Stock
+ * socket in the shoulder pocket (the skeleton's ShoulderPocket socket, + ShoulderOffset); the right hand is moved to
+ * hold it there. Without a Stock socket the Sight goes in front of the eye instead (AimSightOffset, from the head).
  */
 USTRUCT(BlueprintType)
 struct FVaesenWeaponHold
@@ -330,13 +330,13 @@ struct FVaesenWeaponHold
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hold|Aim")
 	bool bShoulderAim = true;
 
-	/** Where the Sight socket sits while aiming, from the head bone along the aim: X forward, Y right, Z up (cm). */
+	/** Weapons without a Stock: where the Sight socket sits while aiming, from the head bone along the aim (X forward, Y right, Z up, cm). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hold|Aim", meta = (EditCondition = "bShoulderAim"))
 	FVector AimSightOffset = FVector(24.0, 8.0, 4.0);
 
-	/** How far the Stock socket sits in front of the shoulder joint, along the aim (cm, negative = behind it). */
+	/** Moves the Stock from the shoulder pocket, along the aim (X forward, Y right, Z up, cm); normally zero. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hold|Aim", meta = (EditCondition = "bShoulderAim"))
-	float StockToShoulder = 4.0f;
+	FVector ShoulderOffset = FVector::ZeroVector;
 
 	/** Turns it while aiming (Roll cants it). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hold|Aim", meta = (EditCondition = "bShoulderAim"))

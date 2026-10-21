@@ -25,6 +25,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "UObject/StrongObjectPtr.h"
 #include "Weapons/VaesenWeaponActor.h"
+#include "Anim/VaesenAnimInstance.h"
 
 TStrongObjectPtr<UVaesenCombatSelfTest> UVaesenCombatSelfTest::Current;
 
@@ -440,15 +441,18 @@ void UVaesenCombatSelfTest::BuildSteps()
 		{
 			const FVector Along = Fighter->GetBaseAimRotation().Vector();
 			const float Alignment = FVector::DotProduct((Muzzle.GetLocation() - Stock.GetLocation()).GetSafeNormal(), Along);
-			const float ToShoulder = FVector::Dist(Stock.GetLocation(), Fighter->GetMesh()->GetSocketLocation(TEXT("upperarm_r")));
-			const FString Measured = FString::Printf(TEXT("(barrel along the aim %.2f, stock %.0f cm from the shoulder)"), Alignment, ToShoulder);
+			// The butt in the shoulder pocket, well below the head (not floating over the shoulder).
+			const USkeletalMeshComponent* Body = Fighter->GetMesh();
+			const float ToShoulder = FVector::Dist(Stock.GetLocation(), UVaesenAnimInstance::ShoulderPocket(Body, Fighter->GetBaseAimRotation()));
+			const float BelowHead = Body->GetSocketLocation(TEXT("head")).Z - Stock.GetLocation().Z;
+			const FString Measured = FString::Printf(TEXT("(barrel along the aim %.2f, stock %.1f cm from the shoulder pocket, %.0f cm below the head)"), Alignment, ToShoulder, BelowHead);
 			if (GetWorld()->GetNetMode() == NM_DedicatedServer)
 			{
 				Say(TEXT("INFO  shoulder aim not measured on a dedicated server (the pose is the clients') ") + Measured, FColor::Yellow);
 			}
 			else
 			{
-				Check(Alignment > 0.98f && ToShoulder < 20.0f, TEXT("the aimed rifle is shouldered ") + Measured);
+				Check(Alignment > 0.98f && ToShoulder < 2.0f && BelowHead > 10.0f, TEXT("the aimed rifle is shouldered ") + Measured);
 			}
 		}
 		CheckLeftPalm(TEXT("aimed"));

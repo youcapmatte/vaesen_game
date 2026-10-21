@@ -18,6 +18,7 @@
 const FName UVaesenAnimInstance::HandIKSheathCurve(TEXT("HandIK_Sheath"));
 const FName UVaesenAnimInstance::TriggerFingerCurve(TEXT("TriggerFinger"));
 const FName UVaesenAnimInstance::LeftHandGripSocket(TEXT("hand_l_weapon"));
+const FName UVaesenAnimInstance::ShoulderPocketSocket(TEXT("ShoulderPocket"));
 
 bool FVaesenHeldWeapon::GetLocalSocketTransform(FName Socket, FTransform& OutTransform) const
 {
@@ -221,6 +222,16 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	TriggerCurl = FMath::Max(TriggerPulse, GetCurveValue(TriggerFingerCurve));
 }
 
+FVector UVaesenAnimInstance::ShoulderPocket(const USkeletalMeshComponent* Body, const FRotator& Aim)
+{
+	if (Body->DoesSocketExist(ShoulderPocketSocket))
+	{
+		return Body->GetSocketLocation(ShoulderPocketSocket);
+	}
+	// In front of the shoulder joint and a little inside it, toward the chest.
+	return Body->GetSocketLocation(TEXT("upperarm_r")) + Aim.RotateVector(FVector(6.0, -5.0, 0.0));
+}
+
 FTransform UVaesenAnimInstance::PlaceShouldered(const USkeletalMeshComponent* Body, const FVaesenHeldWeapon& Weapon, const FRotator& InAim, float Kick)
 {
 	const FVaesenWeaponHold& Hold = *Weapon.Hold;
@@ -228,25 +239,25 @@ FTransform UVaesenAnimInstance::PlaceShouldered(const USkeletalMeshComponent* Bo
 	Aim.Roll = 0.0f;
 	const FVector Along = Aim.Vector();
 
-	// The sight point in front of the eye, pushed back by the kick of a shot (and the muzzle up).
-	const FVector Sight = Body->GetSocketLocation(TEXT("head")) + Aim.RotateVector(Hold.AimSightOffset) - Along * Hold.RecoilBack * Kick;
+	// Laid along the aim: the Sight socket's line (its X) on the aim, the muzzle kicked up by a shot (no Sight: along
+	// the barrel, a little over the grip).
 	const FQuat Rotation = Aim.Quaternion() * Hold.AimRotation.Quaternion() * FRotator(Hold.RecoilPitch * Kick, 0.0, 0.0).Quaternion();
-
-	// The weapon laid there: its Sight socket on the point, the sight's X along the aim (no Sight: a little over the
-	// grip, along the barrel).
 	FTransform SightLocal(FVector(0.0, 0.0, 6.0));
 	Weapon.GetLocalSocketTransform(TEXT("Sight"), SightLocal);
 	const FQuat Turned = Rotation * SightLocal.GetRotation().Inverse();
-	FVector Location = Sight - Turned.RotateVector(SightLocal.GetLocation());
-	FVector StockLocal;
+	const FVector Kickback = Along * Hold.RecoilBack * Kick;
 
-	// With a Stock socket, slid along the aim so the stock meets the shoulder.
+	// The Stock socket in the shoulder pocket (the shot pushes the shoulder back).
+	FVector StockLocal;
 	if (Weapon.GetLocalSocket(TEXT("Stock"), StockLocal))
 	{
-		const FVector Stock = Location + Turned.RotateVector(StockLocal);
-		Location += Along * (Hold.StockToShoulder - FVector::DotProduct(Stock - Body->GetSocketLocation(TEXT("upperarm_r")), Along));
+		const FVector Stock = ShoulderPocket(Body, Aim) + Aim.RotateVector(Hold.ShoulderOffset) - Kickback;
+		return FTransform(Turned, Stock - Turned.RotateVector(StockLocal));
 	}
-	return FTransform(Turned, Location);
+
+	// No stock: the sight in front of the eye.
+	const FVector Sight = Body->GetSocketLocation(TEXT("head")) + Aim.RotateVector(Hold.AimSightOffset) - Kickback;
+	return FTransform(Turned, Sight - Turned.RotateVector(SightLocal.GetLocation()));
 }
 
 void UVaesenAnimInstance::ShoulderHoldFromPlacement(const USkeletalMeshComponent* Body, const FVaesenHeldWeapon& Weapon, const FRotator& InAim,
@@ -259,11 +270,12 @@ void UVaesenAnimInstance::ShoulderHoldFromPlacement(const USkeletalMeshComponent
 	InOutHold.AimRotation = (Aim.Quaternion().Inverse() * Placed.GetRotation() * SightLocal.GetRotation()).Rotator();
 
 	FVector StockLocal;
-	const FVector Sight = Placed.GetLocation() + Placed.GetRotation().RotateVector(SightLocal.GetLocation());
-	InOutHold.AimSightOffset = Aim.UnrotateVector(Sight - Body->GetSocketLocation(TEXT("head")));
 	if (Weapon.GetLocalSocket(TEXT("Stock"), StockLocal))
 	{
-		const FVector Stock = Placed.GetLocation() + Placed.GetRotation().RotateVector(StockLocal);
-		InOutHold.StockToShoulder = FVector::DotProduct(Stock - Body->GetSocketLocation(TEXT("upperarm_r")), Aim.Vector());
+		const FVector Stock = Placed.TransformPosition(StockLocal);
+		InOutHold.ShoulderOffset = Aim.UnrotateVector(Stock - ShoulderPocket(Body, Aim));
+		return;
 	}
+	const FVector Sight = Placed.TransformPosition(SightLocal.GetLocation());
+	InOutHold.AimSightOffset = Aim.UnrotateVector(Sight - Body->GetSocketLocation(TEXT("head")));
 }

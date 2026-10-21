@@ -50,10 +50,14 @@ public:
 	void PulseTriggerFinger() { TriggerPulse = 1.0f; RecoilKick = 1.0f; }
 
 	/**
-	 * Where a shouldered weapon goes (its grip, world): laid along Aim, its Sight socket in front of the head by the
-	 * hold's AimSightOffset, slid so its Stock meets the shoulder; Kick (0..1) is a shot's recoil.
+	 * Where a shouldered weapon goes (its grip, world): laid along Aim (its Sight socket's line), its Stock socket in
+	 * the shoulder pocket (no Stock: its Sight in front of the head by AimSightOffset); Kick (0..1) is a shot's recoil.
 	 */
 	static FTransform PlaceShouldered(const USkeletalMeshComponent* Body, const FVaesenHeldWeapon& Weapon, const FRotator& Aim, float Kick = 0.0f);
+
+	/** The shoulder pocket the stock goes in (world): the skeleton's ShoulderPocket socket, or in front of and inside the
+	 * shoulder joint without it. */
+	static FVector ShoulderPocket(const USkeletalMeshComponent* Body, const FRotator& Aim);
 
 	/** The reverse: the hold's aim values (sight offset, stock, rotation) that put the weapon at Placed. */
 	static void ShoulderHoldFromPlacement(const USkeletalMeshComponent* Body, const FVaesenHeldWeapon& Weapon, const FRotator& Aim,
@@ -147,6 +151,7 @@ protected:
 
 	/** The skeleton's sockets that say how each palm holds a grip. */
 	static const FName LeftHandGripSocket;
+	static const FName ShoulderPocketSocket;
 
 	/** Shoulder aim: where the right hand goes (world space) to hold the weapon at the shoulder, weight 0..1. */
 	UPROPERTY(BlueprintReadOnly, Category = "IK")

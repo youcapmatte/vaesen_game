@@ -172,8 +172,8 @@ Every weapon is held by sockets on its mesh. The rule is the same for every weap
 | --- | --- | --- |
 | `Grip` | Where the right palm closes (pistol grip, wrist of the stock) | The weapon sits in the right hand here (skeleton socket `hand_r_weapon`) |
 | `LeftGrip` | Where the left palm holds (fore-end), turned as the palm should be | The left hand: IK moves it there, and it is turned to match (skeleton socket `hand_l_weapon`) |
-| `Sight` | On the line of the sights; its X is that line | Aiming: the sight goes in front of the eye, along the aim |
-| `Stock` | The butt plate (long guns) | Aiming: slid along the aim until it meets the shoulder |
+| `Sight` | On the line of the sights; its X is that line | Aiming: that line lies along the aim (weapons without a Stock: the sight goes in front of the eye) |
+| `Stock` | The butt plate (long guns) | Aiming: goes in the shoulder pocket (skeleton socket `ShoulderPocket` on `clavicle_r`, in front of the right shoulder joint) |
 
 IK solves the arms and elbows, and the fingers close by the category's **Grip Pose** (DA_WeaponCategoryDefaults; rifles use the pack's aimed rifle grip). A weapon with these four sockets right needs nothing else. The grey-box long guns already have them: `hand_l_weapon` and `LeftGrip` are worked out from how the rifle pack holds its rifle.
 
@@ -188,14 +188,14 @@ IK solves the arms and elbows, and the fingers close by the category's **Grip Po
    - Move `Grip` and the weapon slides in the right hand.
 3. Or move the **weapon** itself:
    - In Hip or Crouch, it slides or turns in the hand, and `Grip` is set to match.
-   - In Aim, you are setting where it lies against the shoulder, and `Sight` and `Stock` are set to match.
+   - In Aim, you are setting how it lies against the shoulder: the butt stays in the shoulder pocket, so `Stock` (and the line of `Sight`) are set to match.
 4. Untick **Show Sockets** to see the hands without the shapes. **Save Weapon** saves the weapon's mesh (the sockets) and its Blueprint.
 
 Sockets belong to the mesh, so every weapon using that mesh gets them.
 
 Put `LeftGrip` under the fore-end, within reach. The left arm doesn't stretch, so a grip much more than about 30 cm in front of `Grip` leaves the hand a few cm short. The in-map self-test measures it (the left hand holds LeftGrip ... cm off).
 
-Extra adjustments for one weapon only (normally zero) are in the weapon Blueprint under **Weapon > Hold**: In Hand, Left Hand Offset, Aim Sight Offset (where the sight sits from the head), Stock To Shoulder, Aim Rotation, Recoil.
+Extra adjustments for one weapon only (normally zero) are in the weapon Blueprint under **Weapon > Hold**: In Hand, Left Hand Offset, Shoulder Offset, Aim Sight Offset (weapons without a stock), Aim Rotation, Recoil.
 
 `-run=VaesenAnimSetup` only adds sockets that are missing. Add `-resetsockets` to work them out again from the pack, and `-rebuild` to rebuild the anim Blueprints.
 
