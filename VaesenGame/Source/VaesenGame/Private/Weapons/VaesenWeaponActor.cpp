@@ -107,20 +107,27 @@ void AVaesenWeaponActor::ApplyWeaponMesh()
 		return;
 	}
 
-	// A grey-box stand-in (the pickup mesh) is shown at the item's pickup size; a real weapon mesh at its own.
-	const FVector Scale = Item && !Item->WeaponMesh && !Skeletal ? Item->PickupScale : FVector::OneVector;
-
 	// Hold the mesh so its Grip socket is at the actor's origin: the hand socket then holds it by the grip.
-	Mesh->SetRelativeTransform(FTransform::Identity);
-	if (!Mesh->DoesSocketExist(VaesenWeaponActor::Grip))
+	Mesh->SetRelativeTransform(GripAlignment(Mesh, HeldMeshScale(Item)));
+}
+
+FVector AVaesenWeaponActor::HeldMeshScale(const UVaesenWeaponItem* Item)
+{
+	// A grey-box stand-in (the pickup mesh) is shown at the item's pickup size; a real weapon mesh at its own.
+	return Item && !Item->WeaponMesh && !Item->WeaponSkeletalMesh.Get() ? Item->PickupScale : FVector::OneVector;
+}
+
+FTransform AVaesenWeaponActor::GripAlignment(const UMeshComponent* Mesh, const FVector& Scale)
+{
+	if (!Mesh || !Mesh->DoesSocketExist(VaesenWeaponActor::Grip))
 	{
-		Mesh->SetRelativeScale3D(Scale);
-		return;
+		return FTransform(FQuat::Identity, FVector::ZeroVector, Scale);
 	}
+	// The socket in the mesh's own space (whatever the component's transform is now).
 	const FTransform GripLocal = Mesh->GetSocketTransform(VaesenWeaponActor::Grip, RTS_Component);
 	const FQuat Rotation = GripLocal.GetRotation().Inverse();
 	const FVector Location = -(Rotation.RotateVector(Scale * GripLocal.GetLocation()));
-	Mesh->SetRelativeTransform(FTransform(Rotation, Location, Scale));
+	return FTransform(Rotation, Location, Scale);
 }
 
 UMeshComponent* AVaesenWeaponActor::GetWeaponMesh() const

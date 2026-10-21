@@ -23,6 +23,8 @@
 #include "Weapons/VaesenProjectile.h"
 #include "Weapons/VaesenThrownItem.h"
 #include "Abilities/VaesenMeleeAbilities.h"
+#include "Anim/VaesenWeaponFitRig.h"
+#include "Items/VaesenWeaponItem.h"
 #include "Abilities/VaesenRangedAbilities.h"
 #include "Characters/VaesenPlayerCharacter.h"
 #include "Inventory/VaesenEquipmentComponent.h"
@@ -954,4 +956,76 @@ bool FVaesenAbilityBowTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+#endif
+
+#if WITH_EDITOR
+// --- Weapon Fit rig: poses the character with the real anim Blueprint; dragging the weapon changes its Hold ---
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenWeaponFitRigTest, "Vaesen.Combat.WeaponFitRig", CombatTestFlags)
+bool FVaesenWeaponFitRigTest::RunTest(const FString& Parameters)
+{
+	UClass* Krag = LoadObject<UClass>(nullptr, TEXT("/Game/Vaesen/Blueprints/Items/Weapons/BP_Weapon_KragRifle.BP_Weapon_KragRifle_C"));
+	if (!Krag)
+	{
+		AddInfo(TEXT("BP_Weapon_KragRifle not generated yet (run the asset commandlet); skipped."));
+		return true;
+	}
+	FTestWorld TestWorld;
+	AVaesenWeaponFitRig* Rig = TestWorld.Spawn<AVaesenWeaponFitRig>();
+	UVaesenWeaponItem* Defaults = Krag->GetDefaultObject<UVaesenWeaponItem>();
+	const FVaesenWeaponHold Original = Defaults->Hold;
+	Rig->Weapon = Krag;
+	Rig->Pose = EVaesenFitPose::Aim;
+	FPropertyChangedEvent Changed(nullptr);
+	Rig->PostEditChangeProperty(Changed);
+	TestWorld.Run(0.5f);
+
+	USceneComponent* Grip = Rig->GetGrip();
+	const USkeletalMeshComponent* Body = Rig->GetBody();
+	const UMeshComponent* Mesh = Rig->GetWeaponMeshHandle();
+	const auto Shouldered = [&](const TCHAR* When)
+	{
+		const FVector Muzzle = Mesh->GetSocketLocation(TEXT("Muzzle"));
+		const FVector Stock = Mesh->GetSocketLocation(TEXT("Stock"));
+		const float Along = FVector::DotProduct((Muzzle - Stock).GetSafeNormal(), Rig->GetAim().Vector());
+		const float ToShoulder = FVector::Dist(Stock, Body->GetSocketLocation(TEXT("upperarm_r")));
+		TestTrue(FString::Printf(TEXT("%s: barrel along the aim (%.3f)"), When, Along), Along > 0.98f);
+		TestTrue(FString::Printf(TEXT("%s: stock at the shoulder (%.0f cm)"), When, ToShoulder), ToShoulder < 25.0f);
+		UE_LOG(LogTemp, Display, TEXT("WeaponFitRig %s: barrel along the aim %.3f, stock %.1f cm from the shoulder"), When, Along, ToShoulder);
+	};
+	Shouldered(TEXT("Aimed"));
+
+	// Aimed: drag the weapon 5 cm up; the shoulder hold changes and the hand carries it there.
+	const FVector Before = Grip->GetComponentLocation();
+	UVaesenFitHandleComponent* Handle = Rig->GetWeaponMeshHandle();
+	Handle->SetWorldLocation(Handle->GetComponentLocation() + FVector(0.0, 0.0, 5.0));
+	Rig->OnHandleMoved(Handle, true);
+	TestWorld.Run(0.3f);
+	const float Raised = Grip->GetComponentLocation().Z - Before.Z;
+	TestTrue(FString::Printf(TEXT("Dragged up while aimed: the weapon stays up (%.1f cm)"), Raised), FMath::Abs(Raised - 5.0f) < 1.5f);
+	TestTrue(TEXT("Dragging while aimed changed the sight offset"), !Defaults->Hold.AimSightOffset.Equals(Original.AimSightOffset, 0.5));
+	Shouldered(TEXT("After the drag"));
+
+	// From the hip: drag it 3 cm along the barrel; that's how it sits in the hand.
+	Rig->Pose = EVaesenFitPose::Hip;
+	Rig->PostEditChangeProperty(Changed);
+	TestWorld.Run(0.5f);
+	const FVector InHandBefore = Defaults->Hold.InHand.GetLocation();
+	Handle->SetWorldLocation(Handle->GetComponentLocation() + Grip->GetForwardVector() * 3.0f);
+	Rig->OnHandleMoved(Handle, true);
+	TestTrue(TEXT("Dragged from the hip: In Hand moved 3 cm"), FMath::IsNearlyEqual((Defaults->Hold.InHand.GetLocation() - InHandBefore).Size(), 3.0f, 0.3f));
+
+	// The off hand: drag its sphere 4 cm; the left hand follows it.
+	UVaesenFitHandleComponent* LeftHandle = Rig->GetLeftHandHandle();
+	LeftHandle->SetWorldLocation(LeftHandle->GetComponentLocation() + Grip->GetForwardVector() * 4.0f);
+	Rig->OnHandleMoved(LeftHandle, true);
+	TestTrue(TEXT("Left Hand Offset is the drag"), FMath::IsNearlyEqual((Defaults->Hold.LeftHandOffset - Original.LeftHandOffset).Size(), 4.0f, 0.3f));
+	TestWorld.Run(0.3f);
+	const float HandGap = FVector::Dist(Body->GetSocketLocation(TEXT("hand_l")), LeftHandle->GetComponentLocation());
+	TestTrue(FString::Printf(TEXT("The left hand is on the sphere (%.1f cm)"), HandGap), HandGap < 3.0f);
+	UE_LOG(LogTemp, Display, TEXT("WeaponFitRig: raised %.1f cm when dragged 5, left hand %.1f cm from its sphere"), Raised, HandGap);
+
+	Defaults->Hold = Original;
+	return true;
+}
 #endif

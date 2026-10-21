@@ -303,7 +303,7 @@ struct FVaesenThrowSettings
 };
 
 /**
- * How a weapon sits in the hands, per weapon (tune it in play: vaesen.weaponfit). The animation gives the body; this
+ * How a weapon sits in the hands, per weapon (tune it with the Weapon Fit rig in L_WeaponFit). The animation gives the body; this
  * places the weapon, and the hands follow it.
  *
  * In the hand: InHand moves it from the hand socket (hand_r_weapon) in every pose. The off hand goes to the mesh's

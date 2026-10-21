@@ -147,6 +147,7 @@ All 24 passed when this plan was written.
 | `Abilities.BlockAndParryInput` | Right mouse blocks; parry window then plain block; slower while blocking; stamina drains; release; attacking drops the block |
 | `Abilities.Throw` | Nothing to throw; stone aimed then thrown off the stack, hits, lands as a pickup; a drawn sword is unequipped and thrown |
 | `Abilities.BowDraw` | No arrows; early release lets down; full draw hits, uses an arrow, costs stamina, sticks and becomes a pickup |
+| `WeaponFitRig` | The Weapon Fit rig holds the Krag shouldered (barrel along the aim, stock at the shoulder); dragging it while aimed keeps it there; dragging from the hip moves In Hand; dragging the sphere moves the left hand onto it |
 
 ### 0.7 In-map self-test
 
@@ -163,29 +164,33 @@ It checks what the C++ tests can't: the generated assets, the Blueprints and the
 
 This replaces functional-test actors. The engine's FunctionalTesting module is developer-only and would break shipping builds.
 
-### 0.8 Tuning how a weapon is held (vaesen.weaponfit)
+### 0.8 Fitting a weapon to the hands (the Weapon Fit rig)
 
-Every weapon has a **Hold** section, in the weapon item's Blueprint under Weapon > Hold:
+Open **`L_WeaponFit`** (Content/Vaesen/Maps). It has a **Weapon Fit rig**: Manny posed by the real anim Blueprint, holding a weapon. You don't need to press Play. To fit a weapon in another level, drag *Vaesen Weapon Fit Rig* in from Place Actors.
+
+1. Select the rig. Under **Weapon Fit** in Details, pick the **Weapon** (an item Blueprint) and the **Pose**: Hip, Aim, Crouch or CrouchAim.
+   - **Aim Pitch** looks up or down.
+   - **Speed** and **Direction** walk or run on the spot.
+   - **Preview Animation** shows any animation of the skeleton on the upper body (a reload, the fire, the draw), held at **Preview Time**. Tick **Play Preview** to play it instead.
+2. Click the weapon (click again if the whole rig is selected) and move or rotate it with the gizmo (W / E):
+   - **Hip, Crouch:** how it sits in the hand (Hold > In Hand). The hand stays; the weapon moves in it.
+   - **Aim, CrouchAim:** where it sits against the shoulder (Hold > Aim Sight Offset, Stock To Shoulder, Aim Rotation). The weapon goes where you put it, and the right hand moves to hold it there.
+3. The **small sphere** is the left hand. Drag it along the weapon and the hand follows (Hold > Left Hand Offset).
+4. Every change goes straight into the weapon's Blueprint. **Save Weapon** (on the rig) or Save All keeps it. **Reset Hold** starts over.
+
+The same values can be typed in the weapon Blueprint under **Weapon > Hold**:
 
 | Setting | What it does |
 | --- | --- |
 | In Hand | Moves the weapon from the hand socket (`hand_r_weapon`), in every pose |
-| Left Hand Offset | Moves the off hand's grip from the mesh's `LeftHandIK` socket (weapon space, cm) |
+| Left Hand Offset | Moves the left hand's grip from the mesh's `LeftHandIK` socket (weapon space, cm) |
 | Shoulder Aim | Lays two-handed guns against the shoulder while aiming (off: the aim animation holds it) |
-| Aim Sight Offset | Where the mesh's `Sight` socket sits while aiming, from the head: X forward, Y right, Z up (cm). With a `Stock` socket, X is decided by the stock instead |
+| Aim Sight Offset | Where the `Sight` socket sits while aiming, from the head: X forward, Y right, Z up (cm). With a `Stock` socket, the stock decides how far forward |
 | Stock To Shoulder | How far the `Stock` socket sits in front of the shoulder joint, along the aim (cm) |
 | Aim Rotation | Turns it while aiming (Roll cants it) |
-| Aim Blend Speed, Recoil Back, Recoil Pitch | How fast it comes up; the kick of a shot while shouldered |
+| Aim Blend Speed, Recoil Back, Recoil Pitch | How fast it comes up, and the kick of a shot while shouldered |
 
-The right hand is moved to hold the weapon there, and the left hand follows the weapon, so both hands stay on it.
-
-To tune it live (Standalone, or the first client window in multiplayer PIE):
-
-1. Play, draw the weapon (H), and type **`vaesen.weaponfit aim`** in the console. The character stands still and keeps the aimed pose. The other poses are `hip`, `crouch` and `crouchaim`.
-2. Press **F8** to leave the character. Click the weapon (or find `VaesenWeaponActor` in the Outliner) and edit **Hold** in Details. It moves as you type.
-3. Press **F8** again, then type **`vaesen.weaponfit save`**. That writes the values into the weapon's Blueprint. Save All keeps them. `vaesen.weaponfit print` logs the values, and `vaesen.weaponfit off` lets go of the pose.
-
-New weapon meshes need the sockets `Grip`, `LeftHandIK`, `Sight` (the line of the sights) and `Stock` (the butt plate), all set in the Static Mesh editor. `-run=VaesenAnimSetup` only adds sockets that are missing. Add `-resetsockets` to work them out again, and `-rebuild` to rebuild the anim Blueprints.
+New weapon meshes need the sockets `Grip`, `LeftHandIK`, `Sight` (the line of the sights) and `Stock` (the butt plate), set in the Static Mesh editor. The rig shows static weapon meshes for now. `-run=VaesenAnimSetup` only adds sockets that are missing. Add `-resetsockets` to work them out again, and `-rebuild` to rebuild the anim Blueprints.
 
 The interaction trace (the debug capsule) is hidden while a weapon is drawn, so it doesn't cover the crosshair.
 

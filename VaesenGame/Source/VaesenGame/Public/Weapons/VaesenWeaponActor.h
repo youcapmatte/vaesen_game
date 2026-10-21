@@ -53,8 +53,8 @@ public:
 	bool IsInHand() const { return bInHand; }
 
 	/**
-	 * How it sits in the hands: the item's, copied here so it can be tuned live (play, vaesen.weaponfit aim, F8, select
-	 * the weapon, edit; vaesen.weaponfit save writes it back to the weapon's Blueprint).
+	 * How it sits in the hands: the item's, copied here (editing it on a weapon in play shows at once; the Weapon Fit
+	 * rig, AVaesenWeaponFitRig, is the way to tune it and keep it).
 	 */
 	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "Hold")
 	FVaesenWeaponHold Hold;
@@ -65,6 +65,12 @@ public:
 
 	/** The visible mesh (static or skeletal), or null. */
 	UMeshComponent* GetWeaponMesh() const;
+
+	/** How a weapon mesh sits under its grip so its Grip socket is at the grip (Scale: the mesh's scale). */
+	static FTransform GripAlignment(const UMeshComponent* Mesh, const FVector& Scale);
+
+	/** The scale its item's mesh is shown at (a grey-box stand-in at the pickup size). */
+	static FVector HeldMeshScale(const UVaesenWeaponItem* Item);
 
 	/** World transform of a socket on the weapon mesh; false (and the actor's transform) if it has none. */
 	bool GetSocketTransform(FName Socket, FTransform& OutTransform) const;

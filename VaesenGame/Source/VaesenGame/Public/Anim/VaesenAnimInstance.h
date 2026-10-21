@@ -5,6 +5,22 @@
 #include "Weapons/VaesenWeaponTypes.h"
 #include "VaesenAnimInstance.generated.h"
 
+class UMeshComponent;
+class USceneComponent;
+
+/** A weapon in the right hand, for the shoulder aim: its grip (the weapon's origin), its mesh (sockets), its hold. */
+struct FVaesenHeldWeapon
+{
+	const USceneComponent* Grip = nullptr;
+	const UMeshComponent* Mesh = nullptr;
+	const FVaesenWeaponHold* Hold = nullptr;
+
+	bool IsValid() const { return Grip && Mesh && Hold; }
+
+	/** A socket of the mesh, relative to the grip; false (and Fallback) without it. */
+	bool GetLocalSocket(FName Socket, FVector& OutLocation, const FVector& Fallback = FVector::ZeroVector) const;
+};
+
 /**
  * Parent class for the character's anim Blueprint (reparent ABP_Manny to it). It works out every frame what the
  * graph needs for weapons, so the Blueprint only reads variables:
@@ -15,6 +31,7 @@
  *   - TriggerCurl, pulsed on each shot (or the montage's TriggerFinger curve) for the index finger;
  *   - for motion matching later: LocomotionDatabase, the drawn category's pose search database
  *     (DA_WeaponCategoryDefaults), plus speed and direction.
+ * It also poses the Weapon Fit rig (AVaesenWeaponFitRig) in the editor, from the rig's settings instead of a character.
  * Upper-body actions are montages in an UpperBody slot, layered per bone from the spine, so the legs keep walking.
  */
 UCLASS()
@@ -28,10 +45,15 @@ public:
 	/** A shot: the trigger finger curls and lets go (and a shouldered weapon kicks). */
 	void PulseTriggerFinger() { TriggerPulse = 1.0f; RecoilKick = 1.0f; }
 
-	/** vaesen.weaponfit: holds a pose (standing still, the aim frozen) so the weapon's Hold can be tuned. */
-	enum class EFitPose : uint8 { None, Hip, Aim, Crouch, CrouchAim };
-	void SetFitPose(EFitPose Pose);
-	EFitPose GetFitPose() const { return FitPose; }
+	/**
+	 * Where a shouldered weapon goes (its grip, world): laid along Aim, its Sight socket in front of the head by the
+	 * hold's AimSightOffset, slid so its Stock meets the shoulder; Kick (0..1) is a shot's recoil.
+	 */
+	static FTransform PlaceShouldered(const USkeletalMeshComponent* Body, const FVaesenHeldWeapon& Weapon, const FRotator& Aim, float Kick = 0.0f);
+
+	/** The reverse: the hold's aim values (sight offset, stock, rotation) that put the weapon at Placed. */
+	static void ShoulderHoldFromPlacement(const USkeletalMeshComponent* Body, const FVaesenHeldWeapon& Weapon, const FRotator& Aim,
+		const FTransform& Placed, FVaesenWeaponHold& InOutHold);
 
 	/** Curve names read from montages. */
 	static const FName HandIKSheathCurve;
@@ -137,14 +159,6 @@ protected:
 	TObjectPtr<UObject> LocomotionDatabase;
 
 private:
-	/** Shoulder aim: the right hand's target for this frame (world); false if there is nothing to shoulder. */
-	bool ComputeShoulderAim(const class AVaesenBaseCharacter* Character, const class AVaesenWeaponActor* Weapon, FTransform& OutHand) const;
-
-	EFitPose FitPose = EFitPose::None;
-
-	/** The aim held by the fit pose, relative to the body. */
-	FRotator FitAim = FRotator::ZeroRotator;
-
 	float RecoilKick = 0.0f;
 
 	FTransform AimHandInComponent;

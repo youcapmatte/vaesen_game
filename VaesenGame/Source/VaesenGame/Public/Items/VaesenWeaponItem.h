@@ -76,7 +76,7 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon|Sheath")
 	FTransform SheathOffset;
 
-	/** How it sits in the hands, in every pose and shouldered while aiming (tune it in play: vaesen.weaponfit). */
+	/** How it sits in the hands, in every pose and shouldered while aiming (tune it with the Weapon Fit rig, L_WeaponFit). */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon|Hold")
 	FVaesenWeaponHold Hold;
 

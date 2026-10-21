@@ -18,6 +18,7 @@
 #include "Engine/BlueprintGeneratedClass.h"
 #include "Engine/DirectionalLight.h"
 #include "Components/ExponentialHeightFogComponent.h"
+#include "Anim/VaesenWeaponFitRig.h"
 #include "Components/SkyAtmosphereComponent.h"
 #include "Components/VolumetricCloudComponent.h"
 #include "Engine/ExponentialHeightFog.h"
@@ -987,6 +988,56 @@ namespace VaesenCombatAssets
 		Pickup->SetActorLabel(FPackageName::GetShortName(ItemPath));
 	}
 
+	/** Sun, sky light, atmosphere, clouds and a little fog. */
+	void AddDaylight(UWorld* World)
+	{
+		ADirectionalLight* Sun = World->SpawnActor<ADirectionalLight>(FVector(0.0, 0.0, 1000.0), FRotator(-50.0, 30.0, 0.0));
+		Sun->GetComponent()->SetMobility(EComponentMobility::Movable);
+		Sun->SetActorLabel(TEXT("Sun"));
+		ASkyLight* Sky = World->SpawnActor<ASkyLight>(FVector(0.0, 0.0, 800.0), FRotator::ZeroRotator);
+		Sky->GetLightComponent()->SetMobility(EComponentMobility::Movable);
+		Sky->GetLightComponent()->bRealTimeCapture = true;
+		Sky->SetActorLabel(TEXT("SkyLight"));
+		// A real sky for the sun and the sky light to work with: atmosphere, clouds, a little fog.
+		if (UDirectionalLightComponent* SunLight = Cast<UDirectionalLightComponent>(Sun->GetLightComponent()))
+		{
+			SunLight->SetAtmosphereSunLight(true);
+		}
+		World->SpawnActor<ASkyAtmosphere>(FVector::ZeroVector, FRotator::ZeroRotator)->SetActorLabel(TEXT("SkyAtmosphere"));
+		World->SpawnActor<AVolumetricCloud>(FVector::ZeroVector, FRotator::ZeroRotator)->SetActorLabel(TEXT("VolumetricCloud"));
+		AExponentialHeightFog* Fog = World->SpawnActor<AExponentialHeightFog>(FVector(0.0, 0.0, -100.0), FRotator::ZeroRotator);
+		Fog->GetComponent()->SetFogDensity(0.01f);
+		Fog->SetActorLabel(TEXT("HeightFog"));
+	}
+
+	/**
+	 * L_WeaponFit: a Weapon Fit rig holding the Krag, on a floor in daylight. Select the rig, pick a weapon and a pose,
+	 * and move the weapon with the gizmo (AVaesenWeaponFitRig).
+	 */
+	void CreateWeaponFitMap()
+	{
+		const TCHAR* FitMapPath = TEXT("/Game/Vaesen/Maps/L_WeaponFit");
+		if (Exists(FitMapPath))
+		{
+			UE_LOG(LogVaesenCombatAssets, Display, TEXT("%s already exists; leaving it alone."), FitMapPath);
+			return;
+		}
+		UPackage* Package = CreatePackage(FitMapPath);
+		UWorld* World = UWorld::CreateWorld(EWorldType::Editor, false, FName(FPackageName::GetShortName(FitMapPath)), Package);
+		World->SetFlags(RF_Public | RF_Standalone);
+
+		PlaceBlock(World, FVector(0.0, 0.0, -10.0), FVector(10.0, 10.0, 0.2), nullptr, TEXT("Floor"));
+		AddDaylight(World);
+		AVaesenWeaponFitRig* Rig = World->SpawnActor<AVaesenWeaponFitRig>(FVector::ZeroVector, FRotator::ZeroRotator);
+		Rig->SetActorLabel(TEXT("WeaponFitRig"));
+		Rig->Weapon = LoadBlueprintClass(Join(WeaponsFolder, TEXT("BP_Weapon_KragRifle")));
+		Rig->RerunConstructionScripts();
+
+		FAssetRegistryModule::AssetCreated(World);
+		Save(World, true);
+		World->DestroyWorld(false);
+	}
+
 	/**
 	 * L_CombatTest: a floor, light, a row of pickups (every test weapon, ammo, the cartridge box, stones, bottles), the
 	 * three training dummies close by, a stone and a wooden wall, and a far dummy and wall for long shots.
@@ -1008,23 +1059,7 @@ namespace VaesenCombatAssets
 		PlaceBlock(World, FVector(900.0, 500.0, 150.0), FVector(0.4, 4.0, 3.0), Materials.FindRef(TEXT("Wood")), TEXT("WoodWall"));
 		PlaceBlock(World, FVector(5200.0, 0.0, 250.0), FVector(0.5, 10.0, 5.0), Materials.FindRef(TEXT("Wood")), TEXT("FarWoodWall"));
 
-		ADirectionalLight* Sun = World->SpawnActor<ADirectionalLight>(FVector(0.0, 0.0, 1000.0), FRotator(-50.0, 30.0, 0.0));
-		Sun->GetComponent()->SetMobility(EComponentMobility::Movable);
-		Sun->SetActorLabel(TEXT("Sun"));
-		ASkyLight* Sky = World->SpawnActor<ASkyLight>(FVector(0.0, 0.0, 800.0), FRotator::ZeroRotator);
-		Sky->GetLightComponent()->SetMobility(EComponentMobility::Movable);
-		Sky->GetLightComponent()->bRealTimeCapture = true;
-		Sky->SetActorLabel(TEXT("SkyLight"));
-		// A real sky for the sun and the sky light to work with: atmosphere, clouds, a little fog.
-		if (UDirectionalLightComponent* SunLight = Cast<UDirectionalLightComponent>(Sun->GetLightComponent()))
-		{
-			SunLight->SetAtmosphereSunLight(true);
-		}
-		World->SpawnActor<ASkyAtmosphere>(FVector::ZeroVector, FRotator::ZeroRotator)->SetActorLabel(TEXT("SkyAtmosphere"));
-		World->SpawnActor<AVolumetricCloud>(FVector::ZeroVector, FRotator::ZeroRotator)->SetActorLabel(TEXT("VolumetricCloud"));
-		AExponentialHeightFog* Fog = World->SpawnActor<AExponentialHeightFog>(FVector(0.0, 0.0, -100.0), FRotator::ZeroRotator);
-		Fog->GetComponent()->SetFogDensity(0.01f);
-		Fog->SetActorLabel(TEXT("HeightFog"));
+		AddDaylight(World);
 
 		APlayerStart* Start = World->SpawnActor<APlayerStart>(FVector(0.0, -100.0, 100.0), FRotator::ZeroRotator);
 		Start->SetActorLabel(TEXT("PlayerStart_A"));
@@ -1100,6 +1135,7 @@ void VaesenCombatAssets::SetupCombat()
 	CreateTestItems(Meshes);
 	CreateDummies(Materials);
 	CreateTestMap(Materials);
+	CreateWeaponFitMap();
 }
 
 #undef LOCTEXT_NAMESPACE
