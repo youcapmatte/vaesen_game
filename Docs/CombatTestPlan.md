@@ -147,7 +147,20 @@ All 24 passed when this plan was written.
 | `Abilities.Throw` | Nothing to throw; stone aimed then thrown off the stack, hits, lands as a pickup; a drawn sword is unequipped and thrown |
 | `Abilities.BowDraw` | No arrows; early release lets down; full draw hits, uses an arrow, costs stamina, sticks and becomes a pickup |
 
-Functional tests placed in `L_CombatTest` aren't written yet: they need the final anim Blueprint to drive real swings and montages.
+### 0.7 In-map self-test
+
+In a running game (PIE with a dedicated server is fine), open the console and type **`vaesen.combat.selftest`**. On the server it spawns:
+
+- an AI-controlled `BP_VaesenPlayerCharacter`, which uses the same `GA_` Blueprints and input as a player;
+- three `BP_TrainingDummy`s, 15 m to the side of the first player start.
+
+It then runs the test Blueprints: revolver (draw, reload, fire, armored target), Krag (aimed, bolt cycles by itself), punch, sword (stamina, block, parry, wear), stone throw, and bow.
+
+Every check prints PASS or FAIL on screen and in the log, and everything it spawned is removed at the end. In `L_CombatTest` it reported **36 passed, 0 failed**.
+
+It checks what the C++ tests can't: the generated assets, the Blueprints and the map's collision together. Both clients should see the fighter do everything. The sword swing is reported as INFO until an attack montage exists, because without one the blade stays where the hand hangs.
+
+This replaces functional-test actors. The engine's FunctionalTesting module is developer-only and would break shipping builds.
 
 ---
 
