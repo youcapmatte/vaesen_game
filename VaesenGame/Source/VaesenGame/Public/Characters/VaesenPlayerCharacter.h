@@ -40,6 +40,9 @@ public:
 	AVaesenPlayerCharacter();
 
 	virtual void Tick(float DeltaSeconds) override;
+
+	/** A shot: the camera kicks up Degrees and settles over Recovery seconds (this machine's view only). */
+	void AddCameraKick(float Degrees, float Recovery);
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	UFUNCTION(BlueprintPure, Category = "Camera")
@@ -267,6 +270,10 @@ private:
 
 	EVaesenAbilityInput TriggerAttackInput = EVaesenAbilityInput::None;
 	float AimAlpha = 0.0f;
+
+	double CameraKickTime = -100.0;
+	float CameraKickDegrees = 0.0f;
+	float CameraKickRecovery = 0.35f;
 	float DefaultFieldOfView = 90.0f;
 	FVector DefaultSocketOffset = FVector::ZeroVector;
 

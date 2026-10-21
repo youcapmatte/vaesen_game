@@ -158,7 +158,7 @@ In a running game (PIE with a dedicated server is fine), open the console and ty
 
 It first checks that the interaction trace finds every pickup in the map and picks up a rifle through its interaction. It then runs the test Blueprints: revolver (draw, reload, fire, armored target), Krag (left hand on LeftGrip from the hip and aimed, shouldered, the bolt worked by hand at the shoulder, the case out as the bolt comes back), punch, sword (stamina, block, parry, wear), stone throw, and bow.
 
-Every check prints PASS or FAIL on screen and in the log, and everything it spawned is removed at the end. In `L_CombatTest` it reported **46 passed, 0 failed**.
+Every check prints PASS or FAIL on screen and in the log, and everything it spawned is removed at the end. In `L_CombatTest` it reported **47 passed, 0 failed**.
 
 It checks what the C++ tests can't: the generated assets, the Blueprints and the map's collision together. Both clients should see the fighter do everything. The sword swing is reported as INFO until an attack montage exists, because without one the blade stays where the hand hangs.
 
@@ -179,7 +179,7 @@ Aiming, the **Vaesen Shoulder Aim** anim node holds it like a shooter: the butt 
 
 Firing and working the bolt:
 
-- **A shot** rocks the upper body back (Recoil Body Pitch), pushes the shoulder back with the butt, and climbs the muzzle (Recoil Pitch). It settles in about half a second.
+- **A shot** kicks at once (peaking in 30 ms): the shoulder is driven back with the butt (Recoil Back, 4 cm), the upper body rocks back (Recoil Body Pitch, 6°), and the muzzle climbs (Recoil Pitch, 6°). The shooter's camera kicks up too (Camera Kick, 1.5°). It all settles over Recoil Recovery (0.35 s). These are under Weapon > Hold > Recoil.
 - **The bolt** (bolt-action weapons with a `Bolt` socket at the knob): after a shot, the rifle stays where it is, held by the shoulder and the left hand. The right hand goes to the bolt, lifts it, pulls it back, pushes it forward, turns it down and returns to the grip. The **spent case flies out of `Eject` when the bolt is fully back**, halfway through the cycle. This works from the hip too.
 - **When cases come out**, historically: the Krag on the bolt cycle; the revolver and the rolling-block pistol on reload (one per spent round); the muzzle-loader, bow and crossbow never. This is set per weapon in **Casing Ejection**.
 

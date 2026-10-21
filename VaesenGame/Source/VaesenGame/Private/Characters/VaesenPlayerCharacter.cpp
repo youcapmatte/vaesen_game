@@ -1,5 +1,6 @@
 #include "Characters/VaesenPlayerCharacter.h"
 
+#include "Anim/VaesenAnimInstance.h"
 #include "Camera/CameraComponent.h"
 #include "EnhancedInputComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -224,6 +225,13 @@ void AVaesenPlayerCharacter::Zoom(const FInputActionValue& Value)
 	DesiredCameraDistance = FMath::Min(MaxCameraDistance, DesiredCameraDistance - ZoomStep * Steps);
 }
 
+void AVaesenPlayerCharacter::AddCameraKick(float Degrees, float Recovery)
+{
+	CameraKickTime = GetWorld()->GetTimeSeconds();
+	CameraKickDegrees = Degrees;
+	CameraKickRecovery = Recovery;
+}
+
 void AVaesenPlayerCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
@@ -234,6 +242,10 @@ void AVaesenPlayerCharacter::Tick(float DeltaSeconds)
 	}
 
 	UpdateAimCamera(DeltaSeconds);
+
+	// A shot's kick, up and settling with the weapon's.
+	const float Kick = UVaesenAnimInstance::KickAt(static_cast<float>(GetWorld()->GetTimeSeconds() - CameraKickTime), CameraKickRecovery);
+	FollowCamera->SetRelativeRotation(FRotator(CameraKickDegrees * Kick, 0.0, 0.0));
 
 	// Aiming pulls the camera in over the shoulder (third person only).
 	const float WantedDistance = DesiredCameraDistance > 0.0f

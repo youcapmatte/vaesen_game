@@ -358,16 +358,27 @@ struct FVaesenWeaponHold
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hold|Aim", meta = (EditCondition = "bShoulderAim", ClampMin = "1"))
 	float AimBlendSpeed = 12.0f;
 
-	/** Each shot while aimed: pushed back this far (cm) and the muzzle up (degrees), easing back. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hold|Aim", meta = (EditCondition = "bShoulderAim"))
-	float RecoilBack = 3.0f;
+	/**
+	 * Each shot while aimed, the kick: the shoulder is driven back this far with the butt (cm; a stockless weapon is
+	 * pushed back), the muzzle climbs (degrees) and the upper body rocks back (degrees). It peaks at once and settles
+	 * over RecoilRecovery.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hold|Recoil", meta = (EditCondition = "bShoulderAim", Units = "cm"))
+	float RecoilBack = 4.0f;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hold|Aim", meta = (EditCondition = "bShoulderAim"))
-	float RecoilPitch = 4.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hold|Recoil", meta = (EditCondition = "bShoulderAim", Units = "Degrees"))
+	float RecoilPitch = 6.0f;
 
-	/** Each shot while aimed: the upper body rocks back this far (degrees), the shoulder taking the stock with it. */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hold|Aim", meta = (EditCondition = "bShoulderAim"))
-	float RecoilBodyPitch = 4.0f;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hold|Recoil", meta = (EditCondition = "bShoulderAim", Units = "Degrees"))
+	float RecoilBodyPitch = 6.0f;
+
+	/** How long the kick takes to settle (most of it in this time). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hold|Recoil", meta = (ClampMin = "0.05", Units = "s"))
+	float RecoilRecovery = 0.35f;
+
+	/** The shooter's camera kicks up this much with each shot, settling with the weapon. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hold|Recoil", meta = (Units = "Degrees"))
+	float CameraKick = 1.5f;
 };
 
 /**

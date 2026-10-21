@@ -105,6 +105,20 @@ void UVaesenCombatSelfTest::Check(bool bPassed, const FString& What)
 	Say(FString::Printf(TEXT("%s  %s"), bPassed ? TEXT("PASS") : TEXT("FAIL"), *What), bPassed ? FColor::Green : FColor::Red);
 }
 
+bool UVaesenCombatSelfTest::RiflePose(FVector& OutStock, FVector& OutBarrel) const
+{
+	const UVaesenWeaponItem* Rifle = Fighter && Fighter->GetEquipment() ? Fighter->GetEquipment()->GetDrawnWeapon() : nullptr;
+	const AVaesenWeaponActor* Actor = Rifle ? Rifle->GetWeaponActor() : nullptr;
+	FTransform Stock, Muzzle;
+	if (!Actor || !Actor->GetSocketTransform(TEXT("Stock"), Stock) || !Actor->GetSocketTransform(TEXT("Muzzle"), Muzzle))
+	{
+		return false;
+	}
+	OutStock = Stock.GetLocation();
+	OutBarrel = (Muzzle.GetLocation() - Stock.GetLocation()).GetSafeNormal();
+	return true;
+}
+
 int32 UVaesenCombatSelfTest::CountCasings() const
 {
 	int32 Count = 0;
@@ -484,8 +498,21 @@ void UVaesenCombatSelfTest::BuildSteps()
 		CheckLeftPalm(TEXT("aimed"));
 		// Fire and keep aiming: the bolt is worked at the shoulder.
 		CasingsBefore = CountCasings();
+		RiflePose(RestStock, RestBarrel);
 		Tap(Attack);
-		return 0.25f;
+		return 0.05f;
+	} });
+	Steps.Add({ FString(), [this]()
+	{
+		// The kick, just after the shot: the muzzle up, the butt and shoulder driven back.
+		FVector Stock, Barrel;
+		if (RiflePose(Stock, Barrel) && GetWorld()->GetNetMode() != NM_DedicatedServer)
+		{
+			const float Climb = FMath::RadiansToDegrees(FMath::Asin(FMath::Clamp(Barrel.Z, -1.0, 1.0)) - FMath::Asin(FMath::Clamp(RestBarrel.Z, -1.0, 1.0)));
+			const float Back = -FVector::DotProduct(Stock - RestStock, RestBarrel);
+			Check(Climb > 3.0f && Back > 2.0f, FString::Printf(TEXT("the shot kicks (muzzle up %.1f degrees, butt and shoulder back %.1f cm)"), Climb, Back));
+		}
+		return 0.2f;
 	} });
 	Steps.Add({ FString(), [this, ASC, Equipment]()
 	{

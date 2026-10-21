@@ -48,7 +48,10 @@ public:
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
 
 	/** A shot: the trigger finger curls and lets go (and a shouldered weapon kicks). */
-	void PulseTriggerFinger() { TriggerPulse = 1.0f; RecoilKick = 1.0f; }
+	void PulseTriggerFinger();
+
+	/** A shot's kick now, 0..1: up at once (in 30 ms), settling over Recovery seconds. */
+	static float KickAt(float SinceShot, float Recovery);
 
 	/** For the Shoulder Aim node (game thread): what it needs this frame (the weapon bone, shouldering, the bolt, the hands). */
 	bool GetShoulderAimInput(FVaesenShoulderAimInput& Out) const;
@@ -181,6 +184,9 @@ protected:
 
 private:
 	float RecoilKick = 0.0f;
+
+	/** When the last shot was fired (world seconds; negative: none yet). */
+	double ShotTime = -100.0;
 
 	FVaesenShoulderAimInput ShoulderAimInput;
 

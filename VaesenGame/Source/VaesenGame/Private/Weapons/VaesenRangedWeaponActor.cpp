@@ -407,6 +407,11 @@ void AVaesenRangedWeaponActor::PlayFireCosmetics(UAnimMontage* FireMontage)
 		{
 			Anim->PulseTriggerFinger();
 		}
+		// The shooter's camera kicks too.
+		if (AVaesenPlayerCharacter* Player = Cast<AVaesenPlayerCharacter>(GetOwner()); Player && Player->IsLocallyControlled())
+		{
+			Player->AddCameraKick(Hold.CameraKick, Hold.RecoilRecovery);
+		}
 	}
 
 	if (Item->CasingEjection == EVaesenCasingEjection::OnFire)

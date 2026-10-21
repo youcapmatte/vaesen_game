@@ -191,7 +191,11 @@ void FAnimNode_VaesenShoulderAim::EvaluateSkeletalControl_AnyThread(FComponentSp
 				const FVector HeadLever = EyeNow - Neck0.GetLocation();
 				Bow = Limit(FQuat::FindBetweenVectors(HeadLever, HeadLever - Gap * (1.0f - Input.ShoulderShare)) * Bow, MaxHeadBow);
 			}
+			// A shot drives the shoulder back with the butt (along the aim), the head staying on the stock.
 			NewClavicle.SetRotation(Lift * Clavicle0.GetRotation());
+			const FVector KickedLever = PocketOf(NewClavicle, UpperOnClavicle * NewClavicle) - Clavicle0.GetLocation();
+			const FQuat Driven = Limit(FQuat::FindBetweenVectors(KickedLever, KickedLever - Along * Input.RecoilBack * Input.Kick), MaxShoulderLift);
+			NewClavicle.SetRotation(Driven * Lift * Clavicle0.GetRotation());
 			NewNeck.SetRotation(Bow * Neck0.GetRotation());
 			// The arm rides on the shoulder; the butt goes on the lifted shoulder (which the rock pushed back).
 			Upper0 = UpperOnClavicle * NewClavicle;

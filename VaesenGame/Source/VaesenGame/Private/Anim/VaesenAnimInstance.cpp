@@ -231,7 +231,8 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	// (The Shoulder Aim node holds the left hand on the weapon.)
 	LeftHandIKAlpha = bLeftHolds ? 1.0f : 0.0f;
 	LeftHandRotationAlpha = bLeftGrip ? LeftHandIKAlpha : 0.0f;
-	RecoilKick = FMath::FInterpTo(RecoilKick, 0.0f, DeltaSeconds, 10.0f);
+	RecoilKick = KickAt(static_cast<float>(Now - ShotTime), Held.Hold ? Held.Hold->RecoilRecovery : 0.35f);
+	ShoulderAimInput.Kick = RecoilKick;
 
 	// Drawing or sheathing: the hand reaches for the actual grip of the weapon in its sheath.
 	SheathHandIKAlpha = FMath::Clamp(GetCurveValue(HandIKSheathCurve), 0.0f, 1.0f);
@@ -287,6 +288,27 @@ FVector UVaesenAnimInstance::EyePoint(const USkeletalMeshComponent* Body)
 	}
 	// Manny's mesh space: forward +Y, right -X, up Z.
 	return Body->GetSocketLocation(TEXT("head")) + Body->GetComponentTransform().TransformVector(FVector(-3.0, 9.0, 9.0));
+}
+
+void UVaesenAnimInstance::PulseTriggerFinger()
+{
+	TriggerPulse = 1.0f;
+	ShotTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0;
+}
+
+float UVaesenAnimInstance::KickAt(float SinceShot, float Recovery)
+{
+	constexpr float Rise = 0.03f;
+	if (SinceShot < 0.0f)
+	{
+		return 0.0f;
+	}
+	if (SinceShot < Rise)
+	{
+		return FMath::Sin(HALF_PI * SinceShot / Rise);
+	}
+	// Settling: most of the way back over Recovery (e^-3 left at its end).
+	return FMath::Exp(-3.0f * (SinceShot - Rise) / FMath::Max(Recovery, 0.05f));
 }
 
 bool UVaesenAnimInstance::GetShoulderAimInput(FVaesenShoulderAimInput& Out) const
