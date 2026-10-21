@@ -7,6 +7,7 @@
 #include "VaesenWeaponData.generated.h"
 
 class UAnimInstance;
+class UAnimSequenceBase;
 class USoundAttenuation;
 class USoundConcurrency;
 class UPhysicalMaterial;
@@ -111,6 +112,13 @@ struct FVaesenCategoryDefaults
 	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Category", meta = (AllowedClasses = "/Script/PoseSearch.PoseSearchDatabase,/Script/Chooser.ChooserTable"))
 	TSoftObjectPtr<UObject> LocomotionDatabase;
+
+	/**
+	 * How the fingers close round this category's grips: a pose (frame 0 of it) laid over the finger bones only, of each
+	 * hand that holds the weapon. Empty = the fingers as the animation has them.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Category")
+	TObjectPtr<UAnimSequenceBase> GripPose;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Category")
 	FVaesenWeaponMontages Montages;

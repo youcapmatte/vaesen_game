@@ -20,7 +20,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FVaesenDurabilityChanged);
  * shields). Throwing isn't a kind of weapon: any item can be throwable (UVaesenItem::Throwing).
  *
  * Holding: the weapon mesh's Grip socket lines up with the character's hand socket (hand_r_weapon), so weapons of
- * the same category share animations; LeftHandIK places the off hand on two-handed weapons. Carrying: the weapon
+ * the same category share animations; LeftGrip places the left hand (and turns it) on two-handed weapons. Carrying: the weapon
  * hangs at SheathSocket (+ SheathOffset) until it's drawn (H).
  *
  * Animation, sounds and attacks default to the category's (DA_WeaponCategoryDefaults); set the overrides here only
@@ -54,7 +54,7 @@ public:
 
 	// --- Mesh ---
 
-	/** In the hand and the sheath, with sockets Grip (required), LeftHandIK, Muzzle, Eject, TraceStart/TraceEnd. Empty = Pickup Mesh. */
+	/** In the hand and the sheath, with sockets Grip (required), LeftGrip, Sight, Stock, Muzzle, Eject, TraceStart/TraceEnd. Empty = Pickup Mesh. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon|Mesh")
 	TObjectPtr<UStaticMesh> WeaponMesh;
 

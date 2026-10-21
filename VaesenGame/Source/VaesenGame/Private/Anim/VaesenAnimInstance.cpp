@@ -6,6 +6,7 @@
 #include "Camera/PlayerCameraManager.h"
 #include "Characters/VaesenBaseCharacter.h"
 #include "Combat/VaesenGameplayTags.h"
+#include "Engine/SkeletalMeshSocket.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/PlayerController.h"
 #include "Inventory/VaesenEquipmentComponent.h"
@@ -16,6 +17,19 @@
 
 const FName UVaesenAnimInstance::HandIKSheathCurve(TEXT("HandIK_Sheath"));
 const FName UVaesenAnimInstance::TriggerFingerCurve(TEXT("TriggerFinger"));
+const FName UVaesenAnimInstance::LeftHandGripSocket(TEXT("hand_l_weapon"));
+
+bool FVaesenHeldWeapon::GetLocalSocketTransform(FName Socket, FTransform& OutTransform) const
+{
+	if (Mesh && Grip && Mesh->DoesSocketExist(Socket))
+	{
+		OutTransform = Mesh->GetSocketTransform(Socket).GetRelativeTransform(Grip->GetComponentTransform());
+		OutTransform.SetScale3D(FVector::OneVector);
+		return true;
+	}
+	OutTransform = FTransform::Identity;
+	return false;
+}
 
 bool FVaesenHeldWeapon::GetLocalSocket(FName Socket, FVector& OutLocation, const FVector& Fallback) const
 {
@@ -104,22 +118,12 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	const AVaesenRangedWeaponActor* Ranged = Cast<AVaesenRangedWeaponActor>(WeaponActor);
 	BowDrawAlpha = Ranged ? Ranged->GetDrawAlpha() : 0.0f;
 
-	// Off hand on the fore-grip of two-handed weapons.
-	FVector LeftHandLocal;
-	LeftHandIKAlpha = bTwoHanded && bInHand && bHandsFree && Held.IsValid() && Held.GetLocalSocket(TEXT("LeftHandIK"), LeftHandLocal) ? 1.0f : 0.0f;
-	if (LeftHandIKAlpha > 0.0f)
-	{
-		const FVector LeftHand = Held.Grip->GetComponentTransform().TransformPosition(LeftHandLocal + Held.Hold->LeftHandOffset);
-		LeftHandIKTransform = FTransform(Held.Grip->GetComponentQuat(), LeftHand);
-		LeftHandIKLocation = LeftHand;
-		// Relative to the right hand, which holds the weapon rigidly: right however the arm moves this frame.
-		LeftHandIKInHand = Body->GetSocketTransform(TEXT("hand_r")).InverseTransformPosition(LeftHand);
-	}
-
 	// Shouldered while aiming two-handed guns (not bows: they have their own draw).
 	const bool bShoulderAim = bShouldering && bTwoHanded && bInHand && bHandsFree && Held.IsValid() && Held.Hold->bShoulderAim
 		&& WeaponCategory != EVaesenWeaponCategory::Bow;
 	const FTransform& Component = Body->GetComponentTransform();
+	// Where the weapon is this frame: laid at the shoulder (exact), or in the hand as it was last frame.
+	FTransform WeaponNow = Held.Grip ? Held.Grip->GetComponentTransform() : FTransform::Identity;
 	if (bShoulderAim)
 	{
 		// The player's own view: the barrel converges on what the crosshair is on (30 m out), not parallel to the camera.
@@ -136,7 +140,40 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		const FTransform Placed = PlaceShouldered(Body, Held, Aim, RecoilKick);
 		const FTransform WeaponInHand = Held.Grip->GetComponentTransform().GetRelativeTransform(Body->GetSocketTransform(TEXT("hand_r")));
 		AimHandInComponent = (WeaponInHand.Inverse() * Placed).GetRelativeTransform(Component);
+		WeaponNow = Placed;
 	}
+
+	// Off hand on the fore-grip of two-handed weapons: its palm (hand_l_weapon) on the LeftGrip socket, turned as the
+	// socket is. LeftHandIK (older meshes) gives only the place.
+	FTransform LeftGrip;
+	FVector LeftHandIKOnly;
+	const bool bLeftGrip = Held.IsValid() && Held.GetLocalSocketTransform(TEXT("LeftGrip"), LeftGrip);
+	const bool bLeftPlace = bLeftGrip || (Held.IsValid() && Held.GetLocalSocket(TEXT("LeftHandIK"), LeftHandIKOnly));
+	LeftHandIKAlpha = bTwoHanded && bInHand && bHandsFree && bLeftPlace ? 1.0f : 0.0f;
+	LeftHandRotationAlpha = bLeftGrip ? LeftHandIKAlpha : 0.0f;
+	if (LeftHandIKAlpha > 0.0f)
+	{
+		if (!bLeftGrip)
+		{
+			LeftGrip = FTransform(LeftHandIKOnly);
+		}
+		LeftGrip.AddToTranslation(Held.Hold->LeftHandOffset);
+		const USkeletalMeshSocket* Palm = bLeftGrip ? Body->GetSocketByName(LeftHandGripSocket) : nullptr;
+		// The hand bone, in the weapon's space: the palm socket put on the grip.
+		const FTransform HandInWeapon = Palm ? Palm->GetSocketLocalTransform().Inverse() * LeftGrip : LeftGrip;
+		const FTransform LeftHand = HandInWeapon * WeaponNow;
+		LeftHandIKTransform = LeftHand;
+		LeftHandIKLocation = LeftHand.GetLocation();
+		LeftHandIKRotation = LeftHand.GetRelativeTransform(Component).Rotator();
+		// Relative to the right hand, which holds the weapon rigidly: right however the arm moves this frame.
+		const FTransform WeaponInRightHand = Held.Grip->GetComponentTransform().GetRelativeTransform(Body->GetSocketTransform(TEXT("hand_r")));
+		LeftHandIKInHand = (HandInWeapon * WeaponInRightHand).GetLocation();
+	}
+
+	// The fingers closed round the grips, of each hand that holds the weapon.
+	GripPose = UVaesenWeaponCategoryDefaults::Get()->GetCategory(WeaponCategory).GripPose;
+	RightFingerGrip = GripPose && bInHand && bHandsFree ? 1.0f : 0.0f;
+	LeftFingerGrip = GripPose ? LeftHandIKAlpha : 0.0f;
 	const float BlendSpeed = Held.Hold ? Held.Hold->AimBlendSpeed : 12.0f;
 	AimIKAlpha = Rig ? (bShoulderAim ? 1.0f : 0.0f) : FMath::FInterpTo(AimIKAlpha, bShoulderAim ? 1.0f : 0.0f, DeltaSeconds, BlendSpeed);
 	if (!bInHand)
@@ -195,18 +232,21 @@ FTransform UVaesenAnimInstance::PlaceShouldered(const USkeletalMeshComponent* Bo
 	const FVector Sight = Body->GetSocketLocation(TEXT("head")) + Aim.RotateVector(Hold.AimSightOffset) - Along * Hold.RecoilBack * Kick;
 	const FQuat Rotation = Aim.Quaternion() * Hold.AimRotation.Quaternion() * FRotator(Hold.RecoilPitch * Kick, 0.0, 0.0).Quaternion();
 
-	// The weapon laid there: its Sight socket on the point (no Sight: a little over the grip).
-	FVector SightLocal, StockLocal;
-	Weapon.GetLocalSocket(TEXT("Sight"), SightLocal, FVector(0.0, 0.0, 6.0));
-	FVector Location = Sight - Rotation.RotateVector(SightLocal);
+	// The weapon laid there: its Sight socket on the point, the sight's X along the aim (no Sight: a little over the
+	// grip, along the barrel).
+	FTransform SightLocal(FVector(0.0, 0.0, 6.0));
+	Weapon.GetLocalSocketTransform(TEXT("Sight"), SightLocal);
+	const FQuat Turned = Rotation * SightLocal.GetRotation().Inverse();
+	FVector Location = Sight - Turned.RotateVector(SightLocal.GetLocation());
+	FVector StockLocal;
 
 	// With a Stock socket, slid along the aim so the stock meets the shoulder.
 	if (Weapon.GetLocalSocket(TEXT("Stock"), StockLocal))
 	{
-		const FVector Stock = Location + Rotation.RotateVector(StockLocal);
+		const FVector Stock = Location + Turned.RotateVector(StockLocal);
 		Location += Along * (Hold.StockToShoulder - FVector::DotProduct(Stock - Body->GetSocketLocation(TEXT("upperarm_r")), Along));
 	}
-	return FTransform(Rotation, Location);
+	return FTransform(Turned, Location);
 }
 
 void UVaesenAnimInstance::ShoulderHoldFromPlacement(const USkeletalMeshComponent* Body, const FVaesenHeldWeapon& Weapon, const FRotator& InAim,
@@ -214,11 +254,12 @@ void UVaesenAnimInstance::ShoulderHoldFromPlacement(const USkeletalMeshComponent
 {
 	FRotator Aim = InAim;
 	Aim.Roll = 0.0f;
-	InOutHold.AimRotation = (Aim.Quaternion().Inverse() * Placed.GetRotation()).Rotator();
+	FTransform SightLocal(FVector(0.0, 0.0, 6.0));
+	Weapon.GetLocalSocketTransform(TEXT("Sight"), SightLocal);
+	InOutHold.AimRotation = (Aim.Quaternion().Inverse() * Placed.GetRotation() * SightLocal.GetRotation()).Rotator();
 
-	FVector SightLocal, StockLocal;
-	Weapon.GetLocalSocket(TEXT("Sight"), SightLocal, FVector(0.0, 0.0, 6.0));
-	const FVector Sight = Placed.GetLocation() + Placed.GetRotation().RotateVector(SightLocal);
+	FVector StockLocal;
+	const FVector Sight = Placed.GetLocation() + Placed.GetRotation().RotateVector(SightLocal.GetLocation());
 	InOutHold.AimSightOffset = Aim.UnrotateVector(Sight - Body->GetSocketLocation(TEXT("head")));
 	if (Weapon.GetLocalSocket(TEXT("Stock"), StockLocal))
 	{

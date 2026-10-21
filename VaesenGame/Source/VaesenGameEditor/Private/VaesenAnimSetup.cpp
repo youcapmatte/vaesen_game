@@ -35,6 +35,7 @@
 #include "AnimGraphNode_Root.h"
 #include "AnimGraphNode_RotationOffsetBlendSpace.h"
 #include "AnimGraphNode_SaveCachedPose.h"
+#include "AnimGraphNode_SequenceEvaluator.h"
 #include "AnimGraphNode_SequencePlayer.h"
 #include "AnimGraphNode_Slot.h"
 #include "AnimGraphNode_TwoBoneIK.h"
@@ -699,7 +700,8 @@ namespace VaesenAnimSetup
 	 *   -> UpperBody slot, layered from spine_01 up (fire, reload, draw: the legs keep walking)
 	 *   -> DefaultSlot (full-body montages: stagger, hit reactions)
 	 *   -> shoulder aim: the right hand where it holds the weapon against the shoulder (AimHandLocation / Rotation)
-	 *   -> left hand onto the weapon's LeftHandIK (relative to the right hand), the drawing hand onto the sheathed weapon's grip
+	 *   -> fingers closed round the grips (the category's GripPose, finger bones only)
+ *   -> left hand onto the weapon's LeftGrip (placed relative to the right hand, then turned), the drawing hand onto the sheathed weapon's grip
 	 */
 	UClass* BuildCharacterGraph(USkeleton* Skeleton, bool bRebuild)
 	{
@@ -763,8 +765,54 @@ namespace VaesenAnimSetup
 		});
 		Builder.Pose(Layered, FullSlot, TEXT("Source"));
 
-		UAnimGraphNode_LocalToComponentSpace* ToComponent = Builder.Add<UAnimGraphNode_LocalToComponentSpace>(-450, 0, [](UAnimGraphNode_LocalToComponentSpace*) {});
-		Builder.Pose(FullSlot, ToComponent, TEXT("LocalPose"));
+		// The fingers closed round the grips: the category's grip pose, over the finger bones of each holding hand.
+		UAnimGraphNode_SequenceEvaluator* Grip = Builder.Add<UAnimGraphNode_SequenceEvaluator>(-900, 400, [](UAnimGraphNode_SequenceEvaluator*) {});
+		for (FOptionalPinFromProperty& Pin : Grip->ShowPinForProperties)
+		{
+			if (Pin.PropertyName == TEXT("Sequence"))
+			{
+				Pin.bShowPin = true;
+			}
+		}
+		Grip->ReconstructNode();
+		Builder.Var(TEXT("GripPose"), Grip, TEXT("Sequence"));
+		UAnimGraphNode_SaveCachedPose* GripCache = Builder.Add<UAnimGraphNode_SaveCachedPose>(-650, 400, [](UAnimGraphNode_SaveCachedPose* Node)
+		{
+			Node->CacheName = TEXT("GripPose");
+		});
+		Builder.Pose(Grip, GripCache, TEXT("Pose"));
+		const auto UseGrip = [&Builder, GripCache](int32 Y)
+		{
+			return Builder.Add<UAnimGraphNode_UseCachedPose>(-650, Y, [GripCache](UAnimGraphNode_UseCachedPose* Node)
+			{
+				Node->SaveCachedPoseNode = GripCache;
+			});
+		};
+		UAnimGraphNode_LayeredBoneBlend* Fingers = Builder.Add<UAnimGraphNode_LayeredBoneBlend>(-450, 200, [](UAnimGraphNode_LayeredBoneBlend* Node)
+		{
+			Node->Node.AddPose();
+			Node->Node.LayerSetup.SetNum(2);
+			for (int32 Side = 0; Side < 2; ++Side)
+			{
+				const TCHAR* Suffix = Side == 0 ? TEXT("_l") : TEXT("_r");
+				TArray<FBranchFilter>& Filters = Node->Node.LayerSetup[Side].BranchFilters;
+				Filters.Reset();
+				for (const TCHAR* Finger : { TEXT("thumb_01"), TEXT("index_metacarpal"), TEXT("middle_metacarpal"), TEXT("ring_metacarpal"), TEXT("pinky_metacarpal") })
+				{
+					FBranchFilter& Filter = Filters.AddDefaulted_GetRef();
+					Filter.BoneName = FName(FString(Finger) + Suffix);
+					Filter.BlendDepth = 0;
+				}
+			}
+		});
+		Builder.Pose(FullSlot, Fingers, TEXT("BasePose"));
+		Builder.Pose(UseGrip(500), Fingers, TEXT("BlendPoses_0"));
+		Builder.Pose(UseGrip(600), Fingers, TEXT("BlendPoses_1"));
+		Builder.Var(TEXT("LeftFingerGrip"), Fingers, TEXT("BlendWeights_0"));
+		Builder.Var(TEXT("RightFingerGrip"), Fingers, TEXT("BlendWeights_1"));
+
+		UAnimGraphNode_LocalToComponentSpace* ToComponent = Builder.Add<UAnimGraphNode_LocalToComponentSpace>(-200, 0, [](UAnimGraphNode_LocalToComponentSpace*) {});
+		Builder.Pose(Fingers, ToComponent, TEXT("LocalPose"));
 
 		const auto HandIK = [&Builder](int32 X, const TCHAR* Hand, const TCHAR* Elbow)
 		{
@@ -803,12 +851,25 @@ namespace VaesenAnimSetup
 		Builder.Var(TEXT("LeftHandIKAlpha"), LeftHand, TEXT("Alpha"));
 		Builder.Var(TEXT("LeftHandIKInHand"), LeftHand, TEXT("EffectorLocation"));
 
-		UAnimGraphNode_TwoBoneIK* DrawHand = HandIK(750, TEXT("hand_r"), TEXT("lowerarm_r"));
-		Builder.Pose(LeftHand, DrawHand, TEXT("ComponentPose"));
+		// ...and turned as the weapon's LeftGrip says (component space).
+		UAnimGraphNode_ModifyBone* LeftTurn = Builder.Add<UAnimGraphNode_ModifyBone>(750, 0, [](UAnimGraphNode_ModifyBone* Node)
+		{
+			Node->Node.BoneToModify.BoneName = TEXT("hand_l");
+			Node->Node.TranslationMode = BMM_Ignore;
+			Node->Node.ScaleMode = BMM_Ignore;
+			Node->Node.RotationMode = BMM_Replace;
+			Node->Node.RotationSpace = BCS_ComponentSpace;
+		});
+		Builder.Pose(LeftHand, LeftTurn, TEXT("ComponentPose"));
+		Builder.Var(TEXT("LeftHandRotationAlpha"), LeftTurn, TEXT("Alpha"));
+		Builder.Var(TEXT("LeftHandIKRotation"), LeftTurn, TEXT("Rotation"));
+
+		UAnimGraphNode_TwoBoneIK* DrawHand = HandIK(1050, TEXT("hand_r"), TEXT("lowerarm_r"));
+		Builder.Pose(LeftTurn, DrawHand, TEXT("ComponentPose"));
 		Builder.Var(TEXT("SheathHandIKAlpha"), DrawHand, TEXT("Alpha"));
 		Builder.Var(TEXT("SheathHandIKLocation"), DrawHand, TEXT("EffectorLocation"));
 
-		UAnimGraphNode_ComponentToLocalSpace* ToLocal = Builder.Add<UAnimGraphNode_ComponentToLocalSpace>(1050, 0, [](UAnimGraphNode_ComponentToLocalSpace*) {});
+		UAnimGraphNode_ComponentToLocalSpace* ToLocal = Builder.Add<UAnimGraphNode_ComponentToLocalSpace>(1350, 0, [](UAnimGraphNode_ComponentToLocalSpace*) {});
 		Builder.Pose(DrawHand, ToLocal, TEXT("ComponentPose"));
 		Builder.Pose(ToLocal, Builder.Root(), TEXT("Result"));
 
@@ -829,7 +890,7 @@ namespace VaesenAnimSetup
 	 * The hand socket on Manny that holds a rifle the way the pack does: the pack holds its rifle at the UE4 skeleton's
 	 * Gun socket on hand_r; the same rifle placement, seen from Manny's retargeted hand, is the socket.
 	 */
-	bool ComputeHandSocket(FTransform& OutSocket, FTransform& OutLeftHandInRifle)
+	bool ComputeHandSocket(FTransform& OutSocket, FTransform& OutLeftPalmSocket, FVector& OutLeftGripInRifle)
 	{
 		const UAnimSequence* Source = LoadObject<UAnimSequence>(nullptr, TEXT("/Game/RifleAnims/Animations/BlendSpaces/Standing_IdleWalk_Aim/AS_Rifle_Aim.AS_Rifle_Aim"));
 		const UAnimSequence* Target = RifleAnim(TEXT("AS_Rifle_Aim"));
@@ -851,10 +912,17 @@ namespace VaesenAnimSetup
 		OutSocket.SetScale3D(FVector::OneVector);
 
 		const FTransform Rifle5 = OutSocket * Hand5;
+		// The left palm (between the wrist and the middle knuckle) as it holds the pack's rifle: hand_l_weapon is that
+		// palm turned like the rifle (X to the muzzle, Z up), so a weapon's LeftGrip socket, turned the same way, puts
+		// the hand back exactly as the pack holds it.
 		const FTransform LeftHand5 = UAnimPoseExtensions::GetBonePose(TargetPose, TEXT("hand_l"), EAnimPoseSpaces::World);
-		OutLeftHandInRifle = LeftHand5.GetRelativeTransform(Rifle5);
-		UE_LOG(LogVaesenAnimSetup, Display, TEXT("Hand socket %s; aimed rifle points %s (forward is +Y); left hand on the rifle at %s"),
-			*Describe(OutSocket), *Rifle5.GetRotation().GetForwardVector().ToCompactString(), *OutLeftHandInRifle.GetLocation().ToCompactString());
+		const FVector Knuckle5 = UAnimPoseExtensions::GetBonePose(TargetPose, TEXT("middle_01_l"), EAnimPoseSpaces::World).GetLocation();
+		const FTransform Palm5(Rifle5.GetRotation(), (LeftHand5.GetLocation() + Knuckle5) * 0.5);
+		OutLeftPalmSocket = Palm5.GetRelativeTransform(LeftHand5);
+		OutLeftPalmSocket.SetScale3D(FVector::OneVector);
+		OutLeftGripInRifle = Rifle5.InverseTransformPosition(Palm5.GetLocation());
+		UE_LOG(LogVaesenAnimSetup, Display, TEXT("Hand socket %s; aimed rifle points %s (forward is +Y); left palm on the rifle at %s"),
+			*Describe(OutSocket), *Rifle5.GetRotation().GetForwardVector().ToCompactString(), *OutLeftGripInRifle.ToCompactString());
 		return true;
 	}
 
@@ -933,16 +1001,18 @@ namespace VaesenAnimSetup
 		}
 
 		// Sockets: the hand as the pack holds its rifle, the back sling, the left hand's place on the rifles.
-		FTransform HandSocket, LeftHandInRifle;
-		const bool bHand = ComputeHandSocket(HandSocket, LeftHandInRifle);
+		FTransform HandSocket, LeftPalmSocket;
+		FVector LeftGripInRifle;
+		const bool bHand = ComputeHandSocket(HandSocket, LeftPalmSocket, LeftGripInRifle);
 		if (bHand)
 		{
 			SetSkeletonSocket(Skeleton, TEXT("hand_r_weapon"), TEXT("hand_r"), HandSocket, bResetSockets);
+			SetSkeletonSocket(Skeleton, TEXT("hand_l_weapon"), TEXT("hand_l"), LeftPalmSocket, bResetSockets);
 		}
 		SetSkeletonSocket(Skeleton, TEXT("Sheath_BackSling"), TEXT("spine_04"), ComputeBackSling(Skeleton, TEXT("spine_04")), bResetSockets);
 		Save(Skeleton);
 
-		// The grey-box long guns: the off hand where the pack puts it (from the grip, which the hand holds), and Sight
+		// The grey-box long guns: the left palm where the pack puts it (from the grip, which the hand holds), and Sight
 		// (the line of the sights) and Stock (the butt plate) for the shoulder aim.
 		struct FLongGun { const TCHAR* Name; FVector Sight; FVector Stock; };
 		for (const FLongGun& Gun : { FLongGun{ TEXT("SM_GB_KragRifle"), FVector(14.0, 0.0, 4.5), FVector(-40.0, 0.0, -2.0) },
@@ -958,7 +1028,13 @@ namespace VaesenAnimSetup
 			const FVector GripLocation = Grip ? Grip->RelativeLocation : FVector::ZeroVector;
 			if (bHand)
 			{
-				SetMeshSocket(Mesh, TEXT("LeftHandIK"), FTransform(GripLocation + LeftHandInRifle.GetLocation()), bResetSockets);
+				// Where the left palm holds it (the older position-only LeftHandIK goes).
+				SetMeshSocket(Mesh, TEXT("LeftGrip"), FTransform(GripLocation + LeftGripInRifle), bResetSockets);
+				if (UStaticMeshSocket* Old = Mesh->FindSocket(TEXT("LeftHandIK")))
+				{
+					Mesh->RemoveSocket(Old);
+					Save(Mesh);
+				}
 			}
 			SetMeshSocket(Mesh, TEXT("Sight"), FTransform(Gun.Sight), false);
 			SetMeshSocket(Mesh, TEXT("Stock"), FTransform(Gun.Stock), false);
@@ -1016,6 +1092,8 @@ namespace VaesenAnimSetup
 				Entry.Montages.FireAimed = FireAimed;
 				Entry.Montages.Reload = Reload;
 				Entry.Montages.ReloadEmpty = ReloadEmpty;
+				// The fingers as the pack wraps them round its rifle (both hands, aimed).
+				Entry.GripPose = RifleAnim(TEXT("AS_Rifle_Aim"));
 			}
 			Defaults->Categories.FindOrAdd(EVaesenWeaponCategory::Unarmed).AnimLayer = LoadObject<UClass>(nullptr, UnarmedGraphPath);
 			if (FVaesenSheathLocation* Sling = Defaults->SheathLocations.Find(TEXT("Sheath_BackSling")))

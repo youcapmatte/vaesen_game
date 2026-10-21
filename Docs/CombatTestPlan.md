@@ -147,7 +147,7 @@ All 24 passed when this plan was written.
 | `Abilities.BlockAndParryInput` | Right mouse blocks; parry window then plain block; slower while blocking; stamina drains; release; attacking drops the block |
 | `Abilities.Throw` | Nothing to throw; stone aimed then thrown off the stack, hits, lands as a pickup; a drawn sword is unequipped and thrown |
 | `Abilities.BowDraw` | No arrows; early release lets down; full draw hits, uses an arrow, costs stamina, sticks and becomes a pickup |
-| `WeaponFitRig` | The Weapon Fit rig holds the Krag shouldered (barrel along the aim, stock at the shoulder); dragging it while aimed keeps it there; dragging from the hip moves In Hand; dragging the sphere moves the left hand onto it |
+| `WeaponFitRig` | The rig holds the Krag shouldered; the left palm sits on LeftGrip (place and turn), aimed and from the hip; moving the weapon while aimed sets Sight (it stays where put); sliding it from the hip moves Grip; moving and turning the LeftGrip handle moves the hand with it |
 
 ### 0.7 In-map self-test
 
@@ -164,33 +164,38 @@ It checks what the C++ tests can't: the generated assets, the Blueprints and the
 
 This replaces functional-test actors. The engine's FunctionalTesting module is developer-only and would break shipping builds.
 
-### 0.8 Fitting a weapon to the hands (the Weapon Fit rig)
+### 0.8 How weapons are held (sockets), and the Weapon Fit rig
 
-Open **`L_WeaponFit`** (Content/Vaesen/Maps). It has a **Weapon Fit rig**: Manny posed by the real anim Blueprint, holding a weapon. You don't need to press Play. To fit a weapon in another level, drag *Vaesen Weapon Fit Rig* in from Place Actors.
+Every weapon is held by sockets on its mesh. The rule is the same for every weapon: **X toward the muzzle, Z up**.
+
+| Socket | Where | What follows it |
+| --- | --- | --- |
+| `Grip` | Where the right palm closes (pistol grip, wrist of the stock) | The weapon sits in the right hand here (skeleton socket `hand_r_weapon`) |
+| `LeftGrip` | Where the left palm holds (fore-end), turned as the palm should be | The left hand: IK moves it there, and it is turned to match (skeleton socket `hand_l_weapon`) |
+| `Sight` | On the line of the sights; its X is that line | Aiming: the sight goes in front of the eye, along the aim |
+| `Stock` | The butt plate (long guns) | Aiming: slid along the aim until it meets the shoulder |
+
+IK solves the arms and elbows, and the fingers close by the category's **Grip Pose** (DA_WeaponCategoryDefaults; rifles use the pack's aimed rifle grip). A weapon with these four sockets right needs nothing else. The grey-box long guns already have them: `hand_l_weapon` and `LeftGrip` are worked out from how the rifle pack holds its rifle.
+
+**Checking and setting the sockets: the Weapon Fit rig.** Open **`L_WeaponFit`** (Content/Vaesen/Maps). You don't need to press Play. To use it in another level, place *Vaesen Weapon Fit Rig* from Place Actors.
 
 1. Select the rig. Under **Weapon Fit** in Details, pick the **Weapon** (an item Blueprint) and the **Pose**: Hip, Aim, Crouch or CrouchAim.
    - **Aim Pitch** looks up or down.
    - **Speed** and **Direction** walk or run on the spot.
-   - **Preview Animation** shows any animation of the skeleton on the upper body (a reload, the fire, the draw), held at **Preview Time**. Tick **Play Preview** to play it instead.
-2. Click the weapon (click again if the whole rig is selected) and move or rotate it with the gizmo (W / E):
-   - **Hip, Crouch:** how it sits in the hand (Hold > In Hand). The hand stays; the weapon moves in it.
-   - **Aim, CrouchAim:** where it sits against the shoulder (Hold > Aim Sight Offset, Stock To Shoulder, Aim Rotation). The weapon goes where you put it, and the right hand moves to hold it there.
-3. The **small sphere** is the left hand. Drag it along the weapon and the hand follows (Hold > Left Hand Offset).
-4. Every change goes straight into the weapon's Blueprint. **Save Weapon** (on the rig) or Save All keeps it. **Reset Hold** starts over.
+   - **Preview Animation** shows any animation on the upper body (reload, fire, draw), held at **Preview Time**. **Play Preview** plays it instead.
+2. The small shapes on the weapon are its sockets: **cube** `Grip`, **sphere** `LeftGrip`, **cone** `Sight`, **cylinder** `Stock`. Click one (click again if the whole rig is selected) and move or turn it with the gizmo (W / E). The hands follow at once:
+   - Move or turn `LeftGrip` and the left hand moves and turns with it.
+   - Move `Grip` and the weapon slides in the right hand.
+3. Or move the **weapon** itself:
+   - In Hip or Crouch, it slides or turns in the hand, and `Grip` is set to match.
+   - In Aim, you are setting where it lies against the shoulder, and `Sight` and `Stock` are set to match.
+4. Untick **Show Sockets** to see the hands without the shapes. **Save Weapon** saves the weapon's mesh (the sockets) and its Blueprint.
 
-The same values can be typed in the weapon Blueprint under **Weapon > Hold**:
+Sockets belong to the mesh, so every weapon using that mesh gets them.
 
-| Setting | What it does |
-| --- | --- |
-| In Hand | Moves the weapon from the hand socket (`hand_r_weapon`), in every pose |
-| Left Hand Offset | Moves the left hand's grip from the mesh's `LeftHandIK` socket (weapon space, cm) |
-| Shoulder Aim | Lays two-handed guns against the shoulder while aiming (off: the aim animation holds it) |
-| Aim Sight Offset | Where the `Sight` socket sits while aiming, from the head: X forward, Y right, Z up (cm). With a `Stock` socket, the stock decides how far forward |
-| Stock To Shoulder | How far the `Stock` socket sits in front of the shoulder joint, along the aim (cm) |
-| Aim Rotation | Turns it while aiming (Roll cants it) |
-| Aim Blend Speed, Recoil Back, Recoil Pitch | How fast it comes up, and the kick of a shot while shouldered |
+Extra adjustments for one weapon only (normally zero) are in the weapon Blueprint under **Weapon > Hold**: In Hand, Left Hand Offset, Aim Sight Offset (where the sight sits from the head), Stock To Shoulder, Aim Rotation, Recoil.
 
-New weapon meshes need the sockets `Grip`, `LeftHandIK`, `Sight` (the line of the sights) and `Stock` (the butt plate), set in the Static Mesh editor. The rig shows static weapon meshes for now. `-run=VaesenAnimSetup` only adds sockets that are missing. Add `-resetsockets` to work them out again, and `-rebuild` to rebuild the anim Blueprints.
+`-run=VaesenAnimSetup` only adds sockets that are missing. Add `-resetsockets` to work them out again from the pack, and `-rebuild` to rebuild the anim Blueprints.
 
 The interaction trace (the debug capsule) is hidden while a weapon is drawn, so it doesn't cover the crosshair.
 

@@ -27,20 +27,31 @@ class VAESENGAME_API UVaesenFitHandleComponent : public UStaticMeshComponent
 	GENERATED_BODY()
 
 public:
+	/** The weapon mesh socket this handle stands for (None: the weapon itself). */
+	UPROPERTY(VisibleAnywhere, Category = "Weapon Fit")
+	FName Socket;
+
 #if WITH_EDITOR
 	virtual void PostEditComponentMove(bool bFinished) override;
 #endif
 };
 
 /**
- * Weapon Fit rig: tunes how a weapon sits in the hands, in the editor, without playing (L_WeaponFit has one).
+ * Weapon Fit rig: checks and sets a weapon's sockets with the hands on it, in the editor, without playing
+ * (L_WeaponFit has one).
  *
- * Pick a Weapon and a Pose (or a Preview Animation and a time). The character shows it through the real anim
- * Blueprint, hands on the weapon as in the game. Then click the weapon and move or rotate it with the gizmo:
- *   - in the hip and crouch poses that changes how it sits in the hand (Hold > In Hand);
- *   - aimed, where it sits against the shoulder (Hold > Aim Sight Offset, Stock To Shoulder, Aim Rotation);
- *   - the small sphere is the off hand: move it to move the left hand along the weapon (Hold > Left Hand Offset).
- * Every change goes straight into the weapon's Blueprint (its Hold); Save Weapon (or Save All) keeps it.
+ * A weapon is held by its mesh's sockets, the same rule for every weapon (X toward the muzzle, Z up):
+ *   - Grip: where the right palm closes (the skeleton's hand_r_weapon);
+ *   - LeftGrip: where the left palm holds, and how it's turned (the skeleton's hand_l_weapon);
+ *   - Sight: the line of the sights (its X is the line); Stock: the butt plate.
+ * The hands go there by IK and the fingers close by the category's grip pose, so a weapon with its sockets right
+ * needs nothing else.
+ *
+ * Pick a Weapon and a Pose (or a Preview Animation and a time); the character shows it through the real anim
+ * Blueprint. The small shapes are the sockets: cube Grip, sphere LeftGrip, cone Sight, cylinder Stock. Move or turn
+ * one with the gizmo and the hands follow. Or move the weapon itself: from the hip that moves Grip (the weapon slides
+ * in the hand), aimed it moves Sight and Stock (where it lies against the shoulder). Changes go into the weapon's
+ * mesh; Save Weapon keeps them.
  */
 UCLASS(HideCategories = (Rendering, Physics, Collision, Input, HLOD, Replication, Networking, LOD, Cooking, DataLayers, WorldPartition, LevelInstance))
 class VAESENGAME_API AVaesenWeaponFitRig : public AActor
@@ -54,7 +65,7 @@ public:
 	virtual void Tick(float DeltaSeconds) override;
 	virtual bool ShouldTickIfViewportsOnly() const override { return true; }
 
-	/** The weapon item's defaults (where the Hold is kept), or null. */
+	/** The weapon item's defaults, or null. */
 	UVaesenWeaponItem* GetWeaponDefaults() const;
 
 	FVaesenHeldWeapon GetHeldWeapon() const;
@@ -68,12 +79,14 @@ public:
 	USkeletalMeshComponent* GetBody() const { return Body; }
 	USceneComponent* GetGrip() const { return Grip; }
 	UVaesenFitHandleComponent* GetWeaponMeshHandle() const { return WeaponMesh; }
-	UVaesenFitHandleComponent* GetLeftHandHandle() const { return LeftHandHandle; }
+
+	/** The handle of a socket (Grip, LeftGrip, Sight, Stock), or null. */
+	UVaesenFitHandleComponent* GetSocketHandle(FName Socket) const;
 
 #if WITH_EDITOR
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& Event) override;
 
-	/** The gizmo moved the weapon or the off-hand handle: work out the Hold that puts it there. */
+	/** The gizmo moved the weapon or a socket handle: sets the socket(s) on the weapon's mesh. */
 	void OnHandleMoved(UVaesenFitHandleComponent* Handle, bool bFinished);
 #endif
 
@@ -107,13 +120,13 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Weapon Fit|Animation")
 	bool bPlayPreview = false;
 
-	/** Saves the weapon's Blueprint (with its Hold). */
+	/** Show the socket handles (hide them to look at the hands). */
+	UPROPERTY(EditAnywhere, Category = "Weapon Fit")
+	bool bShowSockets = true;
+
+	/** Saves the weapon's mesh (its sockets) and its Blueprint. */
 	UFUNCTION(CallInEditor, Category = "Weapon Fit")
 	void SaveWeapon();
-
-	/** Puts the weapon's Hold back to the defaults. */
-	UFUNCTION(CallInEditor, Category = "Weapon Fit")
-	void ResetHold();
 
 	/** The body (Manny) and its anim Blueprint. */
 	UPROPERTY(EditAnywhere, Category = "Weapon Fit|Setup")
@@ -136,16 +149,34 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = "Weapon Fit")
 	TObjectPtr<UVaesenFitHandleComponent> WeaponMesh;
 
-	/** Where the off hand holds the weapon. */
 	UPROPERTY(VisibleAnywhere, Category = "Weapon Fit")
-	TObjectPtr<UVaesenFitHandleComponent> LeftHandHandle;
+	TObjectPtr<UVaesenFitHandleComponent> GripHandle;
+
+	UPROPERTY(VisibleAnywhere, Category = "Weapon Fit")
+	TObjectPtr<UVaesenFitHandleComponent> LeftGripHandle;
+
+	UPROPERTY(VisibleAnywhere, Category = "Weapon Fit")
+	TObjectPtr<UVaesenFitHandleComponent> SightHandle;
+
+	UPROPERTY(VisibleAnywhere, Category = "Weapon Fit")
+	TObjectPtr<UVaesenFitHandleComponent> StockHandle;
 
 private:
-	/** Puts the weapon's mesh on, the body's anim class, the weapon category's locomotion layer. */
+	UVaesenFitHandleComponent* MakeHandle(FName Name, FName Socket, const TCHAR* Shape, float Size);
+
+	/** Puts the weapon's mesh on, the body's anim class. */
 	void ApplySetup();
 
-	/** Keeps the grip and the off-hand handle where the Hold says, and the preview animation where it should be. */
+	/** Holds the mesh by its Grip socket (again, after Grip moved). */
+	void AlignMesh();
+
+	/** Keeps the grip, the mesh and the handles where they belong, the layer linked, the preview animation set. */
 	void ApplyPose();
+
+	/** Sets a socket of the weapon's mesh, from a transform relative to the grip. */
+	void SetSocketFromGrip(FName Socket, const FTransform& InGrip);
+
+	UStaticMesh* GetStaticMesh() const;
 
 	/** The weapon mesh relative to the grip (its Grip socket at the grip). */
 	FTransform MeshInGrip;

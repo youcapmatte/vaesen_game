@@ -16,6 +16,7 @@
 #include "AIController.h"
 #include "EngineUtils.h"
 #include "Engine/StaticMesh.h"
+#include "Engine/StaticMeshSocket.h"
 #include "Engine/StaticMeshActor.h"
 #include "Components/StaticMeshComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -959,7 +960,7 @@ bool FVaesenAbilityBowTest::RunTest(const FString& Parameters)
 #endif
 
 #if WITH_EDITOR
-// --- Weapon Fit rig: poses the character with the real anim Blueprint; dragging the weapon changes its Hold ---
+// --- Weapon Fit rig: the real anim Blueprint holds the weapon by its sockets; moving things moves the sockets ---
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenWeaponFitRigTest, "Vaesen.Combat.WeaponFitRig", CombatTestFlags)
 bool FVaesenWeaponFitRigTest::RunTest(const FString& Parameters)
@@ -972,60 +973,91 @@ bool FVaesenWeaponFitRigTest::RunTest(const FString& Parameters)
 	}
 	FTestWorld TestWorld;
 	AVaesenWeaponFitRig* Rig = TestWorld.Spawn<AVaesenWeaponFitRig>();
-	UVaesenWeaponItem* Defaults = Krag->GetDefaultObject<UVaesenWeaponItem>();
-	const FVaesenWeaponHold Original = Defaults->Hold;
 	Rig->Weapon = Krag;
 	Rig->Pose = EVaesenFitPose::Aim;
 	FPropertyChangedEvent Changed(nullptr);
 	Rig->PostEditChangeProperty(Changed);
+
+	// The mesh's sockets as they were (put back at the end: the test mustn't change the asset).
+	UStaticMesh* Mesh = Rig->GetWeaponMeshHandle()->GetStaticMesh();
+	if (!TestNotNull(TEXT("The rig holds the Krag's mesh"), Mesh))
+	{
+		return false;
+	}
+	TArray<TPair<FVector, FRotator>> Original;
+	for (const UStaticMeshSocket* Socket : Mesh->Sockets)
+	{
+		Original.Emplace(Socket->RelativeLocation, Socket->RelativeRotation);
+	}
+	TestNotNull(TEXT("The Krag has a LeftGrip socket"), Mesh->FindSocket(TEXT("LeftGrip")));
 	TestWorld.Run(0.5f);
 
 	USceneComponent* Grip = Rig->GetGrip();
 	const USkeletalMeshComponent* Body = Rig->GetBody();
-	const UMeshComponent* Mesh = Rig->GetWeaponMeshHandle();
+	UVaesenFitHandleComponent* Weapon = Rig->GetWeaponMeshHandle();
 	const auto Shouldered = [&](const TCHAR* When)
 	{
-		const FVector Muzzle = Mesh->GetSocketLocation(TEXT("Muzzle"));
-		const FVector Stock = Mesh->GetSocketLocation(TEXT("Stock"));
+		const FVector Muzzle = Weapon->GetSocketLocation(TEXT("Muzzle"));
+		const FVector Stock = Weapon->GetSocketLocation(TEXT("Stock"));
 		const float Along = FVector::DotProduct((Muzzle - Stock).GetSafeNormal(), Rig->GetAim().Vector());
 		const float ToShoulder = FVector::Dist(Stock, Body->GetSocketLocation(TEXT("upperarm_r")));
 		TestTrue(FString::Printf(TEXT("%s: barrel along the aim (%.3f)"), When, Along), Along > 0.98f);
 		TestTrue(FString::Printf(TEXT("%s: stock at the shoulder (%.0f cm)"), When, ToShoulder), ToShoulder < 25.0f);
 		UE_LOG(LogTemp, Display, TEXT("WeaponFitRig %s: barrel along the aim %.3f, stock %.1f cm from the shoulder"), When, Along, ToShoulder);
 	};
+	// The left palm (hand_l_weapon) on LeftGrip, turned as it is.
+	const auto LeftPalmOnGrip = [&](const TCHAR* When)
+	{
+		const FTransform Palm = Body->GetSocketTransform(TEXT("hand_l_weapon"));
+		const FTransform LeftGrip = Weapon->GetSocketTransform(TEXT("LeftGrip"));
+		const float Gap = FVector::Dist(Palm.GetLocation(), LeftGrip.GetLocation());
+		const float Turn = FMath::RadiansToDegrees(Palm.GetRotation().AngularDistance(LeftGrip.GetRotation()));
+		TestTrue(FString::Printf(TEXT("%s: the left palm is on LeftGrip (%.1f cm)"), When, Gap), Gap < 2.0f);
+		TestTrue(FString::Printf(TEXT("%s: the left palm is turned as LeftGrip (%.0f degrees)"), When, Turn), Turn < 10.0f);
+		UE_LOG(LogTemp, Display, TEXT("WeaponFitRig %s: left palm %.1f cm, %.0f degrees from LeftGrip"), When, Gap, Turn);
+	};
 	Shouldered(TEXT("Aimed"));
+	LeftPalmOnGrip(TEXT("Aimed"));
 
-	// Aimed: drag the weapon 5 cm up; the shoulder hold changes and the hand carries it there.
+	// Aimed: move the weapon 5 cm up; Sight moves on the weapon, and the weapon stays where it was put.
 	const FVector Before = Grip->GetComponentLocation();
-	UVaesenFitHandleComponent* Handle = Rig->GetWeaponMeshHandle();
-	Handle->SetWorldLocation(Handle->GetComponentLocation() + FVector(0.0, 0.0, 5.0));
-	Rig->OnHandleMoved(Handle, true);
+	const FVector SightBefore = Mesh->FindSocket(TEXT("Sight"))->RelativeLocation;
+	Weapon->SetWorldLocation(Weapon->GetComponentLocation() + FVector(0.0, 0.0, 5.0));
+	Rig->OnHandleMoved(Weapon, true);
 	TestWorld.Run(0.3f);
 	const float Raised = Grip->GetComponentLocation().Z - Before.Z;
-	TestTrue(FString::Printf(TEXT("Dragged up while aimed: the weapon stays up (%.1f cm)"), Raised), FMath::Abs(Raised - 5.0f) < 1.5f);
-	TestTrue(TEXT("Dragging while aimed changed the sight offset"), !Defaults->Hold.AimSightOffset.Equals(Original.AimSightOffset, 0.5));
-	Shouldered(TEXT("After the drag"));
+	TestTrue(FString::Printf(TEXT("Moved up while aimed: it stays up (%.1f cm)"), Raised), FMath::Abs(Raised - 5.0f) < 1.5f);
+	TestTrue(TEXT("Moving it while aimed moved the Sight socket"), !Mesh->FindSocket(TEXT("Sight"))->RelativeLocation.Equals(SightBefore, 0.5));
+	Shouldered(TEXT("After the move"));
 
-	// From the hip: drag it 3 cm along the barrel; that's how it sits in the hand.
+	// From the hip: slide the weapon 3 cm forward in the hand; the Grip socket moves 3 cm back on the weapon.
 	Rig->Pose = EVaesenFitPose::Hip;
 	Rig->PostEditChangeProperty(Changed);
 	TestWorld.Run(0.5f);
-	const FVector InHandBefore = Defaults->Hold.InHand.GetLocation();
-	Handle->SetWorldLocation(Handle->GetComponentLocation() + Grip->GetForwardVector() * 3.0f);
-	Rig->OnHandleMoved(Handle, true);
-	TestTrue(TEXT("Dragged from the hip: In Hand moved 3 cm"), FMath::IsNearlyEqual((Defaults->Hold.InHand.GetLocation() - InHandBefore).Size(), 3.0f, 0.3f));
-
-	// The off hand: drag its sphere 4 cm; the left hand follows it.
-	UVaesenFitHandleComponent* LeftHandle = Rig->GetLeftHandHandle();
-	LeftHandle->SetWorldLocation(LeftHandle->GetComponentLocation() + Grip->GetForwardVector() * 4.0f);
-	Rig->OnHandleMoved(LeftHandle, true);
-	TestTrue(TEXT("Left Hand Offset is the drag"), FMath::IsNearlyEqual((Defaults->Hold.LeftHandOffset - Original.LeftHandOffset).Size(), 4.0f, 0.3f));
+	const FVector GripBefore = Mesh->FindSocket(TEXT("Grip"))->RelativeLocation;
+	Weapon->SetWorldLocation(Weapon->GetComponentLocation() + Grip->GetForwardVector() * 3.0f);
+	Rig->OnHandleMoved(Weapon, true);
+	const float GripMoved = (Mesh->FindSocket(TEXT("Grip"))->RelativeLocation - GripBefore).Size();
+	TestTrue(FString::Printf(TEXT("Slid in the hand: Grip moved %.1f cm on the weapon"), GripMoved), FMath::IsNearlyEqual(GripMoved, 3.0f, 0.3f));
 	TestWorld.Run(0.3f);
-	const float HandGap = FVector::Dist(Body->GetSocketLocation(TEXT("hand_l")), LeftHandle->GetComponentLocation());
-	TestTrue(FString::Printf(TEXT("The left hand is on the sphere (%.1f cm)"), HandGap), HandGap < 3.0f);
-	UE_LOG(LogTemp, Display, TEXT("WeaponFitRig: raised %.1f cm when dragged 5, left hand %.1f cm from its sphere"), Raised, HandGap);
+	LeftPalmOnGrip(TEXT("From the hip"));
 
-	Defaults->Hold = Original;
+	// The LeftGrip handle: move it 4 cm and turn it; the socket follows, and the left hand with it.
+	UVaesenFitHandleComponent* LeftHandle = Rig->GetSocketHandle(TEXT("LeftGrip"));
+	const FVector LeftBefore = Mesh->FindSocket(TEXT("LeftGrip"))->RelativeLocation;
+	LeftHandle->SetWorldLocation(LeftHandle->GetComponentLocation() + Grip->GetForwardVector() * 4.0f);
+	LeftHandle->AddLocalRotation(FRotator(0.0, 0.0, 15.0));
+	Rig->OnHandleMoved(LeftHandle, true);
+	const float LeftMoved = (Mesh->FindSocket(TEXT("LeftGrip"))->RelativeLocation - LeftBefore).Size();
+	TestTrue(FString::Printf(TEXT("LeftGrip moved %.1f cm"), LeftMoved), FMath::IsNearlyEqual(LeftMoved, 4.0f, 0.3f));
+	TestWorld.Run(0.3f);
+	LeftPalmOnGrip(TEXT("After moving LeftGrip"));
+
+	for (int32 Index = 0; Index < Mesh->Sockets.Num() && Index < Original.Num(); ++Index)
+	{
+		Mesh->Sockets[Index]->RelativeLocation = Original[Index].Key;
+		Mesh->Sockets[Index]->RelativeRotation = Original[Index].Value;
+	}
 	return true;
 }
 #endif

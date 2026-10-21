@@ -5,6 +5,7 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/SkeletalMesh.h"
 #include "Engine/StaticMesh.h"
+#include "Engine/StaticMeshSocket.h"
 #include "Inventory/VaesenEquipmentComponent.h"
 #include "Items/VaesenWeaponItem.h"
 #include "Misc/PackageName.h"
@@ -13,6 +14,14 @@
 #include "UObject/SavePackage.h"
 #include "Weapons/VaesenWeaponActor.h"
 #include "Weapons/VaesenWeaponData.h"
+
+namespace VaesenWeaponFitRig
+{
+	const FName Grip(TEXT("Grip"));
+	const FName LeftGrip(TEXT("LeftGrip"));
+	const FName Sight(TEXT("Sight"));
+	const FName Stock(TEXT("Stock"));
+}
 
 #if WITH_EDITOR
 void UVaesenFitHandleComponent::PostEditComponentMove(bool bFinished)
@@ -40,26 +49,37 @@ AVaesenWeaponFitRig::AVaesenWeaponFitRig()
 	Body->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
 	Body->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
-	Grip = CreateDefaultSubobject<USceneComponent>(TEXT("Grip"));
 	// Into the hand socket once the body has its mesh (ApplySetup).
+	Grip = CreateDefaultSubobject<USceneComponent>(TEXT("Grip"));
 	Grip->SetupAttachment(Body);
 
 	WeaponMesh = CreateDefaultSubobject<UVaesenFitHandleComponent>(TEXT("WeaponMesh"));
 	WeaponMesh->SetupAttachment(Grip);
 	WeaponMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 
-	LeftHandHandle = CreateDefaultSubobject<UVaesenFitHandleComponent>(TEXT("LeftHandHandle"));
-	LeftHandHandle->SetupAttachment(Grip);
-	LeftHandHandle->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-	LeftHandHandle->SetRelativeScale3D(FVector(0.05));
-	static ConstructorHelpers::FObjectFinder<UStaticMesh> Sphere(TEXT("/Engine/BasicShapes/Sphere.Sphere"));
-	if (Sphere.Succeeded())
-	{
-		LeftHandHandle->SetStaticMesh(Sphere.Object);
-	}
+	GripHandle = MakeHandle(TEXT("GripHandle"), VaesenWeaponFitRig::Grip, TEXT("/Engine/BasicShapes/Cube.Cube"), 0.025f);
+	LeftGripHandle = MakeHandle(TEXT("LeftGripHandle"), VaesenWeaponFitRig::LeftGrip, TEXT("/Engine/BasicShapes/Sphere.Sphere"), 0.04f);
+	SightHandle = MakeHandle(TEXT("SightHandle"), VaesenWeaponFitRig::Sight, TEXT("/Engine/BasicShapes/Cone.Cone"), 0.03f);
+	StockHandle = MakeHandle(TEXT("StockHandle"), VaesenWeaponFitRig::Stock, TEXT("/Engine/BasicShapes/Cylinder.Cylinder"), 0.03f);
 
 	BodyMesh = TSoftObjectPtr<USkeletalMesh>(FSoftObjectPath(TEXT("/Game/Characters/Mannequins/Meshes/SKM_Manny.SKM_Manny")));
 	AnimClass = TSoftClassPtr<UAnimInstance>(FSoftObjectPath(TEXT("/Game/Vaesen/Animations/ABP_VaesenCharacter.ABP_VaesenCharacter_C")));
+}
+
+UVaesenFitHandleComponent* AVaesenWeaponFitRig::MakeHandle(FName Name, FName Socket, const TCHAR* Shape, float Size)
+{
+	UVaesenFitHandleComponent* Handle = CreateDefaultSubobject<UVaesenFitHandleComponent>(Name);
+	Handle->SetupAttachment(WeaponMesh);
+	Handle->Socket = Socket;
+	Handle->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	Handle->SetUsingAbsoluteScale(true);
+	Handle->SetWorldScale3D(FVector(Size));
+	ConstructorHelpers::FObjectFinder<UStaticMesh> Mesh(Shape);
+	if (Mesh.Succeeded())
+	{
+		Handle->SetStaticMesh(Mesh.Object);
+	}
+	return Handle;
 }
 
 UVaesenWeaponItem* AVaesenWeaponFitRig::GetWeaponDefaults() const
@@ -67,14 +87,31 @@ UVaesenWeaponItem* AVaesenWeaponFitRig::GetWeaponDefaults() const
 	return Weapon ? Weapon->GetDefaultObject<UVaesenWeaponItem>() : nullptr;
 }
 
+UStaticMesh* AVaesenWeaponFitRig::GetStaticMesh() const
+{
+	return WeaponMesh->GetStaticMesh();
+}
+
 FVaesenHeldWeapon AVaesenWeaponFitRig::GetHeldWeapon() const
 {
 	const UVaesenWeaponItem* Defaults = GetWeaponDefaults();
-	if (!Defaults || !WeaponMesh->GetStaticMesh())
+	if (!Defaults || !GetStaticMesh())
 	{
 		return FVaesenHeldWeapon();
 	}
 	return { Grip, WeaponMesh, &Defaults->Hold };
+}
+
+UVaesenFitHandleComponent* AVaesenWeaponFitRig::GetSocketHandle(FName Socket) const
+{
+	for (UVaesenFitHandleComponent* Handle : { GripHandle.Get(), LeftGripHandle.Get(), SightHandle.Get(), StockHandle.Get() })
+	{
+		if (Handle && Handle->Socket == Socket)
+		{
+			return Handle;
+		}
+	}
+	return nullptr;
 }
 
 void AVaesenWeaponFitRig::OnConstruction(const FTransform& Transform)
@@ -115,13 +152,17 @@ void AVaesenWeaponFitRig::ApplySetup()
 		Grip->AttachToComponent(Body, FAttachmentTransformRules::KeepRelativeTransform, HandSocket);
 	}
 
-	// The weapon's mesh, held by its Grip socket exactly as the weapon actor holds it.
 	const UVaesenWeaponItem* Defaults = GetWeaponDefaults();
-	WeaponMesh->SetRelativeTransform(FTransform::Identity);
 	WeaponMesh->SetStaticMesh(Defaults ? Defaults->GetHeldStaticMesh() : nullptr);
-	MeshInGrip = AVaesenWeaponActor::GripAlignment(WeaponMesh, AVaesenWeaponActor::HeldMeshScale(Defaults));
+	AlignMesh();
+}
+
+void AVaesenWeaponFitRig::AlignMesh()
+{
+	// The weapon's mesh, held by its Grip socket exactly as the weapon actor holds it.
+	WeaponMesh->SetRelativeTransform(FTransform::Identity);
+	MeshInGrip = AVaesenWeaponActor::GripAlignment(WeaponMesh, AVaesenWeaponActor::HeldMeshScale(GetWeaponDefaults()));
 	WeaponMesh->SetRelativeTransform(MeshInGrip);
-	LeftHandHandle->SetVisibility(Defaults && Defaults->bTwoHanded);
 }
 
 void AVaesenWeaponFitRig::ApplyPose()
@@ -139,17 +180,19 @@ void AVaesenWeaponFitRig::ApplyPose()
 		LinkedLayer = Layer;
 	}
 
-	// The weapon and the off-hand handle where its Hold puts them (edits in the Blueprint show at once).
-	if (Defaults)
+	// The weapon in the hand (its Hold, normally zero), and a handle on each of its sockets.
+	Grip->SetRelativeTransform(Defaults ? Defaults->Hold.InHand : FTransform::Identity);
+	WeaponMesh->SetRelativeTransform(MeshInGrip);
+	const UStaticMesh* Mesh = GetStaticMesh();
+	for (UVaesenFitHandleComponent* Handle : { GripHandle.Get(), LeftGripHandle.Get(), SightHandle.Get(), StockHandle.Get() })
 	{
-		Grip->SetRelativeTransform(Defaults->Hold.InHand);
-		FVector LeftHand;
-		if (GetHeldWeapon().GetLocalSocket(TEXT("LeftHandIK"), LeftHand))
+		const UStaticMeshSocket* Socket = Mesh ? Mesh->FindSocket(Handle->Socket) : nullptr;
+		Handle->SetVisibility(bShowSockets && Socket != nullptr);
+		if (Socket)
 		{
-			LeftHandHandle->SetRelativeLocation(LeftHand + Defaults->Hold.LeftHandOffset);
+			Handle->SetRelativeLocationAndRotation(Socket->RelativeLocation, Socket->RelativeRotation);
 		}
 	}
-	WeaponMesh->SetRelativeTransform(MeshInGrip);
 
 	// The preview animation on the upper body, held at its time (or playing).
 	if (!Anim)
@@ -190,30 +233,49 @@ void AVaesenWeaponFitRig::ApplyPose()
 	}
 }
 
-void AVaesenWeaponFitRig::SaveWeapon()
+void AVaesenWeaponFitRig::SetSocketFromGrip(FName Name, const FTransform& InGrip)
 {
-#if WITH_EDITOR
-	if (!Weapon)
+	UStaticMesh* Mesh = GetStaticMesh();
+	if (!Mesh)
 	{
 		return;
 	}
-	UPackage* Package = Weapon->GetOutermost();
-	const FString FileName = FPackageName::LongPackageNameToFilename(Package->GetName(), FPackageName::GetAssetPackageExtension());
-	FSavePackageArgs Args;
-	Args.TopLevelFlags = RF_Public | RF_Standalone;
-	UPackage::SavePackage(Package, nullptr, *FileName, Args);
-#endif
+	Mesh->Modify();
+	UStaticMeshSocket* Socket = Mesh->FindSocket(Name);
+	if (!Socket)
+	{
+		Socket = NewObject<UStaticMeshSocket>(Mesh);
+		Socket->SocketName = Name;
+		Mesh->AddSocket(Socket);
+	}
+	// Grip space to the mesh's own space (the mesh sits under the grip by MeshInGrip).
+	const FTransform InMesh = InGrip * MeshInGrip.Inverse();
+	Socket->Modify();
+	Socket->RelativeLocation = InMesh.GetLocation();
+	Socket->RelativeRotation = InMesh.Rotator();
+	Mesh->MarkPackageDirty();
 }
 
-void AVaesenWeaponFitRig::ResetHold()
+void AVaesenWeaponFitRig::SaveWeapon()
 {
-	if (UVaesenWeaponItem* Defaults = GetWeaponDefaults())
+#if WITH_EDITOR
+	TArray<UPackage*> Packages;
+	if (Weapon)
 	{
-		Defaults->Modify();
-		Defaults->Hold = FVaesenWeaponHold();
-		Defaults->MarkPackageDirty();
-		ApplyPose();
+		Packages.Add(Weapon->GetOutermost());
 	}
+	if (UStaticMesh* Mesh = GetStaticMesh())
+	{
+		Packages.Add(Mesh->GetOutermost());
+	}
+	for (UPackage* Package : Packages)
+	{
+		const FString FileName = FPackageName::LongPackageNameToFilename(Package->GetName(), FPackageName::GetAssetPackageExtension());
+		FSavePackageArgs Args;
+		Args.TopLevelFlags = RF_Public | RF_Standalone;
+		UPackage::SavePackage(Package, nullptr, *FileName, Args);
+	}
+#endif
 }
 
 #if WITH_EDITOR
@@ -226,42 +288,59 @@ void AVaesenWeaponFitRig::PostEditChangeProperty(FPropertyChangedEvent& Event)
 
 void AVaesenWeaponFitRig::OnHandleMoved(UVaesenFitHandleComponent* Handle, bool bFinished)
 {
-	UVaesenWeaponItem* Defaults = GetWeaponDefaults();
-	if (!Defaults || !WeaponMesh->GetStaticMesh())
+	const UVaesenWeaponItem* Defaults = GetWeaponDefaults();
+	if (!Defaults || !GetStaticMesh())
 	{
 		return;
 	}
-	Defaults->Modify();
-	FVaesenWeaponHold& Hold = Defaults->Hold;
+	const FTransform GripWorld = Grip->GetComponentTransform();
 
-	if (Handle == LeftHandHandle)
+	if (Handle != WeaponMesh)
 	{
-		// The off hand: its offset from the LeftHandIK socket, in the weapon's space.
-		FVector Socket;
-		GetHeldWeapon().GetLocalSocket(TEXT("LeftHandIK"), Socket);
-		Hold.LeftHandOffset = Grip->GetComponentTransform().InverseTransformPosition(Handle->GetComponentLocation()) - Socket;
+		// A socket handle: the socket is where it now is (all of them in the weapon's own frame, under the grip).
+		FTransform InGrip = Handle->GetComponentTransform().GetRelativeTransform(WeaponMesh->GetComponentTransform()) * MeshInGrip;
+		InGrip.SetScale3D(FVector::OneVector);
+		SetSocketFromGrip(Handle->Socket, InGrip);
+		if (Handle->Socket == VaesenWeaponFitRig::Grip)
+		{
+			// The right palm's place on the weapon: the weapon slides in the hand, the handle stays in the palm.
+			AlignMesh();
+		}
+		ApplyPose();
+		return;
 	}
-	else if (Handle == WeaponMesh)
+
+	// The weapon itself, moved to here (where its grip would be).
+	const FTransform Moved = MeshInGrip.Inverse() * WeaponMesh->GetComponentTransform();
+	// Back under its grip, so its sockets read right again.
+	WeaponMesh->SetRelativeTransform(MeshInGrip);
+	const FVaesenHeldWeapon Held = GetHeldWeapon();
+	const bool bShouldered = IsAimPose() && Defaults->bTwoHanded && Defaults->Hold.bShoulderAim && Defaults->Category != EVaesenWeaponCategory::Bow;
+	if (!bShouldered)
 	{
-		// Where the weapon (its grip) was moved to.
-		const FTransform Moved = MeshInGrip.Inverse() * WeaponMesh->GetComponentTransform();
-		// Back under its grip, so its sockets read right relative to the grip again.
-		WeaponMesh->SetRelativeTransform(MeshInGrip);
-		const bool bShouldered = IsAimPose() && Defaults->bTwoHanded && Hold.bShoulderAim && Defaults->Category != EVaesenWeaponCategory::Bow;
-		if (bShouldered)
+		// From the hip: the hand keeps its place, so the Grip socket moves on the weapon to where the hand now is.
+		SetSocketFromGrip(VaesenWeaponFitRig::Grip, GripWorld.GetRelativeTransform(Moved));
+		AlignMesh();
+	}
+	else
+	{
+		// Aimed: the Sight that lays it here (its place, and its line along the aim), and the Stock slid along the
+		// line to meet the shoulder (the sums of UVaesenAnimInstance::PlaceShouldered, backwards).
+		const FVaesenWeaponHold& Hold = Defaults->Hold;
+		const FRotator Aim = GetAim();
+		const FVector Along = Aim.Vector();
+		const FVector EyePoint = Body->GetSocketLocation(TEXT("head")) + Aim.RotateVector(Hold.AimSightOffset);
+		const FQuat Line = Aim.Quaternion() * Hold.AimRotation.Quaternion();
+		SetSocketFromGrip(VaesenWeaponFitRig::Sight, FTransform(Moved.GetRotation().Inverse() * Line, Moved.InverseTransformPosition(EyePoint)));
+
+		FVector StockLocal;
+		if (Held.GetLocalSocket(VaesenWeaponFitRig::Stock, StockLocal))
 		{
-			// Aimed: the shoulder-aim values that lay it there; the hand follows it.
-			UVaesenAnimInstance::ShoulderHoldFromPlacement(Body, GetHeldWeapon(), GetAim(), FTransform(Moved.GetRotation(), Moved.GetLocation()), Hold);
-		}
-		else
-		{
-			// From the hip: how it sits in the hand.
-			FTransform InHand = Moved.GetRelativeTransform(Body->GetSocketTransform(UVaesenWeaponCategoryDefaults::Get()->MainHandSocket));
-			InHand.SetScale3D(FVector::OneVector);
-			Hold.InHand = InHand;
+			const FVector Stock = Moved.TransformPosition(StockLocal);
+			const float Slide = Hold.StockToShoulder - FVector::DotProduct(Stock - Body->GetSocketLocation(TEXT("upperarm_r")), Along);
+			SetSocketFromGrip(VaesenWeaponFitRig::Stock, FTransform(StockLocal + Moved.InverseTransformVector(Along) * Slide));
 		}
 	}
-	Defaults->MarkPackageDirty();
 	ApplyPose();
 }
 #endif

@@ -307,7 +307,7 @@ struct FVaesenThrowSettings
  * places the weapon, and the hands follow it.
  *
  * In the hand: InHand moves it from the hand socket (hand_r_weapon) in every pose. The off hand goes to the mesh's
- * LeftHandIK socket (+ LeftHandOffset).
+ * LeftGrip socket (+ LeftHandOffset), turned as the socket is.
  *
  * Shoulder aim (two-handed guns while aiming): the weapon is laid along the aim, its Sight socket in front of the eye
  * (AimSightOffset, from the head) and its Stock socket at the shoulder (StockToShoulder); the right hand is moved to
@@ -322,7 +322,7 @@ struct FVaesenWeaponHold
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hold")
 	FTransform InHand;
 
-	/** Moves the off hand's grip from the LeftHandIK socket, in the weapon's space (cm). */
+	/** Moves the left hand from the LeftGrip socket, in the weapon's space (cm). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hold")
 	FVector LeftHandOffset = FVector::ZeroVector;
 

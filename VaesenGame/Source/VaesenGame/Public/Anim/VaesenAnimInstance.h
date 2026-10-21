@@ -19,6 +19,9 @@ struct FVaesenHeldWeapon
 
 	/** A socket of the mesh, relative to the grip; false (and Fallback) without it. */
 	bool GetLocalSocket(FName Socket, FVector& OutLocation, const FVector& Fallback = FVector::ZeroVector) const;
+
+	/** The same with its rotation. */
+	bool GetLocalSocketTransform(FName Socket, FTransform& OutTransform) const;
 };
 
 /**
@@ -26,7 +29,8 @@ struct FVaesenHeldWeapon
  * graph needs for weapons, so the Blueprint only reads variables:
  *   - weapon state: drawn, category, aiming, blocking, reloading, drawing a bow (draw alpha);
  *   - the aim offset (AimPitch, AimYaw) while aiming;
- *   - hand IK: the off hand onto a two-handed weapon's LeftHandIK socket, and the drawing hand onto the sheathed
+ *   - hand IK: the off hand onto a two-handed weapon's LeftGrip socket (where the left palm holds it, matched to the
+ *     skeleton's hand_l_weapon socket: position and rotation), and the drawing hand onto the sheathed
  *     weapon's Grip while the montage's HandIK_Sheath curve is up (so one draw montage serves every weapon there);
  *   - TriggerCurl, pulsed on each shot (or the montage's TriggerFinger curve) for the index finger;
  *   - for motion matching later: LocomotionDatabase, the drawn category's pose search database
@@ -123,6 +127,26 @@ protected:
 	/** The off hand's target relative to hand_r (exact every frame: the weapon is fixed to that hand). */
 	UPROPERTY(BlueprintReadOnly, Category = "IK")
 	FVector LeftHandIKInHand = FVector::ZeroVector;
+
+	/** The off hand's rotation (component space) to hold LeftGrip, weight 0..1 (0 without a LeftGrip socket). */
+	UPROPERTY(BlueprintReadOnly, Category = "IK")
+	FRotator LeftHandIKRotation = FRotator::ZeroRotator;
+
+	UPROPERTY(BlueprintReadOnly, Category = "IK")
+	float LeftHandRotationAlpha = 0.0f;
+
+	/** The drawn category's finger grip (DA_WeaponCategoryDefaults GripPose), laid over the fingers of each holding hand. */
+	UPROPERTY(BlueprintReadOnly, Category = "IK")
+	TObjectPtr<UAnimSequenceBase> GripPose;
+
+	UPROPERTY(BlueprintReadOnly, Category = "IK")
+	float LeftFingerGrip = 0.0f;
+
+	UPROPERTY(BlueprintReadOnly, Category = "IK")
+	float RightFingerGrip = 0.0f;
+
+	/** The skeleton's sockets that say how each palm holds a grip. */
+	static const FName LeftHandGripSocket;
 
 	/** Shoulder aim: where the right hand goes (world space) to hold the weapon at the shoulder, weight 0..1. */
 	UPROPERTY(BlueprintReadOnly, Category = "IK")
