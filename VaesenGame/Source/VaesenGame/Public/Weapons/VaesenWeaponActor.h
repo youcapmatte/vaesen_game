@@ -52,6 +52,17 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Weapon")
 	bool IsInHand() const { return bInHand; }
 
+	/**
+	 * How it sits in the hands: the item's, copied here so it can be tuned live (play, vaesen.weaponfit aim, F8, select
+	 * the weapon, edit; vaesen.weaponfit save writes it back to the weapon's Blueprint).
+	 */
+	UPROPERTY(EditInstanceOnly, BlueprintReadOnly, Category = "Hold")
+	FVaesenWeaponHold Hold;
+
+#if WITH_EDITOR
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& Event) override;
+#endif
+
 	/** The visible mesh (static or skeletal), or null. */
 	UMeshComponent* GetWeaponMesh() const;
 

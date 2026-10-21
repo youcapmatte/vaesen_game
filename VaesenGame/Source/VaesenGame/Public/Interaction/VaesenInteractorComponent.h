@@ -93,7 +93,7 @@ public:
 
 	/**
 	 * Draw the swept tube (green: nothing hit; red: up to a hit) and a yellow box round the focused interactable.
-	 * Development builds only.
+	 * Development builds only; hidden while a weapon is drawn (it would cover the crosshair).
 	 */
 	UPROPERTY(EditAnywhere, Category = "Interaction|Debug")
 	bool bDrawDebugTrace = true;

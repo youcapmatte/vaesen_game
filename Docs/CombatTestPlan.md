@@ -97,6 +97,7 @@ Dummy protections: `BP_TrainingDummy` has none. `BP_TrainingDummy_Armored` has S
 | Throw (hold to aim, release) | G | Left bumper |
 | Draw / sheathe | H | Hold Y / Triangle |
 | Draw the other carried weapon (sidearm ↔ main hand) | Q | — |
+| Crouch (toggle) | C | B / Circle |
 
 ### 0.5 Debug tools
 
@@ -154,13 +155,39 @@ In a running game (PIE with a dedicated server is fine), open the console and ty
 - an AI-controlled `BP_VaesenPlayerCharacter`, which uses the same `GA_` Blueprints and input as a player;
 - three `BP_TrainingDummy`s, 15 m to the side of the first player start.
 
-It first checks that the interaction trace finds every pickup in the map and picks up a rifle through its interaction. It then runs the test Blueprints: revolver (draw, reload, fire, armored target), Krag (aimed, bolt cycles by itself), punch, sword (stamina, block, parry, wear), stone throw, and bow.
+It first checks that the interaction trace finds every pickup in the map and picks up a rifle through its interaction. It then runs the test Blueprints: revolver (draw, reload, fire, armored target), Krag (aimed and shouldered, bolt cycles by itself), punch, sword (stamina, block, parry, wear), stone throw, and bow.
 
-Every check prints PASS or FAIL on screen and in the log, and everything it spawned is removed at the end. In `L_CombatTest` it reported **40 passed, 0 failed**.
+Every check prints PASS or FAIL on screen and in the log, and everything it spawned is removed at the end. In `L_CombatTest` it reported **41 passed, 0 failed**.
 
 It checks what the C++ tests can't: the generated assets, the Blueprints and the map's collision together. Both clients should see the fighter do everything. The sword swing is reported as INFO until an attack montage exists, because without one the blade stays where the hand hangs.
 
 This replaces functional-test actors. The engine's FunctionalTesting module is developer-only and would break shipping builds.
+
+### 0.8 Tuning how a weapon is held (vaesen.weaponfit)
+
+Every weapon has a **Hold** section, in the weapon item's Blueprint under Weapon > Hold:
+
+| Setting | What it does |
+| --- | --- |
+| In Hand | Moves the weapon from the hand socket (`hand_r_weapon`), in every pose |
+| Left Hand Offset | Moves the off hand's grip from the mesh's `LeftHandIK` socket (weapon space, cm) |
+| Shoulder Aim | Lays two-handed guns against the shoulder while aiming (off: the aim animation holds it) |
+| Aim Sight Offset | Where the mesh's `Sight` socket sits while aiming, from the head: X forward, Y right, Z up (cm). With a `Stock` socket, X is decided by the stock instead |
+| Stock To Shoulder | How far the `Stock` socket sits in front of the shoulder joint, along the aim (cm) |
+| Aim Rotation | Turns it while aiming (Roll cants it) |
+| Aim Blend Speed, Recoil Back, Recoil Pitch | How fast it comes up; the kick of a shot while shouldered |
+
+The right hand is moved to hold the weapon there, and the left hand follows the weapon, so both hands stay on it.
+
+To tune it live (Standalone, or the first client window in multiplayer PIE):
+
+1. Play, draw the weapon (H), and type **`vaesen.weaponfit aim`** in the console. The character stands still and keeps the aimed pose. The other poses are `hip`, `crouch` and `crouchaim`.
+2. Press **F8** to leave the character. Click the weapon (or find `VaesenWeaponActor` in the Outliner) and edit **Hold** in Details. It moves as you type.
+3. Press **F8** again, then type **`vaesen.weaponfit save`**. That writes the values into the weapon's Blueprint. Save All keeps them. `vaesen.weaponfit print` logs the values, and `vaesen.weaponfit off` lets go of the pose.
+
+New weapon meshes need the sockets `Grip`, `LeftHandIK`, `Sight` (the line of the sights) and `Stock` (the butt plate), all set in the Static Mesh editor. `-run=VaesenAnimSetup` only adds sockets that are missing. Add `-resetsockets` to work them out again, and `-rebuild` to rebuild the anim Blueprints.
+
+The interaction trace (the debug capsule) is hidden while a weapon is drawn, so it doesn't cover the crosshair.
 
 ---
 

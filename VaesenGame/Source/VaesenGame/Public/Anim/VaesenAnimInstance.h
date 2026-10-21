@@ -25,8 +25,13 @@ class VAESENGAME_API UVaesenAnimInstance : public UAnimInstance
 public:
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
 
-	/** A shot: the trigger finger curls and lets go. */
-	void PulseTriggerFinger() { TriggerPulse = 1.0f; }
+	/** A shot: the trigger finger curls and lets go (and a shouldered weapon kicks). */
+	void PulseTriggerFinger() { TriggerPulse = 1.0f; RecoilKick = 1.0f; }
+
+	/** vaesen.weaponfit: holds a pose (standing still, the aim frozen) so the weapon's Hold can be tuned. */
+	enum class EFitPose : uint8 { None, Hip, Aim, Crouch, CrouchAim };
+	void SetFitPose(EFitPose Pose);
+	EFitPose GetFitPose() const { return FitPose; }
 
 	/** Curve names read from montages. */
 	static const FName HandIKSheathCurve;
@@ -93,6 +98,20 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "IK")
 	FVector SheathHandIKLocation = FVector::ZeroVector;
 
+	/** The off hand's target relative to hand_r (exact every frame: the weapon is fixed to that hand). */
+	UPROPERTY(BlueprintReadOnly, Category = "IK")
+	FVector LeftHandIKInHand = FVector::ZeroVector;
+
+	/** Shoulder aim: where the right hand goes (world space) to hold the weapon at the shoulder, weight 0..1. */
+	UPROPERTY(BlueprintReadOnly, Category = "IK")
+	float AimIKAlpha = 0.0f;
+
+	UPROPERTY(BlueprintReadOnly, Category = "IK")
+	FVector AimHandLocation = FVector::ZeroVector;
+
+	UPROPERTY(BlueprintReadOnly, Category = "IK")
+	FRotator AimHandRotation = FRotator::ZeroRotator;
+
 	/** Sheath IK drives the left hand (an off-hand shield) instead of the right. */
 	UPROPERTY(BlueprintReadOnly, Category = "IK")
 	bool bSheathIKLeftHand = false;
@@ -118,6 +137,18 @@ protected:
 	TObjectPtr<UObject> LocomotionDatabase;
 
 private:
+	/** Shoulder aim: the right hand's target for this frame (world); false if there is nothing to shoulder. */
+	bool ComputeShoulderAim(const class AVaesenBaseCharacter* Character, const class AVaesenWeaponActor* Weapon, FTransform& OutHand) const;
+
+	EFitPose FitPose = EFitPose::None;
+
+	/** The aim held by the fit pose, relative to the body. */
+	FRotator FitAim = FRotator::ZeroRotator;
+
+	float RecoilKick = 0.0f;
+
+	FTransform AimHandInComponent;
+
 	float TriggerPulse = 0.0f;
 
 	/** Weapon whose sheath grip the drawing hand reaches for (the draw / sheath in progress). */

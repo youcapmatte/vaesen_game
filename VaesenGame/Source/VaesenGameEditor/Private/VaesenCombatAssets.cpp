@@ -304,7 +304,7 @@ namespace VaesenCombatAssets
 	};
 
 	/**
-	 * Grey-box meshes: the weapon points along +X, up is +Z, and Grip (where the hand closes) is near the origin.
+	 * Grey-box meshes: the weapon points along +X, up is +Z, and Grip (where the hand closes) is near the origin. Long guns have Sight (the line of the sights) and Stock (the butt plate) for the shoulder aim.
 	 * Replace them with the asset pack's meshes later (same socket names).
 	 */
 	FMeshes BuildGreyBoxMeshes()
@@ -337,6 +337,8 @@ namespace VaesenCombatAssets
 			.Socket(TEXT("Grip"), FVector(0.0, 0.0, -2.0))
 			.Socket(TEXT("LeftHandIK"), FVector(38.0, 0.0, -1.0))
 			.Socket(TEXT("Muzzle"), FVector(88.0, 0.0, 2.0))
+			.Socket(TEXT("Sight"), FVector(14.0, 0.0, 4.5))
+			.Socket(TEXT("Stock"), FVector(-40.0, 0.0, -2.0))
 			.Socket(TEXT("Eject"), FVector(10.0, 2.5, 3.0))
 			.Socket(TEXT("TraceStart"), FVector(-20.0, 0.0, -4.0))
 			.Socket(TEXT("TraceEnd"), FVector(-40.0, 0.0, -6.0))
@@ -349,6 +351,8 @@ namespace VaesenCombatAssets
 			.Socket(TEXT("Grip"), FVector(0.0, 0.0, -2.0))
 			.Socket(TEXT("LeftHandIK"), FVector(40.0, 0.0, -1.0))
 			.Socket(TEXT("Muzzle"), FVector(100.0, 0.0, 2.0))
+			.Socket(TEXT("Sight"), FVector(8.0, 0.0, 4.5))
+			.Socket(TEXT("Stock"), FVector(-40.0, 0.0, -2.0))
 			.Socket(TEXT("TraceStart"), FVector(-20.0, 0.0, -4.0))
 			.Socket(TEXT("TraceEnd"), FVector(-40.0, 0.0, -6.0))
 			.Make(TEXT("SM_GB_MuzzleLoader"));
@@ -368,6 +372,8 @@ namespace VaesenCombatAssets
 			.Socket(TEXT("Grip"), FVector(-8.0, 0.0, -5.0))
 			.Socket(TEXT("LeftHandIK"), FVector(15.0, 0.0, -2.0))
 			.Socket(TEXT("Muzzle"), FVector(32.0, 0.0, 2.0))
+			.Socket(TEXT("Sight"), FVector(-4.0, 0.0, 1.5))
+			.Socket(TEXT("Stock"), FVector(-30.0, 0.0, -2.0))
 			.Make(TEXT("SM_GB_Crossbow"));
 
 		// Melee: TraceStart and TraceEnd run along the striking part (blade, head).

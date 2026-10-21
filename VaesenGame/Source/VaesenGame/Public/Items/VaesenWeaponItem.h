@@ -76,6 +76,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon|Sheath")
 	FTransform SheathOffset;
 
+	/** How it sits in the hands, in every pose and shouldered while aiming (tune it in play: vaesen.weaponfit). */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon|Hold")
+	FVaesenWeaponHold Hold;
+
 	/** Its own draw and sheath montages. Empty = the sheath location's shared ones. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon|Sheath")
 	TObjectPtr<UAnimMontage> DrawMontage;

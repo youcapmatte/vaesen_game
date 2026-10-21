@@ -24,6 +24,7 @@
 #include "Abilities/VaesenGeneralAbilities.h"
 #include "Kismet/GameplayStatics.h"
 #include "UObject/StrongObjectPtr.h"
+#include "Weapons/VaesenWeaponActor.h"
 
 TStrongObjectPtr<UVaesenCombatSelfTest> UVaesenCombatSelfTest::Current;
 
@@ -387,13 +388,36 @@ void UVaesenCombatSelfTest::BuildSteps()
 		Tap(Reload);
 		return Rifle ? Rifle->ReloadTime + 0.3f : 0.1f;
 	} });
-	Steps.Add({ FString(), [this, Equipment, ASC, Tap, Attack, AimOrBlock]()
+	Steps.Add({ FString(), [this, Equipment, ASC, AimOrBlock]()
 	{
 		const UVaesenRangedWeaponItem* Rifle = Cast<UVaesenRangedWeaponItem>(Equipment->GetDrawnWeapon());
 		Check(Rifle && Rifle->GetLoadedRounds() == Rifle->MagazineSize, TEXT("magazine loaded at once"));
 		// Aimed (hip fire spreads 5 degrees with a rifle and can miss at 4 m).
 		Press(AimOrBlock);
 		Check(ASC->HasMatchingGameplayTag(VaesenTags::State_Aiming), TEXT("right mouse aims the rifle"));
+		return 0.8f;
+	} });
+	Steps.Add({ FString(), [this, Equipment, Tap, Attack, AimOrBlock]()
+	{
+		// Shouldered: the barrel along the aim, the stock at the shoulder (the anim graph's shoulder aim).
+		const UVaesenWeaponItem* Rifle = Equipment->GetDrawnWeapon();
+		const AVaesenWeaponActor* Actor = Rifle ? Rifle->GetWeaponActor() : nullptr;
+		FTransform Muzzle, Stock;
+		if (Actor && Actor->GetSocketTransform(TEXT("Muzzle"), Muzzle) && Actor->GetSocketTransform(TEXT("Stock"), Stock))
+		{
+			const FVector Along = Fighter->GetBaseAimRotation().Vector();
+			const float Alignment = FVector::DotProduct((Muzzle.GetLocation() - Stock.GetLocation()).GetSafeNormal(), Along);
+			const float ToShoulder = FVector::Dist(Stock.GetLocation(), Fighter->GetMesh()->GetSocketLocation(TEXT("upperarm_r")));
+			const FString Measured = FString::Printf(TEXT("(barrel along the aim %.2f, stock %.0f cm from the shoulder)"), Alignment, ToShoulder);
+			if (GetWorld()->GetNetMode() == NM_DedicatedServer)
+			{
+				Say(TEXT("INFO  shoulder aim not measured on a dedicated server (the pose is the clients') ") + Measured, FColor::Yellow);
+			}
+			else
+			{
+				Check(Alignment > 0.98f && ToShoulder < 20.0f, TEXT("the aimed rifle is shouldered ") + Measured);
+			}
+		}
 		Tap(Attack);
 		Release(AimOrBlock);
 		return 0.2f;

@@ -301,3 +301,55 @@ struct FVaesenThrowSettings
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Throwing", meta = (EditCondition = "bCanBeThrown && bBreaksOnImpact"))
 	TObjectPtr<USoundBase> BreakSound;
 };
+
+/**
+ * How a weapon sits in the hands, per weapon (tune it in play: vaesen.weaponfit). The animation gives the body; this
+ * places the weapon, and the hands follow it.
+ *
+ * In the hand: InHand moves it from the hand socket (hand_r_weapon) in every pose. The off hand goes to the mesh's
+ * LeftHandIK socket (+ LeftHandOffset).
+ *
+ * Shoulder aim (two-handed guns while aiming): the weapon is laid along the aim, its Sight socket in front of the eye
+ * (AimSightOffset, from the head) and its Stock socket at the shoulder (StockToShoulder); the right hand is moved to
+ * hold it there. Without a Stock socket, AimSightOffset.X says how far in front of the head it is.
+ */
+USTRUCT(BlueprintType)
+struct FVaesenWeaponHold
+{
+	GENERATED_BODY()
+
+	/** From the hand socket, in every pose (forward is the barrel, X). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hold")
+	FTransform InHand;
+
+	/** Moves the off hand's grip from the LeftHandIK socket, in the weapon's space (cm). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hold")
+	FVector LeftHandOffset = FVector::ZeroVector;
+
+	/** Lay it against the shoulder while aiming (off: the aim animation holds it as it is). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hold|Aim")
+	bool bShoulderAim = true;
+
+	/** Where the Sight socket sits while aiming, from the head bone along the aim: X forward, Y right, Z up (cm). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hold|Aim", meta = (EditCondition = "bShoulderAim"))
+	FVector AimSightOffset = FVector(24.0, 8.0, 4.0);
+
+	/** How far the Stock socket sits in front of the shoulder joint, along the aim (cm, negative = behind it). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hold|Aim", meta = (EditCondition = "bShoulderAim"))
+	float StockToShoulder = 4.0f;
+
+	/** Turns it while aiming (Roll cants it). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hold|Aim", meta = (EditCondition = "bShoulderAim"))
+	FRotator AimRotation = FRotator::ZeroRotator;
+
+	/** How fast it comes up to the shoulder and goes down again. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hold|Aim", meta = (EditCondition = "bShoulderAim", ClampMin = "1"))
+	float AimBlendSpeed = 12.0f;
+
+	/** Each shot while aimed: pushed back this far (cm) and the muzzle up (degrees), easing back. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hold|Aim", meta = (EditCondition = "bShoulderAim"))
+	float RecoilBack = 3.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hold|Aim", meta = (EditCondition = "bShoulderAim"))
+	float RecoilPitch = 4.0f;
+};

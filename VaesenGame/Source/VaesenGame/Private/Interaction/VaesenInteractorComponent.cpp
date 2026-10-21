@@ -6,6 +6,7 @@
 #include "Engine/World.h"
 #include "GameFramework/Controller.h"
 #include "Interaction/VaesenInteractionComponent.h"
+#include "Inventory/VaesenEquipmentComponent.h"
 #include "TimerManager.h"
 
 UVaesenInteractorComponent::UVaesenInteractorComponent()
@@ -95,7 +96,9 @@ void UVaesenInteractorComponent::PerformInteractionCheck()
 	}
 
 #if ENABLE_DRAW_DEBUG
-	if (bDrawDebugTrace)
+	const AVaesenBaseCharacter* Owner = Cast<AVaesenBaseCharacter>(GetOwner());
+	const bool bWeaponDrawn = Owner && Owner->GetEquipment() && Owner->GetEquipment()->GetDrawnWeapon();
+	if (bDrawDebugTrace && !bWeaponDrawn)
 	{
 		// The whole swept tube: green if nothing was hit, red up to the hit (and grey beyond it).
 		const bool bHit = Hit.bBlockingHit;

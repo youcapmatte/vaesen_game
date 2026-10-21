@@ -31,6 +31,7 @@
 #include "AnimGraphNode_LayeredBoneBlend.h"
 #include "AnimGraphNode_LinkedAnimGraph.h"
 #include "AnimGraphNode_LocalToComponentSpace.h"
+#include "AnimGraphNode_ModifyBone.h"
 #include "AnimGraphNode_Root.h"
 #include "AnimGraphNode_RotationOffsetBlendSpace.h"
 #include "AnimGraphNode_SaveCachedPose.h"
@@ -569,6 +570,30 @@ namespace VaesenAnimSetup
 		return Blueprint;
 	}
 
+	/** The anim Blueprint at PackagePath: made new, or (rebuilding) the existing one with its anim graph cleared. */
+	UAnimBlueprint* OpenAnimBlueprint(const FString& PackagePath, USkeleton* Skeleton)
+	{
+		UAnimBlueprint* Existing = LoadAt<UAnimBlueprint>(PackagePath);
+		if (!Existing)
+		{
+			return NewAnimBlueprint(PackagePath, Skeleton);
+		}
+		for (UEdGraph* Graph : Existing->FunctionGraphs)
+		{
+			if (Graph && Graph->GetFName() == UEdGraphSchema_K2::GN_AnimGraph)
+			{
+				for (UEdGraphNode* Node : TArray<UEdGraphNode*>(Graph->Nodes))
+				{
+					if (!Cast<UAnimGraphNode_Root>(Node))
+					{
+						FBlueprintEditorUtils::RemoveNode(Existing, Node, true);
+					}
+				}
+			}
+		}
+		return Existing;
+	}
+
 	bool CompileAndSave(UAnimBlueprint* Blueprint)
 	{
 		FBlueprintEditorUtils::MarkBlueprintAsStructurallyModified(Blueprint);
@@ -638,7 +663,7 @@ namespace VaesenAnimSetup
 				return Existing->GeneratedClass;
 			}
 		}
-		UAnimBlueprint* Blueprint = NewAnimBlueprint(RifleGraphPath, Skeleton);
+		UAnimBlueprint* Blueprint = OpenAnimBlueprint(RifleGraphPath, Skeleton);
 		FGraphBuilder Builder(Blueprint);
 		if (!Blueprint || !Builder.Graph)
 		{
@@ -673,7 +698,8 @@ namespace VaesenAnimSetup
 	 *   weapon locomotion (linked graph tagged WeaponLocomotion: ABP_Manny unarmed, the weapon's when one is drawn)
 	 *   -> UpperBody slot, layered from spine_01 up (fire, reload, draw: the legs keep walking)
 	 *   -> DefaultSlot (full-body montages: stagger, hit reactions)
-	 *   -> left hand onto the weapon's LeftHandIK, the drawing hand onto the sheathed weapon's grip
+	 *   -> shoulder aim: the right hand where it holds the weapon against the shoulder (AimHandLocation / Rotation)
+	 *   -> left hand onto the weapon's LeftHandIK (relative to the right hand), the drawing hand onto the sheathed weapon's grip
 	 */
 	UClass* BuildCharacterGraph(USkeleton* Skeleton, bool bRebuild)
 	{
@@ -685,7 +711,7 @@ namespace VaesenAnimSetup
 			}
 		}
 		UClass* Unarmed = LoadObject<UClass>(nullptr, UnarmedGraphPath);
-		UAnimBlueprint* Blueprint = NewAnimBlueprint(CharacterGraphPath, Skeleton);
+		UAnimBlueprint* Blueprint = OpenAnimBlueprint(CharacterGraphPath, Skeleton);
 		FGraphBuilder Builder(Blueprint);
 		if (!Blueprint || !Builder.Graph)
 		{
@@ -752,17 +778,37 @@ namespace VaesenAnimSetup
 				Node->Node.bAllowStretching = false;
 			});
 		};
-		UAnimGraphNode_TwoBoneIK* LeftHand = HandIK(-150, TEXT("hand_l"), TEXT("lowerarm_l"));
-		Builder.Pose(ToComponent, LeftHand, TEXT("ComponentPose"));
-		Builder.Var(TEXT("LeftHandIKAlpha"), LeftHand, TEXT("Alpha"));
-		Builder.Var(TEXT("LeftHandIKLocation"), LeftHand, TEXT("EffectorLocation"));
+		// Shoulder aim: the right hand placed (two-bone IK), then turned (world rotation), to hold the weapon there.
+		UAnimGraphNode_TwoBoneIK* AimHand = HandIK(-150, TEXT("hand_r"), TEXT("lowerarm_r"));
+		Builder.Pose(ToComponent, AimHand, TEXT("ComponentPose"));
+		Builder.Var(TEXT("AimIKAlpha"), AimHand, TEXT("Alpha"));
+		Builder.Var(TEXT("AimHandLocation"), AimHand, TEXT("EffectorLocation"));
+		UAnimGraphNode_ModifyBone* AimTurn = Builder.Add<UAnimGraphNode_ModifyBone>(150, 0, [](UAnimGraphNode_ModifyBone* Node)
+		{
+			Node->Node.BoneToModify.BoneName = TEXT("hand_r");
+			Node->Node.TranslationMode = BMM_Ignore;
+			Node->Node.ScaleMode = BMM_Ignore;
+			Node->Node.RotationMode = BMM_Replace;
+			Node->Node.RotationSpace = BCS_WorldSpace;
+		});
+		Builder.Pose(AimHand, AimTurn, TEXT("ComponentPose"));
+		Builder.Var(TEXT("AimIKAlpha"), AimTurn, TEXT("Alpha"));
+		Builder.Var(TEXT("AimHandRotation"), AimTurn, TEXT("Rotation"));
 
-		UAnimGraphNode_TwoBoneIK* DrawHand = HandIK(200, TEXT("hand_r"), TEXT("lowerarm_r"));
+		// The off hand, relative to the right hand that holds the weapon: on the weapon whatever the arm does.
+		UAnimGraphNode_TwoBoneIK* LeftHand = HandIK(450, TEXT("hand_l"), TEXT("lowerarm_l"));
+		LeftHand->Node.EffectorLocationSpace = BCS_BoneSpace;
+		LeftHand->Node.EffectorTarget = FBoneSocketTarget(TEXT("hand_r"));
+		Builder.Pose(AimTurn, LeftHand, TEXT("ComponentPose"));
+		Builder.Var(TEXT("LeftHandIKAlpha"), LeftHand, TEXT("Alpha"));
+		Builder.Var(TEXT("LeftHandIKInHand"), LeftHand, TEXT("EffectorLocation"));
+
+		UAnimGraphNode_TwoBoneIK* DrawHand = HandIK(750, TEXT("hand_r"), TEXT("lowerarm_r"));
 		Builder.Pose(LeftHand, DrawHand, TEXT("ComponentPose"));
 		Builder.Var(TEXT("SheathHandIKAlpha"), DrawHand, TEXT("Alpha"));
 		Builder.Var(TEXT("SheathHandIKLocation"), DrawHand, TEXT("EffectorLocation"));
 
-		UAnimGraphNode_ComponentToLocalSpace* ToLocal = Builder.Add<UAnimGraphNode_ComponentToLocalSpace>(550, 0, [](UAnimGraphNode_ComponentToLocalSpace*) {});
+		UAnimGraphNode_ComponentToLocalSpace* ToLocal = Builder.Add<UAnimGraphNode_ComponentToLocalSpace>(1050, 0, [](UAnimGraphNode_ComponentToLocalSpace*) {});
 		Builder.Pose(DrawHand, ToLocal, TEXT("ComponentPose"));
 		Builder.Pose(ToLocal, Builder.Root(), TEXT("Result"));
 
@@ -827,9 +873,14 @@ namespace VaesenAnimSetup
 		return Desired.GetRelativeTransform(BoneInMesh);
 	}
 
-	void SetSkeletonSocket(USkeleton* Skeleton, FName Name, FName Bone, const FTransform& Relative)
+	/** Sets a socket that's missing (with bOverwrite, also one that exists: it may have been tuned by hand). */
+	void SetSkeletonSocket(USkeleton* Skeleton, FName Name, FName Bone, const FTransform& Relative, bool bOverwrite)
 	{
 		USkeletalMeshSocket* Socket = Skeleton->FindSocket(Name);
+		if (Socket && !bOverwrite)
+		{
+			return;
+		}
 		if (!Socket)
 		{
 			Socket = NewObject<USkeletalMeshSocket>(Skeleton);
@@ -842,13 +893,17 @@ namespace VaesenAnimSetup
 		UE_LOG(LogVaesenAnimSetup, Display, TEXT("Socket %s on %s: %s"), *Name.ToString(), *Bone.ToString(), *Describe(Relative));
 	}
 
-	void SetMeshSocket(UStaticMesh* Mesh, FName Name, const FTransform& Relative)
+	void SetMeshSocket(UStaticMesh* Mesh, FName Name, const FTransform& Relative, bool bOverwrite)
 	{
 		if (!Mesh)
 		{
 			return;
 		}
 		UStaticMeshSocket* Socket = Mesh->FindSocket(Name);
+		if (Socket && !bOverwrite)
+		{
+			return;
+		}
 		if (!Socket)
 		{
 			Socket = NewObject<UStaticMeshSocket>(Mesh);
@@ -863,6 +918,8 @@ namespace VaesenAnimSetup
 	void BuildRifle()
 	{
 		const bool bRebuild = FParse::Param(FCommandLine::Get(), TEXT("rebuild"));
+		// Sockets are only added where missing (they get tuned by hand); -resetsockets works them out again.
+		const bool bResetSockets = FParse::Param(FCommandLine::Get(), TEXT("resetsockets"));
 		USkeleton* Skeleton = LoadObject<USkeleton>(nullptr, MannySkeletonPath);
 		if (!Skeleton)
 		{
@@ -880,16 +937,31 @@ namespace VaesenAnimSetup
 		const bool bHand = ComputeHandSocket(HandSocket, LeftHandInRifle);
 		if (bHand)
 		{
-			SetSkeletonSocket(Skeleton, TEXT("hand_r_weapon"), TEXT("hand_r"), HandSocket);
+			SetSkeletonSocket(Skeleton, TEXT("hand_r_weapon"), TEXT("hand_r"), HandSocket, bResetSockets);
 		}
-		SetSkeletonSocket(Skeleton, TEXT("Sheath_BackSling"), TEXT("spine_04"), ComputeBackSling(Skeleton, TEXT("spine_04")));
+		SetSkeletonSocket(Skeleton, TEXT("Sheath_BackSling"), TEXT("spine_04"), ComputeBackSling(Skeleton, TEXT("spine_04")), bResetSockets);
 		Save(Skeleton);
-		if (bHand)
+
+		// The grey-box long guns: the off hand where the pack puts it (from the grip, which the hand holds), and Sight
+		// (the line of the sights) and Stock (the butt plate) for the shoulder aim.
+		struct FLongGun { const TCHAR* Name; FVector Sight; FVector Stock; };
+		for (const FLongGun& Gun : { FLongGun{ TEXT("SM_GB_KragRifle"), FVector(14.0, 0.0, 4.5), FVector(-40.0, 0.0, -2.0) },
+				 FLongGun{ TEXT("SM_GB_MuzzleLoader"), FVector(8.0, 0.0, 4.5), FVector(-40.0, 0.0, -2.0) },
+				 FLongGun{ TEXT("SM_GB_Crossbow"), FVector(-4.0, 0.0, 1.5), FVector(-30.0, 0.0, -2.0) } })
 		{
-			for (const TCHAR* Rifle : { TEXT("SM_GB_KragRifle"), TEXT("SM_GB_MuzzleLoader"), TEXT("SM_GB_Crossbow") })
+			UStaticMesh* Mesh = LoadAt<UStaticMesh>(FString(TEXT("/Game/Vaesen/Combat/GreyBox")) / Gun.Name);
+			if (!Mesh)
 			{
-				SetMeshSocket(LoadAt<UStaticMesh>(FString(TEXT("/Game/Vaesen/Combat/GreyBox")) / Rifle), TEXT("LeftHandIK"), LeftHandInRifle);
+				continue;
 			}
+			const UStaticMeshSocket* Grip = Mesh->FindSocket(TEXT("Grip"));
+			const FVector GripLocation = Grip ? Grip->RelativeLocation : FVector::ZeroVector;
+			if (bHand)
+			{
+				SetMeshSocket(Mesh, TEXT("LeftHandIK"), FTransform(GripLocation + LeftHandInRifle.GetLocation()), bResetSockets);
+			}
+			SetMeshSocket(Mesh, TEXT("Sight"), FTransform(Gun.Sight), false);
+			SetMeshSocket(Mesh, TEXT("Stock"), FTransform(Gun.Stock), false);
 		}
 
 		// Montages on the upper body.

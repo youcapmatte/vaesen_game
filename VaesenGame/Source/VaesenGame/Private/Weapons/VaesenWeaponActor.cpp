@@ -89,6 +89,10 @@ void AVaesenWeaponActor::OnRep_WeaponItem()
 void AVaesenWeaponActor::ApplyWeaponMesh()
 {
 	const UVaesenWeaponItem* Item = WeaponItem;
+	if (Item)
+	{
+		Hold = Item->Hold;
+	}
 	USkeletalMesh* Skeletal = Item ? Item->WeaponSkeletalMesh.Get() : nullptr;
 	UStaticMesh* Static = Item && !Skeletal ? Item->GetHeldStaticMesh() : nullptr;
 
@@ -154,6 +158,7 @@ bool AVaesenWeaponActor::ResolveAttachment(bool bToHand, FName& OutSocket, FTran
 	if (bToHand)
 	{
 		OutSocket = WeaponItem->IsHeldInOffHand() ? Defaults->OffHandSocket : Defaults->MainHandSocket;
+		OutOffset = Hold.InHand;
 		if (!Body->DoesSocketExist(OutSocket))
 		{
 			// No weapon socket on the skeleton yet: the hand bone itself.
@@ -361,3 +366,15 @@ void AVaesenWeaponActor::MulticastImpact_Implementation(const FHitResult& Hit, F
 {
 	UVaesenCombatLibrary::PlayImpactEffects(this, DamageType, Hit, bBullet);
 }
+
+#if WITH_EDITOR
+void AVaesenWeaponActor::PostEditChangeProperty(FPropertyChangedEvent& Event)
+{
+	Super::PostEditChangeProperty(Event);
+	// Tuning the hold in play: show it at once.
+	if (bInHand)
+	{
+		AttachToOwner(true);
+	}
+}
+#endif

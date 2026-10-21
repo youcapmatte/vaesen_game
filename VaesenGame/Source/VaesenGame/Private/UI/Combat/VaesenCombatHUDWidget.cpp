@@ -142,11 +142,16 @@ int32 UVaesenCombatHUDWidget::NativePaint(const FPaintArgs& Args, const FGeometr
 	if (bShowCrosshair)
 	{
 		const float Gap = FMath::Max(SpreadPixels, CrosshairMinGap);
-		Line(Centre + FVector2D(Gap, 0), Centre + FVector2D(Gap + CrosshairLineLength, 0), CrosshairColor, 1.5f);
-		Line(Centre - FVector2D(Gap, 0), Centre - FVector2D(Gap + CrosshairLineLength, 0), CrosshairColor, 1.5f);
-		Line(Centre + FVector2D(0, Gap), Centre + FVector2D(0, Gap + CrosshairLineLength), CrosshairColor, 1.5f);
-		Line(Centre - FVector2D(0, Gap), Centre - FVector2D(0, Gap + CrosshairLineLength), CrosshairColor, 1.5f);
-		Line(Centre - FVector2D(0.75f, 0), Centre + FVector2D(0.75f, 0), CrosshairColor, 1.5f);
+		// A dark outline under the light lines, so it reads on sky and snow as well as in the dark.
+		const FLinearColor Outline(0.0f, 0.0f, 0.0f, CrosshairColor.A * 0.6f);
+		for (const TPair<FLinearColor, float>& Pass : { TPair<FLinearColor, float>(Outline, 3.5f), TPair<FLinearColor, float>(CrosshairColor, 1.5f) })
+		{
+			Line(Centre + FVector2D(Gap, 0), Centre + FVector2D(Gap + CrosshairLineLength, 0), Pass.Key, Pass.Value);
+			Line(Centre - FVector2D(Gap, 0), Centre - FVector2D(Gap + CrosshairLineLength, 0), Pass.Key, Pass.Value);
+			Line(Centre + FVector2D(0, Gap), Centre + FVector2D(0, Gap + CrosshairLineLength), Pass.Key, Pass.Value);
+			Line(Centre - FVector2D(0, Gap), Centre - FVector2D(0, Gap + CrosshairLineLength), Pass.Key, Pass.Value);
+			Line(Centre - FVector2D(1.0f, 0), Centre + FVector2D(1.0f, 0), Pass.Key, Pass.Value);
+		}
 	}
 
 	// Hit marker: a cross of four short diagonals, fading out.
