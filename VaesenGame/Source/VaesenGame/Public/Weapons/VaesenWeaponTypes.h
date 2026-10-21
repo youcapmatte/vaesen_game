@@ -309,9 +309,11 @@ struct FVaesenThrowSettings
  * In the hand: InHand moves it from the hand socket (hand_r_weapon) in every pose. The off hand goes to the mesh's
  * LeftGrip socket (+ LeftHandOffset), turned as the socket is.
  *
- * Shoulder aim (two-handed guns while aiming): the weapon is laid along the aim (its Sight socket's line), its Stock
- * socket in the shoulder pocket (the skeleton's ShoulderPocket socket, + ShoulderOffset); the right hand is moved to
- * hold it there. Without a Stock socket the Sight goes in front of the eye instead (AimSightOffset, from the head).
+ * Shoulder aim (two-handed guns while aiming, the Shoulder Aim anim node): the weapon is laid along the aim (its Sight
+ * socket's line) with the sight line at the eye (AimSightOffset) and the butt (Stock socket) in the shoulder pocket (the
+ * skeleton's ShoulderPocket socket, + ShoulderOffset). The body meets the stock: the shoulder lifts by ShoulderShare of
+ * the gap and the head bows onto the stock by the rest. Both hands are solved onto the weapon. Without a Stock socket
+ * the sight just goes in front of the eye.
  */
 USTRUCT(BlueprintType)
 struct FVaesenWeaponHold
@@ -330,13 +332,23 @@ struct FVaesenWeaponHold
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hold|Aim")
 	bool bShoulderAim = true;
 
-	/** Weapons without a Stock: where the Sight socket sits while aiming, from the head bone along the aim (X forward, Y right, Z up, cm). */
+	/**
+	 * Where the Sight socket is while aiming, from the eye (the skeleton's Eye_R socket) along the aim: X how far in front
+	 * of the eye, Y right, Z up (cm). The sight line goes through the eye with Y and Z at zero.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hold|Aim", meta = (EditCondition = "bShoulderAim"))
-	FVector AimSightOffset = FVector(24.0, 8.0, 4.0);
+	FVector AimSightOffset = FVector(14.0, 0.0, 0.0);
 
 	/** Moves the Stock from the shoulder pocket, along the aim (X forward, Y right, Z up, cm); normally zero. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hold|Aim", meta = (EditCondition = "bShoulderAim"))
 	FVector ShoulderOffset = FVector::ZeroVector;
+
+	/**
+	 * How the gap between the eye line and the shoulder is shared: the shoulder lifts to the stock by this much of it,
+	 * the head bows (and leans) onto the stock by the rest. 0 = all head, 1 = all shoulder.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hold|Aim", meta = (EditCondition = "bShoulderAim", ClampMin = "0", ClampMax = "1"))
+	float ShoulderShare = 0.4f;
 
 	/** Turns it while aiming (Roll cants it). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hold|Aim", meta = (EditCondition = "bShoulderAim"))

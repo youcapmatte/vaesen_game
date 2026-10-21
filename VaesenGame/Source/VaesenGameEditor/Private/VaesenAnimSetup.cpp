@@ -40,6 +40,7 @@
 #include "AnimGraphNode_Slot.h"
 #include "AnimGraphNode_TwoBoneIK.h"
 #include "AnimGraphNode_UseCachedPose.h"
+#include "AnimGraphNode_VaesenShoulderAim.h"
 #include "Anim/VaesenAnimInstance.h"
 #include "Anim/VaesenAnimNotifies.h"
 #include "Animation/AnimBlueprint.h"
@@ -699,7 +700,7 @@ namespace VaesenAnimSetup
 	 *   weapon locomotion (linked graph tagged WeaponLocomotion: ABP_Manny unarmed, the weapon's when one is drawn)
 	 *   -> UpperBody slot, layered from spine_01 up (fire, reload, draw: the legs keep walking)
 	 *   -> DefaultSlot (full-body montages: stagger, hit reactions)
-	 *   -> shoulder aim: the right hand where it holds the weapon against the shoulder (AimHandLocation / Rotation)
+	 *   -> shoulder aim (the Vaesen Shoulder Aim node: the weapon at the shoulder and the eye; shoulder, head, both arms)
 	 *   -> fingers closed round the grips (the category's GripPose, finger bones only)
  *   -> left hand onto the weapon's LeftGrip (placed relative to the right hand, then turned), the drawing hand onto the sheathed weapon's grip
 	 */
@@ -826,28 +827,16 @@ namespace VaesenAnimSetup
 				Node->Node.bAllowStretching = false;
 			});
 		};
-		// Shoulder aim: the right hand placed (two-bone IK), then turned (world rotation), to hold the weapon there.
-		UAnimGraphNode_TwoBoneIK* AimHand = HandIK(-150, TEXT("hand_r"), TEXT("lowerarm_r"));
-		Builder.Pose(ToComponent, AimHand, TEXT("ComponentPose"));
-		Builder.Var(TEXT("AimIKAlpha"), AimHand, TEXT("Alpha"));
-		Builder.Var(TEXT("AimHandLocation"), AimHand, TEXT("EffectorLocation"));
-		UAnimGraphNode_ModifyBone* AimTurn = Builder.Add<UAnimGraphNode_ModifyBone>(150, 0, [](UAnimGraphNode_ModifyBone* Node)
-		{
-			Node->Node.BoneToModify.BoneName = TEXT("hand_r");
-			Node->Node.TranslationMode = BMM_Ignore;
-			Node->Node.ScaleMode = BMM_Ignore;
-			Node->Node.RotationMode = BMM_Replace;
-			Node->Node.RotationSpace = BCS_WorldSpace;
-		});
-		Builder.Pose(AimHand, AimTurn, TEXT("ComponentPose"));
-		Builder.Var(TEXT("AimIKAlpha"), AimTurn, TEXT("Alpha"));
-		Builder.Var(TEXT("AimHandRotation"), AimTurn, TEXT("Rotation"));
+		// Shoulder aim: the Vaesen Shoulder Aim node shoulders the weapon on this pose (shoulder, head, both arms).
+		UAnimGraphNode_VaesenShoulderAim* ShoulderAim = Builder.Add<UAnimGraphNode_VaesenShoulderAim>(0, 0, [](UAnimGraphNode_VaesenShoulderAim*) {});
+		Builder.Pose(ToComponent, ShoulderAim, TEXT("ComponentPose"));
+		Builder.Var(TEXT("AimIKAlpha"), ShoulderAim, TEXT("Alpha"));
 
 		// The off hand, relative to the right hand that holds the weapon: on the weapon whatever the arm does.
 		UAnimGraphNode_TwoBoneIK* LeftHand = HandIK(450, TEXT("hand_l"), TEXT("lowerarm_l"));
 		LeftHand->Node.EffectorLocationSpace = BCS_BoneSpace;
 		LeftHand->Node.EffectorTarget = FBoneSocketTarget(TEXT("hand_r"));
-		Builder.Pose(AimTurn, LeftHand, TEXT("ComponentPose"));
+		Builder.Pose(ShoulderAim, LeftHand, TEXT("ComponentPose"));
 		Builder.Var(TEXT("LeftHandIKAlpha"), LeftHand, TEXT("Alpha"));
 		Builder.Var(TEXT("LeftHandIKInHand"), LeftHand, TEXT("EffectorLocation"));
 
@@ -943,6 +932,26 @@ namespace VaesenAnimSetup
 
 	/** Sets a socket that's missing (with bOverwrite, also one that exists: it may have been tuned by hand). */
 	/**
+	 * The right eye, on the head bone (the sight line goes through it when aiming): about 11.5 cm below the crown (the
+	 * top of Manny's mesh), in front of the head bone and a little to its right (Manny faces +Y; his right is -X).
+	 */
+	FTransform ComputeRightEye(const USkeleton* Skeleton)
+	{
+		const FReferenceSkeleton& Reference = Skeleton->GetReferenceSkeleton();
+		const int32 Head = Reference.FindBoneIndex(TEXT("head"));
+		const USkeletalMesh* Manny = LoadObject<USkeletalMesh>(nullptr, MannyMesh);
+		if (Head == INDEX_NONE || !Manny)
+		{
+			return FTransform::Identity;
+		}
+		const FTransform HeadInMesh = FAnimationRuntime::GetComponentSpaceTransformRefPose(Reference, Head);
+		const FBox Bounds = Manny->GetImportedBounds().GetBox();
+		const FVector Eye(HeadInMesh.GetLocation().X - 3.2, HeadInMesh.GetLocation().Y + 8.5, Bounds.Max.Z - 11.5);
+		UE_LOG(LogVaesenAnimSetup, Display, TEXT("Head bone at %s, crown at %.1f: right eye at %s"), *HeadInMesh.GetLocation().ToCompactString(), Bounds.Max.Z, *Eye.ToCompactString());
+		return FTransform(Eye).GetRelativeTransform(HeadInMesh);
+	}
+
+	/**
 	 * Where a rifle butt goes, on clavicle_r (so it follows the shoulder as it lifts to aim): in front of the right
 	 * shoulder joint and a little inside it, worked out in Manny's mesh space (he faces +Y; his right is -X).
 	 */
@@ -1029,6 +1038,7 @@ namespace VaesenAnimSetup
 		}
 		SetSkeletonSocket(Skeleton, TEXT("Sheath_BackSling"), TEXT("spine_04"), ComputeBackSling(Skeleton, TEXT("spine_04")), bResetSockets);
 		SetSkeletonSocket(Skeleton, TEXT("ShoulderPocket"), TEXT("clavicle_r"), ComputeShoulderPocket(Skeleton), bResetSockets);
+		SetSkeletonSocket(Skeleton, TEXT("Eye_R"), TEXT("head"), ComputeRightEye(Skeleton), bResetSockets);
 		Save(Skeleton);
 
 		// The grey-box long guns, from their shapes: LeftGrip under the fore-end (the palm's middle a couple of cm below

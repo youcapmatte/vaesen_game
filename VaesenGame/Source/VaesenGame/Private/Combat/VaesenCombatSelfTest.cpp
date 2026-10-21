@@ -372,11 +372,14 @@ void UVaesenCombatSelfTest::BuildSteps()
 		Tap(Reload);
 		return Revolver ? Revolver->ReloadTime * Revolver->MagazineSize + 0.5f : 0.1f;
 	} });
-	Steps.Add({ FString(), [this, Equipment, Tap, Attack]()
+	Steps.Add({ FString(), [this, Equipment, Tap, Attack, AimOrBlock]()
 	{
 		const UVaesenRangedWeaponItem* Revolver = Cast<UVaesenRangedWeaponItem>(Equipment->GetDrawnWeapon());
 		Check(Revolver && Revolver->GetLoadedRounds() == Revolver->MagazineSize, TEXT("reloaded round by round to full"));
+		// Aimed: the hip spread (4 degrees) can miss a dummy 4 m off.
+		Press(AimOrBlock);
 		Tap(Attack);
+		Release(AimOrBlock);
 		return 0.3f;
 	} });
 	const FVaesenDamagePacket Cartridge = AmmoDamage(TEXT("BP_Ammo_RevolverCartridge"));
@@ -388,10 +391,12 @@ void UVaesenCombatSelfTest::BuildSteps()
 		Controller->SetControlRotation(ToArmored.Rotation());
 		return 0.5f;
 	} });
-	Steps.Add({ FString(), [Tap, Attack]()
+	Steps.Add({ FString(), [this, Tap, Attack, AimOrBlock]()
 	{
 		// After the fire interval.
+		Press(AimOrBlock);
 		Tap(Attack);
+		Release(AimOrBlock);
 		return 0.5f;
 	} });
 	Steps.Add({ FString(), [this, Cartridge, Equipment]()
@@ -441,18 +446,27 @@ void UVaesenCombatSelfTest::BuildSteps()
 		{
 			const FVector Along = Fighter->GetBaseAimRotation().Vector();
 			const float Alignment = FVector::DotProduct((Muzzle.GetLocation() - Stock.GetLocation()).GetSafeNormal(), Along);
-			// The butt in the shoulder pocket, well below the head (not floating over the shoulder).
+			// The butt in the shoulder pocket (not floating over the shoulder, not down at the chest)...
 			const USkeletalMeshComponent* Body = Fighter->GetMesh();
 			const float ToShoulder = FVector::Dist(Stock.GetLocation(), UVaesenAnimInstance::ShoulderPocket(Body, Fighter->GetBaseAimRotation()));
 			const float BelowHead = Body->GetSocketLocation(TEXT("head")).Z - Stock.GetLocation().Z;
-			const FString Measured = FString::Printf(TEXT("(barrel along the aim %.2f, stock %.1f cm from the shoulder pocket, %.0f cm below the head)"), Alignment, ToShoulder, BelowHead);
+			// ...and the eye looking down the sights: the sight line passes through the eye.
+			FTransform Sight;
+			Actor->GetSocketTransform(TEXT("Sight"), Sight);
+			FRotator Aim = Fighter->GetBaseAimRotation();
+			Aim.Roll = 0.0f;
+			const FVector ToEye = UVaesenAnimInstance::EyePoint(Body) + Aim.RotateVector(Actor->Hold.AimSightOffset) - Sight.GetLocation();
+			const FVector Line = Sight.GetRotation().GetForwardVector();
+			const float EyeGap = (ToEye - Line * FVector::DotProduct(ToEye, Line)).Size();
+			const FString Measured = FString::Printf(TEXT("(barrel along the aim %.2f, stock %.1f cm from the shoulder pocket, %.0f cm below the head, sight line %.1f cm from the eye)"),
+				Alignment, ToShoulder, BelowHead, EyeGap);
 			if (GetWorld()->GetNetMode() == NM_DedicatedServer)
 			{
 				Say(TEXT("INFO  shoulder aim not measured on a dedicated server (the pose is the clients') ") + Measured, FColor::Yellow);
 			}
 			else
 			{
-				Check(Alignment > 0.98f && ToShoulder < 2.0f && BelowHead > 10.0f, TEXT("the aimed rifle is shouldered ") + Measured);
+				Check(Alignment > 0.98f && ToShoulder < 2.0f && EyeGap < 4.0f, TEXT("the aimed rifle is shouldered ") + Measured);
 			}
 		}
 		CheckLeftPalm(TEXT("aimed"));

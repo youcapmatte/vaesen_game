@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Animation/AnimInstance.h"
+#include "Anim/AnimNode_VaesenShoulderAim.h"
 #include "Weapons/VaesenWeaponTypes.h"
 #include "VaesenAnimInstance.generated.h"
 
@@ -49,19 +50,15 @@ public:
 	/** A shot: the trigger finger curls and lets go (and a shouldered weapon kicks). */
 	void PulseTriggerFinger() { TriggerPulse = 1.0f; RecoilKick = 1.0f; }
 
-	/**
-	 * Where a shouldered weapon goes (its grip, world): laid along Aim (its Sight socket's line), its Stock socket in
-	 * the shoulder pocket (no Stock: its Sight in front of the head by AimSightOffset); Kick (0..1) is a shot's recoil.
-	 */
-	static FTransform PlaceShouldered(const USkeletalMeshComponent* Body, const FVaesenHeldWeapon& Weapon, const FRotator& Aim, float Kick = 0.0f);
+	/** For the Shoulder Aim node (game thread): what it needs this frame; false while it isn't shouldering. */
+	bool GetShoulderAimInput(FVaesenShoulderAimInput& Out) const;
 
 	/** The shoulder pocket the stock goes in (world): the skeleton's ShoulderPocket socket, or in front of and inside the
 	 * shoulder joint without it. */
 	static FVector ShoulderPocket(const USkeletalMeshComponent* Body, const FRotator& Aim);
 
-	/** The reverse: the hold's aim values (sight offset, stock, rotation) that put the weapon at Placed. */
-	static void ShoulderHoldFromPlacement(const USkeletalMeshComponent* Body, const FVaesenHeldWeapon& Weapon, const FRotator& Aim,
-		const FTransform& Placed, FVaesenWeaponHold& InOutHold);
+	/** The right eye (world): the skeleton's Eye_R socket on the head, or roughly there without it. */
+	static FVector EyePoint(const USkeletalMeshComponent* Body);
 
 	/** Curve names read from montages. */
 	static const FName HandIKSheathCurve;
@@ -152,16 +149,11 @@ protected:
 	/** The skeleton's sockets that say how each palm holds a grip. */
 	static const FName LeftHandGripSocket;
 	static const FName ShoulderPocketSocket;
+	static const FName EyeSocket;
 
-	/** Shoulder aim: where the right hand goes (world space) to hold the weapon at the shoulder, weight 0..1. */
+	/** Shoulder aim (the Shoulder Aim node), weight 0..1. */
 	UPROPERTY(BlueprintReadOnly, Category = "IK")
 	float AimIKAlpha = 0.0f;
-
-	UPROPERTY(BlueprintReadOnly, Category = "IK")
-	FVector AimHandLocation = FVector::ZeroVector;
-
-	UPROPERTY(BlueprintReadOnly, Category = "IK")
-	FRotator AimHandRotation = FRotator::ZeroRotator;
 
 	/** Sheath IK drives the left hand (an off-hand shield) instead of the right. */
 	UPROPERTY(BlueprintReadOnly, Category = "IK")
@@ -190,7 +182,7 @@ protected:
 private:
 	float RecoilKick = 0.0f;
 
-	FTransform AimHandInComponent;
+	FVaesenShoulderAimInput ShoulderAimInput;
 
 	float TriggerPulse = 0.0f;
 

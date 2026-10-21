@@ -1002,10 +1002,14 @@ bool FVaesenWeaponFitRigTest::RunTest(const FString& Parameters)
 		const float Along = FVector::DotProduct((Muzzle - Stock).GetSafeNormal(), Rig->GetAim().Vector());
 		const float ToShoulder = FVector::Dist(Stock, UVaesenAnimInstance::ShoulderPocket(Body, Rig->GetAim()));
 		const float BelowHead = Body->GetSocketLocation(TEXT("head")).Z - Stock.Z;
+		const FTransform Sight = Weapon->GetSocketTransform(TEXT("Sight"));
+		const FVector ToEye = UVaesenAnimInstance::EyePoint(Body) + Rig->GetAim().RotateVector(Rig->GetWeaponDefaults()->Hold.AimSightOffset) - Sight.GetLocation();
+		const FVector Line = Sight.GetRotation().GetForwardVector();
+		const float EyeGap = (ToEye - Line * FVector::DotProduct(ToEye, Line)).Size();
+		TestTrue(FString::Printf(TEXT("%s: the sight line is at the eye (%.1f cm)"), When, EyeGap), EyeGap < 4.0f);
 		TestTrue(FString::Printf(TEXT("%s: barrel along the aim (%.3f)"), When, Along), Along > 0.98f);
 		TestTrue(FString::Printf(TEXT("%s: stock in the shoulder pocket (%.1f cm)"), When, ToShoulder), ToShoulder < 2.0f);
-		TestTrue(FString::Printf(TEXT("%s: stock well below the head (%.0f cm)"), When, BelowHead), BelowHead > 10.0f);
-		UE_LOG(LogTemp, Display, TEXT("WeaponFitRig %s: barrel along the aim %.3f, stock %.1f cm from the shoulder pocket, %.0f cm below the head"), When, Along, ToShoulder, BelowHead);
+		UE_LOG(LogTemp, Display, TEXT("WeaponFitRig %s: barrel along the aim %.3f, stock %.1f cm from the shoulder pocket, %.0f cm below the head, sight line %.1f cm from the eye"), When, Along, ToShoulder, BelowHead, EyeGap);
 	};
 	// The left palm (hand_l_weapon) on LeftGrip, turned as it is.
 	const auto LeftPalmOnGrip = [&](const TCHAR* When)

@@ -172,8 +172,10 @@ Every weapon is held by sockets on its mesh. The rule is the same for every weap
 | --- | --- | --- |
 | `Grip` | Where the right palm closes (pistol grip, wrist of the stock) | The weapon sits in the right hand here (skeleton socket `hand_r_weapon`) |
 | `LeftGrip` | Where the left palm holds (fore-end), turned as the palm should be | The left hand: IK moves it there, and it is turned to match (skeleton socket `hand_l_weapon`) |
-| `Sight` | On the line of the sights; its X is that line | Aiming: that line lies along the aim (weapons without a Stock: the sight goes in front of the eye) |
+| `Sight` | On the line of the sights; its X is that line | Aiming: that line lies along the aim and passes through the eye (skeleton socket `Eye_R` on `head`) |
 | `Stock` | The butt plate (long guns) | Aiming: goes in the shoulder pocket (skeleton socket `ShoulderPocket` on `clavicle_r`, in front of the right shoulder joint) |
+
+Aiming, the **Vaesen Shoulder Aim** anim node holds it like a shooter: the butt in the shoulder pocket and the eye down the sights. With a straight stock both can only hold if the body meets the rifle, so the right shoulder lifts and the head bows and leans onto the stock. **Shoulder Share** (Weapon > Hold) splits that between them: 0.4 means the shoulder takes 40%. The node also solves both arms onto the rifle.
 
 IK solves the arms and elbows, and the fingers close by the category's **Grip Pose** (DA_WeaponCategoryDefaults; rifles use the pack's aimed rifle grip). A weapon with these four sockets right needs nothing else. The grey-box long guns already have them: `hand_l_weapon` and `LeftGrip` are worked out from how the rifle pack holds its rifle.
 

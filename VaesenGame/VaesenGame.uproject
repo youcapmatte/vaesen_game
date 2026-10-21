@@ -10,6 +10,11 @@
 			"LoadingPhase": "Default"
 		},
 		{
+			"Name": "VaesenGameAnimGraph",
+			"Type": "UncookedOnly",
+			"LoadingPhase": "Default"
+		},
+		{
 			"Name": "VaesenGameEditor",
 			"Type": "Editor",
 			"LoadingPhase": "Default"

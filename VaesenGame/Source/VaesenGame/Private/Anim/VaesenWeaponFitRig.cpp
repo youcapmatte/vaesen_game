@@ -324,7 +324,7 @@ void AVaesenWeaponFitRig::OnHandleMoved(UVaesenFitHandleComponent* Handle, bool 
 	}
 	else
 	{
-		// Aimed (the sums of UVaesenAnimInstance::PlaceShouldered, backwards): the Sight's line turned so the weapon lies
+		// Aimed (the Shoulder Aim node's sums, backwards): the Sight's line turned so the weapon lies
 		// as it was put, and the Stock socket moved to where the shoulder pocket now is on the weapon. Without a Stock,
 		// the Sight moves to the point in front of the eye instead.
 		const FVaesenWeaponHold& Hold = Defaults->Hold;
@@ -341,7 +341,7 @@ void AVaesenWeaponFitRig::OnHandleMoved(UVaesenFitHandleComponent* Handle, bool 
 		}
 		else
 		{
-			const FVector EyePoint = Body->GetSocketLocation(TEXT("head")) + Aim.RotateVector(Hold.AimSightOffset);
+			const FVector EyePoint = UVaesenAnimInstance::EyePoint(Body) + Aim.RotateVector(Hold.AimSightOffset);
 			SetSocketFromGrip(VaesenWeaponFitRig::Sight, FTransform(Moved.GetRotation().Inverse() * Line, Moved.InverseTransformPosition(EyePoint)));
 		}
 	}
