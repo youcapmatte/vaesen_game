@@ -77,6 +77,9 @@ private:
 	float SpreadPixels = 0.0f;
 	FText AmmoText;
 	FText WarningText;
+
+	/** Why the trigger did nothing (empty, out of ammunition, bolt to work), under the crosshair for a moment. */
+	FText NoticeText;
 	TArray<FVector2D> ThrowArc;
 	double HitMarkerTime = -100.0;
 	EVaesenHitOutcome HitMarkerOutcome = EVaesenHitOutcome::Hit;

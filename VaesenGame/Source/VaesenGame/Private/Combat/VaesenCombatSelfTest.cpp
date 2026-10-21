@@ -25,6 +25,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "UObject/StrongObjectPtr.h"
 #include "Weapons/VaesenCasing.h"
+#include "Weapons/VaesenRangedWeaponActor.h"
 #include "Weapons/VaesenWeaponActor.h"
 #include "Weapons/VaesenWeaponData.h"
 #include "Anim/VaesenAnimInstance.h"
@@ -445,11 +446,13 @@ void UVaesenCombatSelfTest::BuildSteps()
 		Tap(Holster);
 		return 1.2f;
 	} });
-	Steps.Add({ FString(), [this, Equipment, Tap, Reload]()
+	Steps.Add({ FString(), [this, Equipment, Tap, Attack, Reload]()
 	{
 		const UVaesenRangedWeaponItem* Rifle = Cast<UVaesenRangedWeaponItem>(Equipment->GetDrawnWeapon());
 		Check(Rifle && Rifle->Category == EVaesenWeaponCategory::Rifle, TEXT("H drew the rifle (main hand before sidearm)"));
 		CheckLeftPalm(TEXT("from the hip"));
+		// Fired empty first: nothing comes out, and the HUD is told why.
+		Tap(Attack);
 		Tap(Reload);
 		return Rifle ? Rifle->ReloadTime + 0.3f : 0.1f;
 	} });
@@ -457,6 +460,10 @@ void UVaesenCombatSelfTest::BuildSteps()
 	{
 		const UVaesenRangedWeaponItem* Rifle = Cast<UVaesenRangedWeaponItem>(Equipment->GetDrawnWeapon());
 		Check(Rifle && Rifle->GetLoadedRounds() == Rifle->MagazineSize, TEXT("magazine loaded at once"));
+		double DryTime;
+		EVaesenFireBlock Why;
+		const AVaesenRangedWeaponActor* RifleActor = Rifle ? Cast<AVaesenRangedWeaponActor>(Rifle->GetWeaponActor()) : nullptr;
+		Check(RifleActor && RifleActor->GetLastDryFire(DryTime, Why) && Why == EVaesenFireBlock::Empty, TEXT("fired empty: a dry click, the HUD told it was empty"));
 		// Aimed (hip fire spreads 5 degrees with a rifle and can miss at 4 m).
 		Press(AimOrBlock);
 		Check(ASC->HasMatchingGameplayTag(VaesenTags::State_Aiming), TEXT("right mouse aims the rifle"));

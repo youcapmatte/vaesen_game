@@ -421,9 +421,25 @@ void AVaesenRangedWeaponActor::PlayFireCosmetics(UAnimMontage* FireMontage)
 	OnFired();
 }
 
-void AVaesenRangedWeaponActor::PlayDryFire() const
+void AVaesenRangedWeaponActor::PlayDryFire(EVaesenFireBlock Why)
 {
 	PlayWeaponSound(EVaesenWeaponSound::DryFire);
+	LastDryFireTime = GetWorld() ? GetWorld()->GetRealTimeSeconds() : 0.0;
+	LastDryFireBlock = Why;
+	if (const AVaesenBaseCharacter* Character = GetOwningCharacter())
+	{
+		if (UVaesenAnimInstance* Anim = Cast<UVaesenAnimInstance>(Character->GetMesh()->GetAnimInstance()))
+		{
+			Anim->PulseDryTrigger();
+		}
+	}
+}
+
+bool AVaesenRangedWeaponActor::GetLastDryFire(double& OutTime, EVaesenFireBlock& OutWhy) const
+{
+	OutTime = LastDryFireTime;
+	OutWhy = LastDryFireBlock;
+	return LastDryFireBlock != EVaesenFireBlock::None;
 }
 
 void AVaesenRangedWeaponActor::EjectCasingsAt(EVaesenCasingMoment Moment, int32 Count)

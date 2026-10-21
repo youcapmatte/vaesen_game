@@ -50,6 +50,9 @@ public:
 	/** A shot: the trigger finger curls and lets go (and a shouldered weapon kicks). */
 	void PulseTriggerFinger();
 
+	/** The trigger pulled on an empty or unready gun: the finger only, no kick. */
+	void PulseDryTrigger() { TriggerPulse = 1.0f; }
+
 	/** A shot's kick now, 0..1: up at once (in 30 ms), settling over Recovery seconds. */
 	static float KickAt(float SinceShot, float Recovery);
 

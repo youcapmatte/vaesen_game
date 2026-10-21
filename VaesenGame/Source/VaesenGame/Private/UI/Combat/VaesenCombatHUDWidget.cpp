@@ -1,4 +1,4 @@
-#include "UI/Combat/VaesenCombatHUDWidget.h"
+﻿#include "UI/Combat/VaesenCombatHUDWidget.h"
 
 #include "Abilities/VaesenGeneralAbilities.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
@@ -6,12 +6,16 @@
 #include "Characters/VaesenPlayerCharacter.h"
 #include "Combat/VaesenAbilitySystemComponent.h"
 #include "Combat/VaesenGameplayTags.h"
+#include "Fonts/FontMeasure.h"
 #include "Fonts/SlateFontInfo.h"
+#include "Framework/Application/SlateApplication.h"
 #include "GameFramework/PlayerController.h"
 #include "Inventory/VaesenEquipmentComponent.h"
+#include "Items/VaesenAmmoItem.h"
 #include "Items/VaesenRangedWeaponItem.h"
 #include "Kismet/GameplayStatics.h"
 #include "Rendering/DrawElements.h"
+#include "Rendering/SlateRenderer.h"
 #include "Styling/CoreStyle.h"
 #include "Weapons/VaesenRangedWeaponActor.h"
 
@@ -58,6 +62,7 @@ void UVaesenCombatHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDel
 	bShowCrosshair = false;
 	AmmoText = FText::GetEmpty();
 	WarningText = FText::GetEmpty();
+	NoticeText = FText::GetEmpty();
 	ThrowArc.Reset();
 
 	const AVaesenPlayerCharacter* Player = Cast<AVaesenPlayerCharacter>(GetOwningPlayerPawn());
@@ -83,6 +88,26 @@ void UVaesenCombatHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDel
 		SpreadPixels = HalfWidth * FMath::Tan(FMath::DegreesToRadians(Spread)) / FMath::Tan(FMath::DegreesToRadians(FieldOfView * 0.5f));
 
 		const int32 Carried = Ranged->CountAmmoIn(Player->GetInventory());
+		// The trigger pulled for nothing a moment ago: say why, and what to do.
+		double DryTime;
+		EVaesenFireBlock Why;
+		if (Actor->GetLastDryFire(DryTime, Why) && Now - DryTime < 2.5)
+		{
+			if (Why == EVaesenFireBlock::NeedsCycle)
+			{
+				NoticeText = LOCTEXT("WorkAction", "Work the action: press R");
+			}
+			else if (Why == EVaesenFireBlock::Empty)
+			{
+				NoticeText = Carried > 0 ? LOCTEXT("Empty", "Empty: press R to reload")
+					: FText::Format(LOCTEXT("NoAmmo", "Out of ammunition: pick up {0}"),
+						Ranged->AcceptedAmmo ? Ranged->AcceptedAmmo->GetDefaultObject<UVaesenAmmoItem>()->ItemName : LOCTEXT("Cartridges", "cartridges"));
+			}
+			else if (Why == EVaesenFireBlock::Broken)
+			{
+				NoticeText = FText::Format(LOCTEXT("BrokenNotice", "{0} is broken"), Ranged->ItemName);
+			}
+		}
 		AmmoText = Ranged->IsBow()
 			? FText::Format(LOCTEXT("Arrows", "- / {0}"), FText::AsNumber(Carried))
 			: FText::Format(LOCTEXT("Ammo", "{0} / {1}"), FText::AsNumber(Ranged->GetLoadedRounds()), FText::AsNumber(Carried));
@@ -183,13 +208,24 @@ int32 UVaesenCombatHUDWidget::NativePaint(const FPaintArgs& Args, const FGeometr
 		FSlateDrawElement::MakeText(OutDrawElements, LayerId + 1, AllottedGeometry.ToPaintGeometry(FVector2f(150.0f, 30.0f), FSlateLayoutTransform(FVector2f(Position))),
 			AmmoText, Font, ESlateDrawEffect::None, CrosshairColor);
 	}
+	if (!NoticeText.IsEmpty())
+	{
+		const FSlateFontInfo NoticeFont = FCoreStyle::GetDefaultFontStyle("Bold", 20);
+		const FVector2D TextSize = FSlateApplication::Get().GetRenderer()->GetFontMeasureService()->Measure(NoticeText, NoticeFont);
+		const FVector2D Position(Centre.X - TextSize.X * 0.5f, Centre.Y + 60.0f);
+		// A dark copy just under it, so it reads on any background.
+		FSlateDrawElement::MakeText(OutDrawElements, LayerId + 1, AllottedGeometry.ToPaintGeometry(FVector2f(TextSize), FSlateLayoutTransform(FVector2f(Position + FVector2D(2.0, 2.0)))),
+			NoticeText, NoticeFont, ESlateDrawEffect::None, FLinearColor(0.0f, 0.0f, 0.0f, 0.7f));
+		FSlateDrawElement::MakeText(OutDrawElements, LayerId + 2, AllottedGeometry.ToPaintGeometry(FVector2f(TextSize), FSlateLayoutTransform(FVector2f(Position))),
+			NoticeText, NoticeFont, ESlateDrawEffect::None, WarningColor);
+	}
 	if (!WarningText.IsEmpty())
 	{
 		const FVector2D Position(Size.X - 360.0f, Size.Y - 50.0f);
 		FSlateDrawElement::MakeText(OutDrawElements, LayerId + 1, AllottedGeometry.ToPaintGeometry(FVector2f(350.0f, 30.0f), FSlateLayoutTransform(FVector2f(Position))),
 			WarningText, FCoreStyle::GetDefaultFontStyle("Regular", 14), ESlateDrawEffect::None, WarningColor);
 	}
-	return LayerId + 1;
+	return LayerId + 2;
 }
 
 #undef LOCTEXT_NAMESPACE

@@ -102,7 +102,7 @@ void UVaesenGA_FireWeapon::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 	{
 		if (IsLocallyControlled() && Actor && (Block == EVaesenFireBlock::Empty || Block == EVaesenFireBlock::NeedsCycle || Block == EVaesenFireBlock::Broken))
 		{
-			Actor->PlayDryFire();
+			Actor->PlayDryFire(Block);
 		}
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
 		return;

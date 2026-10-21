@@ -81,8 +81,11 @@ public:
 	/** Flash, smoke, sound, trigger finger; casing too if it ejects on fire and the fire montage has no notify. */
 	void PlayFireCosmetics(UAnimMontage* FireMontage);
 
-	/** The click of an empty or unready gun. */
-	void PlayDryFire() const;
+	/** The click of an empty or unready gun (this machine): the trigger pulled for nothing, and why, for the HUD. */
+	void PlayDryFire(EVaesenFireBlock Why);
+
+	/** The last dry fire here: when (real seconds) and why. False if there was none. */
+	bool GetLastDryFire(double& OutTime, EVaesenFireBlock& OutWhy) const;
 
 	/** From AN_EjectCasing: ejects only if the weapon's setting matches this moment. Count 0 = the spent rounds. */
 	void EjectCasingsAt(EVaesenCasingMoment Moment, int32 Count);
@@ -113,6 +116,8 @@ protected:
 	void OnDrawAlphaChanged(float Alpha);
 
 private:
+	double LastDryFireTime = -100.0;
+	EVaesenFireBlock LastDryFireBlock = EVaesenFireBlock::None;
 	void SpawnCasing();
 
 	/** The point the shot heads for: what the aim from the eyes hits, else far along it. */
