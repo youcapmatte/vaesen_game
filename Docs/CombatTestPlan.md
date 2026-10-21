@@ -154,9 +154,9 @@ In a running game (PIE with a dedicated server is fine), open the console and ty
 - an AI-controlled `BP_VaesenPlayerCharacter`, which uses the same `GA_` Blueprints and input as a player;
 - three `BP_TrainingDummy`s, 15 m to the side of the first player start.
 
-It then runs the test Blueprints: revolver (draw, reload, fire, armored target), Krag (aimed, bolt cycles by itself), punch, sword (stamina, block, parry, wear), stone throw, and bow.
+It first checks that the interaction trace finds every pickup in the map and picks up a rifle through its interaction. It then runs the test Blueprints: revolver (draw, reload, fire, armored target), Krag (aimed, bolt cycles by itself), punch, sword (stamina, block, parry, wear), stone throw, and bow.
 
-Every check prints PASS or FAIL on screen and in the log, and everything it spawned is removed at the end. In `L_CombatTest` it reported **36 passed, 0 failed**.
+Every check prints PASS or FAIL on screen and in the log, and everything it spawned is removed at the end. In `L_CombatTest` it reported **40 passed, 0 failed**.
 
 It checks what the C++ tests can't: the generated assets, the Blueprints and the map's collision together. Both clients should see the fighter do everything. The sword swing is reported as INFO until an attack montage exists, because without one the blade stays where the hand hangs.
 

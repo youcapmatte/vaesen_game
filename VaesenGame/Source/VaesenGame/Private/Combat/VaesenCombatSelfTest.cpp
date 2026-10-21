@@ -18,6 +18,7 @@
 #include "Items/VaesenAmmoItem.h"
 #include "Items/VaesenEquippableItem.h"
 #include "Items/VaesenPickup.h"
+#include "Interaction/VaesenInteractionComponent.h"
 #include "Items/VaesenRangedWeaponItem.h"
 #include "TimerManager.h"
 #include "Abilities/VaesenGeneralAbilities.h"
@@ -251,6 +252,72 @@ void UVaesenCombatSelfTest::BuildSteps()
 		const UClass* Class = LoadBlueprintClass(Path(Ammo, Name));
 		return Class ? Class->GetDefaultObject<UVaesenAmmoItem>()->GetDamage() : FVaesenDamagePacket();
 	};
+
+	// --- Pickups: the interaction trace finds them, and picking one up puts it in the inventory ---
+	Steps.Add({ TEXT("Pickups"), [this]()
+	{
+		int32 Total = 0;
+		TArray<FString> Missed;
+		TArray<AActor*> Pickups;
+		for (TActorIterator<AVaesenPickup> It(World.Get()); It; ++It)
+		{
+			Pickups.Add(*It);
+		}
+		for (TActorIterator<AVaesenPickup> It(World.Get()); It; ++It)
+		{
+			// The same sweep as the interaction trace (10 cm sphere, Visibility), from above onto it.
+			FHitResult Hit;
+			const FVector Location = It->GetActorLocation();
+			// Only this pickup: neighbours lying close by don't count against it.
+			FCollisionQueryParams Params(SCENE_QUERY_STAT(VaesenSelfTestPickup), false);
+			for (AActor* Other : Pickups)
+			{
+				if (Other != *It)
+				{
+					Params.AddIgnoredActor(Other);
+				}
+			}
+			const bool bFound = World->SweepSingleByChannel(Hit, Location + FVector(0.0, 0.0, 80.0), Location - FVector(0.0, 0.0, 20.0),
+				FQuat::Identity, ECC_Visibility, FCollisionShape::MakeSphere(10.0f), Params) && Hit.GetActor() == *It;
+			Total++;
+			if (!bFound)
+			{
+				Missed.Add(It->GetItem() ? It->GetItem()->GetClass()->GetName() : It->GetName());
+			}
+		}
+		Check(Missed.Num() == 0, FString::Printf(TEXT("the interaction trace finds all %d pickups in the map%s"), Total,
+			Missed.Num() ? *FString::Printf(TEXT(" (missed: %s)"), *FString::Join(Missed, TEXT(", "))) : TEXT("")));
+
+		// A rifle pickup of our own beside the fighter, picked up through its interaction.
+		UClass* RifleClass = LoadTestClass(*Path(Weapons, TEXT("BP_Weapon_KragRifle")));
+		UClass* PickupClass = LoadBlueprintClass(TEXT("/Game/Vaesen/Blueprints/Interaction/BP_Pickup"));
+		FActorSpawnParameters Params;
+		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		AVaesenPickup* Pickup = World->SpawnActor<AVaesenPickup>(PickupClass ? PickupClass : AVaesenPickup::StaticClass(), Origin + FVector(80.0, 0.0, -95.0), FRotator::ZeroRotator, Params);
+		if (Pickup && RifleClass)
+		{
+			Spawned.Add(Pickup);
+			Pickup->InitializePickup(RifleClass, 1);
+			UVaesenInteractionComponent* Interaction = Pickup->FindComponentByClass<UVaesenInteractionComponent>();
+			Check(Interaction && Interaction->CanInteract(Fighter), TEXT("the fighter may pick up the rifle"));
+			if (Interaction)
+			{
+				// As the E key does: begin (instant interactions complete at once), complete, let go.
+				Interaction->BeginInteract(Fighter);
+				if (IsValid(Pickup))
+				{
+					Interaction->Interact(Fighter);
+				}
+				if (IsValid(Pickup))
+				{
+					Interaction->EndInteract(Fighter);
+				}
+			}
+			Check(Fighter->GetInventory()->HasItem(RifleClass), TEXT("picked up: the rifle is in the inventory"));
+			Fighter->GetInventory()->RemoveItemsOfClass(RifleClass, 1);
+		}
+		return 0.5f;
+	} });
 
 	// --- Revolver: equip, draw, reload from the inventory, fire, armored target ---
 	Steps.Add({ TEXT("Revolver"), [this, Tap, Holster]()

@@ -17,6 +17,11 @@
 #include "Engine/Blueprint.h"
 #include "Engine/BlueprintGeneratedClass.h"
 #include "Engine/DirectionalLight.h"
+#include "Components/ExponentialHeightFogComponent.h"
+#include "Components/SkyAtmosphereComponent.h"
+#include "Components/VolumetricCloudComponent.h"
+#include "Engine/ExponentialHeightFog.h"
+#include "PhysicsEngine/BodySetup.h"
 #include "Engine/SkeletalMeshSocket.h"
 #include "Engine/SkyLight.h"
 #include "Engine/StaticMesh.h"
@@ -174,6 +179,34 @@ namespace VaesenCombatAssets
 
 	// --- Grey-box meshes ---
 
+	/**
+	 * A box around the mesh as its simple collision, if it has none: the interaction trace, pickups lying on the floor and
+	 * dropped items falling with physics all need one. Returns whether it was added.
+	 */
+	bool AddBoxCollision(UStaticMesh* Mesh)
+	{
+		if (!Mesh->GetBodySetup())
+		{
+			Mesh->CreateBodySetup();
+		}
+		UBodySetup* Body = Mesh->GetBodySetup();
+		if (!Body || Body->AggGeom.GetElementCount() > 0)
+		{
+			return false;
+		}
+		const FBox Bounds = Mesh->GetBoundingBox();
+		// At least 2 cm thick, so thin things (a blade, an arrow) can still be found and come to rest.
+		const FVector Size = Bounds.GetSize().ComponentMax(FVector(2.0));
+		FKBoxElem Box(Size.X, Size.Y, Size.Z);
+		Box.Center = Bounds.GetCenter();
+		Body->AggGeom.BoxElems.Add(Box);
+		Body->CollisionTraceFlag = CTF_UseDefault;
+		Body->InvalidatePhysicsData();
+		Body->CreatePhysicsMeshes();
+		Mesh->MarkPackageDirty();
+		return true;
+	}
+
 	/** Builds a static mesh from boxes and cylinders, with sockets (all in cm, the weapon pointing along +X). */
 	struct FGreyBox
 	{
@@ -217,6 +250,11 @@ namespace VaesenCombatAssets
 			const FString PackagePath = Join(GreyBoxFolder, Name);
 			if (UStaticMesh* Existing = LoadAsset<UStaticMesh>(PackagePath))
 			{
+				// Meshes made before they got collision: add it now.
+				if (AddBoxCollision(Existing))
+				{
+					Save(Existing);
+				}
 				return Existing;
 			}
 			FGeometryScriptCreateNewStaticMeshAssetOptions AssetOptions;
@@ -237,6 +275,7 @@ namespace VaesenCombatAssets
 				MeshSocket->RelativeRotation = Entry.Value.Rotator();
 				Asset->AddSocket(MeshSocket);
 			}
+			AddBoxCollision(Asset);
 			Save(Asset);
 			return Asset;
 		}
@@ -966,6 +1005,16 @@ namespace VaesenCombatAssets
 		Sky->GetLightComponent()->SetMobility(EComponentMobility::Movable);
 		Sky->GetLightComponent()->bRealTimeCapture = true;
 		Sky->SetActorLabel(TEXT("SkyLight"));
+		// A real sky for the sun and the sky light to work with: atmosphere, clouds, a little fog.
+		if (UDirectionalLightComponent* SunLight = Cast<UDirectionalLightComponent>(Sun->GetLightComponent()))
+		{
+			SunLight->SetAtmosphereSunLight(true);
+		}
+		World->SpawnActor<ASkyAtmosphere>(FVector::ZeroVector, FRotator::ZeroRotator)->SetActorLabel(TEXT("SkyAtmosphere"));
+		World->SpawnActor<AVolumetricCloud>(FVector::ZeroVector, FRotator::ZeroRotator)->SetActorLabel(TEXT("VolumetricCloud"));
+		AExponentialHeightFog* Fog = World->SpawnActor<AExponentialHeightFog>(FVector(0.0, 0.0, -100.0), FRotator::ZeroRotator);
+		Fog->GetComponent()->SetFogDensity(0.01f);
+		Fog->SetActorLabel(TEXT("HeightFog"));
 
 		APlayerStart* Start = World->SpawnActor<APlayerStart>(FVector(0.0, -100.0, 100.0), FRotator::ZeroRotator);
 		Start->SetActorLabel(TEXT("PlayerStart_A"));
@@ -1019,8 +1068,8 @@ namespace VaesenCombatAssets
 		};
 		for (int32 Index = 0; Index < UE_ARRAY_COUNT(Pickups); ++Index)
 		{
-			// Two rows, left of the start.
-			const FVector Location(-200.0 + (Index % 11) * 70.0, -350.0 - (Index / 11) * 90.0, 20.0);
+			// Rows of seven, left of the start, 1.5 m apart so long guns don't lie over their neighbours.
+			const FVector Location(-300.0 + (Index % 7) * 150.0, -400.0 - (Index / 7) * 150.0, 20.0);
 			PlacePickup(World, PickupClass, Pickups[Index].Key, Pickups[Index].Value, Location);
 		}
 
