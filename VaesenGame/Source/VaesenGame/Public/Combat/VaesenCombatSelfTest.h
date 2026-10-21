@@ -54,6 +54,7 @@ private:
 	/** Spent cases lying in the world (cosmetic AVaesenCasing actors). */
 	int32 CountCasings() const;
 	int32 CasingsBefore = 0;
+	int32 FreeFireBefore = 0;
 
 	/** The rifle's stock and barrel just before a shot, to measure its kick. */
 	bool RiflePose(FVector& OutStock, FVector& OutBarrel) const;

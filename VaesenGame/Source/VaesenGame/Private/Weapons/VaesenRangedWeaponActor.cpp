@@ -104,7 +104,7 @@ EVaesenFireBlock AVaesenRangedWeaponActor::GetFireBlock() const
 	{
 		// Bows nock straight from the inventory.
 		const AVaesenPlayerCharacter* Player = Cast<AVaesenPlayerCharacter>(GetOwner());
-		if (!Player || Item->CountAmmoIn(Player->GetInventory()) <= 0)
+		if ((!Player || Item->CountAmmoIn(Player->GetInventory()) <= 0) && !UVaesenCombatLibrary::IsFreeFire())
 		{
 			return EVaesenFireBlock::Empty;
 		}
@@ -113,7 +113,7 @@ EVaesenFireBlock AVaesenRangedWeaponActor::GetFireBlock() const
 	{
 		return EVaesenFireBlock::NeedsCycle;
 	}
-	else if (Item->GetLoadedRounds() <= 0)
+	else if (Item->GetLoadedRounds() <= 0 && !UVaesenCombatLibrary::IsFreeFire())
 	{
 		return EVaesenFireBlock::Empty;
 	}
@@ -205,15 +205,28 @@ bool AVaesenRangedWeaponActor::ServerFire(const FVector& AimOrigin, const FVecto
 	if (Item->IsBow())
 	{
 		AmmoClass = Item->FindAmmoIn(Player ? Player->GetInventory() : nullptr);
-		if (!AmmoClass || Player->GetInventory()->RemoveItemsOfClass(AmmoClass, 1) <= 0)
+		if (!AmmoClass && UVaesenCombatLibrary::IsFreeFire())
+		{
+			// vaesen.combat.freefire: its usual arrow, none taken.
+			AmmoClass = Item->AcceptedAmmo;
+		}
+		else if (!AmmoClass || Player->GetInventory()->RemoveItemsOfClass(AmmoClass, 1) <= 0)
 		{
 			return false;
 		}
 	}
 	else
 	{
-		AmmoClass = Item->GetLoadedAmmo();
-		Item->SetLoadedRounds(Item->GetLoadedRounds() - 1, AmmoClass);
+		if (Item->GetLoadedRounds() > 0)
+		{
+			AmmoClass = Item->GetLoadedAmmo();
+			Item->SetLoadedRounds(Item->GetLoadedRounds() - 1, AmmoClass);
+		}
+		else
+		{
+			// vaesen.combat.freefire, empty: its usual round, none used.
+			AmmoClass = Item->AcceptedAmmo;
+		}
 		if (Item->HasCycleStep())
 		{
 			Item->SetNeedsCycle(true);

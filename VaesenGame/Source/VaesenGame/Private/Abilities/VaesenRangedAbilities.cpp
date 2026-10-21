@@ -3,6 +3,7 @@
 #include "AbilitySystemComponent.h"
 #include "Animation/AnimMontage.h"
 #include "Characters/VaesenPlayerCharacter.h"
+#include "Combat/VaesenCombatLibrary.h"
 #include "Combat/VaesenGameplayTags.h"
 #include "Engine/World.h"
 #include "Inventory/VaesenEquipmentComponent.h"
@@ -166,7 +167,7 @@ void UVaesenGA_FireWeapon::StartCycleIfNeeded()
 {
 	const UVaesenRangedWeaponItem* Item = GetRangedItem();
 	UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
-	if (!Item || !ASC || !CycleAbility || !Item->NeedsCycle() || Item->GetLoadedRounds() <= 0)
+	if (!Item || !ASC || !CycleAbility || !Item->NeedsCycle() || (Item->GetLoadedRounds() <= 0 && !UVaesenCombatLibrary::IsFreeFire()))
 	{
 		return;
 	}

@@ -39,6 +39,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Combat")
 	static bool IsCombatDebugEnabled();
 
+	/** vaesen.combat.freefire: guns and bows fire without ammunition (for now, on outside shipping builds). */
+	static bool IsFreeFire();
+
 	/** What would block a hit on Target now: its drawn shield, else its drawn weapon, else bare hands. Null profile = can't block. */
 	static const FVaesenBlockProfile* FindBlockProfile(const AActor* Target, bool bProjectile, UVaesenWeaponItem*& OutBlockingItem);
 

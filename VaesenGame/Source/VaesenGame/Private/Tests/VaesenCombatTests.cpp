@@ -66,9 +66,16 @@ namespace VaesenCombatTests
 	struct FTestWorld
 	{
 		UWorld* World = nullptr;
+		int32 FreeFireBefore = 0;
 
 		FTestWorld()
 		{
+			// The ammo rules are under test: free fire off while it runs.
+			if (IConsoleVariable* FreeFire = IConsoleManager::Get().FindConsoleVariable(TEXT("vaesen.combat.freefire")))
+			{
+				FreeFireBefore = FreeFire->GetInt();
+				FreeFire->Set(0, ECVF_SetByCode);
+			}
 			World = UWorld::CreateWorld(EWorldType::Game, false, TEXT("VaesenCombatTestWorld"));
 			FWorldContext& Context = GEngine->CreateNewWorldContext(EWorldType::Game);
 			Context.SetCurrentWorld(World);
@@ -80,6 +87,10 @@ namespace VaesenCombatTests
 
 		~FTestWorld()
 		{
+			if (IConsoleVariable* FreeFire = IConsoleManager::Get().FindConsoleVariable(TEXT("vaesen.combat.freefire")))
+			{
+				FreeFire->Set(FreeFireBefore, ECVF_SetByCode);
+			}
 			GEngine->DestroyWorldContext(World);
 			World->DestroyWorld(false);
 		}

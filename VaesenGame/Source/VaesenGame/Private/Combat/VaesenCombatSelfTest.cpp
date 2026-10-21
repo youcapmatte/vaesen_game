@@ -173,6 +173,13 @@ void UVaesenCombatSelfTest::Start()
 {
 	UWorld* InWorld = World.Get();
 
+	// The ammo rules are part of the test: free fire off while it runs.
+	if (IConsoleVariable* FreeFire = IConsoleManager::Get().FindConsoleVariable(TEXT("vaesen.combat.freefire")))
+	{
+		FreeFireBefore = FreeFire->GetInt();
+		FreeFire->Set(0, ECVF_SetByCode);
+	}
+
 	// 15 m to the side of the first player start, on whatever floor is there.
 	FVector Start = FVector::ZeroVector;
 	for (TActorIterator<APlayerStart> It(InWorld); It; ++It)
@@ -241,6 +248,10 @@ void UVaesenCombatSelfTest::RunNextStep()
 
 void UVaesenCombatSelfTest::Finish()
 {
+	if (IConsoleVariable* FreeFire = IConsoleManager::Get().FindConsoleVariable(TEXT("vaesen.combat.freefire")))
+	{
+		FreeFire->Set(FreeFireBefore, ECVF_SetByCode);
+	}
 	if (UWorld* InWorld = World.Get())
 	{
 		InWorld->GetTimerManager().ClearTimer(StepTimer);
@@ -548,11 +559,29 @@ void UVaesenCombatSelfTest::BuildSteps()
 		return 0.8f;
 	} });
 	const FVaesenDamagePacket Krag = AmmoDamage(TEXT("BP_Ammo_KragCartridge"));
-	Steps.Add({ FString(), [this, Equipment, Krag]()
+	Steps.Add({ FString(), [this, Equipment, Krag, Tap, Attack]()
 	{
 		const UVaesenRangedWeaponItem* Rifle = Cast<UVaesenRangedWeaponItem>(Equipment->GetDrawnWeapon());
 		Check(Rifle && !Rifle->NeedsCycle(), TEXT("chamber ready again"));
 		Check(FMath::IsNearlyEqual(DummyDamage(Target), Krag.GetTotal()), FString::Printf(TEXT("projectile hit for %.0f (got %.0f)"), Krag.GetTotal(), DummyDamage(Target)));
+		// vaesen.combat.freefire: an empty rifle still fires (and works its bolt).
+		if (UVaesenRangedWeaponItem* Emptied = Cast<UVaesenRangedWeaponItem>(Equipment->GetDrawnWeapon()))
+		{
+			Emptied->SetLoadedRounds(0, nullptr);
+		}
+		IConsoleManager::Get().FindConsoleVariable(TEXT("vaesen.combat.freefire"))->Set(1, ECVF_SetByCode);
+		CasingsBefore = CountCasings();
+		Tap(Attack);
+		return 0.3f;
+	} });
+	Steps.Add({ FString(), [this, Equipment, ASC]()
+	{
+		Check(ASC->HasMatchingGameplayTag(VaesenTags::State_Cycling), TEXT("with free fire on, the empty rifle fired (and works its bolt)"));
+		IConsoleManager::Get().FindConsoleVariable(TEXT("vaesen.combat.freefire"))->Set(0, ECVF_SetByCode);
+		return 1.0f;
+	} });
+	Steps.Add({ FString(), [Equipment]()
+	{
 		Equipment->RequestSheathe();
 		return 1.0f;
 	} });

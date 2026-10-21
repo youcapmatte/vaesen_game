@@ -26,6 +26,17 @@ static TAutoConsoleVariable<int32> CVarVaesenCombatDebug(
 	TEXT("1 = draw melee traces, projectile paths and hit points."),
 	ECVF_Cheat);
 
+// While animations are being worked on: guns fire without ammunition. Off in shipping builds.
+static TAutoConsoleVariable<int32> CVarVaesenFreeFire(
+	TEXT("vaesen.combat.freefire"), UE_BUILD_SHIPPING ? 0 : 1,
+	TEXT("1 = guns and bows fire without ammunition (none used; an empty gun fires its usual round). 0 = the ammo rules."),
+	ECVF_Cheat);
+
+bool UVaesenCombatLibrary::IsFreeFire()
+{
+	return CVarVaesenFreeFire.GetValueOnAnyThread() > 0;
+}
+
 bool UVaesenCombatLibrary::IsCombatDebugEnabled()
 {
 	return CVarVaesenCombatDebug.GetValueOnAnyThread() > 0;
