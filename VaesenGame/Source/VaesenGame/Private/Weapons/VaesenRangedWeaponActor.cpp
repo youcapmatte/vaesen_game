@@ -7,6 +7,7 @@
 #include "Components/SkeletalMeshComponent.h"
 #include "DrawDebugHelpers.h"
 #include "Engine/World.h"
+#include "GameFramework/PlayerController.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Inventory/VaesenInventoryComponent.h"
 #include "Items/VaesenAmmoItem.h"
@@ -267,6 +268,7 @@ bool AVaesenRangedWeaponActor::ServerFire(const FVector& AimOrigin, const FVecto
 		Params.bDeferConstruction = true;
 		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 		const FTransform SpawnTransform(ShotDirection.Rotation(), Muzzle);
+		UE_LOG(LogVaesenCombat, Verbose, TEXT("%s fires a projectile from %s toward %s (aim from %s)"), *GetNameSafe(Shooter), *Muzzle.ToCompactString(), *AimPoint.ToCompactString(), *AimOrigin.ToCompactString());
 		if (AVaesenProjectile* Projectile = GetWorld()->SpawnActor<AVaesenProjectile>(AVaesenProjectile::StaticClass(), SpawnTransform, Params))
 		{
 			const float Speed = Item->LaunchSpeed * (Item->IsBow() ? FMath::Lerp(0.35f, 1.0f, FMath::Clamp(DrawStrength, 0.0f, 1.0f)) : 1.0f);
@@ -344,8 +346,24 @@ void AVaesenRangedWeaponActor::MulticastFired_Implementation(FVector_NetQuantize
 		return;
 	}
 	const UVaesenRangedWeaponItem* Item = GetRangedItem();
-	// The fire montage reaches other machines through the ability system's montage replication.
+	// The fire montage reaches other machines through the ability system's montage replication (the server plays it).
 	PlayFireCosmetics(Item ? Item->GetMontage(&FVaesenWeaponMontages::Fire) : nullptr);
+
+	// A bullet passing close to this machine's player (within 3 m of the line, not the shooter) cracks past.
+	const APlayerController* Local = GetWorld()->GetFirstPlayerController();
+	const APawn* Listener = Local ? Local->GetPawn() : nullptr;
+	if (Item && Listener && Listener != GetOwner())
+	{
+		const FVector Head = Listener->GetPawnViewLocation();
+		const FVector Closest = FMath::ClosestPointOnSegment(Head, GetMuzzleLocation(), TraceEnd);
+		if (FVector::DistSquared(Closest, Head) < FMath::Square(300.0f) && FVector::DistSquared(Closest, TraceEnd) > FMath::Square(50.0f))
+		{
+			if (USoundBase* Flyby = Item->GetSound(EVaesenWeaponSound::Flyby))
+			{
+				UGameplayStatics::PlaySoundAtLocation(this, Flyby, Closest);
+			}
+		}
+	}
 }
 
 void AVaesenRangedWeaponActor::MulticastMisfire_Implementation()

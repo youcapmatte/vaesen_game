@@ -564,8 +564,7 @@ namespace VaesenCombatAssets
 			// The player grants the Blueprints, so tuning them takes effect.
 			if (UClass* AbilityBlueprint = LoadBlueprintClass(Path); AbilityBlueprint && CharacterDefaults)
 			{
-				CharacterDefaults->ReplaceDefaultAbility(Ability.Value, AbilityBlueprint);
-				bCharacterChanged = true;
+				bCharacterChanged |= CharacterDefaults->ReplaceDefaultAbility(Ability.Value, AbilityBlueprint);
 			}
 		}
 		if (Character && bCharacterChanged)

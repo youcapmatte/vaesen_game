@@ -10,6 +10,10 @@
 #include "Inventory/VaesenInventoryComponent.h"
 #include "Items/VaesenItem.h"
 #include "Net/UnrealNetwork.h"
+#include "GameFramework/PlayerController.h"
+#include "Items/VaesenAmmoItem.h"
+#include "Kismet/GameplayStatics.h"
+#include "Weapons/VaesenWeaponData.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogVaesenPickup, Log, All);
 
@@ -100,6 +104,9 @@ void AVaesenPickup::Fall(const FVector& Velocity)
 	PickupMesh->SetPhysicsLinearVelocity(Velocity);
 	PickupMesh->SetPhysicsAngularVelocityInDegrees(FVector(FMath::FRandRange(-180.0, 180.0), FMath::FRandRange(-180.0, 180.0), FMath::FRandRange(-90.0, 90.0)));
 	PickupMesh->OnComponentSleep.AddUniqueDynamic(this, &AVaesenPickup::OnSettled);
+	bLandedSoundPlayed = false;
+	PickupMesh->SetNotifyRigidBodyCollision(true);
+	PickupMesh->OnComponentHit.AddUniqueDynamic(this, &AVaesenPickup::OnFallHit);
 	GetWorldTimerManager().SetTimer(FallTimer, this, &AVaesenPickup::StopFalling, MaxFallSeconds, false);
 }
 
@@ -232,6 +239,17 @@ void AVaesenPickup::OnTakePickup(AVaesenPlayerCharacter* Taker)
 	const FVaesenItemAddResult Result = Inventory->TryAddItem(Item);
 	UE_LOG(LogVaesenPickup, Display, TEXT("%s picked up %d of %d x %s. %s"), *Taker->GetName(), Result.AmountGiven,
 		Result.AmountToGive, *Item->ItemName.ToString(), *Result.ErrorText.ToString());
+	// Pulling a recovered arrow (or bolt) out: the bow's ArrowPull sound, to the one who took it.
+	const UVaesenAmmoItem* Ammo = Cast<UVaesenAmmoItem>(Item);
+	APlayerController* TakerController = Cast<APlayerController>(Taker->GetController());
+	if (Ammo && Ammo->bRecoverable && TakerController && Result.AmountGiven > 0)
+	{
+		const UVaesenWeaponSoundSet* BowSounds = UVaesenWeaponCategoryDefaults::Get()->GetCategory(EVaesenWeaponCategory::Bow).Sounds;
+		if (USoundBase* Pull = BowSounds ? BowSounds->GetSound(EVaesenWeaponSound::ArrowPull) : nullptr)
+		{
+			TakerController->ClientPlaySound(Pull);
+		}
+	}
 	if (Result.Result == EVaesenAddItemOutcome::All)
 	{
 		Destroy();
@@ -267,3 +285,22 @@ void AVaesenPickup::PostEditChangeProperty(FPropertyChangedEvent& PropertyChange
 #endif
 
 #undef LOCTEXT_NAMESPACE
+
+void AVaesenPickup::OnFallHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit)
+{
+	if (bLandedSoundPlayed || !HasAuthority())
+	{
+		return;
+	}
+	bLandedSoundPlayed = true;
+	MulticastLanded(Hit.ImpactPoint);
+}
+
+void AVaesenPickup::MulticastLanded_Implementation(FVector_NetQuantize Location)
+{
+	USoundBase* Sound = Item ? Item->GetLandSound() : nullptr;
+	if (Sound && GetNetMode() != NM_DedicatedServer)
+	{
+		UGameplayStatics::PlaySoundAtLocation(this, Sound, Location);
+	}
+}

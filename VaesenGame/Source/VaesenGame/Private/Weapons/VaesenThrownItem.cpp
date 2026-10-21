@@ -126,6 +126,7 @@ void AVaesenThrownItem::OnThrownHit(UPrimitiveComponent* HitComponent, AActor* O
 		return;
 	}
 	bHasHitSomething = true;
+	UE_LOG(LogVaesenCombat, Log, TEXT("Thrown %s hit %s at %s"), *GetNameSafe(ItemClass), *GetNameSafe(OtherActor), *Hit.ImpactPoint.ToCompactString());
 
 	const UVaesenItem* Defaults = ItemClass ? ItemClass->GetDefaultObject<UVaesenItem>() : nullptr;
 	if (!Defaults)
@@ -161,6 +162,7 @@ void AVaesenThrownItem::Land()
 	}
 	bLanded = true;
 	GetWorldTimerManager().ClearTimer(LandTimer);
+	UE_LOG(LogVaesenCombat, Log, TEXT("Thrown %s landed at %s"), *GetNameSafe(ItemClass), *GetActorLocation().ToCompactString());
 
 	if (Item)
 	{

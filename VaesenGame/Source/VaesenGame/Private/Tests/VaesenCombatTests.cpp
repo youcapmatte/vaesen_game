@@ -616,6 +616,7 @@ namespace VaesenCombatTests
 		AAIController* Controller = TestWorld.Spawn<AAIController>(Location);
 		if (Character && Controller)
 		{
+			Controller->bSetControlRotationFromPawnOrientation = false;
 			Controller->Possess(Character);
 			Controller->SetControlRotation(FRotator::ZeroRotator);
 		}

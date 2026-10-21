@@ -15,6 +15,7 @@
 #include "Combat/VaesenGameplayTags.h"
 #include "Items/VaesenWeaponItem.h"
 #include "Kismet/GameplayStatics.h"
+#include "Weapons/VaesenWeaponActor.h"
 #include "Animation/AnimMontage.h"
 #include "PhysicalMaterials/PhysicalMaterial.h"
 
@@ -266,14 +267,63 @@ void AVaesenBaseCharacter::PlayVocal(bool bPain)
 }
 
 #if WITH_EDITOR
-void AVaesenBaseCharacter::ReplaceDefaultAbility(UClass* From, UClass* To)
+bool AVaesenBaseCharacter::ReplaceDefaultAbility(UClass* From, UClass* To)
 {
+	bool bReplaced = false;
 	for (TSubclassOf<UVaesenGameplayAbility>& Ability : DefaultAbilities)
 	{
 		if (Ability.Get() == From && To && To->IsChildOf(UVaesenGameplayAbility::StaticClass()))
 		{
 			Ability = To;
+			bReplaced = true;
+		}
+	}
+	return bReplaced;
+}
+#endif
+
+void AVaesenBaseCharacter::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	// Gear rattle without footstep notifies: by distance walked on the ground.
+	if (GetNetMode() == NM_DedicatedServer || !GetCharacterMovement()->IsMovingOnGround())
+	{
+		return;
+	}
+	GearRattleDistance += GetVelocity().Size2D() * DeltaSeconds;
+	if (GearRattleDistance >= GearRattleStride)
+	{
+		GearRattleDistance = 0.0f;
+		if (GetWorld()->GetTimeSeconds() - LastFootstepNotifyTime > 1.0)
+		{
+			PlayGearRattle();
 		}
 	}
 }
-#endif
+
+void AVaesenBaseCharacter::OnFootstep()
+{
+	LastFootstepNotifyTime = GetWorld()->GetTimeSeconds();
+	PlayGearRattle();
+}
+
+void AVaesenBaseCharacter::PlayGearRattle()
+{
+	if (!Equipment || GetNetMode() == NM_DedicatedServer)
+	{
+		return;
+	}
+	const float MaxSpeed = FMath::Max(GetCharacterMovement()->MaxWalkSpeed, 1.0f);
+	const float Volume = FMath::Clamp(GetVelocity().Size2D() / MaxSpeed, 0.3f, 1.0f);
+	for (const FVaesenEquippedItem& Entry : Equipment->GetEquippedItems())
+	{
+		const UVaesenWeaponItem* Weapon = Cast<UVaesenWeaponItem>(Entry.Item);
+		AVaesenWeaponActor* Actor = Weapon ? Weapon->GetWeaponActor() : nullptr;
+		USoundBase* Rattle = Weapon && !Equipment->IsInHand(Entry.Slot) ? Weapon->GetSound(EVaesenWeaponSound::GearRattle) : nullptr;
+		if (Actor && Rattle)
+		{
+			UGameplayStatics::SpawnSoundAttached(Rattle, Actor->GetRootComponent(), NAME_None, FVector::ZeroVector, EAttachLocation::KeepRelativeOffset, true, Volume);
+		}
+	}
+}

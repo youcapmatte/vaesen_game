@@ -91,3 +91,12 @@ void UAnimNotifyState_VaesenMeleeHitWindow::NotifyEnd(USkeletalMeshComponent* Me
 		Character->OnMeleeHitWindow.Broadcast(false);
 	}
 }
+
+void UAnimNotify_VaesenFootstep::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
+{
+	Super::Notify(MeshComp, Animation, EventReference);
+	if (AVaesenBaseCharacter* Character = VaesenNotifies::GetCharacter(MeshComp))
+	{
+		Character->OnFootstep();
+	}
+}

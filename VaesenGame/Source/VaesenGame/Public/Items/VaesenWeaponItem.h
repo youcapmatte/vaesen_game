@@ -146,6 +146,8 @@ public:
 	/** The sound set the sound would come from (for attenuation and concurrency). */
 	const UVaesenWeaponSoundSet* GetSoundSetFor(EVaesenWeaponSound Sound) const;
 
+	virtual USoundBase* GetLandSound() const override { return LandSound ? LandSound.Get() : GetSound(EVaesenWeaponSound::DropLand); }
+
 	/** How it blocks (melee weapons can override the category's). */
 	virtual const FVaesenBlockProfile& GetBlockProfile() const { return GetCategoryDefaults().BlockProfile; }
 
@@ -183,6 +185,10 @@ private:
 	UFUNCTION()
 	void OnRep_Durability();
 
-	UPROPERTY(Replicated)
+	/** The actor and this pointer to it can reach a client in either order; whichever comes second attaches it. */
+	UFUNCTION()
+	void OnRep_WeaponActor();
+
+	UPROPERTY(ReplicatedUsing = OnRep_WeaponActor)
 	TObjectPtr<AVaesenWeaponActor> WeaponActor;
 };

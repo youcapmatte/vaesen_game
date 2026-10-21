@@ -7,6 +7,7 @@
 #include "Combat/VaesenGameplayEffects.h"
 #include "Combat/VaesenGameplayTags.h"
 #include "Items/VaesenWeaponItem.h"
+#include "GameFramework/Character.h"
 #include "Weapons/VaesenWeaponActor.h"
 
 namespace VaesenDamageCapture
@@ -144,6 +145,15 @@ void UVaesenDamageExecution::Execute_Implementation(const FGameplayEffectCustomE
 		{
 			SourceASC->ApplyGameplayEffectSpecToSelf(*Stagger.Data.Get());
 		}
+	}
+
+	// Knockback (a heavy club, a shield bash): pushed away from the attacker; half when blocked, none when parried.
+	const float Knockback = Spec.GetSetByCallerMagnitude(VaesenTags::Data_Knockback, false, 0.0f);
+	if (ACharacter* Pushed = Cast<ACharacter>(TargetActor); Pushed && Knockback > 0.0f && Report.Outcome != EVaesenHitOutcome::Parried)
+	{
+		const FVector Away = (TargetActor->GetActorLocation() - From).GetSafeNormal2D();
+		const float Strength = Report.Outcome == EVaesenHitOutcome::Blocked ? Knockback * 0.5f : Knockback;
+		Pushed->LaunchCharacter(Away * Strength + FVector(0.0, 0.0, Strength * 0.25f), true, false);
 	}
 
 	// Everyone sees and hears it: blood, sparks on a block, the ring of a parry.

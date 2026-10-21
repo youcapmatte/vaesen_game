@@ -70,6 +70,19 @@ private:
 	UPROPERTY(Replicated)
 	TObjectPtr<UFXSystemAsset> TrailEffect;
 
+	/** The weapon's flyby and stick sounds (the weapon itself is only known on the server). */
+	UPROPERTY(Replicated)
+	TObjectPtr<USoundBase> FlybySound;
+
+	UPROPERTY(Replicated)
+	TObjectPtr<USoundBase> StickSound;
+
+	/** Played the flyby for this machine's player already. */
+	bool bFlybyPlayed = false;
+
+	/** Plays the flyby when it passes close to this machine's player (not the shooter). */
+	void UpdateFlyby();
+
 	FVaesenDamagePacket Damage;
 
 	UPROPERTY(Transient)

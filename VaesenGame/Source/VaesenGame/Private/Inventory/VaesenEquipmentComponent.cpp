@@ -260,11 +260,21 @@ void UVaesenEquipmentComponent::ApplyAppearance()
 			Current.Add(Entry.Item);
 		}
 	}
+	// Taking off or putting on a weapon plays its unequip / equip montage (not when joining or dressing an NPC).
+	const auto PlayWeaponMontage = [this, Character](const UVaesenEquippableItem* Item, bool bEquip)
+	{
+		const UVaesenWeaponItem* Weapon = Cast<UVaesenWeaponItem>(Item);
+		if (UAnimMontage* Montage = bAppearanceApplied && Weapon ? Weapon->GetMontage(bEquip ? &FVaesenWeaponMontages::Equip : &FVaesenWeaponMontages::Unequip) : nullptr)
+		{
+			Character->PlayAnimMontage(Montage);
+		}
+	};
 	for (UVaesenEquippableItem* Item : AppliedItems)
 	{
 		if (Item && !Current.Contains(Item))
 		{
 			Item->Unequip();
+			PlayWeaponMontage(Item, false);
 		}
 	}
 	UVaesenEquippableItem* JustPutOn = nullptr;
@@ -273,6 +283,7 @@ void UVaesenEquipmentComponent::ApplyAppearance()
 		if (!AppliedItems.Contains(Item))
 		{
 			Item->Equip(Character);
+			PlayWeaponMontage(Item, true);
 			JustPutOn = JustPutOn ? JustPutOn : Item;
 		}
 	}

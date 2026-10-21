@@ -76,6 +76,11 @@ void AVaesenWeaponActor::OnRep_WeaponItem()
 	{
 		if (UVaesenEquipmentComponent* Equipment = Character->GetEquipment())
 		{
+			// Straight to the right place, even before the item knows this actor (an item only ever goes in its own slot).
+			if (WeaponItem)
+			{
+				AttachToOwner(Equipment->IsInHand(WeaponItem->Slot));
+			}
 			Equipment->RefreshWeaponAttachments();
 		}
 	}

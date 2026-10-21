@@ -10,6 +10,7 @@
 #include "Inventory/VaesenInventoryComponent.h"
 #include "Items/VaesenAmmoItem.h"
 #include "Items/VaesenPickup.h"
+#include "GameFramework/PlayerController.h"
 #include "Items/VaesenRangedWeaponItem.h"
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
@@ -49,6 +50,8 @@ void AVaesenProjectile::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME_CONDITION(AVaesenProjectile, Ammo, COND_InitialOnly);
 	DOREPLIFETIME_CONDITION(AVaesenProjectile, TrailEffect, COND_InitialOnly);
+	DOREPLIFETIME_CONDITION(AVaesenProjectile, FlybySound, COND_InitialOnly);
+	DOREPLIFETIME_CONDITION(AVaesenProjectile, StickSound, COND_InitialOnly);
 }
 
 void AVaesenProjectile::InitProjectile(TSubclassOf<UVaesenAmmoItem> InAmmo, const FVaesenDamagePacket& InDamage, UVaesenRangedWeaponItem* InWeapon, const FVector& Velocity, UFXSystemAsset* Trail)
@@ -57,6 +60,8 @@ void AVaesenProjectile::InitProjectile(TSubclassOf<UVaesenAmmoItem> InAmmo, cons
 	Damage = InDamage;
 	Weapon = InWeapon;
 	TrailEffect = Trail;
+	FlybySound = InWeapon ? InWeapon->GetSound(EVaesenWeaponSound::Flyby) : nullptr;
+	StickSound = InWeapon ? InWeapon->GetSound(EVaesenWeaponSound::ArrowStick) : nullptr;
 	Movement->Velocity = Velocity;
 	Movement->InitialSpeed = Velocity.Size();
 	Movement->MaxSpeed = FMath::Max(Velocity.Size(), 1.0f);
@@ -103,6 +108,7 @@ void AVaesenProjectile::Tick(float DeltaSeconds)
 	{
 		DrawDebugLine(GetWorld(), LastDebugLocation, GetActorLocation(), FColor::Yellow, false, 4.0f, 0, 1.0f);
 	}
+	UpdateFlyby();
 	LastDebugLocation = GetActorLocation();
 }
 
@@ -113,6 +119,7 @@ void AVaesenProjectile::OnProjectileHit(UPrimitiveComponent* HitComponent, AActo
 		return;
 	}
 	bHasHit = true;
+	UE_LOG(LogVaesenCombat, Log, TEXT("Projectile %s hit %s at %s"), *GetNameSafe(Ammo), *GetNameSafe(OtherActor), *Hit.ImpactPoint.ToCompactString());
 
 	const bool bDamaged = UVaesenCombatLibrary::ApplyDamagePacket(GetOwner(), OtherActor, Damage, Hit, Weapon, true, true);
 	if (!bDamaged)
@@ -168,7 +175,7 @@ void AVaesenProjectile::MulticastStuck_Implementation(FVector_NetQuantize Locati
 	const UVaesenAmmoItem* AmmoDefaults = Ammo ? Ammo->GetDefaultObject<UVaesenAmmoItem>() : nullptr;
 	const FGameplayTag DamageType = AmmoDefaults ? UVaesenCombatLibrary::GetMainDamageType(AmmoDefaults->Damage) : FGameplayTag();
 	UVaesenCombatLibrary::PlayImpactEffects(this, DamageType, Hit);
-	if (USoundBase* Sound = Weapon ? Weapon->GetSound(EVaesenWeaponSound::ArrowStick) : nullptr)
+	if (USoundBase* Sound = StickSound.Get())
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, Sound, Location);
 	}
@@ -179,4 +186,27 @@ void AVaesenProjectile::MulticastImpact_Implementation(const FHitResult& Hit)
 	const UVaesenAmmoItem* AmmoDefaults = Ammo ? Ammo->GetDefaultObject<UVaesenAmmoItem>() : nullptr;
 	const FGameplayTag DamageType = AmmoDefaults ? UVaesenCombatLibrary::GetMainDamageType(AmmoDefaults->Damage) : FGameplayTag();
 	UVaesenCombatLibrary::PlayImpactEffects(this, DamageType, Hit, true);
+}
+
+void AVaesenProjectile::UpdateFlyby()
+{
+	if (bFlybyPlayed || bHasHit || !FlybySound || GetNetMode() == NM_DedicatedServer)
+	{
+		return;
+	}
+	const APlayerController* Local = GetWorld()->GetFirstPlayerController();
+	const APawn* Listener = Local ? Local->GetPawn() : nullptr;
+	if (!Listener || Listener == GetOwner())
+	{
+		return;
+	}
+	// Close (within 3 m of the listener's head) and just past them.
+	const FVector Head = Listener->GetPawnViewLocation();
+	const FVector ToHead = Head - GetActorLocation();
+	const FVector Velocity = Movement->Velocity;
+	if (ToHead.SizeSquared() < FMath::Square(300.0f) && FVector::DotProduct(ToHead, Velocity) <= 0.0f)
+	{
+		bFlybyPlayed = true;
+		UGameplayStatics::PlaySoundAtLocation(this, FlybySound, GetActorLocation());
+	}
 }

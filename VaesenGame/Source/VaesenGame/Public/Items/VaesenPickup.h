@@ -88,6 +88,15 @@ private:
 
 	void StopFalling();
 
+	/** First touch of the ground while falling (server): everyone hears it land. */
+	UFUNCTION()
+	void OnFallHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
+
+	UFUNCTION(NetMulticast, Unreliable)
+	void MulticastLanded(FVector_NetQuantize Location);
+
+	bool bLandedSoundPlayed = false;
+
 	FTimerHandle FallTimer;
 
 	/** Holds NewItem from now on, replicating it (and what's inside it). */

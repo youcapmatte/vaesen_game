@@ -75,6 +75,12 @@ void UVaesenWeaponCategoryDefaults::SetBuiltInDefaults()
 		}
 		Entry.BlockProfile = Block;
 	};
+	const auto SetKnockback = [this](EVaesenWeaponCategory Category, float Light, float Heavy)
+	{
+		FVaesenCategoryDefaults& Entry = Categories.FindOrAdd(Category);
+		Entry.LightAttack.Knockback = Light;
+		Entry.HeavyAttack.Knockback = Heavy;
+	};
 
 	// Grey-box numbers: readable differences between weapons, not balance.
 	//                                        type      dmg  reach stam  dur  window
@@ -98,6 +104,14 @@ void UVaesenWeaponCategoryDefaults::SetBuiltInDefaults()
 	Add(EVaesenWeaponCategory::Rifle, MakeAttack(Blunt, 8, 110, 10, 0.8f, 0.30f, 0.50f), nullptr, MakeBlock(0.3f, 0.2f, 0.3f, 0.1f));
 	Add(EVaesenWeaponCategory::Bow, MakeAttack(Blunt, 3, 90, 6, 0.6f, 0.20f, 0.35f), nullptr, MakeBlock(0.1f, 0.1f, 0.1f, 0.0f));
 	Add(EVaesenWeaponCategory::Crossbow, MakeAttack(Blunt, 6, 100, 8, 0.7f, 0.25f, 0.45f), nullptr, MakeBlock(0.2f, 0.2f, 0.2f, 0.05f));
+
+	// Heavy blunt blows and shield bashes push (cm/s).
+	SetKnockback(EVaesenWeaponCategory::Unarmed, 0.0f, 150.0f);
+	SetKnockback(EVaesenWeaponCategory::Club, 0.0f, 350.0f);
+	SetKnockback(EVaesenWeaponCategory::Warhammer, 100.0f, 400.0f);
+	SetKnockback(EVaesenWeaponCategory::OneHandedAxe, 0.0f, 250.0f);
+	SetKnockback(EVaesenWeaponCategory::Shield, 300.0f, 0.0f);
+	SetKnockback(EVaesenWeaponCategory::Rifle, 200.0f, 0.0f);
 
 	// Where weapons hang (sockets on the mannequin skeleton; the commandlet adds them). Until a socket exists the
 	// weapon hangs from the fallback bone at the fallback offset. Back and hip draws are different motions, so each

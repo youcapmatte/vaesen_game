@@ -97,3 +97,14 @@ public:
 	virtual void NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference) override;
 	virtual FString GetNotifyName_Implementation() const override { return TEXT("Melee Hit Window"); }
 };
+
+/** AN_Footstep: a foot touches down (in locomotion animations). Sheathed weapons rattle. */
+UCLASS(meta = (DisplayName = "Footstep"))
+class VAESENGAME_API UAnimNotify_VaesenFootstep : public UAnimNotify
+{
+	GENERATED_BODY()
+
+public:
+	virtual void Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference) override;
+	virtual FString GetNotifyName_Implementation() const override { return TEXT("Footstep"); }
+};

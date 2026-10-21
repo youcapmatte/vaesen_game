@@ -10,6 +10,7 @@ class AVaesenPlayerCharacter;
 class UVaesenInventoryComponent;
 class UStaticMesh;
 class UTexture2D;
+class USoundBase;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FVaesenItemModified);
 
@@ -119,6 +120,13 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Item")
 	bool CanBeThrown() const { return Throwing.bCanBeThrown; }
+
+	/** Heard when it hits the ground after being dropped or thrown (per surface: use a Sound Cue switching on it). Empty = a weapon's DropLand sound, else silent. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item|Sounds")
+	TObjectPtr<USoundBase> LandSound;
+
+	/** LandSound, or (weapons) their DropLand sound. */
+	virtual USoundBase* GetLandSound() const { return LandSound; }
 
 	/** Most that fit in one stack: MaxStackSize, or 1 when not stackable. */
 	UFUNCTION(BlueprintPure, Category = "Item")

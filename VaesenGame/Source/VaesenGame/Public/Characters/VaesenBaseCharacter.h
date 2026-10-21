@@ -77,12 +77,17 @@ public:
 	/** Plays the effort (heavy attack, throw) or pain vocal from this character's voice. */
 	void PlayVocal(bool bPain);
 
+	/** A footstep (AN_Footstep in a locomotion animation): sheathed weapons rattle, louder the faster it moves. */
+	void OnFootstep();
+
+	virtual void Tick(float DeltaSeconds) override;
+
 	/** Faces where it aims (strafes) rather than where it walks: aiming, blocking, drawing a bow, throwing. */
 	virtual bool WantsToFaceAim() const;
 
 #if WITH_EDITOR
 	/** For the asset commandlet: grants To instead of From (a GA_ Blueprint instead of its C++ class). */
-	void ReplaceDefaultAbility(UClass* From, UClass* To);
+	bool ReplaceDefaultAbility(UClass* From, UClass* To);
 #endif
 
 protected:
@@ -110,6 +115,10 @@ protected:
 	/** Grunt on heavy attacks and throws. Empty = silent. */
 	UPROPERTY(EditDefaultsOnly, Category = "Combat|Voice")
 	TObjectPtr<USoundBase> EffortSound;
+
+	/** Without footstep notifies: a rattle every this far walked (while weapons are carried sheathed). */
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Voice", meta = (ClampMin = "10", Units = "cm"))
+	float GearRattleStride = 110.0f;
 
 	/** On being hit. Empty = silent. */
 	UPROPERTY(EditDefaultsOnly, Category = "Combat|Voice")
@@ -167,4 +176,10 @@ private:
 	float BaseWalkSpeed = 0.0f;
 
 	bool bAbilitiesGranted = false;
+
+	/** Sheathed weapons rattle (this machine). */
+	void PlayGearRattle();
+
+	float GearRattleDistance = 0.0f;
+	double LastFootstepNotifyTime = -100.0;
 };

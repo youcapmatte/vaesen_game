@@ -140,6 +140,12 @@ void UVaesenGA_FireWeapon::OnAimReceived(const FVector& Origin, const FVector& D
 			PlayAbilityMontage(Montage);
 			Actor->PlayFireCosmetics(Montage);
 		}
+		else if (bFired)
+		{
+			// A remote shooter: the server plays the montage too, so the ability system replicates it to everyone else
+			// (the shooter already predicted it). No cosmetics on the server itself.
+			PlayAbilityMontage(GetRangedItem()->GetMontage(&FVaesenWeaponMontages::Fire));
+		}
 		StartCycleIfNeeded();
 	}
 	EndAbility(CurrentSpecHandle, ActorInfo, CurrentActivationInfo, true, false);
@@ -159,10 +165,18 @@ void UVaesenGA_FireWeapon::StartCycleIfNeeded()
 		return;
 	}
 	// Once this ability has ended; the server starting a predicted ability tells the player's machine to run it too.
+	// The granted one may be a Blueprint of CycleAbility (GA_CycleAction), so look for anything of that class.
 	const TSubclassOf<UGameplayAbility> Cycle = CycleAbility;
 	GetWorld()->GetTimerManager().SetTimerForNextTick(FTimerDelegate::CreateWeakLambda(ASC, [ASC, Cycle]()
 	{
-		ASC->TryActivateAbilityByClass(Cycle);
+		for (const FGameplayAbilitySpec& Spec : ASC->GetActivatableAbilities())
+		{
+			if (Spec.Ability && Spec.Ability->IsA(Cycle))
+			{
+				ASC->TryActivateAbility(Spec.Handle);
+				return;
+			}
+		}
 	}));
 }
 
@@ -497,6 +511,12 @@ void UVaesenGA_DrawBow::OnAimReceived(const FVector& Origin, const FVector& Dire
 			UAnimMontage* Montage = GetRangedItem()->GetMontage(&FVaesenWeaponMontages::Fire);
 			PlayAbilityMontage(Montage);
 			Actor->PlayFireCosmetics(Montage);
+		}
+		else if (bFired)
+		{
+			// A remote shooter: the server plays the montage too, so the ability system replicates it to everyone else
+			// (the shooter already predicted it). No cosmetics on the server itself.
+			PlayAbilityMontage(GetRangedItem()->GetMontage(&FVaesenWeaponMontages::Fire));
 		}
 	}
 	EndAbility(CurrentSpecHandle, GetCurrentActorInfo(), CurrentActivationInfo, true, false);

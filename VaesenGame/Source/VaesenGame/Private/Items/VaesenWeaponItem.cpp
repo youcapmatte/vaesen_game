@@ -5,6 +5,7 @@
 #include "Engine/StaticMesh.h"
 #include "Engine/StaticMeshSocket.h"
 #include "Engine/World.h"
+#include "Inventory/VaesenEquipmentComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Weapons/VaesenMeleeWeaponActor.h"
 #include "Weapons/VaesenWeaponActor.h"
@@ -254,3 +255,12 @@ EDataValidationResult UVaesenWeaponItem::IsDataValid(FDataValidationContext& Con
 #endif
 
 #undef LOCTEXT_NAMESPACE
+
+void UVaesenWeaponItem::OnRep_WeaponActor()
+{
+	const AVaesenBaseCharacter* Character = Cast<AVaesenBaseCharacter>(GetOwningActor());
+	if (UVaesenEquipmentComponent* Equipment = Character ? Character->GetEquipment() : nullptr)
+	{
+		Equipment->RefreshWeaponAttachments();
+	}
+}
