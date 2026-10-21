@@ -140,40 +140,62 @@ bool AVaesenWeaponActor::GetSocketTransform(FName Socket, FTransform& OutTransfo
 	return false;
 }
 
+bool AVaesenWeaponActor::ResolveAttachment(bool bToHand, FName& OutSocket, FTransform& OutOffset) const
+{
+	const AVaesenBaseCharacter* Character = GetOwningCharacter();
+	const USkeletalMeshComponent* Body = Character ? Character->GetMesh() : nullptr;
+	if (!Body || !WeaponItem)
+	{
+		return false;
+	}
+
+	const UVaesenWeaponCategoryDefaults* Defaults = UVaesenWeaponCategoryDefaults::Get();
+	OutOffset = FTransform::Identity;
+	if (bToHand)
+	{
+		OutSocket = WeaponItem->IsHeldInOffHand() ? Defaults->OffHandSocket : Defaults->MainHandSocket;
+		if (!Body->DoesSocketExist(OutSocket))
+		{
+			// No weapon socket on the skeleton yet: the hand bone itself.
+			OutSocket = WeaponItem->IsHeldInOffHand() ? FName(TEXT("hand_l")) : FName(TEXT("hand_r"));
+		}
+		return true;
+	}
+
+	OutSocket = WeaponItem->SheathSocket;
+	OutOffset = WeaponItem->SheathOffset;
+	if (!Body->DoesSocketExist(OutSocket))
+	{
+		const FVaesenSheathLocation* Location = Defaults->FindSheathLocation(OutSocket);
+		OutSocket = Location ? Location->FallbackBone : FName(TEXT("spine_03"));
+		OutOffset = Location ? OutOffset * Location->FallbackOffset : OutOffset;
+	}
+	return true;
+}
+
+FTransform AVaesenWeaponActor::GetSheathedTransform() const
+{
+	FName Socket;
+	FTransform Offset;
+	const AVaesenBaseCharacter* Character = GetOwningCharacter();
+	if (!Character || !ResolveAttachment(false, Socket, Offset))
+	{
+		return GetActorTransform();
+	}
+	return Offset * Character->GetMesh()->GetSocketTransform(Socket);
+}
+
 void AVaesenWeaponActor::AttachToOwner(bool bNowInHand)
 {
 	AVaesenBaseCharacter* Character = GetOwningCharacter();
-	USkeletalMeshComponent* Body = Character ? Character->GetMesh() : nullptr;
-	if (!Body || !WeaponItem)
+	FName Socket;
+	FTransform Offset;
+	if (!Character || !ResolveAttachment(bNowInHand, Socket, Offset))
 	{
 		return;
 	}
 
-	const UVaesenWeaponCategoryDefaults* Defaults = UVaesenWeaponCategoryDefaults::Get();
-	FName Socket;
-	FTransform Offset = FTransform::Identity;
-	if (bNowInHand)
-	{
-		Socket = WeaponItem->IsHeldInOffHand() ? Defaults->OffHandSocket : Defaults->MainHandSocket;
-		if (!Body->DoesSocketExist(Socket))
-		{
-			// No weapon socket on the skeleton yet: the hand bone itself.
-			Socket = WeaponItem->IsHeldInOffHand() ? FName(TEXT("hand_l")) : FName(TEXT("hand_r"));
-		}
-	}
-	else
-	{
-		Socket = WeaponItem->SheathSocket;
-		Offset = WeaponItem->SheathOffset;
-		if (!Body->DoesSocketExist(Socket))
-		{
-			const FVaesenSheathLocation* Location = Defaults->FindSheathLocation(Socket);
-			Socket = Location ? Location->FallbackBone : FName(TEXT("spine_03"));
-			Offset = Location ? Offset * Location->FallbackOffset : Offset;
-		}
-	}
-
-	AttachToComponent(Body, FAttachmentTransformRules::SnapToTargetNotIncludingScale, Socket);
+	AttachToComponent(Character->GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, Socket);
 	SetActorRelativeTransform(Offset);
 
 	if (bInHand != bNowInHand)

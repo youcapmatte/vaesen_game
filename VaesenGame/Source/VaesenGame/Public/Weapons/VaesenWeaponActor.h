@@ -46,6 +46,9 @@ public:
 	/** Moves it to the hand, or to its sheath socket. */
 	void AttachToOwner(bool bInHand);
 
+	/** Where it hangs when sheathed, in the world (its grip there), wherever it is now. */
+	FTransform GetSheathedTransform() const;
+
 	UFUNCTION(BlueprintPure, Category = "Weapon")
 	bool IsInHand() const { return bInHand; }
 
@@ -110,6 +113,9 @@ protected:
 	TObjectPtr<USkeletalMeshComponent> SkeletalMesh;
 
 private:
+	/** The socket (or fallback bone) and offset it attaches to, in the hand or the sheath. False without an owner. */
+	bool ResolveAttachment(bool bToHand, FName& OutSocket, FTransform& OutOffset) const;
+
 	UFUNCTION()
 	void OnRep_WeaponItem();
 

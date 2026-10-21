@@ -155,8 +155,16 @@ struct FVaesenWeaponMontages
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
 	TObjectPtr<UAnimMontage> Fire;
 
+	/** Firing while aiming (right mouse). Empty = Fire. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
+	TObjectPtr<UAnimMontage> FireAimed;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
 	TObjectPtr<UAnimMontage> Reload;
+
+	/** Reloading an empty weapon (chamber a round as well). Empty = Reload. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
+	TObjectPtr<UAnimMontage> ReloadEmpty;
 
 	/** Working the bolt or lever. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")

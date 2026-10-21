@@ -814,6 +814,20 @@ void UVaesenEquipmentComponent::ApplyDrawnLook()
 	{
 		return;
 	}
+
+	// An anim Blueprint with a linked anim graph tagged WeaponLocomotion (ABP_VaesenCharacter) swaps that graph: the
+	// weapon's, or the unarmed one. Otherwise, Lyra-style anim layers are linked onto the mesh.
+	UAnimInstance* AnimInstance = Mesh->GetAnimInstance();
+	if (AnimInstance && AnimInstance->GetLinkedAnimGraphInstanceByTag(WeaponLocomotionTag))
+	{
+		const TSubclassOf<UAnimInstance> Unarmed = UVaesenWeaponCategoryDefaults::Get()->GetCategory(EVaesenWeaponCategory::Unarmed).AnimLayer;
+		if (const TSubclassOf<UAnimInstance> Graph = Layer ? Layer : Unarmed)
+		{
+			AnimInstance->LinkAnimGraphByTag(WeaponLocomotionTag, Graph);
+		}
+		LinkedAnimLayer = Layer;
+		return;
+	}
 	if (LinkedAnimLayer)
 	{
 		Mesh->UnlinkAnimClassLayers(LinkedAnimLayer);
@@ -823,4 +837,18 @@ void UVaesenEquipmentComponent::ApplyDrawnLook()
 		Mesh->LinkAnimClassLayers(Layer);
 	}
 	LinkedAnimLayer = Layer;
+}
+
+const FName UVaesenEquipmentComponent::WeaponLocomotionTag(TEXT("WeaponLocomotion"));
+
+AVaesenWeaponActor* UVaesenEquipmentComponent::GetSwitchingWeaponActor() const
+{
+	if (!bStepRunning)
+	{
+		return nullptr;
+	}
+	const UVaesenWeaponItem* Weapon = CurrentStep.WeaponSlot == EVaesenEquipmentSlot::Sidearm
+		? GetWeaponInSlot(EVaesenEquipmentSlot::Sidearm)
+		: (GetWeaponInSlot(EVaesenEquipmentSlot::MainHand) ? GetWeaponInSlot(EVaesenEquipmentSlot::MainHand) : GetWeaponInSlot(EVaesenEquipmentSlot::OffHand));
+	return Weapon ? Weapon->GetWeaponActor() : nullptr;
 }

@@ -107,7 +107,7 @@ protected:
 	float BlockingSpeedScale = 0.5f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Combat", meta = (ClampMin = "0", ClampMax = "1"))
-	float AimingSpeedScale = 0.6f;
+	float AimingSpeedScale = 0.3f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Combat", meta = (ClampMin = "0", ClampMax = "1"))
 	float StaggeredSpeedScale = 0.2f;

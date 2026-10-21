@@ -10,6 +10,7 @@ public class VaesenGameEditor : ModuleRules
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine" });
 		PrivateDependencyModuleNames.AddRange(new string[] { "UnrealEd", "UMG", "UMGEditor", "Slate", "SlateCore", "AssetRegistry", "EnhancedInput", "InputCore", "VaesenGame",
 			"AssetTools", "MaterialEditor", "GameplayTags", "AnimationCore", "GeometryCore", "GeometryFramework", "GeometryScriptingCore", "SkeletalMeshDescription", "SkeletalMeshUtilitiesCommon", "MeshConversion", "MeshDescription", "RenderCore", "DynamicMesh",
-			"GeometryScriptingEditor", "GameplayAbilities", "PhysicsCore" });
+			"GeometryScriptingEditor", "GameplayAbilities", "PhysicsCore",
+			"IKRig", "IKRigEditor", "AnimationBlueprintLibrary", "AnimGraph", "AnimGraphRuntime", "BlueprintGraph", "Kismet" });
 	}
 }

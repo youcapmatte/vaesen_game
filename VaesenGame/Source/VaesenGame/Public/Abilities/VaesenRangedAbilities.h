@@ -21,6 +21,9 @@ public:
 
 protected:
 	UVaesenRangedWeaponItem* GetRangedItem(const FGameplayAbilityActorInfo* ActorInfo = nullptr) const;
+
+	/** Aiming (right mouse, or a bow being drawn) right now. */
+	bool IsAiming() const;
 	AVaesenRangedWeaponActor* GetRangedActor(const FGameplayAbilityActorInfo* ActorInfo = nullptr) const;
 
 	/** Whether this ability is for bows (Action Draw) or for everything else. */

@@ -134,6 +134,10 @@ void AVaesenPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 	BindAbility(ThrowAction, EVaesenAbilityInput::Throw);
 	BindAbility(HolsterAction, EVaesenAbilityInput::Holster);
 	BindAbility(SwapWeaponAction, EVaesenAbilityInput::SwapWeapon);
+	if (CrouchAction)
+	{
+		EnhancedInput->BindAction(CrouchAction, ETriggerEvent::Started, this, &AVaesenPlayerCharacter::ToggleCrouch);
+	}
 	if (TriggerAttackAction)
 	{
 		EnhancedInput->BindAction(TriggerAttackAction, ETriggerEvent::Started, this, &AVaesenPlayerCharacter::PressTriggerAttack);
@@ -426,5 +430,17 @@ void AVaesenPlayerCharacter::UpdateAimCamera(float DeltaSeconds)
 	if (!bFirstPerson)
 	{
 		CameraBoom->SocketOffset = FMath::Lerp(DefaultSocketOffset, AimSocketOffset, AimAlpha);
+	}
+}
+
+void AVaesenPlayerCharacter::ToggleCrouch()
+{
+	if (bIsCrouched)
+	{
+		UnCrouch();
+	}
+	else
+	{
+		Crouch();
 	}
 }

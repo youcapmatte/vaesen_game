@@ -1,6 +1,9 @@
 #include "Weapons/VaesenRangedWeaponActor.h"
 
 #include "Anim/VaesenAnimInstance.h"
+#include "AbilitySystemComponent.h"
+#include "AbilitySystemGlobals.h"
+#include "Combat/VaesenGameplayTags.h"
 #include "Characters/VaesenBaseCharacter.h"
 #include "Characters/VaesenPlayerCharacter.h"
 #include "Combat/VaesenCombatLibrary.h"
@@ -347,7 +350,9 @@ void AVaesenRangedWeaponActor::MulticastFired_Implementation(FVector_NetQuantize
 	}
 	const UVaesenRangedWeaponItem* Item = GetRangedItem();
 	// The fire montage reaches other machines through the ability system's montage replication (the server plays it).
-	PlayFireCosmetics(Item ? Item->GetMontage(&FVaesenWeaponMontages::Fire) : nullptr);
+	const UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(GetOwner());
+	const bool bAiming = ASC && ASC->HasMatchingGameplayTag(VaesenTags::State_Aiming);
+	PlayFireCosmetics(Item ? Item->GetFireMontage(bAiming) : nullptr);
 
 	// A bullet passing close to this machine's player (within 3 m of the line, not the shooter) cracks past.
 	const APlayerController* Local = GetWorld()->GetFirstPlayerController();
@@ -456,7 +461,7 @@ void AVaesenRangedWeaponActor::MulticastActionCosmetics_Implementation(EVaesenCa
 	{
 		return;
 	}
-	const UAnimMontage* Montage = Item->GetMontage(Moment == EVaesenCasingMoment::Cycle ? &FVaesenWeaponMontages::Cycle : &FVaesenWeaponMontages::Reload);
+	const UAnimMontage* Montage = Moment == EVaesenCasingMoment::Cycle ? Item->GetMontage(&FVaesenWeaponMontages::Cycle) : Item->GetReloadMontage();
 	EjectCasingsUnlessNotified(Moment, Montage, Count);
 }
 

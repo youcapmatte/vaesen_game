@@ -153,6 +153,20 @@ public:
 	/** Reloading can stop between rounds. */
 	bool CanInterruptReload() const { return ReloadStyle == EVaesenReloadStyle::SingleRound || ReloadStyle == EVaesenReloadStyle::Cylinder; }
 
+	/** The fire montage: the aimed one while aiming (if there is one), else the plain one. */
+	UAnimMontage* GetFireMontage(bool bAiming) const
+	{
+		UAnimMontage* Aimed = bAiming ? GetMontage(&FVaesenWeaponMontages::FireAimed) : nullptr;
+		return Aimed ? Aimed : GetMontage(&FVaesenWeaponMontages::Fire);
+	}
+
+	/** The reload montage: from empty when nothing is loaded (if there is one), else the plain one. */
+	UAnimMontage* GetReloadMontage() const
+	{
+		UAnimMontage* Empty = LoadedRounds <= 0 ? GetMontage(&FVaesenWeaponMontages::ReloadEmpty) : nullptr;
+		return Empty ? Empty : GetMontage(&FVaesenWeaponMontages::Reload);
+	}
+
 	/** Whether it can load this kind of ammo. */
 	bool Accepts(TSubclassOf<UVaesenItem> AmmoClass) const;
 

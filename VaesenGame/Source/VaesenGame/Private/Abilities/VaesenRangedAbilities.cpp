@@ -38,6 +38,12 @@ UVaesenRangedWeaponItem* UVaesenRangedAbility::GetRangedItem(const FGameplayAbil
 	return Cast<UVaesenRangedWeaponItem>(GetDrawnWeapon(ActorInfo));
 }
 
+bool UVaesenRangedAbility::IsAiming() const
+{
+	const UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+	return ASC && (ASC->HasMatchingGameplayTag(VaesenTags::State_Aiming) || ASC->HasMatchingGameplayTag(VaesenTags::State_DrawingBow));
+}
+
 AVaesenRangedWeaponActor* UVaesenRangedAbility::GetRangedActor(const FGameplayAbilityActorInfo* ActorInfo) const
 {
 	const UVaesenRangedWeaponItem* Item = GetRangedItem(ActorInfo);
@@ -119,7 +125,7 @@ void UVaesenGA_FireWeapon::ActivateAbility(const FGameplayAbilitySpecHandle Hand
 	if (!HasAuthority(&ActivationInfo))
 	{
 		// Prediction: the shot is seen and heard at once; the server decides what it hits.
-		UAnimMontage* Montage = Item->GetMontage(&FVaesenWeaponMontages::Fire);
+		UAnimMontage* Montage = Item->GetFireMontage(bAiming);
 		PlayAbilityMontage(Montage);
 		Actor->PlayFireCosmetics(Montage);
 	}
@@ -136,7 +142,7 @@ void UVaesenGA_FireWeapon::OnAimReceived(const FVector& Origin, const FVector& D
 		if (bFired && IsLocallyControlled())
 		{
 			// This machine is the server and the shooter (listen server, standalone): it plays the shot itself.
-			UAnimMontage* Montage = GetRangedItem()->GetMontage(&FVaesenWeaponMontages::Fire);
+			UAnimMontage* Montage = GetRangedItem()->GetFireMontage(IsAiming());
 			PlayAbilityMontage(Montage);
 			Actor->PlayFireCosmetics(Montage);
 		}
@@ -144,7 +150,7 @@ void UVaesenGA_FireWeapon::OnAimReceived(const FVector& Origin, const FVector& D
 		{
 			// A remote shooter: the server plays the montage too, so the ability system replicates it to everyone else
 			// (the shooter already predicted it). No cosmetics on the server itself.
-			PlayAbilityMontage(GetRangedItem()->GetMontage(&FVaesenWeaponMontages::Fire));
+			PlayAbilityMontage(GetRangedItem()->GetFireMontage(IsAiming()));
 		}
 		StartCycleIfNeeded();
 	}
@@ -226,7 +232,7 @@ void UVaesenGA_Reload::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 	{
 		if (IsLocallyControlled())
 		{
-			Actor->EjectCasingsUnlessNotified(EVaesenCasingMoment::Reload, Item->GetMontage(&FVaesenWeaponMontages::Reload), 0);
+			Actor->EjectCasingsUnlessNotified(EVaesenCasingMoment::Reload, Item->GetReloadMontage(), 0);
 		}
 		if (HasAuthority(&ActivationInfo))
 		{
@@ -244,7 +250,7 @@ void UVaesenGA_Reload::StartRound()
 		EndAbility(CurrentSpecHandle, GetCurrentActorInfo(), CurrentActivationInfo, true, true);
 		return;
 	}
-	UAnimMontage* Montage = Item->GetMontage(&FVaesenWeaponMontages::Reload);
+	UAnimMontage* Montage = Item->GetReloadMontage();
 	PlayAbilityMontage(Montage, VaesenRangedAbilities::RateToFit(Montage, Item->ReloadTime));
 	if (!Montage && IsLocallyControlled())
 	{
@@ -425,7 +431,7 @@ void UVaesenGA_DrawBow::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 
 	// Nock, then draw: the strength starts building once the arrow is on the string.
 	DrawStartTime = GetWorld()->GetTimeSeconds() + Item->NockTime;
-	UAnimMontage* Montage = Item->GetMontage(&FVaesenWeaponMontages::Reload);
+	UAnimMontage* Montage = Item->GetReloadMontage();
 	PlayAbilityMontage(Montage, VaesenRangedAbilities::RateToFit(Montage, Item->NockTime + Item->DrawTime));
 	if (IsLocallyControlled())
 	{
@@ -508,7 +514,7 @@ void UVaesenGA_DrawBow::OnAimReceived(const FVector& Origin, const FVector& Dire
 		}
 		if (bFired && IsLocallyControlled())
 		{
-			UAnimMontage* Montage = GetRangedItem()->GetMontage(&FVaesenWeaponMontages::Fire);
+			UAnimMontage* Montage = GetRangedItem()->GetFireMontage(IsAiming());
 			PlayAbilityMontage(Montage);
 			Actor->PlayFireCosmetics(Montage);
 		}
@@ -516,7 +522,7 @@ void UVaesenGA_DrawBow::OnAimReceived(const FVector& Origin, const FVector& Dire
 		{
 			// A remote shooter: the server plays the montage too, so the ability system replicates it to everyone else
 			// (the shooter already predicted it). No cosmetics on the server itself.
-			PlayAbilityMontage(GetRangedItem()->GetMontage(&FVaesenWeaponMontages::Fire));
+			PlayAbilityMontage(GetRangedItem()->GetFireMontage(IsAiming()));
 		}
 	}
 	EndAbility(CurrentSpecHandle, GetCurrentActorInfo(), CurrentActivationInfo, true, false);

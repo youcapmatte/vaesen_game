@@ -15,6 +15,7 @@ class UVaesenItem;
 class UVaesenMeleeWeaponItem;
 class UVaesenWeaponItem;
 class UAnimInstance;
+class AVaesenWeaponActor;
 
 /** One worn or held item and the slot it's in. */
 USTRUCT(BlueprintType)
@@ -187,6 +188,12 @@ public:
 
 	/** Server: takes the item out of Slot for throwing (no inventory involved); returns a copy owned by NewOuter. */
 	UVaesenItem* TakeOutForThrow(EVaesenEquipmentSlot Slot, UObject* NewOuter);
+
+	/** The weapon being drawn or sheathed right now (the hand reaches for it), or null. */
+	AVaesenWeaponActor* GetSwitchingWeaponActor() const;
+
+	/** The anim graph tag the weapon locomotion is linked into (UAnimInstance::LinkAnimGraphByTag). */
+	static const FName WeaponLocomotionTag;
 
 	/** The draw or sheath montage reached its grab frame (AN_WeaponGrab / AN_WeaponRelease), on every machine. */
 	void HandleWeaponGrabNotify();

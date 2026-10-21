@@ -151,6 +151,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Input|Combat")
 	TObjectPtr<UInputAction> SwapWeaponAction;
 
+	/** C: crouch, or stand up again. */
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TObjectPtr<UInputAction> CrouchAction;
+
 	/** Third-person camera distance while aiming (closer, over the shoulder). */
 	UPROPERTY(EditDefaultsOnly, Category = "Camera|Aim", meta = (ClampMin = "0", Units = "cm"))
 	float AimCameraDistance = 180.0f;
@@ -254,6 +258,7 @@ private:
 
 	void PressAbility(EVaesenAbilityInput Input);
 	void ReleaseAbility(EVaesenAbilityInput Input);
+	void ToggleCrouch();
 	void PressTriggerAttack();
 	void ReleaseTriggerAttack();
 

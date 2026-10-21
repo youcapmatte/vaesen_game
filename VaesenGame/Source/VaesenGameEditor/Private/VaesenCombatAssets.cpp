@@ -665,6 +665,7 @@ namespace VaesenCombatAssets
 		UInputAction* Throw = GetOrCreateAction(TEXT("IA_Throw"));
 		UInputAction* Holster = GetOrCreateAction(TEXT("IA_Holster"));
 		UInputAction* Swap = GetOrCreateAction(TEXT("IA_SwapWeapon"));
+		UInputAction* Crouch = GetOrCreateAction(TEXT("IA_Crouch"));
 
 		bool bChanged = false;
 		bChanged |= MapOnce(Mappings, HeavyModifier, EKeys::LeftShift);
@@ -698,6 +699,8 @@ namespace VaesenCombatAssets
 			Mapping.Triggers.Add(Hold);
 		});
 		bChanged |= MapOnce(Mappings, Swap, EKeys::Q);
+		bChanged |= MapOnce(Mappings, Crouch, EKeys::C);
+		bChanged |= MapOnce(Mappings, Crouch, EKeys::Gamepad_FaceButton_Right);
 		if (bChanged)
 		{
 			Save(Mappings);
@@ -709,6 +712,7 @@ namespace VaesenCombatAssets
 			{ TEXT("AttackAction"), Attack }, { TEXT("HeavyAttackAction"), Heavy }, { TEXT("TriggerAttackAction"), Trigger },
 			{ TEXT("AimOrBlockAction"), AimBlock }, { TEXT("ReloadAction"), Reload }, { TEXT("ThrowAction"), Throw },
 			{ TEXT("HolsterAction"), Holster }, { TEXT("SwapWeaponAction"), Swap },
+			{ TEXT("CrouchAction"), Crouch },
 		};
 		for (const TPair<const TCHAR*, UInputAction*>& Property : Properties)
 		{

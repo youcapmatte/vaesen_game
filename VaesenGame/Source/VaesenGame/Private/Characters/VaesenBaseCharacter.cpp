@@ -29,6 +29,9 @@ AVaesenBaseCharacter::AVaesenBaseCharacter()
 	bUseControllerRotationRoll = false;
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 	GetCharacterMovement()->RotationRate = FRotator(0.f, 500.f, 0.f);
+	// Crouching (C): the movement component shrinks the capsule and replicates it; the anim graphs crouch.
+	GetCharacterMovement()->GetNavAgentPropertiesRef().bCanCrouch = true;
+	GetCharacterMovement()->MaxWalkSpeedCrouched = 150.f;
 
 	HeadMesh = CreateBodyPart(TEXT("HeadMesh"));
 	HandsMesh = CreateBodyPart(TEXT("HandsMesh"));

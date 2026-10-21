@@ -28,6 +28,8 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	Speed = Velocity.Size2D();
 	Direction = Speed > 1.0f ? UKismetAnimationLibrary::CalculateDirection(Velocity, Character->GetActorRotation()) : 0.0f;
 	bStrafing = !Character->GetCharacterMovement()->bOrientRotationToMovement;
+	bCrouching = Character->bIsCrouched;
+	bFalling = Character->GetCharacterMovement()->IsFalling();
 
 	const UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Character);
 	const auto HasTag = [ASC](const FGameplayTag& Tag) { return ASC && ASC->HasMatchingGameplayTag(Tag); };
@@ -54,8 +56,11 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 
 	// Off hand on the fore-grip of two-handed weapons.
 	FTransform LeftHand;
-	LeftHandIKAlpha = bTwoHanded && WeaponActor && WeaponActor->GetSocketTransform(TEXT("LeftHandIK"), LeftHand) && !bReloading ? 1.0f : 0.0f;
+	// Not while the hands are busy with something else (reloading, drawing or sheathing).
+	const bool bHandsFree = !bReloading && !HasTag(VaesenTags::State_SwitchingWeapon);
+	LeftHandIKAlpha = bTwoHanded && WeaponActor && WeaponActor->GetSocketTransform(TEXT("LeftHandIK"), LeftHand) && bHandsFree ? 1.0f : 0.0f;
 	LeftHandIKTransform = LeftHand;
+	LeftHandIKLocation = LeftHand.GetLocation();
 
 	// Drawing or sheathing: the hand reaches for the actual grip of the weapon in its sheath.
 	SheathHandIKAlpha = FMath::Clamp(GetCurveValue(HandIKSheathCurve), 0.0f, 1.0f);
@@ -63,31 +68,30 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	{
 		if (!SheathTarget.IsValid())
 		{
-			// The weapon not in the hand of the set being drawn or sheathed: whichever is the nearest to the hand.
-			const FVector Hand = Character->GetMesh()->GetSocketLocation(TEXT("hand_r"));
-			float Best = TNumericLimits<float>::Max();
-			for (const FVaesenEquippedItem& Entry : Equipment->GetEquippedItems())
+			// The weapon being drawn or sheathed. Its origin is its grip; remember where that is relative to the body
+			// when the reach begins: at the grab the weapon moves to the hand, and the hand must keep reaching for
+			// where it was, not chase it.
+			if (AVaesenWeaponActor* Found = Equipment->GetSwitchingWeaponActor())
 			{
-				const UVaesenWeaponItem* Each = Cast<UVaesenWeaponItem>(Entry.Item);
-				AVaesenWeaponActor* Actor = Each ? Each->GetWeaponActor() : nullptr;
-				const float Distance = Actor ? FVector::DistSquared(Actor->GetActorLocation(), Hand) : Best;
-				if (Distance < Best)
-				{
-					Best = Distance;
-					SheathTarget = Actor;
-				}
+				SheathTarget = Found;
+				SheathTargetInComponent = Found->GetSheathedTransform().GetRelativeTransform(Character->GetMesh()->GetComponentTransform());
+				bSheathIKLeftHand = Found->GetWeaponItem() && Found->GetWeaponItem()->IsHeldInOffHand();
 			}
 		}
-		if (const AVaesenWeaponActor* Target = SheathTarget.Get())
+		if (SheathTarget.IsValid())
 		{
-			// The actor's origin is the weapon's grip.
-			SheathHandIKTransform = Target->GetActorTransform();
-			bSheathIKLeftHand = Target->GetWeaponItem() && Target->GetWeaponItem()->IsHeldInOffHand();
+			SheathHandIKTransform = SheathTargetInComponent * Character->GetMesh()->GetComponentTransform();
+			SheathHandIKLocation = SheathHandIKTransform.GetLocation();
+		}
+		else
+		{
+			SheathHandIKAlpha = 0.0f;
 		}
 	}
 	else
 	{
 		SheathTarget.Reset();
+		SheathHandIKAlpha = 0.0f;
 	}
 
 	TriggerPulse = FMath::FInterpTo(TriggerPulse, 0.0f, DeltaSeconds, 12.0f);

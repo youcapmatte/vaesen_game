@@ -54,6 +54,13 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
 	bool bStaggered = false;
 
+	UPROPERTY(BlueprintReadOnly, Category = "Locomotion")
+	bool bCrouching = false;
+
+	/** In the air (jumping, falling). */
+	UPROPERTY(BlueprintReadOnly, Category = "Locomotion")
+	bool bFalling = false;
+
 	/** Bows: 0 = slack, 1 = full draw. */
 	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
 	float BowDrawAlpha = 0.0f;
@@ -72,12 +79,19 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "IK")
 	float LeftHandIKAlpha = 0.0f;
 
+	/** LeftHandIKTransform's location (what a Two Bone IK node takes). */
+	UPROPERTY(BlueprintReadOnly, Category = "IK")
+	FVector LeftHandIKLocation = FVector::ZeroVector;
+
 	/** The drawing hand onto the sheathed weapon's grip (world space), weight from the HandIK_Sheath curve. */
 	UPROPERTY(BlueprintReadOnly, Category = "IK")
 	FTransform SheathHandIKTransform;
 
 	UPROPERTY(BlueprintReadOnly, Category = "IK")
 	float SheathHandIKAlpha = 0.0f;
+
+	UPROPERTY(BlueprintReadOnly, Category = "IK")
+	FVector SheathHandIKLocation = FVector::ZeroVector;
 
 	/** Sheath IK drives the left hand (an off-hand shield) instead of the right. */
 	UPROPERTY(BlueprintReadOnly, Category = "IK")
@@ -108,4 +122,7 @@ private:
 
 	/** Weapon whose sheath grip the drawing hand reaches for (the draw / sheath in progress). */
 	TWeakObjectPtr<class AVaesenWeaponActor> SheathTarget;
+
+	/** Where its grip was when the reach began, relative to the character (the weapon moves to the hand at the grab). */
+	FTransform SheathTargetInComponent;
 };
