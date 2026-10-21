@@ -9,6 +9,10 @@ using Vaesen.Framework.GameLift.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// The appearance presets the game offers ("Characters:Appearance"), exported from the game's DT_AppearancePresets.
+// Optional: without it the API uses its placeholder defaults (AppearanceOptions).
+builder.Configuration.AddJsonFile("appearance-presets.json", optional: true, reloadOnChange: false);
+
 builder.Services.AddControllers()
     .AddNewtonsoftJson()
     .AddApplicationPart(typeof(Vaesen.Framework.Common.Api.AccountController).Assembly)

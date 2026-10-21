@@ -1,5 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Vaesen.Framework.Common.Models;
+using Vaesen.Framework.Common.Services;
+using Vaesen.Framework.Core.Api;
 using Vaesen.Framework.Core.Models;
 using Vaesen.Framework.Core.Security;
 using Vaesen.Framework.GameLift.Models;
@@ -16,11 +19,18 @@ namespace Vaesen.Framework.GameLift.Api;
 public sealed class GameServerController : ControllerBase
 {
     private readonly WorldSessionService _sessions;
+    private readonly ICharacterService _characters;
 
-    public GameServerController(WorldSessionService sessions)
+    public GameServerController(WorldSessionService sessions, ICharacterService characters)
     {
         _sessions = sessions;
+        _characters = characters;
     }
+
+    /// <summary>A character joining the server's world: what the server needs to spawn it (its appearance).</summary>
+    [HttpGet("characters/{characterId}")]
+    public async Task<ActionResult<ResultBase<Character>>> GetCharacter([FromRoute] string characterId, CancellationToken cancellationToken) =>
+        this.ToActionResult(await _characters.GetAsync(characterId, cancellationToken).ConfigureAwait(false));
 
     /// <summary>
     /// A character left the server's world (logged out or lost the connection): records when, so Play can bring it

@@ -11,6 +11,8 @@ class USpringArmComponent;
 class UVaesenInteractorComponent;
 class UVaesenInventoryComponent;
 class UVaesenQuickSlotComponent;
+class UVaesenAppearanceComponent;
+struct FVaesenAppearance;
 struct FInputActionValue;
 
 /**
@@ -44,6 +46,15 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Camera")
 	bool IsFirstPerson() const { return bFirstPerson; }
 
+	/**
+	 * Server: gives the character its player's character look (the player state's, loaded from the API on join). It
+	 * replicates; every client shows it as a MetaHuman driven by the character's own (hidden) mannequin.
+	 */
+	void ApplyCharacterAppearance();
+
+	/** A generated look for a character that has none (made before the creator, or editor play): same seed, same look. */
+	static FVaesenAppearance MakeFallbackAppearance(uint32 Seed);
+
 	/** Player setting: how much the first-person camera moves (bob, sway, breathing, landing), 0..1. Saved per user. */
 	UFUNCTION(BlueprintCallable, Category = "Camera")
 	static void SetCameraMotionScale(float Scale);
@@ -62,6 +73,7 @@ public:
 
 protected:
 	virtual void BeginPlay() override;
+	virtual void PossessedBy(AController* NewController) override;
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 	virtual void Landed(const FHitResult& Hit) override;
 
@@ -78,6 +90,10 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera")
 	TObjectPtr<UCameraComponent> FollowCamera;
+
+	/** The character's look (its MetaHuman). */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Appearance")
+	TObjectPtr<UVaesenAppearanceComponent> Appearance;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Interaction")
 	TObjectPtr<UVaesenInteractorComponent> Interactor;
@@ -201,4 +217,12 @@ private:
 	float LandingOffset = 0.0f;
 	float LastFallSpeed = 0.0f;
 	FVector MotionOffset = FVector::ZeroVector;
+
+private:
+	/** The MetaHuman showing this character; the mannequin parts stay, hidden, and drive it. */
+	TWeakObjectPtr<AActor> MetaHuman;
+
+	void HandleMetaHumanReady(AActor* InMetaHuman);
+	/** First person: the owner's camera doesn't draw the MetaHuman's head and its grooms (they keep their shadow). */
+	void ApplyMetaHumanHeadView();
 };

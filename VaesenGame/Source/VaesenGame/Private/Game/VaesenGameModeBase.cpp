@@ -92,9 +92,35 @@ FString AVaesenGameModeBase::InitNewPlayer(APlayerController* NewPlayerControlle
 	{
 		PlayerState->SetPlayerSessionId(UGameplayStatics::ParseOption(Options, PlayerSessionIdOption));
 		PlayerState->SetCharacterId(UGameplayStatics::ParseOption(Options, CharacterIdOption));
+		LoadCharacterAppearance(PlayerState);
 	}
 
 	return Error;
+}
+
+void AVaesenGameModeBase::LoadCharacterAppearance(AVaesenPlayerState* PlayerState)
+{
+	UVaesenServerApiSubsystem* const ServerApi = GetGameInstance() ? GetGameInstance()->GetSubsystem<UVaesenServerApiSubsystem>() : nullptr;
+	const FString CharacterId = PlayerState->GetCharacterId();
+	if (!ServerApi || CharacterId.IsEmpty())
+	{
+		return;
+	}
+	// The look comes from the API record, never from the client. Characters made before the creator have none and get
+	// a generated look (the same one every time); so does a character the API can't be asked about.
+	ServerApi->GetCharacterAppearance(CharacterId, [WeakPlayerState = TWeakObjectPtr<AVaesenPlayerState>(PlayerState), CharacterId](const FVaesenAppearance& Loaded)
+	{
+		AVaesenPlayerState* const State = WeakPlayerState.Get();
+		if (!State)
+		{
+			return;
+		}
+		State->SetCharacterAppearance(Loaded.IsSet() ? Loaded : AVaesenPlayerCharacter::MakeFallbackAppearance(GetTypeHash(CharacterId)));
+		if (AVaesenPlayerCharacter* const Character = State->GetPawn<AVaesenPlayerCharacter>())
+		{
+			Character->ApplyCharacterAppearance();
+		}
+	});
 }
 
 void AVaesenGameModeBase::Logout(AController* Exiting)

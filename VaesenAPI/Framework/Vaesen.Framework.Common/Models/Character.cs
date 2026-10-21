@@ -32,6 +32,10 @@ public sealed class Character : BaseCore
     [JsonProperty("healthPoints")]
     public int HealthPoints { get; set; } = DefaultHealthPoints;
 
+    /// <summary>How the character looks (the character creator's result). Null for characters made before it existed.</summary>
+    [JsonProperty("appearance", NullValueHandling = NullValueHandling.Ignore)]
+    public CharacterAppearance? Appearance { get; set; }
+
     /// <summary>The world instance the character is in or was in last; decides where Play puts it. Null before it has played.</summary>
     [JsonProperty("lastLocation", NullValueHandling = NullValueHandling.Ignore)]
     public CharacterLocation? LastLocation { get; set; }

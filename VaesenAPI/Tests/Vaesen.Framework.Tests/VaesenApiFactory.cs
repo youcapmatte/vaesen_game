@@ -10,6 +10,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
+using Vaesen.Framework.Common.Models;
 using Vaesen.Framework.Common.Repositorys;
 using Vaesen.Framework.Core.Models;
 using Vaesen.Framework.GameLift.Models;
@@ -57,6 +58,9 @@ public sealed class VaesenApiFactory(bool useTestAuth = true) : WebApplicationFa
             services.AddSingleton<ICharacterStore>(database);
             services.AddSingleton<IGuildStore>(database);
             services.RemoveAll<IHostedService>();
+
+            // The API's own placeholder appearance presets, whatever the game exported to appearance-presets.json.
+            services.PostConfigure<CharacterOptions>(options => options.Appearance = new AppearanceOptions());
 
             if (!useTestAuth)
             {

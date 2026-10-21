@@ -69,6 +69,10 @@ public:
 	/** Creates a character in the guild, made by the signed-in account (POST /api/guilds/{guildId}/characters). */
 	void CreateCharacter(const FString& GuildId, const FString& FirstName, const FString& LastName, const FString& Class, FCharacterCallback OnComplete);
 
+	/** The same, with the character creator's appearance (sent when set; the API checks it against the allowed presets). */
+	void CreateCharacter(const FString& GuildId, const FString& FirstName, const FString& LastName, const FString& Class,
+		const FVaesenAppearance& Appearance, FCharacterCallback OnComplete);
+
 	/**
 	 * Plays a character: assigns it to the signed-in account in its guild, then gets the account's play token for it
 	 * (development login for now). On success the session holds the character and token.

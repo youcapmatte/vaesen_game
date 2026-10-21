@@ -39,6 +39,9 @@ protected:
 	float HeartbeatSeconds = 300.0f;
 
 private:
+	/** Asks the API for the joining player's character's look and puts it on its player state (and character). */
+	void LoadCharacterAppearance(class AVaesenPlayerState* PlayerState);
+
 	void SendHeartbeat();
 
 	FTimerHandle HeartbeatTimer;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Appearance/VaesenAppearance.h"
 #include "VaesenApiTypes.generated.h"
 
 /** Who plays one of a guild's characters right now. */
@@ -71,6 +72,14 @@ struct FVaesenCharacter
 
 	UPROPERTY(BlueprintReadOnly, Category = "Vaesen|Character")
 	int32 HealthPoints = 0;
+
+	/**
+	 * How the character looks (the API's "appearance"); not set (AppearanceVersion 0) for characters made before the
+	 * character creator. Named differently from the JSON field on purpose: it's read with FVaesenAppearance::FromJson,
+	 * since the generic JSON reader can't map the API's slider map onto the replicable slider list.
+	 */
+	UPROPERTY(BlueprintReadOnly, Category = "Vaesen|Character")
+	FVaesenAppearance CharacterAppearance;
 };
 
 /** One of a guild's characters and who is playing it (GET /api/guilds/{id}/roster). */

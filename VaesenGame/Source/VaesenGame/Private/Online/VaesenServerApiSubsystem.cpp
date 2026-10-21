@@ -42,6 +42,32 @@ void UVaesenServerApiSubsystem::SendHeartbeat(const TArray<FString>& CharacterId
 	Post(TEXT("/api/sessions/server/heartbeat"), Json);
 }
 
+void UVaesenServerApiSubsystem::GetCharacterAppearance(const FString& CharacterId, TFunction<void(const FVaesenAppearance& Appearance)> OnComplete)
+{
+	const FString Path = FString::Printf(TEXT("/api/sessions/server/characters/%s"), *FGenericPlatformHttp::UrlEncode(CharacterId));
+	const auto Request = FHttpModule::Get().CreateRequest();
+	Request->SetURL(UVaesenSettings::Get()->ApiBaseUrl + Path);
+	Request->SetVerb(TEXT("GET"));
+	Request->OnProcessRequestComplete().BindLambda([Path, OnComplete = MoveTemp(OnComplete)](FHttpRequestPtr, FHttpResponsePtr Response, bool bConnected)
+	{
+		FVaesenAppearance Appearance;
+		TSharedPtr<FJsonObject> Envelope;
+		const TSharedPtr<FJsonObject>* Character = nullptr;
+		const TSharedPtr<FJsonObject>* Look = nullptr;
+		if (!bConnected || !Response.IsValid() || !EHttpResponseCodes::IsOk(Response->GetResponseCode()))
+		{
+			UE_LOG(LogVaesenServerApi, Warning, TEXT("GET %s: %s"), *Path, Response.IsValid() ? *Response->GetContentAsString() : TEXT("couldn't reach the API."));
+		}
+		else if (FJsonSerializer::Deserialize(TJsonReaderFactory<>::Create(Response->GetContentAsString()), Envelope) && Envelope.IsValid()
+			&& Envelope->TryGetObjectField(TEXT("result"), Character) && (*Character)->TryGetObjectField(TEXT("appearance"), Look))
+		{
+			Appearance = FVaesenAppearance::FromJson(*Look);
+		}
+		OnComplete(Appearance);
+	});
+	Request->ProcessRequest();
+}
+
 void UVaesenServerApiSubsystem::Post(const FString& Path, const FString& Body)
 {
 	// No machine credentials yet: the API leaves these endpoints open in Development.

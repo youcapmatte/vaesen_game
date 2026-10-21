@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerState.h"
+#include "Appearance/VaesenAppearance.h"
 #include "VaesenPlayerState.generated.h"
 
 UCLASS()
@@ -18,6 +19,10 @@ public:
 	const FString& GetCharacterId() const { return CharacterId; }
 	void SetCharacterId(const FString& InCharacterId) { CharacterId = InCharacterId; }
 
+	/** The character's look, loaded from the API when the player joined (unset until then). Server-only. */
+	const FVaesenAppearance& GetCharacterAppearance() const { return CharacterAppearance; }
+	void SetCharacterAppearance(const FVaesenAppearance& InAppearance) { CharacterAppearance = InAppearance; }
+
 protected:
 	/** Carry the player session across seamless travel within the same server. */
 	virtual void CopyProperties(APlayerState* PlayerState) override;
@@ -25,4 +30,5 @@ protected:
 private:
 	FString PlayerSessionId;
 	FString CharacterId;
+	FVaesenAppearance CharacterAppearance;
 };

@@ -46,6 +46,29 @@ namespace VaesenApiEnvelope
 		return Result;
 	}
 
+	/** What the generic JSON reader can't fill: nothing for most types. */
+	template <typename TStruct>
+	void ReadExtras(TStruct& Out, const TSharedPtr<FJsonObject>& Json) {}
+
+	/** A character's appearance (its slider map doesn't map onto the replicable slider list by itself). */
+	void ReadExtras(FVaesenCharacter& Out, const TSharedPtr<FJsonObject>& Json)
+	{
+		const TSharedPtr<FJsonObject>* Appearance = nullptr;
+		if (Json.IsValid() && Json->TryGetObjectField(TEXT("appearance"), Appearance))
+		{
+			Out.CharacterAppearance = FVaesenAppearance::FromJson(*Appearance);
+		}
+	}
+
+	void ReadExtras(FVaesenRosterEntry& Out, const TSharedPtr<FJsonObject>& Json)
+	{
+		const TSharedPtr<FJsonObject>* Character = nullptr;
+		if (Json.IsValid() && Json->TryGetObjectField(TEXT("character"), Character))
+		{
+			ReadExtras(Out.Character, *Character);
+		}
+	}
+
 	/** Reads the envelope's "result" object into a USTRUCT. */
 	template <typename TStruct>
 	bool ReadObject(const FString& Body, TStruct& Out, FString& OutError)
@@ -55,6 +78,10 @@ namespace VaesenApiEnvelope
 		if (OutError.IsEmpty() && (!Result->TryGetObject(Object) || !FJsonObjectConverter::JsonObjectToUStruct((*Object).ToSharedRef(), &Out)))
 		{
 			OutError = TEXT("Unexpected response from the API.");
+		}
+		if (OutError.IsEmpty())
+		{
+			ReadExtras(Out, *Object);
 		}
 		return OutError.IsEmpty();
 	}
@@ -68,6 +95,13 @@ namespace VaesenApiEnvelope
 		if (OutError.IsEmpty() && (!Result->TryGetArray(Items) || !FJsonObjectConverter::JsonArrayToUStruct(*Items, &Out)))
 		{
 			OutError = TEXT("Unexpected response from the API.");
+		}
+		if (OutError.IsEmpty())
+		{
+			for (int32 I = 0; I < Out.Num() && I < Items->Num(); ++I)
+			{
+				ReadExtras(Out[I], (*Items)[I]->AsObject());
+			}
 		}
 		return OutError.IsEmpty();
 	}
@@ -367,12 +401,22 @@ void UVaesenApiSubsystem::IsCharacterNameTaken(const FString& Name, FNameTakenCa
 
 void UVaesenApiSubsystem::CreateCharacter(const FString& GuildId, const FString& FirstName, const FString& LastName, const FString& Class, FCharacterCallback OnComplete)
 {
+	CreateCharacter(GuildId, FirstName, LastName, Class, FVaesenAppearance(), MoveTemp(OnComplete));
+}
+
+void UVaesenApiSubsystem::CreateCharacter(const FString& GuildId, const FString& FirstName, const FString& LastName, const FString& Class,
+	const FVaesenAppearance& Appearance, FCharacterCallback OnComplete)
+{
 	const TSharedRef<FJsonObject> Body = MakeShared<FJsonObject>();
 	Body->SetStringField(TEXT("firstName"), FirstName);
 	Body->SetStringField(TEXT("lastName"), LastName);
 	if (!Class.IsEmpty())
 	{
 		Body->SetStringField(TEXT("class"), Class);
+	}
+	if (Appearance.IsSet())
+	{
+		Body->SetObjectField(TEXT("appearance"), Appearance.ToJson());
 	}
 	Body->SetStringField(TEXT("createdByAccountId"), GetSession()->GetAccount().Id);
 

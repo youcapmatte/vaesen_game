@@ -1,6 +1,10 @@
 #include "UI/CharacterSelect/VaesenCharacterSelectWidget.h"
 
+#include "CharacterCreator/VaesenCharacterCreatorScene.h"
+#include "CharacterCreator/VaesenCharacterCreatorWidget.h"
 #include "Components/Button.h"
+#include "Core/VaesenSettings.h"
+#include "EngineUtils.h"
 #include "Components/CircularThrobber.h"
 #include "Components/ComboBoxString.h"
 #include "Components/TextBlock.h"
@@ -113,6 +117,14 @@ void UVaesenCharacterSelectWidget::NativeConstruct()
 	if (UVaesenSessionSubsystem* Session = GetGameInstance()->GetSubsystem<UVaesenSessionSubsystem>())
 	{
 		PendingStatus = Session->ConsumeTravelError();
+	}
+
+	// The level's creator scene, if any, is the view: it shows the selected character and hosts the creator.
+	TActorIterator<AVaesenCharacterCreatorScene> SceneIt(GetWorld());
+	CreatorScene = SceneIt ? *SceneIt : nullptr;
+	if (CreatorScene)
+	{
+		CreatorScene->BecomeView(GetOwningPlayer());
 	}
 
 	PendingLoads = 0;
@@ -334,6 +346,7 @@ void UVaesenCharacterSelectWidget::ShowRoster(const TArray<FVaesenRosterEntry>& 
 		}
 	}
 
+	PreviewSelected();
 	UpdateButtons();
 }
 
@@ -363,6 +376,7 @@ void UVaesenCharacterSelectWidget::HandleCharacterSelected(FString SelectedItem,
 	{
 		VaesenCharacterSelect::Remember(VaesenCharacterSelect::LastCharacterKey, Character->Id);
 	}
+	PreviewSelected();
 	UpdateButtons();
 }
 
@@ -407,6 +421,14 @@ void UVaesenCharacterSelectWidget::HandleGuildCreated(const FVaesenGuild& Guild)
 
 void UVaesenCharacterSelectWidget::HandleCreateCharacterClicked()
 {
+	if (CreatorScene)
+	{
+		if (!SelectedGuildId.IsEmpty() && bCharactersLoaded)
+		{
+			OpenCreator();
+		}
+		return;
+	}
 	if (!CreateCharacterDialog)
 	{
 		UE_LOG(LogVaesenApi, Warning, TEXT("%s has no CreateCharacterDialog."), *GetClass()->GetName());
@@ -425,6 +447,54 @@ void UVaesenCharacterSelectWidget::HandleCharacterCreated(const FVaesenCharacter
 	SetStatus(FText::Format(LOCTEXT("CharacterCreated", "{0} has joined the guild."), FText::FromString(Character.Name)));
 	VaesenCharacterSelect::Remember(VaesenCharacterSelect::LastCharacterKey, Character.Id);
 	LoadCharacters(Character.Id);
+}
+
+void UVaesenCharacterSelectWidget::PreviewSelected()
+{
+	if (CreatorScene && !CreatorWidget)
+	{
+		const FVaesenCharacter* const Character = GetSelectedCharacter();
+		CreatorScene->Preview(Character ? Character->CharacterAppearance : FVaesenAppearance());
+	}
+}
+
+void UVaesenCharacterSelectWidget::OpenCreator()
+{
+	APlayerController* const Player = GetOwningPlayer();
+	TSubclassOf<UVaesenCharacterCreatorWidget> WidgetClass = UVaesenSettings::Get()->CharacterCreatorWidget.LoadSynchronous();
+	if (!WidgetClass)
+	{
+		WidgetClass = UVaesenCharacterCreatorWidget::StaticClass();
+	}
+	CreatorWidget = CreateWidget<UVaesenCharacterCreatorWidget>(Player, WidgetClass);
+	if (!CreatorWidget)
+	{
+		return;
+	}
+	CreatorScene->Open(Player, TEXT("female"));
+	CreatorWidget->SetScene(CreatorScene);
+	CreatorWidget->SetGuild(SelectedGuildId);
+	CreatorWidget->OnFinished.AddUObject(this, &UVaesenCharacterSelectWidget::HandleCreatorFinished);
+	CreatorWidget->AddToViewport();
+	SetVisibility(ESlateVisibility::Collapsed);
+}
+
+void UVaesenCharacterSelectWidget::HandleCreatorFinished(bool bCreated, const FVaesenCharacter& Character)
+{
+	if (CreatorWidget)
+	{
+		CreatorWidget->RemoveFromParent();
+		CreatorWidget = nullptr;
+	}
+	SetVisibility(ESlateVisibility::Visible);
+	if (bCreated)
+	{
+		HandleCharacterCreated(Character);
+	}
+	else
+	{
+		PreviewSelected();
+	}
 }
 
 void UVaesenCharacterSelectWidget::HandleDialogClosed()

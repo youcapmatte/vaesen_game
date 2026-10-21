@@ -1,0 +1,87 @@
+{
+  "Characters": {
+    "Appearance": {
+      "PresetsBySex": {
+        "female": {
+          "Bodies": [
+            "body_f_spike"
+          ],
+          "Faces": [
+            "face_f_spike_a",
+            "face_f_spike_b"
+          ],
+          "HairStyles": [
+            "hair_f_bald",
+            "hair_f_l_straight",
+            "hair_f_s_lowponytail",
+            "hair_f_s_pulledback",
+            "hair_f_s_updo",
+            "hair_f_s_updobraids",
+            "hair_f_s_updobuns"
+          ],
+          "EyebrowStyles": [
+            "brow_f_m_dense",
+            "brow_f_m_full",
+            "brow_f_m_natural",
+            "brow_f_m_thin",
+            "brow_f_s_flatthin"
+          ],
+          "FacialHair": []
+        },
+        "male": {
+          "Bodies": [
+            "body_m_spike"
+          ],
+          "Faces": [
+            "face_m_spike_a",
+            "face_m_spike_b"
+          ],
+          "HairStyles": [
+            "hair_m_bald",
+            "hair_m_m_layered",
+            "hair_m_s_baldingstubble",
+            "hair_m_s_brushcut",
+            "hair_m_s_casual",
+            "hair_m_s_pulledback",
+            "hair_m_s_recedemessy",
+            "hair_m_s_sidesweptfringe",
+            "hair_m_s_slickback"
+          ],
+          "EyebrowStyles": [
+            "brow_m_m_dense",
+            "brow_m_m_full",
+            "brow_m_m_natural",
+            "brow_m_m_thin",
+            "brow_m_s_flatthin"
+          ],
+          "FacialHair": [
+            "facial_m_beard_l_full",
+            "facial_m_beard_m_muttonchops",
+            "facial_m_beard_s_full",
+            "facial_m_beard_s_stubble",
+            "facial_m_goatee_m_pointed",
+            "facial_m_mustache_l_handlebar",
+            "facial_m_mustache_m_curly",
+            "facial_m_mustache_m_gunslinger",
+            "facial_m_mustache_s_full",
+            "facial_m_mustache_s_horseshoe"
+          ]
+        }
+      },
+      "EyeColors": [
+        "eye_blue",
+        "eye_brown",
+        "eye_dark_brown",
+        "eye_green",
+        "eye_grey",
+        "eye_grey_blue",
+        "eye_hazel"
+      ],
+      "FaceSliders": [
+        "cheekboneHeight",
+        "jawWidth",
+        "noseWidth"
+      ]
+    }
+  }
+}

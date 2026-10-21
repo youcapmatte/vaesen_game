@@ -119,6 +119,10 @@ public sealed class CreateCharacterRequest
     [JsonProperty("healthPoints")]
     public int? HealthPoints { get; set; }
 
+    /// <summary>The character creator's result. Optional for now (the old dialog sends none); checked against the allowed presets.</summary>
+    [JsonProperty("appearance")]
+    public CharacterAppearance? Appearance { get; set; }
+
     /// <summary>The member creating it (stored as createdBy). Must be a member of the guild.</summary>
     [JsonProperty("createdByAccountId")]
     public string? CreatedByAccountId { get; set; }
