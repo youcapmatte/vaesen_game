@@ -112,13 +112,13 @@ Dummy protections: `BP_TrainingDummy` has none. `BP_TrainingDummy_Armored` has S
 
 ### 0.6 Automated tests
 
-Session Frontend > Automation, filter **`Vaesen.Combat`** (18 tests), or headless:
+Session Frontend > Automation, filter **`Vaesen.Combat`** (24 tests), or headless:
 
 ```
 UnrealEditor-Cmd.exe VaesenGame.uproject -ExecCmds="Automation RunTests Vaesen.Combat; Quit" -unattended -nullrhi
 ```
 
-All 18 passed when this plan was written.
+All 24 passed when this plan was written.
 
 | Test | Covers |
 | --- | --- |
@@ -140,6 +140,12 @@ All 18 passed when this plan was written.
 | `Flow.BoltActionNeedsCycle` | Fire → needs cycle → blocked → cycle → fire |
 | `Flow.BlockParryDurability` | Unblocked, blocked (70%, wear 7), from behind, unblockable, projectile vs sword, parry (no damage, no wear, attacker staggered, stagger wears off), block until broken (can't block, still throwable) |
 | `Flow.StaminaCostAndRegen` | Abilities granted. Regen up to max, paused while blocking. A punch costs its stamina; no stamina, no punch |
+| `Abilities.ReloadFireInterrupt` | Through the real abilities and inputs (AI-controlled character): H draws, dry fire, R without ammo, cylinder reload round by round, fire hits, fire interval, firing interrupts the reload, right mouse aims (not blocks), sheathing cancels a reload |
+| `Abilities.AutoCycle` | Magazine reload, fire, bolt worked by itself, no firing while cycling |
+| `Abilities.MeleeLightHeavyPunch` | Punch, sword light and heavy (damage, stamina, wear), no stamina or broken: no swing |
+| `Abilities.BlockAndParryInput` | Right mouse blocks; parry window then plain block; slower while blocking; stamina drains; release; attacking drops the block |
+| `Abilities.Throw` | Nothing to throw; stone aimed then thrown off the stack, hits, lands as a pickup; a drawn sword is unequipped and thrown |
+| `Abilities.BowDraw` | No arrows; early release lets down; full draw hits, uses an arrow, costs stamina, sticks and becomes a pickup |
 
 Functional tests placed in `L_CombatTest` aren't written yet: they need the final anim Blueprint to drive real swings and montages.
 
@@ -275,6 +281,8 @@ Functional tests placed in `L_CombatTest` aren't written yet: they need the fina
 | 3.16 | Each hit | Watch durability in the tooltip | −0.5 per hit (attack's Durability Cost Per Hit) | Now |
 | 3.17 | An attack with two damage types (iron blade: Slashing 10 + Iron 4, set on a copy) | Hit the armored dummy | Two lines: `Slashing 10 > 2`, `Iron 4 > 4` | Now |
 | 3.18 | A new tag `Damage.Fire` added in Project Settings, used on an attack | Hit | Dealt with no protection; no code change needed | Now |
+| 3.19 | Heavy club or warhammer swing, shield bash, rifle butt at the other player | Pushed away from the attacker (club heavy 350, warhammer heavy 400, axe heavy 250, shield bash 300, butt 200); half when blocked, none when parried | Now |
+| 3.20 | Equip or unequip a weapon with Equip / Unequip montages set | The montage plays (not when joining, or for NPC outfits) | Needs assets |
 
 ## 4. Block, parry, durability, shields
 
@@ -417,7 +425,11 @@ Fill `DA_WeaponSounds_Default` (every slot is listed, empty) with placeholder so
 | 10.4 | Impact table with sounds per type × surface | Sword on the dummy (Flesh), arrow into wood, bullet on stone with ricochet chance | Now with placeholders |
 | 10.5 | Effort and pain vocals on `BP_VaesenPlayerCharacter` | Heavy attack and throw grunt; pain when hit, not when blocked or parried | Now with placeholders |
 | 10.6 | Concurrency set | 40 casings bouncing don't stack sounds | Needs assets |
-| 10.7 | Slots not wired yet | Flyby, GearRattle, ArrowPull, DropLand, HammerCock (play them from montages with `AN_WeaponSound`; no code event triggers them yet) | Needs assets |
+| 10.7 | Flyby: stand within 3 m of the other player's line of fire (bullets and arrows) | Flyby plays once as it passes, not for the shooter | Now with placeholders |
+| 10.8 | Shoot an arrow into wood, then press E on it | Arrow pull (bow category's set) for the one who takes it | Now with placeholders |
+| 10.9 | Drop a weapon (or throw a stone) onto the floor | Drop/land sound once on first touch, on both clients (item's Land Sound, else the weapon's DropLand) | Now with placeholders |
+| 10.10 | Walk and run with a rifle slung and a pistol holstered | Gear rattle per stride, louder when running; none with nothing sheathed. With `AN_Footstep` in the locomotion it follows the footsteps | Now with placeholders |
+| 10.11 | HammerCock | From montages with `AN_WeaponSound` | Needs assets |
 
 ## 11. Empty-slot robustness
 
@@ -444,7 +456,7 @@ Each of these needs something not in the project yet:
 - **The anim Blueprint isn't reparented** to `VaesenAnimInstance` and has no upper-body slot or layered blend. Until it is: no IK, no aim offset, no trigger finger, and montages play full-body.
 - **Motion matching**: `LocomotionDatabase` per category is exposed but empty. The locomotion graph will read it when the motion matching setup comes.
 - **Socket placement** on the mannequin (`hand_r_weapon`, `Sheath_*`) is estimated. Weapons will sit oddly until adjusted in the Skeleton editor. The grab points (`ReferenceGrabPoint`) are zero, so the grip-distance warning (1.14) only becomes meaningful once they're set with the draw montages.
-- **Functional tests inside `L_CombatTest`** aren't written. Real swings and montages need the anim Blueprint first. The C++ flow tests cover the logic until then.
+- **The self-test's sword hit** is INFO, not a check, until there is an attack montage.
 - **Health and damage reactions**: there's no condition system yet. Player death only sets State.Dead and logs.
 
 ---
