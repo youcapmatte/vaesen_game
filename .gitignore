@@ -43,3 +43,11 @@ Thumbs.db
 
 # Per-machine script settings (GameLift Anywhere fleet, compute name, ...)
 Scripts/Config.local.bat
+
+# ---- Nexus Table ----
+NexusTable/**/bin/
+NexusTable/**/obj/
+NexusTable/**/node_modules/
+NexusTable/**/.next/
+NexusTable/**/.data/
+NexusTable/**/next-env.d.ts

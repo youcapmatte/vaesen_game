@@ -1,0 +1,93 @@
+using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Nexus.Table.Models;
+using Nexus.Table.Services;
+
+namespace Nexus.Table.Tests;
+
+/// <summary>The API in Development with LocalFile storage in a fresh folder and dice the test decides.</summary>
+public sealed class NexusApiFactory : WebApplicationFactory<Program>
+{
+    private readonly string _dataDirectory = Path.Combine(Path.GetTempPath(), "nexus-table-tests", Guid.NewGuid().ToString("N"));
+
+    public FixedDice Dice { get; } = new();
+
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
+    {
+        builder.UseEnvironment("Development");
+        builder.UseSetting("DataService:Provider", NexusServiceExtensions.LocalFileProvider);
+        builder.UseSetting("LocalData:Directory", _dataDirectory);
+        builder.ConfigureServices(services => services.Replace(ServiceDescriptor.Singleton<IDiceRoller>(Dice)));
+    }
+
+    /// <summary>A client signed in as a dev player ("mattias" is the host).</summary>
+    public async Task<HttpClient> ClientForAsync(string playerId)
+    {
+        var client = CreateClient();
+        var login = await client.PostAsJsonAsync("/api/dev/login", new { playerId });
+        var token = (await ReadAsync(login))["result"]!["accessToken"]!.ToString();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        return client;
+    }
+
+    public static async Task<JObject> ReadAsync(HttpResponseMessage response) => JObject.Parse(await response.Content.ReadAsStringAsync());
+
+    public static async Task<T> ResultAsync<T>(HttpResponseMessage response)
+    {
+        var body = await ReadAsync(response);
+        Assert.True(body["success"]!.Value<bool>(), body.ToString(Formatting.None));
+        return body["result"]!.ToObject<T>()!;
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+        if (disposing && Directory.Exists(_dataDirectory))
+        {
+            Directory.Delete(_dataDirectory, recursive: true);
+        }
+    }
+}
+
+/// <summary>Dice that come up as queued; 1 when nothing is queued.</summary>
+public sealed class FixedDice : IDiceRoller
+{
+    private readonly Queue<int> _faces = new();
+
+    public void Queue(params int[] faces)
+    {
+        foreach (var face in faces)
+        {
+            _faces.Enqueue(face);
+        }
+    }
+
+    public int D6() => _faces.TryDequeue(out var face) ? face : 1;
+}
+
+public static class Requests
+{
+    /// <summary>A young Academic that follows every creation rule.</summary>
+    public static CreateCharacterRequest Academic(string name = "Elin Gregorius") => new()
+    {
+        Name = name,
+        Archetype = "academic",
+        AgeGroup = "young",
+        Age = 24,
+        Attributes = new() { ["physique"] = 3, ["precision"] = 3, ["logic"] = 5, ["empathy"] = 4 },
+        Skills = new() { ["learning"] = 3, ["investigation"] = 2, ["observation"] = 2, ["vigilance"] = 2, ["inspiration"] = 1 },
+        Resources = 4,
+        Talent = "bookworm",
+        Motivation = "To read what no one else dares to",
+        Trauma = "Saw the reading room's shadows move",
+        DarkSecret = "Burned a rival's thesis",
+        Memento = "Dried red rose",
+        Equipment = ["Book collection", "Writing utensils", "Liquor"],
+    };
+}

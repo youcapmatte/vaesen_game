@@ -1,0 +1,1330 @@
+{
+  "attributes": [
+    {
+      "id": "physique",
+      "name": "Physique",
+      "description": "Bodily size, strength and stamina; how well you endure hardship and deal or take punishment."
+    },
+    {
+      "id": "precision",
+      "name": "Precision",
+      "description": "Coordination, steady hands and fine motor control."
+    },
+    {
+      "id": "logic",
+      "name": "Logic",
+      "description": "Reasoning, education and problem-solving; can also be used to face frightening situations."
+    },
+    {
+      "id": "empathy",
+      "name": "Empathy",
+      "description": "Understanding, charming, persuading or deceiving others; can also be used to face frightening situations."
+    }
+  ],
+  "skills": [
+    {
+      "id": "agility",
+      "name": "Agility",
+      "attribute": "physique",
+      "description": "Running, climbing, jumping, fleeing and dodging; successes can be shared with others doing the same action."
+    },
+    {
+      "id": "closeCombat",
+      "name": "Close Combat",
+      "attribute": "physique",
+      "description": "Fighting with melee weapons; extra successes add damage, swap initiative, inflict mental Conditions, shove or disarm."
+    },
+    {
+      "id": "force",
+      "name": "Force",
+      "attribute": "physique",
+      "description": "Raw strength, enduring pain and privation, crude repairs, wrestling and unarmed fighting; extra successes can grapple or add damage."
+    },
+    {
+      "id": "medicine",
+      "name": "Medicine",
+      "attribute": "precision",
+      "description": "Treating the hurt; a daily test heals three physical Conditions (three more per extra success) or saves a Broken character."
+    },
+    {
+      "id": "rangedCombat",
+      "name": "Ranged Combat",
+      "attribute": "precision",
+      "description": "Attacking with firearms, thrown weapons and explosives; extra successes add damage, swap initiative, stress, shove or disarm."
+    },
+    {
+      "id": "stealth",
+      "name": "Stealth",
+      "attribute": "precision",
+      "description": "Sneaking, hiding, picking locks and sleight of hand."
+    },
+    {
+      "id": "investigation",
+      "name": "Investigation",
+      "attribute": "logic",
+      "description": "Searching places, reading crime scenes and examining bodies to receive clues from the Gamemaster."
+    },
+    {
+      "id": "learning",
+      "name": "Learning",
+      "attribute": "logic",
+      "description": "Education and reasoning: recalling facts, translating languages, understanding devices, rituals or basic vaesen lore."
+    },
+    {
+      "id": "vigilance",
+      "name": "Vigilance",
+      "attribute": "logic",
+      "description": "Noticing threats, tracking and reading a watched situation; each extra success gives +1 to a related later test."
+    },
+    {
+      "id": "inspiration",
+      "name": "Inspiration",
+      "attribute": "empathy",
+      "description": "Swaying crowds, encouraging friends and art; a daily test heals three mental Conditions (three more per extra success)."
+    },
+    {
+      "id": "manipulation",
+      "name": "Manipulation",
+      "attribute": "empathy",
+      "description": "Lying, flirting, bribing, haggling and persuading individuals; extra successes in opposed tests inflict mental Conditions."
+    },
+    {
+      "id": "observation",
+      "name": "Observation",
+      "attribute": "empathy",
+      "description": "Reading what someone thinks, feels or intends; each extra success gives +1 to a test where that knowledge helps."
+    }
+  ],
+  "ageGroups": [
+    {
+      "id": "young",
+      "name": "Young",
+      "minAge": 17,
+      "maxAge": 25,
+      "attributePoints": 15,
+      "skillPoints": 10
+    },
+    {
+      "id": "middleAged",
+      "name": "Middle-aged",
+      "minAge": 26,
+      "maxAge": 50,
+      "attributePoints": 14,
+      "skillPoints": 12
+    },
+    {
+      "id": "old",
+      "name": "Old",
+      "minAge": 51,
+      "maxAge": null,
+      "attributePoints": 13,
+      "skillPoints": 14
+    }
+  ],
+  "creationLimits": {
+    "attributeMin": 2,
+    "attributeMax": 4,
+    "mainAttributeMax": 5,
+    "skillMax": 2,
+    "mainSkillMax": 3
+  },
+  "archetypes": [
+    {
+      "id": "academic",
+      "name": "Academic",
+      "summary": "A scholar who trusts books and reason to explain what others call superstition.",
+      "mainAttribute": "logic",
+      "mainSkill": "learning",
+      "talents": [
+        "bookworm",
+        "erudite",
+        "knowledgeIsReassuring"
+      ],
+      "resources": {
+        "min": 4,
+        "max": 6
+      },
+      "equipment": [
+        [
+          "Book collection",
+          "Map book"
+        ],
+        [
+          "Writing utensils"
+        ],
+        [
+          "Liquor",
+          "Slide rule"
+        ]
+      ],
+      "names": {
+        "first": [
+          "Gustaf",
+          "Ebba",
+          "Teodor",
+          "Hedvig",
+          "Conrad",
+          "Ingeborg"
+        ],
+        "last": [
+          "Rosenquist",
+          "Ahlgren",
+          "Wallerius"
+        ]
+      },
+      "motivations": [
+        "Writing the treatise that finally classifies the unseen",
+        "Restoring a reputation lost to a scholarly scandal",
+        "Deciphering a manuscript left by a vanished mentor"
+      ],
+      "traumas": [
+        "Read aloud a passage that made the library walls bleed",
+        "Spent a winter night lost in a fog that whispered equations",
+        "Found a colleague turned to bark and moss in the archive"
+      ],
+      "darkSecrets": [
+        "Bought rare texts from grave robbers",
+        "Signed a pact in ink you cannot remember mixing",
+        "Your doctoral thesis was written by someone else"
+      ],
+      "relationships": [
+        "You are a fascinating subject of study",
+        "I owe you for defending me before the faculty",
+        "You talk too much and think too little"
+      ]
+    },
+    {
+      "id": "doctor",
+      "name": "Doctor",
+      "summary": "A physician who has seen wounds no textbook can explain and swore to heal them anyway.",
+      "mainAttribute": "logic",
+      "mainSkill": "medicine",
+      "talents": [
+        "armyMedic",
+        "chiefPhysician",
+        "emergencyMedicine"
+      ],
+      "resources": {
+        "min": 4,
+        "max": 6
+      },
+      "equipment": [
+        [
+          "Doctor's bag with medical equipment"
+        ],
+        [
+          "Liquor",
+          "Fine wine"
+        ],
+        [
+          "Weak horse",
+          "Strong poison"
+        ]
+      ],
+      "names": {
+        "first": [
+          "Harald",
+          "Sigrid",
+          "Nils",
+          "Beata",
+          "Ludvig",
+          "Agnes"
+        ],
+        "last": [
+          "Lindqvist",
+          "Hammarsköld",
+          "Strand"
+        ]
+      },
+      "motivations": [
+        "Finding a cure for the sleeping sickness in my home parish",
+        "Proving the unseen leave marks on the flesh",
+        "Atoning for a patient I let die"
+      ],
+      "traumas": [
+        "Delivered a child that was not human",
+        "Watched a cholera ward empty in a single night of singing",
+        "Amputated a limb that kept moving afterwards"
+      ],
+      "darkSecrets": [
+        "Dependent on laudanum",
+        "Paid body snatchers for cadavers",
+        "Practised without a valid licence"
+      ],
+      "relationships": [
+        "You remind me of a patient I could not save",
+        "I keep a careful eye on your health",
+        "You never follow my advice"
+      ]
+    },
+    {
+      "id": "hunter",
+      "name": "Hunter",
+      "summary": "A tracker of the deep forest who knows that some prey hunts back.",
+      "mainAttribute": "precision",
+      "mainSkill": "rangedCombat",
+      "talents": [
+        "bloodhound",
+        "herbalist",
+        "marksman"
+      ],
+      "resources": {
+        "min": 2,
+        "max": 4
+      },
+      "equipment": [
+        [
+          "Rifle"
+        ],
+        [
+          "Hunting knife",
+          "Hunting dog"
+        ],
+        [
+          "Hunting trap",
+          "Hunting equipment"
+        ]
+      ],
+      "names": {
+        "first": [
+          "Ragnar",
+          "Tyra",
+          "Holger",
+          "Gunhild",
+          "Sten",
+          "Liv"
+        ],
+        "last": [
+          "Granlund",
+          "Björk",
+          "Hallström"
+        ]
+      },
+      "motivations": [
+        "Bringing down the beast that took my brother",
+        "Keeping the old forest paths safe for the villages",
+        "Earning a bounty large enough to buy my own land"
+      ],
+      "traumas": [
+        "Followed tracks that turned into human footprints",
+        "Shot something that wept like a child",
+        "Was dragged into a bog and left there for a night"
+      ],
+      "darkSecrets": [
+        "Poached on a nobleman's estate for years",
+        "Killed a man and blamed it on a wolf",
+        "Feed something in the woods so it spares your cabin"
+      ],
+      "relationships": [
+        "You would not last a night in the forest",
+        "I trust you to watch my back",
+        "You scare the game away"
+      ]
+    },
+    {
+      "id": "occultist",
+      "name": "Occultist",
+      "summary": "A seeker of hidden arts who senses that their own nature is not wholly human.",
+      "mainAttribute": "precision",
+      "mainSkill": "stealth",
+      "talents": [
+        "conjuringTricks",
+        "medium",
+        "strikeFear"
+      ],
+      "resources": {
+        "min": 1,
+        "max": 4
+      },
+      "equipment": [
+        [
+          "Crystal ball"
+        ],
+        [
+          "Powdered stag's horn",
+          "Tinder box"
+        ],
+        [
+          "Dagger",
+          "Cooking pot"
+        ]
+      ],
+      "names": {
+        "first": [
+          "Viggo",
+          "Saga",
+          "Isidor",
+          "Ylva",
+          "Emanuel",
+          "Ottilia"
+        ],
+        "last": [
+          "Dahlin",
+          "Svartling",
+          "Ekelund"
+        ]
+      },
+      "motivations": [
+        "Mastering a power I only half understand",
+        "Finding the coven that cast me out",
+        "Opening a door between worlds, carefully"
+      ],
+      "traumas": [
+        "Saw your own face on a corpse in a dream that came true",
+        "A spirit refused to leave after a seance",
+        "Burned your hands on a sigil that drew itself"
+      ],
+      "darkSecrets": [
+        "You were left by the trolls in another child's cradle",
+        "You sold a fake seance that drove a widow mad",
+        "Something speaks through you when you sleep"
+      ],
+      "relationships": [
+        "I have seen your death in the cards",
+        "You are the only one who does not fear me",
+        "You mock what you do not understand"
+      ]
+    },
+    {
+      "id": "officer",
+      "name": "Officer",
+      "summary": "A soldier of rank who came home from war with honor and nightmares in equal measure.",
+      "mainAttribute": "precision",
+      "mainSkill": "rangedCombat",
+      "talents": [
+        "battleHardened",
+        "gentleman",
+        "tactician"
+      ],
+      "resources": {
+        "min": 3,
+        "max": 7
+      },
+      "equipment": [
+        [
+          "Rifle",
+          "Pistol"
+        ],
+        [
+          "Compass",
+          "Bayonet"
+        ],
+        [
+          "Map book",
+          "Saber"
+        ]
+      ],
+      "names": {
+        "first": [
+          "Carl",
+          "Märta",
+          "Axel",
+          "Ulla",
+          "Fredrik",
+          "Charlotta"
+        ],
+        "last": [
+          "Silfverhjelm",
+          "Adlercreutz",
+          "Stålberg"
+        ]
+      },
+      "motivations": [
+        "Upholding the oath I gave the Crown",
+        "Protecting the men who still follow me",
+        "Finding a war worth fighting"
+      ],
+      "traumas": [
+        "Led a patrol into a mist from which only you returned",
+        "Saw fallen soldiers rise and march home",
+        "Was buried alive under a collapsed redoubt"
+      ],
+      "darkSecrets": [
+        "Deserted your post during a battle",
+        "Ordered the burning of an innocent village",
+        "Owe gambling debts to a dangerous man"
+      ],
+      "relationships": [
+        "You need discipline",
+        "You saved my life once and I never thanked you",
+        "I would follow you into any battle"
+      ]
+    },
+    {
+      "id": "priest",
+      "name": "Priest",
+      "summary": "A servant of the Church who has learned that the old devils are real.",
+      "mainAttribute": "empathy",
+      "mainSkill": "observation",
+      "talents": [
+        "absolution",
+        "blessing",
+        "confessor"
+      ],
+      "resources": {
+        "min": 4,
+        "max": 6
+      },
+      "equipment": [
+        [
+          "Musical instrument",
+          "Fine wines"
+        ],
+        [
+          "Writing utensils"
+        ],
+        [
+          "Holy water",
+          "Old bible"
+        ]
+      ],
+      "names": {
+        "first": [
+          "Anselm",
+          "Elisabet",
+          "Petrus",
+          "Kerstin",
+          "Mattias",
+          "Hanna"
+        ],
+        "last": [
+          "Ödmark",
+          "Lagerlund",
+          "Hellström"
+        ]
+      },
+      "motivations": [
+        "Bringing the light of God to the darkest parishes",
+        "Proving faith is stronger than fear",
+        "Earning forgiveness for my former doubts"
+      ],
+      "traumas": [
+        "Heard the church bells ring at midnight with no ringer",
+        "Performed an exorcism that failed",
+        "Buried a whole family who died the same night"
+      ],
+      "darkSecrets": [
+        "You no longer truly believe",
+        "Fathered a child in secret",
+        "Keep a confession you should have taken to the authorities"
+      ],
+      "relationships": [
+        "I pray for your soul every night",
+        "You confide in me more than you should",
+        "Your sins are written on your face"
+      ]
+    },
+    {
+      "id": "privateDetective",
+      "name": "Private Detective",
+      "summary": "An investigator for hire who follows clues wherever they lead, even into the unseen.",
+      "mainAttribute": "logic",
+      "mainSkill": "investigation",
+      "talents": [
+        "eagleEye",
+        "elementary",
+        "focused"
+      ],
+      "resources": {
+        "min": 2,
+        "max": 5
+      },
+      "equipment": [
+        [
+          "Magnifying glass",
+          "Lockpicks"
+        ],
+        [
+          "Revolver"
+        ],
+        [
+          "Knuckle duster",
+          "Binoculars"
+        ]
+      ],
+      "names": {
+        "first": [
+          "Birger",
+          "Lovisa",
+          "Einar",
+          "Frida",
+          "Hjalmar",
+          "Matilda"
+        ],
+        "last": [
+          "Kjellberg",
+          "Sandell",
+          "Ohlsson"
+        ]
+      },
+      "motivations": [
+        "Solving the case the police buried",
+        "Clearing my father's name",
+        "Earning enough to leave the city for good"
+      ],
+      "traumas": [
+        "Found a murder victim who answered your questions",
+        "Was locked in a cellar with something that breathed",
+        "Followed a suspect into a house that was not there the next day"
+      ],
+      "darkSecrets": [
+        "Planted evidence to close a case",
+        "Blackmail a prominent family",
+        "Once worked for a criminal syndicate"
+      ],
+      "relationships": [
+        "I suspect you are hiding something",
+        "You are my best informant",
+        "We work well together, as long as you do as I say"
+      ]
+    },
+    {
+      "id": "servant",
+      "name": "Servant",
+      "summary": "A hardworking domestic who knows the secrets of the great houses and how to survive them.",
+      "mainAttribute": "physique",
+      "mainSkill": "force",
+      "talents": [
+        "loyal",
+        "robust",
+        "toughAsNails"
+      ],
+      "resources": {
+        "min": 2,
+        "max": 4
+      },
+      "equipment": [
+        [
+          "Revolver"
+        ],
+        [
+          "Hurricane lamp",
+          "Make-up"
+        ],
+        [
+          "Field kitchen",
+          "Simple bandages"
+        ]
+      ],
+      "names": {
+        "first": [
+          "Per",
+          "Greta",
+          "Lars",
+          "Britta",
+          "Olof",
+          "Karin"
+        ],
+        "last": [
+          "Berg",
+          "Holm",
+          "Lund"
+        ]
+      },
+      "motivations": [
+        "Keeping the household I serve safe",
+        "Saving enough to buy a farm of my own",
+        "Learning what really happened to the previous maid"
+      ],
+      "traumas": [
+        "Cleaned a room where the blood kept returning",
+        "Heard your master's voice from an empty bed",
+        "Was trapped in the cold larder by something with long fingers"
+      ],
+      "darkSecrets": [
+        "Stole silver from your employers",
+        "Know who poisoned the old count and said nothing",
+        "Were born out of wedlock to a noble"
+      ],
+      "relationships": [
+        "I will take care of you whether you like it or not",
+        "You treat me as an equal and I am grateful",
+        "You expect me to clean up after you"
+      ]
+    },
+    {
+      "id": "vagabond",
+      "name": "Vagabond",
+      "summary": "A rootless wanderer of the roads who knows the signs, the people and the dangers of every parish.",
+      "mainAttribute": "physique",
+      "mainSkill": "manipulation",
+      "talents": [
+        "hoboTricks",
+        "suspicious",
+        "wellTraveled"
+      ],
+      "resources": {
+        "min": 1,
+        "max": 3
+      },
+      "equipment": [
+        [
+          "Walking stick"
+        ],
+        [
+          "Knife",
+          "Crowbar"
+        ],
+        [
+          "Liquor",
+          "Pet dog"
+        ]
+      ],
+      "names": {
+        "first": [
+          "Jöns",
+          "Elvira",
+          "Knut",
+          "Stina",
+          "Tore",
+          "Hilma"
+        ],
+        "last": [
+          "Rännare",
+          "Vall",
+          "Lång"
+        ]
+      },
+      "motivations": [
+        "Finding a place where I belong",
+        "Warning the road folk of the dangers I have seen",
+        "Staying one step ahead of my past"
+      ],
+      "traumas": [
+        "Slept in a barn and woke up in a stranger's grave",
+        "Was chased for three nights by lights on the moor",
+        "Saw a fellow traveler taken beneath a bridge"
+      ],
+      "darkSecrets": [
+        "Wanted for a crime in another county",
+        "Robbed a dying man on the road",
+        "Made a bargain with the troll under the mountain"
+      ],
+      "relationships": [
+        "You are too soft for this life",
+        "I would share my last crust with you",
+        "You look down on my kind"
+      ]
+    },
+    {
+      "id": "writer",
+      "name": "Writer",
+      "summary": "A poet or journalist driven to capture the unseen world in words, whatever the price.",
+      "mainAttribute": "empathy",
+      "mainSkill": "inspiration",
+      "talents": [
+        "automaticWriting",
+        "journalist",
+        "wordsmith"
+      ],
+      "resources": {
+        "min": 2,
+        "max": 5
+      },
+      "equipment": [
+        [
+          "Writing utensils and paper"
+        ],
+        [
+          "Camera",
+          "Opera glasses"
+        ],
+        [
+          "Pet dog",
+          "Book collection"
+        ]
+      ],
+      "names": {
+        "first": [
+          "Anton",
+          "Ellen",
+          "Verner",
+          "Sofia",
+          "Gösta",
+          "Ida"
+        ],
+        "last": [
+          "Fröding",
+          "Wennerberg",
+          "Sjöblom"
+        ]
+      },
+      "motivations": [
+        "Writing the story that will make my name",
+        "Exposing the truth the newspapers will not print",
+        "Recapturing the voice that once wrote through me"
+      ],
+      "traumas": [
+        "Your words came true exactly as written",
+        "Saw your own obituary in tomorrow's paper",
+        "A reader's letter arrived written in your own blood"
+      ],
+      "darkSecrets": [
+        "Your best work was plagiarized",
+        "You wrote slander that ruined an innocent man",
+        "Your muse is a vaesen who demands payment"
+      ],
+      "relationships": [
+        "You will be a character in my next book",
+        "I admire you more than I let on",
+        "You are hiding a story I must uncover"
+      ]
+    }
+  ],
+  "talents": [
+    {
+      "id": "bookworm",
+      "name": "Bookworm",
+      "archetype": "academic",
+      "effect": "+2 to Learning when searching for clues in books or libraries."
+    },
+    {
+      "id": "erudite",
+      "name": "Erudite",
+      "archetype": "academic",
+      "effect": "A successful Learning test lets you declare facts about places and phenomena, subject to GM approval; not about vaesen."
+    },
+    {
+      "id": "knowledgeIsReassuring",
+      "name": "Knowledge is Reassuring",
+      "archetype": "academic",
+      "effect": "Conditions give no penalty to your Learning tests."
+    },
+    {
+      "id": "armyMedic",
+      "name": "Army Medic",
+      "archetype": "doctor",
+      "effect": "+2 to Fear tests caused by dead or mutilated human bodies."
+    },
+    {
+      "id": "chiefPhysician",
+      "name": "Chief Physician",
+      "archetype": "doctor",
+      "effect": "Your Medicine treatment of player characters heals four Conditions instead of three, including per extra success."
+    },
+    {
+      "id": "emergencyMedicine",
+      "name": "Emergency Medicine",
+      "archetype": "doctor",
+      "effect": "Mental Conditions give no penalty to your Medicine tests."
+    },
+    {
+      "id": "bloodhound",
+      "name": "Bloodhound",
+      "archetype": "hunter",
+      "effect": "+2 to Vigilance when tracking prey."
+    },
+    {
+      "id": "herbalist",
+      "name": "Herbalist",
+      "archetype": "hunter",
+      "effect": "You can use Medicine with wild herbs instead of medical supplies."
+    },
+    {
+      "id": "marksman",
+      "name": "Marksman",
+      "archetype": "hunter",
+      "effect": "+2 to Ranged Combat in your first turn after a successful ambush or attack."
+    },
+    {
+      "id": "conjuringTricks",
+      "name": "Conjuring Tricks",
+      "archetype": "occultist",
+      "effect": "Use Stealth in place of Manipulation when influencing people with conjuring tricks."
+    },
+    {
+      "id": "medium",
+      "name": "Medium",
+      "archetype": "occultist",
+      "effect": "Use Observation to hold seances that foretell futures or reach the dead; extra successes give more, failure brings false information, attack or a Condition."
+    },
+    {
+      "id": "strikeFear",
+      "name": "Strike Fear",
+      "archetype": "occultist",
+      "effect": "Slow action: one NPC in your zone faces Fear 1 (Logic or Empathy, +1 die per ally present); useless against vaesen."
+    },
+    {
+      "id": "battleHardened",
+      "name": "Battle-hardened",
+      "archetype": "officer",
+      "effect": "Draw two initiative cards and keep the one you prefer."
+    },
+    {
+      "id": "gentleman",
+      "name": "Gentleman",
+      "archetype": "officer",
+      "effect": "Mental Conditions give no penalty to your Manipulation tests."
+    },
+    {
+      "id": "tactician",
+      "name": "Tactician",
+      "archetype": "officer",
+      "effect": "Spend an extra Ranged Combat success in combat to order an ally; obeying gives them +2 on their next test; repeatable for different allies."
+    },
+    {
+      "id": "absolution",
+      "name": "Absolution",
+      "archetype": "priest",
+      "effect": "Player characters confessing to you as an activity heal three Conditions rather than two."
+    },
+    {
+      "id": "blessing",
+      "name": "Blessing",
+      "archetype": "priest",
+      "effect": "Once per session bless a character or object, granting a Blessed Advantage of +2 on one test; same target once per mystery."
+    },
+    {
+      "id": "confessor",
+      "name": "Confessor",
+      "archetype": "priest",
+      "effect": "Use Observation in place of Manipulation during confidential conversations."
+    },
+    {
+      "id": "eagleEye",
+      "name": "Eagle Eye",
+      "archetype": "privateDetective",
+      "effect": "+2 to Vigilance when interpreting a situation you are not part of."
+    },
+    {
+      "id": "elementary",
+      "name": "Elementary",
+      "archetype": "privateDetective",
+      "effect": "Once per session the GM explains how the clues you hold fit together."
+    },
+    {
+      "id": "focused",
+      "name": "Focused",
+      "archetype": "privateDetective",
+      "effect": "Conditions give no penalty to your Investigation tests."
+    },
+    {
+      "id": "loyal",
+      "name": "Loyal",
+      "archetype": "servant",
+      "effect": "+2 to Fear tests while near someone you have sworn to protect."
+    },
+    {
+      "id": "robust",
+      "name": "Robust",
+      "archetype": "servant",
+      "effect": "Once per session ignore physical Condition penalties on a single roll."
+    },
+    {
+      "id": "toughAsNails",
+      "name": "Tough as Nails",
+      "archetype": "servant",
+      "effect": "+2 to Force when fighting unarmed."
+    },
+    {
+      "id": "hoboTricks",
+      "name": "Hobo Tricks",
+      "archetype": "vagabond",
+      "effect": "+2 to Stealth when hiding yourself or an item from a wealthy person."
+    },
+    {
+      "id": "suspicious",
+      "name": "Suspicious",
+      "archetype": "vagabond",
+      "effect": "Mental Conditions give no penalty to your Vigilance tests."
+    },
+    {
+      "id": "wellTraveled",
+      "name": "Well-traveled",
+      "archetype": "vagabond",
+      "effect": "Once per mystery a Manipulation test creates a local NPC you once knew; on failure they are hostile or desperate for help."
+    },
+    {
+      "id": "automaticWriting",
+      "name": "Automatic Writing",
+      "archetype": "writer",
+      "effect": "Once per session channel spirits with Inspiration for clues; failure may bring a Condition, possession or a 1D6-hour personality shift."
+    },
+    {
+      "id": "journalist",
+      "name": "Journalist",
+      "archetype": "writer",
+      "effect": "Use Inspiration in place of Manipulation when charming or tricking someone for information."
+    },
+    {
+      "id": "wordsmith",
+      "name": "Wordsmith",
+      "archetype": "writer",
+      "effect": "Conditions give no penalty to your Inspiration tests."
+    },
+    {
+      "id": "battleExperience",
+      "name": "Battle Experience",
+      "archetype": null,
+      "effect": "+2 to Medicine when treating a physical critical injury."
+    },
+    {
+      "id": "brave",
+      "name": "Brave",
+      "archetype": null,
+      "effect": "+1 to every Fear test."
+    },
+    {
+      "id": "combatTrained",
+      "name": "Combat-trained",
+      "archetype": null,
+      "effect": "+2 to Close Combat and Force when parrying."
+    },
+    {
+      "id": "contacts",
+      "name": "Contacts",
+      "archetype": null,
+      "effect": "Once per session declare you already know a friendly NPC, unless the GM vetoes it."
+    },
+    {
+      "id": "coward",
+      "name": "Coward",
+      "archetype": null,
+      "effect": "Once per combat, when hit, a free Stealth test shifts the damage to another PC; failure adds 1 damage to you."
+    },
+    {
+      "id": "deceptive",
+      "name": "Deceptive",
+      "archetype": null,
+      "effect": "+2 to Manipulation when cheating or deceiving."
+    },
+    {
+      "id": "dedicated",
+      "name": "Dedicated",
+      "archetype": null,
+      "effect": "Once per session ignore mental Condition penalties on one skill test."
+    },
+    {
+      "id": "defensive",
+      "name": "Defensive",
+      "archetype": null,
+      "effect": "One extra action each turn, usable only to dodge or parry."
+    },
+    {
+      "id": "dualWeapons",
+      "name": "Dual Weapons",
+      "archetype": null,
+      "effect": "Fighting with two melee weapons, spend extra successes to hit another enemy in the zone and split bonus damage as you choose."
+    },
+    {
+      "id": "dynamiter",
+      "name": "Dynamiter",
+      "archetype": null,
+      "effect": "+2 to Ranged Combat with explosives."
+    },
+    {
+      "id": "empathetic",
+      "name": "Empathetic",
+      "archetype": null,
+      "effect": "Conditions give no penalty to your Observation tests."
+    },
+    {
+      "id": "escapeArtist",
+      "name": "Escape Artist",
+      "archetype": null,
+      "effect": "Conditions give no penalty when using Agility to flee."
+    },
+    {
+      "id": "famous",
+      "name": "Famous",
+      "archetype": null,
+      "effect": "+2 to Manipulation against someone who knows of you."
+    },
+    {
+      "id": "fleetFooted",
+      "name": "Fleet-footed",
+      "archetype": null,
+      "effect": "Move within your own zone in combat without spending an action."
+    },
+    {
+      "id": "holySymbol",
+      "name": "Holy Symbol",
+      "archetype": null,
+      "effect": "A religious item lets you attack vaesen in close combat with Inspiration, dealing 1 damage."
+    },
+    {
+      "id": "lightningReflexes",
+      "name": "Lightning Reflexes",
+      "archetype": null,
+      "effect": "Drawing a weapon costs no action."
+    },
+    {
+      "id": "nineLives",
+      "name": "Nine Lives",
+      "archetype": null,
+      "effect": "On critical injury rolls you choose which die is tens and which is ones."
+    },
+    {
+      "id": "pet",
+      "name": "Pet",
+      "archetype": null,
+      "effect": "Once per session your pet gives +1 to a test where it plausibly helps."
+    },
+    {
+      "id": "pugilist",
+      "name": "Pugilist",
+      "archetype": null,
+      "effect": "+1 damage when fighting unarmed."
+    },
+    {
+      "id": "safetyInNumbers",
+      "name": "Safety in Numbers",
+      "archetype": null,
+      "effect": "+2 to Fear tests with at least two other PCs present (same zone in combat)."
+    },
+    {
+      "id": "sixthSense",
+      "name": "Sixth Sense",
+      "archetype": null,
+      "effect": "Extra Investigation successes reveal whether a vaesen was here, hints of its kind, and whether magic was used."
+    },
+    {
+      "id": "sprinter",
+      "name": "Sprinter",
+      "archetype": null,
+      "effect": "+2 to Agility when chasing or outrunning someone."
+    },
+    {
+      "id": "theLordsShepherd",
+      "name": "The Lord's Shepherd",
+      "archetype": null,
+      "effect": "+2 to Inspiration when treating a mental critical injury."
+    },
+    {
+      "id": "wealthy",
+      "name": "Wealthy",
+      "archetype": null,
+      "effect": "Resources +1; may be taken several times."
+    }
+  ],
+  "conditions": {
+    "physical": [
+      {
+        "id": "exhausted",
+        "name": "Exhausted"
+      },
+      {
+        "id": "battered",
+        "name": "Battered"
+      },
+      {
+        "id": "wounded",
+        "name": "Wounded"
+      }
+    ],
+    "mental": [
+      {
+        "id": "angry",
+        "name": "Angry"
+      },
+      {
+        "id": "frightened",
+        "name": "Frightened"
+      },
+      {
+        "id": "hopeless",
+        "name": "Hopeless"
+      }
+    ],
+    "notes": [
+      "Each physical Condition is -1 die to Physique and Precision skills; each mental Condition is -1 die to Logic and Empathy skills and Fear tests.",
+      "Taking a fourth Condition of a type when all three are marked makes you Broken: no actions of either kind and a critical injury roll."
+    ]
+  },
+  "resourceLevels": [
+    {
+      "value": 1,
+      "name": "Destitute"
+    },
+    {
+      "value": 2,
+      "name": "Poor"
+    },
+    {
+      "value": 3,
+      "name": "Struggling"
+    },
+    {
+      "value": 4,
+      "name": "Financially Stable"
+    },
+    {
+      "value": 5,
+      "name": "Middle-class"
+    },
+    {
+      "value": 6,
+      "name": "Well-off"
+    },
+    {
+      "value": 7,
+      "name": "Wealthy"
+    },
+    {
+      "value": 8,
+      "name": "Filthy Rich"
+    }
+  ],
+  "resourceNotes": "Start at the archetype's minimum; before play each skill point spent raises Resources by one, up to the archetype's maximum.",
+  "mementos": [
+    {
+      "roll": 11,
+      "item": "Dried red rose"
+    },
+    {
+      "roll": 12,
+      "item": "Photograph of a loved one"
+    },
+    {
+      "roll": 13,
+      "item": "Signet ring with a hidden compartment"
+    },
+    {
+      "roll": 14,
+      "item": "Your father's walking cane"
+    },
+    {
+      "roll": 15,
+      "item": "Hat with a hidden pocket"
+    },
+    {
+      "roll": 16,
+      "item": "Book in a foreign tongue"
+    },
+    {
+      "roll": 21,
+      "item": "Engraved hip flask"
+    },
+    {
+      "roll": 22,
+      "item": "Old love letter"
+    },
+    {
+      "roll": 23,
+      "item": "Scruffy cat"
+    },
+    {
+      "roll": 24,
+      "item": "Monkey skull"
+    },
+    {
+      "roll": 25,
+      "item": "Bloodstained promissory note"
+    },
+    {
+      "roll": 26,
+      "item": "Your mother's gold jewelry"
+    },
+    {
+      "roll": 31,
+      "item": "Silver cross on a chain"
+    },
+    {
+      "roll": 32,
+      "item": "Heirloom fiddle"
+    },
+    {
+      "roll": 33,
+      "item": "Journal"
+    },
+    {
+      "roll": 34,
+      "item": "Newspaper from a meaningful date"
+    },
+    {
+      "roll": 35,
+      "item": "Ragged doll"
+    },
+    {
+      "roll": 36,
+      "item": "Tame pigeon"
+    },
+    {
+      "roll": 41,
+      "item": "Dog-eared novel with a dedication"
+    },
+    {
+      "roll": 42,
+      "item": "Plans for a family tomb"
+    },
+    {
+      "roll": 43,
+      "item": "Annotated map"
+    },
+    {
+      "roll": 44,
+      "item": "Strange animal in a glass jar"
+    },
+    {
+      "roll": 45,
+      "item": "Childhood music box"
+    },
+    {
+      "roll": 46,
+      "item": "Cut sunstone"
+    },
+    {
+      "roll": 51,
+      "item": "Small perfume bottle with a familiar scent"
+    },
+    {
+      "roll": 52,
+      "item": "Family hymnbook"
+    },
+    {
+      "roll": 53,
+      "item": "Pocket watch with a portrait inside"
+    },
+    {
+      "roll": 54,
+      "item": "Unsigned will"
+    },
+    {
+      "roll": 55,
+      "item": "Golden box from abroad"
+    },
+    {
+      "roll": 56,
+      "item": "Sheet music by a forgotten composer"
+    },
+    {
+      "roll": 61,
+      "item": "Powder compact holding sleeping pills"
+    },
+    {
+      "roll": 62,
+      "item": "Ornate pipe"
+    },
+    {
+      "roll": 63,
+      "item": "Lucky charm, such as a rabbit's foot"
+    },
+    {
+      "roll": 64,
+      "item": "Boxed syringe and needle"
+    },
+    {
+      "roll": 65,
+      "item": "Worn bone dice"
+    },
+    {
+      "roll": 66,
+      "item": "Heirloom manuscript"
+    }
+  ],
+  "dice": {
+    "successOn": 6,
+    "pushing": "After failing a test you may push once, immediately: reroll every die that is not a six and suffer a Condition (physical for Physique/Precision, mental for Logic/Empathy). The Condition takes effect after the reroll, so pushing can leave you Broken.",
+    "fear": "Roll Logic or Empathy plus 1 die per other able PC present (max +3); successes needed equal the Fear value (1-3); failure means Terrified for 1D6 rounds and mental Conditions equal to Fear value, minus 1 per success.",
+    "notes": [
+      "Dice pool is attribute plus skill; a skill of 0 rolls the attribute alone.",
+      "One six is usually enough; challenging actions need 2 sixes, difficult ones need 3.",
+      "Each Condition of the matching type removes one die; you always roll at least one die.",
+      "An Advantage adds +2 dice once per session and must be declared before rolling or when pushing.",
+      "Equipment usually gives +1, rarely up to +3; each helper gives +1, maximum +3.",
+      "All modifiers are summed; a push cannot be pushed again.",
+      "Extra sixes beyond those required can buy skill-specific effects, one success each.",
+      "Opposed rolls: most successes wins; ties mean neither side succeeds outright."
+    ]
+  }
+}

@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="10.0.13" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\VaesenAPI\Framework\Vaesen.Framework.Core\Vaesen.Framework.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- The character rules from the Vaesen rulebook, served by GET /api/rules and used to validate characters. -->
+    <EmbeddedResource Include="Rules\vaesen-rules.json" LogicalName="Nexus.Table.Rules.vaesen-rules.json" />
+  </ItemGroup>
+
+</Project>
