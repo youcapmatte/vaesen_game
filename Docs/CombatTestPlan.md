@@ -156,9 +156,9 @@ In a running game (PIE with a dedicated server is fine), open the console and ty
 - an AI-controlled `BP_VaesenPlayerCharacter`, which uses the same `GA_` Blueprints and input as a player;
 - three `BP_TrainingDummy`s, 15 m to the side of the first player start.
 
-It first checks that the interaction trace finds every pickup in the map and picks up a rifle through its interaction. It then runs the test Blueprints: revolver (draw, reload, fire, armored target), Krag (aimed and shouldered, bolt cycles by itself), punch, sword (stamina, block, parry, wear), stone throw, and bow.
+It first checks that the interaction trace finds every pickup in the map and picks up a rifle through its interaction. It then runs the test Blueprints: revolver (draw, reload, fire, armored target), Krag (left hand on LeftGrip from the hip and aimed, shouldered, bolt cycles by itself), punch, sword (stamina, block, parry, wear), stone throw, and bow.
 
-Every check prints PASS or FAIL on screen and in the log, and everything it spawned is removed at the end. In `L_CombatTest` it reported **41 passed, 0 failed**.
+Every check prints PASS or FAIL on screen and in the log, and everything it spawned is removed at the end. In `L_CombatTest` it reported **43 passed, 0 failed**.
 
 It checks what the C++ tests can't: the generated assets, the Blueprints and the map's collision together. Both clients should see the fighter do everything. The sword swing is reported as INFO until an attack montage exists, because without one the blade stays where the hand hangs.
 
@@ -192,6 +192,8 @@ IK solves the arms and elbows, and the fingers close by the category's **Grip Po
 4. Untick **Show Sockets** to see the hands without the shapes. **Save Weapon** saves the weapon's mesh (the sockets) and its Blueprint.
 
 Sockets belong to the mesh, so every weapon using that mesh gets them.
+
+Put `LeftGrip` under the fore-end, within reach. The left arm doesn't stretch, so a grip much more than about 30 cm in front of `Grip` leaves the hand a few cm short. The in-map self-test measures it (the left hand holds LeftGrip ... cm off).
 
 Extra adjustments for one weapon only (normally zero) are in the weapon Blueprint under **Weapon > Hold**: In Hand, Left Hand Offset, Aim Sight Offset (where the sight sits from the head), Stock To Shoulder, Aim Rotation, Recoil.
 

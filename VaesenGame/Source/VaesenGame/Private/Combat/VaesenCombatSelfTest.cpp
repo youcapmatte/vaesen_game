@@ -102,6 +102,38 @@ void UVaesenCombatSelfTest::Check(bool bPassed, const FString& What)
 	Say(FString::Printf(TEXT("%s  %s"), bPassed ? TEXT("PASS") : TEXT("FAIL"), *What), bPassed ? FColor::Green : FColor::Red);
 }
 
+void UVaesenCombatSelfTest::CheckLeftPalm(const TCHAR* When)
+{
+	const UVaesenWeaponItem* Weapon = Fighter && Fighter->GetEquipment() ? Fighter->GetEquipment()->GetDrawnWeapon() : nullptr;
+	const AVaesenWeaponActor* Actor = Weapon ? Weapon->GetWeaponActor() : nullptr;
+	FTransform LeftGrip;
+	if (!Actor || !Actor->GetSocketTransform(TEXT("LeftGrip"), LeftGrip))
+	{
+		Say(FString::Printf(TEXT("INFO  left hand %s: the weapon has no LeftGrip socket"), When), FColor::Yellow);
+		return;
+	}
+	const FTransform Palm = Fighter->GetMesh()->GetSocketTransform(TEXT("hand_l_weapon"));
+	const float Gap = FVector::Dist(Palm.GetLocation(), LeftGrip.GetLocation());
+	const float Turn = FMath::RadiansToDegrees(Palm.GetRotation().AngularDistance(LeftGrip.GetRotation()));
+	// Which hand bones the animating mesh (the torso) evaluates: the hands mesh copies only those.
+	const USkeletalMeshComponent* Torso = Fighter->GetMesh();
+	FString Evaluated;
+	for (const TCHAR* Bone : { TEXT("hand_l"), TEXT("index_01_l"), TEXT("hand_r"), TEXT("index_01_r") })
+	{
+		const int32 Index = Torso->GetBoneIndex(Bone);
+		const bool bRequired = Index != INDEX_NONE && Torso->RequiredBones.Contains(static_cast<FBoneIndexType>(Index));
+		Evaluated += FString::Printf(TEXT(" %s:%s"), Bone, bRequired ? TEXT("yes") : TEXT("NO"));
+	}
+	Say(FString::Printf(TEXT("INFO  bones the torso animates:%s"), *Evaluated), FColor::Yellow);
+	const FString Measured = FString::Printf(TEXT("(%.1f cm, %.0f degrees off)"), Gap, Turn);
+	if (GetWorld()->GetNetMode() == NM_DedicatedServer)
+	{
+		Say(FString::Printf(TEXT("INFO  left hand %s not measured on a dedicated server %s"), When, *Measured), FColor::Yellow);
+		return;
+	}
+	Check(Gap < 2.0f && Turn < 10.0f, FString::Printf(TEXT("the left hand holds LeftGrip %s %s"), When, *Measured));
+}
+
 UClass* UVaesenCombatSelfTest::LoadTestClass(const TCHAR* InPath)
 {
 	UClass* Class = VaesenSelfTest::LoadBlueprintClass(InPath);
@@ -385,6 +417,7 @@ void UVaesenCombatSelfTest::BuildSteps()
 	{
 		const UVaesenRangedWeaponItem* Rifle = Cast<UVaesenRangedWeaponItem>(Equipment->GetDrawnWeapon());
 		Check(Rifle && Rifle->Category == EVaesenWeaponCategory::Rifle, TEXT("H drew the rifle (main hand before sidearm)"));
+		CheckLeftPalm(TEXT("from the hip"));
 		Tap(Reload);
 		return Rifle ? Rifle->ReloadTime + 0.3f : 0.1f;
 	} });
@@ -418,6 +451,7 @@ void UVaesenCombatSelfTest::BuildSteps()
 				Check(Alignment > 0.98f && ToShoulder < 20.0f, TEXT("the aimed rifle is shouldered ") + Measured);
 			}
 		}
+		CheckLeftPalm(TEXT("aimed"));
 		Tap(Attack);
 		Release(AimOrBlock);
 		return 0.2f;

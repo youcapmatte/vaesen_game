@@ -1030,22 +1030,22 @@ bool FVaesenWeaponFitRigTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("Moving it while aimed moved the Sight socket"), !Mesh->FindSocket(TEXT("Sight"))->RelativeLocation.Equals(SightBefore, 0.5));
 	Shouldered(TEXT("After the move"));
 
-	// From the hip: slide the weapon 3 cm forward in the hand; the Grip socket moves 3 cm back on the weapon.
+	// From the hip: slide the weapon 3 cm back in the hand; the Grip socket moves 3 cm forward on the weapon.
 	Rig->Pose = EVaesenFitPose::Hip;
 	Rig->PostEditChangeProperty(Changed);
 	TestWorld.Run(0.5f);
 	const FVector GripBefore = Mesh->FindSocket(TEXT("Grip"))->RelativeLocation;
-	Weapon->SetWorldLocation(Weapon->GetComponentLocation() + Grip->GetForwardVector() * 3.0f);
+	Weapon->SetWorldLocation(Weapon->GetComponentLocation() - Grip->GetForwardVector() * 3.0f);
 	Rig->OnHandleMoved(Weapon, true);
 	const float GripMoved = (Mesh->FindSocket(TEXT("Grip"))->RelativeLocation - GripBefore).Size();
 	TestTrue(FString::Printf(TEXT("Slid in the hand: Grip moved %.1f cm on the weapon"), GripMoved), FMath::IsNearlyEqual(GripMoved, 3.0f, 0.3f));
 	TestWorld.Run(0.3f);
 	LeftPalmOnGrip(TEXT("From the hip"));
 
-	// The LeftGrip handle: move it 4 cm and turn it; the socket follows, and the left hand with it.
+	// The LeftGrip handle: move it 4 cm toward the body and turn it; the socket follows, and the left hand with it.
 	UVaesenFitHandleComponent* LeftHandle = Rig->GetSocketHandle(TEXT("LeftGrip"));
 	const FVector LeftBefore = Mesh->FindSocket(TEXT("LeftGrip"))->RelativeLocation;
-	LeftHandle->SetWorldLocation(LeftHandle->GetComponentLocation() + Grip->GetForwardVector() * 4.0f);
+	LeftHandle->SetWorldLocation(LeftHandle->GetComponentLocation() - Grip->GetForwardVector() * 4.0f);
 	LeftHandle->AddLocalRotation(FRotator(0.0, 0.0, 15.0));
 	Rig->OnHandleMoved(LeftHandle, true);
 	const float LeftMoved = (Mesh->FindSocket(TEXT("LeftGrip"))->RelativeLocation - LeftBefore).Size();

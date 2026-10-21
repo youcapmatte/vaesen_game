@@ -47,6 +47,9 @@ private:
 
 	/** Records a check. */
 	void Check(bool bPassed, const FString& What);
+
+	/** The fighter's left palm (hand_l_weapon) is on the drawn weapon's LeftGrip, place and turn. */
+	void CheckLeftPalm(const TCHAR* When);
 	void Say(const FString& Line, const FColor& Color) const;
 
 	/** A test asset from the commandlet (null + FAIL if missing). */

@@ -1012,29 +1012,25 @@ namespace VaesenAnimSetup
 		SetSkeletonSocket(Skeleton, TEXT("Sheath_BackSling"), TEXT("spine_04"), ComputeBackSling(Skeleton, TEXT("spine_04")), bResetSockets);
 		Save(Skeleton);
 
-		// The grey-box long guns: the left palm where the pack puts it (from the grip, which the hand holds), and Sight
-		// (the line of the sights) and Stock (the butt plate) for the shoulder aim.
-		struct FLongGun { const TCHAR* Name; FVector Sight; FVector Stock; };
-		for (const FLongGun& Gun : { FLongGun{ TEXT("SM_GB_KragRifle"), FVector(14.0, 0.0, 4.5), FVector(-40.0, 0.0, -2.0) },
-				 FLongGun{ TEXT("SM_GB_MuzzleLoader"), FVector(8.0, 0.0, 4.5), FVector(-40.0, 0.0, -2.0) },
-				 FLongGun{ TEXT("SM_GB_Crossbow"), FVector(-4.0, 0.0, 1.5), FVector(-30.0, 0.0, -2.0) } })
+		// The grey-box long guns, from their shapes: LeftGrip under the fore-end (the palm's middle a couple of cm below
+		// the wood, a little to the left), Sight (the line of the sights) and Stock (the butt plate) for the shoulder aim.
+		// Each mesh has its own: the pack's rifle is shaped differently, so only the palm (hand_l_weapon) comes from it.
+		struct FLongGun { const TCHAR* Name; FVector LeftGrip; FVector Sight; FVector Stock; };
+		for (const FLongGun& Gun : { FLongGun{ TEXT("SM_GB_KragRifle"), FVector(28.0, -1.0, -5.0), FVector(14.0, 0.0, 4.5), FVector(-40.0, 0.0, -2.0) },
+				 FLongGun{ TEXT("SM_GB_MuzzleLoader"), FVector(30.0, -1.0, -5.0), FVector(8.0, 0.0, 4.5), FVector(-40.0, 0.0, -2.0) },
+				 FLongGun{ TEXT("SM_GB_Crossbow"), FVector(12.0, -1.0, -6.5), FVector(-4.0, 0.0, 1.5), FVector(-30.0, 0.0, -2.0) } })
 		{
 			UStaticMesh* Mesh = LoadAt<UStaticMesh>(FString(TEXT("/Game/Vaesen/Combat/GreyBox")) / Gun.Name);
 			if (!Mesh)
 			{
 				continue;
 			}
-			const UStaticMeshSocket* Grip = Mesh->FindSocket(TEXT("Grip"));
-			const FVector GripLocation = Grip ? Grip->RelativeLocation : FVector::ZeroVector;
-			if (bHand)
+			// Where the left palm holds it (the older position-only LeftHandIK goes).
+			SetMeshSocket(Mesh, TEXT("LeftGrip"), FTransform(Gun.LeftGrip), bResetSockets);
+			if (UStaticMeshSocket* Old = Mesh->FindSocket(TEXT("LeftHandIK")))
 			{
-				// Where the left palm holds it (the older position-only LeftHandIK goes).
-				SetMeshSocket(Mesh, TEXT("LeftGrip"), FTransform(GripLocation + LeftGripInRifle), bResetSockets);
-				if (UStaticMeshSocket* Old = Mesh->FindSocket(TEXT("LeftHandIK")))
-				{
-					Mesh->RemoveSocket(Old);
-					Save(Mesh);
-				}
+				Mesh->RemoveSocket(Old);
+				Save(Mesh);
 			}
 			SetMeshSocket(Mesh, TEXT("Sight"), FTransform(Gun.Sight), false);
 			SetMeshSocket(Mesh, TEXT("Stock"), FTransform(Gun.Stock), false);
