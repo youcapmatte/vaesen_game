@@ -24,7 +24,9 @@
 #include "Abilities/VaesenGeneralAbilities.h"
 #include "Kismet/GameplayStatics.h"
 #include "UObject/StrongObjectPtr.h"
+#include "Weapons/VaesenCasing.h"
 #include "Weapons/VaesenWeaponActor.h"
+#include "Weapons/VaesenWeaponData.h"
 #include "Anim/VaesenAnimInstance.h"
 
 TStrongObjectPtr<UVaesenCombatSelfTest> UVaesenCombatSelfTest::Current;
@@ -101,6 +103,16 @@ void UVaesenCombatSelfTest::Check(bool bPassed, const FString& What)
 {
 	(bPassed ? Passed : Failed)++;
 	Say(FString::Printf(TEXT("%s  %s"), bPassed ? TEXT("PASS") : TEXT("FAIL"), *What), bPassed ? FColor::Green : FColor::Red);
+}
+
+int32 UVaesenCombatSelfTest::CountCasings() const
+{
+	int32 Count = 0;
+	for (TActorIterator<AVaesenCasing> It(GetWorld()); It; ++It)
+	{
+		++Count;
+	}
+	return Count;
 }
 
 void UVaesenCombatSelfTest::CheckLeftPalm(const TCHAR* When)
@@ -470,14 +482,36 @@ void UVaesenCombatSelfTest::BuildSteps()
 			}
 		}
 		CheckLeftPalm(TEXT("aimed"));
+		// Fire and keep aiming: the bolt is worked at the shoulder.
+		CasingsBefore = CountCasings();
 		Tap(Attack);
-		Release(AimOrBlock);
-		return 0.2f;
+		return 0.25f;
 	} });
-	Steps.Add({ FString(), [this, ASC]()
+	Steps.Add({ FString(), [this, ASC, Equipment]()
 	{
 		Check(ASC->HasMatchingGameplayTag(VaesenTags::State_Cycling), TEXT("bolt worked by itself after the shot"));
-		return 1.2f;
+		// Mid-cycle: still shouldered and the left hand on the rifle; the right hand off the grip, on the bolt.
+		const UVaesenWeaponItem* Rifle = Equipment->GetDrawnWeapon();
+		const AVaesenWeaponActor* Actor = Rifle ? Rifle->GetWeaponActor() : nullptr;
+		FTransform Stock, Bolt;
+		if (Actor && Actor->GetSocketTransform(TEXT("Stock"), Stock) && Actor->GetSocketTransform(TEXT("Bolt"), Bolt) && GetWorld()->GetNetMode() != NM_DedicatedServer)
+		{
+			const USkeletalMeshComponent* Body = Fighter->GetMesh();
+			const float ToShoulder = FVector::Dist(Stock.GetLocation(), UVaesenAnimInstance::ShoulderPocket(Body, Fighter->GetBaseAimRotation()));
+			const FVector Palm = Body->GetSocketLocation(UVaesenWeaponCategoryDefaults::Get()->MainHandSocket);
+			const float OffGrip = FVector::Dist(Palm, Actor->GetActorLocation());
+			const float ToBolt = FVector::Dist(Palm, Bolt.GetLocation());
+			Check(ToShoulder < 3.0f && OffGrip > 5.0f && ToBolt < 15.0f, FString::Printf(TEXT("working the bolt at the shoulder (stock %.1f cm from the pocket; right hand %.0f cm off the grip, %.0f cm from the bolt)"),
+				ToShoulder, OffGrip, ToBolt));
+		}
+		CheckLeftPalm(TEXT("working the bolt"));
+		return 0.45f;
+	} });
+	Steps.Add({ FString(), [this, AimOrBlock]()
+	{
+		Check(CountCasings() > CasingsBefore, TEXT("the spent case flew out as the bolt came back"));
+		Release(AimOrBlock);
+		return 0.8f;
 	} });
 	const FVaesenDamagePacket Krag = AmmoDamage(TEXT("BP_Ammo_KragCartridge"));
 	Steps.Add({ FString(), [this, Equipment, Krag]()

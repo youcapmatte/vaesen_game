@@ -50,6 +50,10 @@ private:
 
 	/** The fighter's left palm (hand_l_weapon) is on the drawn weapon's LeftGrip, place and turn. */
 	void CheckLeftPalm(const TCHAR* When);
+
+	/** Spent cases lying in the world (cosmetic AVaesenCasing actors). */
+	int32 CountCasings() const;
+	int32 CasingsBefore = 0;
 	void Say(const FString& Line, const FColor& Color) const;
 
 	/** A test asset from the commandlet (null + FAIL if missing). */

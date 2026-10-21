@@ -700,9 +700,10 @@ namespace VaesenAnimSetup
 	 *   weapon locomotion (linked graph tagged WeaponLocomotion: ABP_Manny unarmed, the weapon's when one is drawn)
 	 *   -> UpperBody slot, layered from spine_01 up (fire, reload, draw: the legs keep walking)
 	 *   -> DefaultSlot (full-body montages: stagger, hit reactions)
-	 *   -> shoulder aim (the Vaesen Shoulder Aim node: the weapon at the shoulder and the eye; shoulder, head, both arms)
 	 *   -> fingers closed round the grips (the category's GripPose, finger bones only)
- *   -> left hand onto the weapon's LeftGrip (placed relative to the right hand, then turned), the drawing hand onto the sheathed weapon's grip
+	 *   -> the drawing hand onto the sheathed weapon's grip (HandIK_Sheath)
+	 *   -> the Vaesen Shoulder Aim node: the weapon bone (ik_hand_gun, which the held weapon rides on), both hands on the
+	 *      weapon, the shoulder aim (shoulder, head, recoil) and the bolt worked by hand
 	 */
 	UClass* BuildCharacterGraph(USkeleton* Skeleton, bool bRebuild)
 	{
@@ -827,39 +828,19 @@ namespace VaesenAnimSetup
 				Node->Node.bAllowStretching = false;
 			});
 		};
-		// Shoulder aim: the Vaesen Shoulder Aim node shoulders the weapon on this pose (shoulder, head, both arms).
-		UAnimGraphNode_VaesenShoulderAim* ShoulderAim = Builder.Add<UAnimGraphNode_VaesenShoulderAim>(0, 0, [](UAnimGraphNode_VaesenShoulderAim*) {});
-		Builder.Pose(ToComponent, ShoulderAim, TEXT("ComponentPose"));
-		Builder.Var(TEXT("AimIKAlpha"), ShoulderAim, TEXT("Alpha"));
-
-		// The off hand, relative to the right hand that holds the weapon: on the weapon whatever the arm does.
-		UAnimGraphNode_TwoBoneIK* LeftHand = HandIK(450, TEXT("hand_l"), TEXT("lowerarm_l"));
-		LeftHand->Node.EffectorLocationSpace = BCS_BoneSpace;
-		LeftHand->Node.EffectorTarget = FBoneSocketTarget(TEXT("hand_r"));
-		Builder.Pose(ShoulderAim, LeftHand, TEXT("ComponentPose"));
-		Builder.Var(TEXT("LeftHandIKAlpha"), LeftHand, TEXT("Alpha"));
-		Builder.Var(TEXT("LeftHandIKInHand"), LeftHand, TEXT("EffectorLocation"));
-
-		// ...and turned as the weapon's LeftGrip says (component space).
-		UAnimGraphNode_ModifyBone* LeftTurn = Builder.Add<UAnimGraphNode_ModifyBone>(750, 0, [](UAnimGraphNode_ModifyBone* Node)
-		{
-			Node->Node.BoneToModify.BoneName = TEXT("hand_l");
-			Node->Node.TranslationMode = BMM_Ignore;
-			Node->Node.ScaleMode = BMM_Ignore;
-			Node->Node.RotationMode = BMM_Replace;
-			Node->Node.RotationSpace = BCS_ComponentSpace;
-		});
-		Builder.Pose(LeftHand, LeftTurn, TEXT("ComponentPose"));
-		Builder.Var(TEXT("LeftHandRotationAlpha"), LeftTurn, TEXT("Alpha"));
-		Builder.Var(TEXT("LeftHandIKRotation"), LeftTurn, TEXT("Rotation"));
-
-		UAnimGraphNode_TwoBoneIK* DrawHand = HandIK(1050, TEXT("hand_r"), TEXT("lowerarm_r"));
-		Builder.Pose(LeftTurn, DrawHand, TEXT("ComponentPose"));
+		// The drawing hand onto the sheathed weapon (before the weapon bone is set, so a drawn weapon follows the hand).
+		UAnimGraphNode_TwoBoneIK* DrawHand = HandIK(-150, TEXT("hand_r"), TEXT("lowerarm_r"));
+		Builder.Pose(ToComponent, DrawHand, TEXT("ComponentPose"));
 		Builder.Var(TEXT("SheathHandIKAlpha"), DrawHand, TEXT("Alpha"));
 		Builder.Var(TEXT("SheathHandIKLocation"), DrawHand, TEXT("EffectorLocation"));
 
-		UAnimGraphNode_ComponentToLocalSpace* ToLocal = Builder.Add<UAnimGraphNode_ComponentToLocalSpace>(1350, 0, [](UAnimGraphNode_ComponentToLocalSpace*) {});
-		Builder.Pose(DrawHand, ToLocal, TEXT("ComponentPose"));
+		// The Vaesen Shoulder Aim node holds the weapon in the hands: the weapon bone, both hands on the weapon, the
+		// shoulder aim (shoulder, head, recoil) and the bolt worked by hand. Always on (it blends itself).
+		UAnimGraphNode_VaesenShoulderAim* ShoulderAim = Builder.Add<UAnimGraphNode_VaesenShoulderAim>(200, 0, [](UAnimGraphNode_VaesenShoulderAim*) {});
+		Builder.Pose(DrawHand, ShoulderAim, TEXT("ComponentPose"));
+
+		UAnimGraphNode_ComponentToLocalSpace* ToLocal = Builder.Add<UAnimGraphNode_ComponentToLocalSpace>(550, 0, [](UAnimGraphNode_ComponentToLocalSpace*) {});
+		Builder.Pose(ShoulderAim, ToLocal, TEXT("ComponentPose"));
 		Builder.Pose(ToLocal, Builder.Root(), TEXT("Result"));
 
 		CompileAndSave(Blueprint);
@@ -1039,6 +1020,8 @@ namespace VaesenAnimSetup
 		SetSkeletonSocket(Skeleton, TEXT("Sheath_BackSling"), TEXT("spine_04"), ComputeBackSling(Skeleton, TEXT("spine_04")), bResetSockets);
 		SetSkeletonSocket(Skeleton, TEXT("ShoulderPocket"), TEXT("clavicle_r"), ComputeShoulderPocket(Skeleton), bResetSockets);
 		SetSkeletonSocket(Skeleton, TEXT("Eye_R"), TEXT("head"), ComputeRightEye(Skeleton), bResetSockets);
+		// The weapon bone the held weapon rides on (the anim sets ik_hand_gun to the right palm, or holds the weapon there).
+		SetSkeletonSocket(Skeleton, TEXT("WeaponHeld"), TEXT("ik_hand_gun"), FTransform::Identity, bResetSockets);
 		Save(Skeleton);
 
 		// The grey-box long guns, from their shapes: LeftGrip under the fore-end (the palm's middle a couple of cm below
@@ -1064,6 +1047,8 @@ namespace VaesenAnimSetup
 			SetMeshSocket(Mesh, TEXT("Sight"), FTransform(Gun.Sight), false);
 			SetMeshSocket(Mesh, TEXT("Stock"), FTransform(Gun.Stock), false);
 		}
+		// The Krag's bolt knob, at the end of its handle (the hand works the bolt there).
+		SetMeshSocket(LoadAt<UStaticMesh>(TEXT("/Game/Vaesen/Combat/GreyBox/SM_GB_KragRifle")), TEXT("Bolt"), FTransform(FVector(10.0, 5.0, 4.0)), false);
 
 		// Montages on the upper body.
 		const FString Folder = RifleFolder;

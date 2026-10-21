@@ -156,9 +156,9 @@ In a running game (PIE with a dedicated server is fine), open the console and ty
 - an AI-controlled `BP_VaesenPlayerCharacter`, which uses the same `GA_` Blueprints and input as a player;
 - three `BP_TrainingDummy`s, 15 m to the side of the first player start.
 
-It first checks that the interaction trace finds every pickup in the map and picks up a rifle through its interaction. It then runs the test Blueprints: revolver (draw, reload, fire, armored target), Krag (left hand on LeftGrip from the hip and aimed, shouldered, bolt cycles by itself), punch, sword (stamina, block, parry, wear), stone throw, and bow.
+It first checks that the interaction trace finds every pickup in the map and picks up a rifle through its interaction. It then runs the test Blueprints: revolver (draw, reload, fire, armored target), Krag (left hand on LeftGrip from the hip and aimed, shouldered, the bolt worked by hand at the shoulder, the case out as the bolt comes back), punch, sword (stamina, block, parry, wear), stone throw, and bow.
 
-Every check prints PASS or FAIL on screen and in the log, and everything it spawned is removed at the end. In `L_CombatTest` it reported **43 passed, 0 failed**.
+Every check prints PASS or FAIL on screen and in the log, and everything it spawned is removed at the end. In `L_CombatTest` it reported **46 passed, 0 failed**.
 
 It checks what the C++ tests can't: the generated assets, the Blueprints and the map's collision together. Both clients should see the fighter do everything. The sword swing is reported as INFO until an attack montage exists, because without one the blade stays where the hand hangs.
 
@@ -176,6 +176,14 @@ Every weapon is held by sockets on its mesh. The rule is the same for every weap
 | `Stock` | The butt plate (long guns) | Aiming: goes in the shoulder pocket (skeleton socket `ShoulderPocket` on `clavicle_r`, in front of the right shoulder joint) |
 
 Aiming, the **Vaesen Shoulder Aim** anim node holds it like a shooter: the butt in the shoulder pocket and the eye down the sights. With a straight stock both can only hold if the body meets the rifle, so the right shoulder lifts and the head bows and leans onto the stock. **Shoulder Share** (Weapon > Hold) splits that between them: 0.4 means the shoulder takes 40%. The node also solves both arms onto the rifle.
+
+Firing and working the bolt:
+
+- **A shot** rocks the upper body back (Recoil Body Pitch), pushes the shoulder back with the butt, and climbs the muzzle (Recoil Pitch). It settles in about half a second.
+- **The bolt** (bolt-action weapons with a `Bolt` socket at the knob): after a shot, the rifle stays where it is, held by the shoulder and the left hand. The right hand goes to the bolt, lifts it, pulls it back, pushes it forward, turns it down and returns to the grip. The **spent case flies out of `Eject` when the bolt is fully back**, halfway through the cycle. This works from the hip too.
+- **When cases come out**, historically: the Krag on the bolt cycle; the revolver and the rolling-block pistol on reload (one per spent round); the muzzle-loader, bow and crossbow never. This is set per weapon in **Casing Ejection**.
+
+The weapon in the right hand rides on the skeleton's weapon bone (`ik_hand_gun`, socket `WeaponHeld`). That bone follows the right palm, and the Shoulder Aim node holds it still while shouldering or working the bolt. That is what lets the right hand leave the rifle.
 
 IK solves the arms and elbows, and the fingers close by the category's **Grip Pose** (DA_WeaponCategoryDefaults; rifles use the pack's aimed rifle grip). A weapon with these four sockets right needs nothing else. The grey-box long guns already have them: `hand_l_weapon` and `LeftGrip` are worked out from how the rifle pack holds its rifle.
 

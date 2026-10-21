@@ -11,6 +11,7 @@
 #include "GameFramework/PlayerController.h"
 #include "Inventory/VaesenEquipmentComponent.h"
 #include "Items/VaesenWeaponItem.h"
+#include "Items/VaesenRangedWeaponItem.h"
 #include "KismetAnimationLibrary.h"
 #include "Weapons/VaesenRangedWeaponActor.h"
 #include "Weapons/VaesenWeaponActor.h"
@@ -63,6 +64,7 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	bool bShouldering = false;
 	bool bHandsFree = true;
 	bool bInHand = false;
+	bool bCyclingNow = false;
 	const UVaesenEquipmentComponent* Equipment = nullptr;
 	const AVaesenWeaponActor* WeaponActor = nullptr;
 
@@ -82,8 +84,10 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		bReloading = HasTag(VaesenTags::State_Reloading) || HasTag(VaesenTags::State_Cycling);
 		bStaggered = HasTag(VaesenTags::State_Staggered);
 		bShouldering = HasTag(VaesenTags::State_Aiming);
-		// Not while the hands are busy with something else (reloading, drawing or sheathing).
-		bHandsFree = !bReloading && !HasTag(VaesenTags::State_SwitchingWeapon);
+		// Not while the hands are busy with something else (reloading, drawing or sheathing). Working a bolt only takes
+		// the right hand (below).
+		bHandsFree = !HasTag(VaesenTags::State_Reloading) && !HasTag(VaesenTags::State_SwitchingWeapon);
+		bCyclingNow = HasTag(VaesenTags::State_Cycling);
 		Aim = Character->GetBaseAimRotation();
 
 		Equipment = Character->GetEquipment();
@@ -125,8 +129,6 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	const bool bShoulderAim = bShouldering && bTwoHanded && bInHand && bHandsFree && Held.IsValid() && Held.Hold->bShoulderAim
 		&& WeaponCategory != EVaesenWeaponCategory::Bow;
 	const FTransform& Component = Body->GetComponentTransform();
-	const FTransform WeaponInRightHand = Held.Grip ? Held.Grip->GetComponentTransform().GetRelativeTransform(Body->GetSocketTransform(TEXT("hand_r")))
-		: FTransform::Identity;
 
 	// Off hand on the fore-grip of two-handed weapons: its palm (hand_l_weapon) on the LeftGrip socket, turned as the
 	// socket is. LeftHandIK (older meshes) gives only the place.
@@ -150,8 +152,6 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		LeftHandIKTransform = LeftHand;
 		LeftHandIKLocation = LeftHand.GetLocation();
 		LeftHandIKRotation = LeftHand.GetRelativeTransform(Component).Rotator();
-		// Relative to the right hand, which holds the weapon rigidly: right however the arm moves this frame.
-		LeftHandIKInHand = (HandInWeapon * WeaponInRightHand).GetLocation();
 	}
 
 	if (bShoulderAim)
@@ -169,14 +169,11 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		const FVaesenWeaponHold& Hold = *Held.Hold;
 		FVaesenShoulderAimInput& In = ShoulderAimInput;
 		In.Aim = Component.GetRotation().Inverse() * Aim.Quaternion();
-		In.WeaponInHand = WeaponInRightHand;
 		FTransform Sight(FVector(0.0, 0.0, 6.0));
 		Held.GetLocalSocketTransform(TEXT("Sight"), Sight);
 		In.SightLocation = Sight.GetLocation();
 		In.SightRotation = Sight.GetRotation();
 		In.bHasStock = Held.GetLocalSocket(TEXT("Stock"), In.StockLocation);
-		In.bLeftHand = bLeftHolds;
-		In.LeftHandInWeapon = HandInWeapon;
 		const USkeletalMeshSocket* Pocket = Body->GetSocketByName(ShoulderPocketSocket);
 		In.bHasPocketSocket = Pocket && Pocket->BoneName == TEXT("clavicle_r");
 		In.PocketOnClavicle = In.bHasPocketSocket ? Pocket->GetSocketLocalTransform() : FTransform::Identity;
@@ -189,21 +186,50 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		In.ShoulderShare = Hold.ShoulderShare;
 		In.RecoilBack = Hold.RecoilBack;
 		In.RecoilPitch = Hold.RecoilPitch;
+		In.RecoilBodyPitch = Hold.RecoilBodyPitch;
 	}
-	ShoulderAimInput.Kick = RecoilKick;
+
+	// Every frame, for the weapon bone (ik_hand_gun, which the weapon in the right hand rides on) and the hands.
+	FVaesenShoulderAimInput& In = ShoulderAimInput;
+	const USkeletalMeshSocket* PalmSocket = Body->GetSocketByName(UVaesenWeaponCategoryDefaults::Get()->MainHandSocket);
+	In.PalmOnHand = PalmSocket ? PalmSocket->GetSocketLocalTransform() : FTransform::Identity;
+	In.bHeld = bInHand && Held.IsValid() && Weapon && !Weapon->IsHeldInOffHand();
+	In.GripOnWeaponBone = In.bHeld ? Held.Hold->InHand : FTransform::Identity;
+	In.bShoulder = bShoulderAim || (In.bShoulder && AimIKAlpha > 0.0f);
+	In.bLeftHand = bLeftHolds;
+	In.bLeftHandTurns = bLeftGrip;
+	In.LeftHandInWeapon = HandInWeapon;
+	In.Kick = RecoilKick;
+
+	// Working a bolt by hand: how far through it (the right hand goes to the Bolt socket and back).
+	const UVaesenRangedWeaponItem* RangedItem = Cast<UVaesenRangedWeaponItem>(Weapon);
+	const bool bWorksBolt = bCyclingNow && In.bHeld && RangedItem && RangedItem->Action == EVaesenWeaponAction::BoltAction
+		&& Held.GetLocalSocket(TEXT("Bolt"), In.BoltLocation);
+	const double Now = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0;
+	if (!bWorksBolt)
+	{
+		CycleStartTime = -1.0;
+	}
+	else if (CycleStartTime < 0.0)
+	{
+		CycleStartTime = Now;
+	}
+	In.bCycling = bWorksBolt;
+	In.CyclePhase = bWorksBolt ? FMath::Clamp(static_cast<float>((Now - CycleStartTime) / FMath::Max(RangedItem->CycleTime, 0.05f)), 0.0f, 1.0f) : 0.0f;
 	const float BlendSpeed = Held.Hold ? Held.Hold->AimBlendSpeed : 12.0f;
 	AimIKAlpha = Rig ? (bShoulderAim ? 1.0f : 0.0f) : FMath::FInterpTo(AimIKAlpha, bShoulderAim ? 1.0f : 0.0f, DeltaSeconds, BlendSpeed);
 	if (!bInHand)
 	{
 		AimIKAlpha = 0.0f;
 	}
+	In.ShoulderBlend = AimIKAlpha;
 
 	// The fingers closed round the grips, of each hand that holds the weapon.
 	GripPose = UVaesenWeaponCategoryDefaults::Get()->GetCategory(WeaponCategory).GripPose;
-	RightFingerGrip = GripPose && bInHand && bHandsFree ? 1.0f : 0.0f;
+	RightFingerGrip = GripPose && bInHand && bHandsFree && !bWorksBolt ? 1.0f : 0.0f;
 	LeftFingerGrip = GripPose && bLeftHolds ? 1.0f : 0.0f;
-	// While shouldered the node holds the left hand; these IK nodes take over as it lets go.
-	LeftHandIKAlpha = bLeftHolds ? 1.0f - AimIKAlpha : 0.0f;
+	// (The Shoulder Aim node holds the left hand on the weapon.)
+	LeftHandIKAlpha = bLeftHolds ? 1.0f : 0.0f;
 	LeftHandRotationAlpha = bLeftGrip ? LeftHandIKAlpha : 0.0f;
 	RecoilKick = FMath::FInterpTo(RecoilKick, 0.0f, DeltaSeconds, 10.0f);
 
@@ -266,5 +292,5 @@ FVector UVaesenAnimInstance::EyePoint(const USkeletalMeshComponent* Body)
 bool UVaesenAnimInstance::GetShoulderAimInput(FVaesenShoulderAimInput& Out) const
 {
 	Out = ShoulderAimInput;
-	return AimIKAlpha > 0.0f;
+	return true;
 }

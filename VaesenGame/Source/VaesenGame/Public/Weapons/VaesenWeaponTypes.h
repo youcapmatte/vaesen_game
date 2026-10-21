@@ -364,4 +364,22 @@ struct FVaesenWeaponHold
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hold|Aim", meta = (EditCondition = "bShoulderAim"))
 	float RecoilPitch = 4.0f;
+
+	/** Each shot while aimed: the upper body rocks back this far (degrees), the shoulder taking the stock with it. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hold|Aim", meta = (EditCondition = "bShoulderAim"))
+	float RecoilBodyPitch = 4.0f;
 };
+
+/**
+ * A bolt worked by hand, as shares of the cycle time: the hand reaches the bolt knob, lifts it, pulls it back (the
+ * spent case flies out at the end of the pull), pushes it forward, turns it down and goes back to the grip. The anim
+ * (FAnimNode_VaesenShoulderAim) and GA_CycleAction (the case) use the same moments.
+ */
+namespace VaesenBolt
+{
+	constexpr float Reached = 0.15f;
+	constexpr float Lifted = 0.27f;
+	constexpr float Back = 0.5f;
+	constexpr float Forward = 0.72f;
+	constexpr float Down = 0.84f;
+}

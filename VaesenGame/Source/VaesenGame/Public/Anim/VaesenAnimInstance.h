@@ -50,7 +50,7 @@ public:
 	/** A shot: the trigger finger curls and lets go (and a shouldered weapon kicks). */
 	void PulseTriggerFinger() { TriggerPulse = 1.0f; RecoilKick = 1.0f; }
 
-	/** For the Shoulder Aim node (game thread): what it needs this frame; false while it isn't shouldering. */
+	/** For the Shoulder Aim node (game thread): what it needs this frame (the weapon bone, shouldering, the bolt, the hands). */
 	bool GetShoulderAimInput(FVaesenShoulderAimInput& Out) const;
 
 	/** The shoulder pocket the stock goes in (world): the skeleton's ShoulderPocket socket, or in front of and inside the
@@ -183,6 +183,9 @@ private:
 	float RecoilKick = 0.0f;
 
 	FVaesenShoulderAimInput ShoulderAimInput;
+
+	/** When the bolt cycle in progress began (-1: none). */
+	double CycleStartTime = -1.0;
 
 	float TriggerPulse = 0.0f;
 

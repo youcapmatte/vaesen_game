@@ -13,17 +13,34 @@ struct FVaesenShoulderAimInput
 	/** Where it aims, in component space (no roll). */
 	FQuat Aim = FQuat::Identity;
 
-	/** The weapon's grip relative to hand_r (rigid: the weapon is in that hand). */
-	FTransform WeaponInHand;
+	/** How the right palm holds a grip: the skeleton's hand_r_weapon socket, on hand_r. */
+	FTransform PalmOnHand;
+
+	/** The weapon's grip on the weapon bone (ik_hand_gun): its Hold.InHand. */
+	FTransform GripOnWeaponBone;
+
+	/** A weapon is in the right hand (the weapon bone follows it, or holds it while shouldered). */
+	bool bHeld = false;
+
+	/** Shouldered, 0..1 (blends in and out). */
+	float ShoulderBlend = 0.0f;
+	bool bShoulder = false;
+
+	/** Working the bolt: how far through it (0..1), and the bolt knob on the weapon (grip space). */
+	bool bCycling = false;
+	float CyclePhase = 0.0f;
+	FVector BoltLocation = FVector::ZeroVector;
 
 	FVector SightLocation = FVector(0.0, 0.0, 6.0);
 	FQuat SightRotation = FQuat::Identity;
 	FVector StockLocation = FVector::ZeroVector;
 	bool bHasStock = false;
 
-	/** The left hand bone in the weapon's space (its palm on LeftGrip); valid if bLeftHand. */
+	/** The left hand bone in the weapon's space (its palm on LeftGrip); valid if bLeftHand. Without bLeftHandTurns
+	 * (an older LeftHandIK socket: a place only) the hand keeps the animation's rotation. */
 	FTransform LeftHandInWeapon;
 	bool bLeftHand = false;
+	bool bLeftHandTurns = false;
 
 	/** The shoulder pocket on clavicle_r (the skeleton's ShoulderPocket socket); without it, next to upperarm_r. */
 	FTransform PocketOnClavicle;
@@ -40,20 +57,29 @@ struct FVaesenShoulderAimInput
 	float ShoulderShare = 0.4f;
 	float RecoilBack = 0.0f;
 	float RecoilPitch = 0.0f;
+	float RecoilBodyPitch = 0.0f;
 
 	/** A shot's kick, 1 easing to 0. */
 	float Kick = 0.0f;
 };
 
 /**
- * Vaesen Shoulder Aim: shoulders a long gun the way a shooter does, on this frame's pose.
+ * Vaesen Shoulder Aim: holds the weapon in the hands on this frame's pose. The weapon rides on the weapon bone
+ * (ik_hand_gun), which follows the right hand's grip; while shouldered or working the bolt it holds the weapon itself.
+ *
+ * Shouldered, a long gun is held the way a shooter does:
  *   - The weapon lies along the aim (its Sight socket's line).
  *   - The gap between the eye line and the shoulder pocket is shared: the right shoulder lifts (clavicle_r) by
  *     ShoulderShare of it and the head bows and leans onto the stock (neck_01) by the rest.
  *   - The butt (Stock socket) goes on the lifted shoulder pocket; the sight line is then at the eye.
  *   - Both arms are solved onto the weapon: the right hand holds its grip, the left hand its LeftGrip, turned to it.
- * A weapon without a Stock puts its sight in front of the eye and leaves the body alone. The inputs come from
- * UVaesenAnimInstance (PreUpdate); Alpha blends it in and out.
+ *   - A shot rocks the upper body back (spine_05) and climbs the muzzle.
+ * A weapon without a Stock puts its sight in front of the eye and leaves the body alone.
+ *
+ * Working a bolt (aimed or not): the weapon stays where it is, held by the left hand (and the shoulder), and the right
+ * hand goes to the bolt knob, lifts, pulls back, pushes, turns down and comes back to the grip (VaesenBolt moments).
+ *
+ * The left hand always holds LeftGrip of a two-handed weapon. The inputs come from UVaesenAnimInstance (PreUpdate).
  */
 USTRUCT(BlueprintInternalUseOnly)
 struct VAESENGAME_API FAnimNode_VaesenShoulderAim : public FAnimNode_SkeletalControlBase
@@ -78,6 +104,7 @@ private:
 	FVaesenShoulderAimInput Input;
 	bool bActive = false;
 
+	FBoneReference Spine = FBoneReference(TEXT("spine_05"));
 	FBoneReference Neck = FBoneReference(TEXT("neck_01"));
 	FBoneReference Head = FBoneReference(TEXT("head"));
 	FBoneReference ClavicleR = FBoneReference(TEXT("clavicle_r"));
@@ -87,4 +114,5 @@ private:
 	FBoneReference UpperArmL = FBoneReference(TEXT("upperarm_l"));
 	FBoneReference LowerArmL = FBoneReference(TEXT("lowerarm_l"));
 	FBoneReference HandL = FBoneReference(TEXT("hand_l"));
+	FBoneReference WeaponBone = FBoneReference(TEXT("ik_hand_gun"));
 };

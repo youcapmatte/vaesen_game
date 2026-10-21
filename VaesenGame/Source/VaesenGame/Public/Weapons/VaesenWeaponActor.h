@@ -66,6 +66,9 @@ public:
 	/** The visible mesh (static or skeletal), or null. */
 	UMeshComponent* GetWeaponMesh() const;
 
+	/** The skeleton socket on the weapon bone (ik_hand_gun) a right-hand weapon rides on (hand_r_weapon without it). */
+	static const FName WeaponHeldSocket;
+
 	/** How a weapon mesh sits under its grip so its Grip socket is at the grip (Scale: the mesh's scale). */
 	static FTransform GripAlignment(const UMeshComponent* Mesh, const FVector& Scale);
 

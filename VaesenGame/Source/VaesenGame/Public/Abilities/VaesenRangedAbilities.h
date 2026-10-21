@@ -98,6 +98,9 @@ public:
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 
 private:
+	/** The bolt is back: the spent case flies out. */
+	void EjectCase();
+
 	void FinishCycle();
 };
 

@@ -146,7 +146,9 @@ void AVaesenWeaponFitRig::ApplySetup()
 	PlayingAnimation = nullptr;
 	PlayingMontage = nullptr;
 
-	const FName HandSocket = UVaesenWeaponCategoryDefaults::Get()->MainHandSocket;
+	// Held as in the game: on the weapon bone's socket (or the hand socket without it).
+	const FName HandSocket = Body->DoesSocketExist(AVaesenWeaponActor::WeaponHeldSocket) ? AVaesenWeaponActor::WeaponHeldSocket
+		: UVaesenWeaponCategoryDefaults::Get()->MainHandSocket;
 	if (Body->GetSkeletalMeshAsset() && Grip->GetAttachSocketName() != HandSocket)
 	{
 		Grip->AttachToComponent(Body, FAttachmentTransformRules::KeepRelativeTransform, HandSocket);

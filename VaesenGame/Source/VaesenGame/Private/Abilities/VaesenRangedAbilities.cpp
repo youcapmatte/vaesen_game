@@ -333,6 +333,27 @@ void UVaesenGA_CycleAction::ActivateAbility(const FGameplayAbilitySpecHandle Han
 		GetRangedActor(ActorInfo)->PlayWeaponSound(EVaesenWeaponSound::Cycle);
 	}
 	GetTimers().SetTimer(StepTimer, this, &UVaesenGA_CycleAction::FinishCycle, Item->CycleTime, false);
+	GetTimers().SetTimer(RepeatTimer, this, &UVaesenGA_CycleAction::EjectCase, Item->CycleTime * VaesenBolt::Back, false);
+}
+
+void UVaesenGA_CycleAction::EjectCase()
+{
+	// When the bolt is fully back (the hand works it there: VaesenBolt), on the shooter's machine at once and on the
+	// others through the server.
+	AVaesenRangedWeaponActor* Actor = GetRangedActor();
+	const UVaesenRangedWeaponItem* Item = GetRangedItem();
+	if (!Actor || !Item)
+	{
+		return;
+	}
+	if (IsLocallyControlled())
+	{
+		Actor->EjectCasingsUnlessNotified(EVaesenCasingMoment::Cycle, Item->GetMontage(&FVaesenWeaponMontages::Cycle), 1);
+	}
+	if (HasAuthority(&CurrentActivationInfo))
+	{
+		Actor->MulticastActionCosmetics(EVaesenCasingMoment::Cycle, 1);
+	}
 }
 
 void UVaesenGA_CycleAction::FinishCycle()
@@ -341,16 +362,10 @@ void UVaesenGA_CycleAction::FinishCycle()
 	const UVaesenRangedWeaponItem* Item = GetRangedItem();
 	if (Actor && Item)
 	{
-		const UAnimMontage* Montage = Item->GetMontage(&FVaesenWeaponMontages::Cycle);
-		if (IsLocallyControlled())
-		{
-			Actor->EjectCasingsUnlessNotified(EVaesenCasingMoment::Cycle, Montage, 1);
-		}
 		Actor->ClearPredictedCycle();
 		if (HasAuthority(&CurrentActivationInfo))
 		{
 			Actor->ServerFinishCycle();
-			Actor->MulticastActionCosmetics(EVaesenCasingMoment::Cycle, 1);
 		}
 	}
 	EndAbility(CurrentSpecHandle, GetCurrentActorInfo(), CurrentActivationInfo, true, false);

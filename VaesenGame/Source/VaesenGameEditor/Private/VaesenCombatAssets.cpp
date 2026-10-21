@@ -341,6 +341,7 @@ namespace VaesenCombatAssets
 			.Socket(TEXT("Sight"), FVector(14.0, 0.0, 4.5))
 			.Socket(TEXT("Stock"), FVector(-40.0, 0.0, -2.0))
 			.Socket(TEXT("Eject"), FVector(10.0, 2.5, 3.0))
+			.Socket(TEXT("Bolt"), FVector(10.0, 5.0, 4.0))
 			.Socket(TEXT("TraceStart"), FVector(-20.0, 0.0, -4.0))
 			.Socket(TEXT("TraceEnd"), FVector(-40.0, 0.0, -6.0))
 			.Make(TEXT("SM_GB_KragRifle"));

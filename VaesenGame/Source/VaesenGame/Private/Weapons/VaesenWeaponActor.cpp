@@ -13,6 +13,8 @@
 #include "Kismet/GameplayStatics.h"
 #include "Net/UnrealNetwork.h"
 
+const FName AVaesenWeaponActor::WeaponHeldSocket(TEXT("WeaponHeld"));
+
 namespace VaesenWeaponActor
 {
 	const FName Grip(TEXT("Grip"));
@@ -166,6 +168,13 @@ bool AVaesenWeaponActor::ResolveAttachment(bool bToHand, FName& OutSocket, FTran
 	{
 		OutSocket = WeaponItem->IsHeldInOffHand() ? Defaults->OffHandSocket : Defaults->MainHandSocket;
 		OutOffset = Hold.InHand;
+		// The right hand's weapon rides on the weapon bone (ik_hand_gun follows the palm; the anim holds it there while
+		// shouldered or working the bolt).
+		if (!WeaponItem->IsHeldInOffHand() && Body->DoesSocketExist(AVaesenWeaponActor::WeaponHeldSocket))
+		{
+			OutSocket = WeaponHeldSocket;
+			return true;
+		}
 		if (!Body->DoesSocketExist(OutSocket))
 		{
 			// No weapon socket on the skeleton yet: the hand bone itself.
