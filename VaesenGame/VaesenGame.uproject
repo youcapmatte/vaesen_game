@@ -1,6 +1,6 @@
 {
 	"FileVersion": 3,
-	"EngineAssociation": "{3728E351-42B5-5F9E-97DF-42B11DD7090C}",
+	"EngineAssociation": "{73775F75-42CB-2D52-4800-3A886A952D71}",
 	"Category": "",
 	"Description": "",
 	"Modules": [
@@ -54,6 +54,18 @@
 			"TargetAllowList": [
 				"Editor"
 			]
+		},
+		{
+			"Name": "MetaHumanCharacter",
+			"Enabled": true
+		},
+		{
+			"Name": "HairStrands",
+			"Enabled": true
+		},
+		{
+			"Name": "RigLogic",
+			"Enabled": true
 		}
 	]
 }

@@ -93,6 +93,22 @@ public:
 	UPROPERTY(Config, EditAnywhere, Category = "Audio")
 	TSoftObjectPtr<USoundBase> LoadingMusic;
 
+	/** DT_AppearancePresets: everything a character's look may be made of (faces, bodies, grooms, colours). */
+	UPROPERTY(Config, EditAnywhere, Category = "Characters|Appearance", meta = (RequiredAssetDataTags = "RowStructure=/Script/VaesenGame.VaesenAppearancePresetRow"))
+	TSoftObjectPtr<class UDataTable> AppearancePresets;
+
+	/** MetaHuman's skin tone model, for the skin tone slider. */
+	UPROPERTY(Config, EditAnywhere, Category = "Characters|Appearance")
+	TSoftObjectPtr<class UVaesenSkinToneTable> SkinToneTable;
+
+	/** Retargets the mannequin's animation onto the MetaHuman body (IK_Mannequin to the MetaHuman IK rig). */
+	UPROPERTY(Config, EditAnywhere, Category = "Characters|Appearance")
+	TSoftObjectPtr<class UIKRetargeter> MetaHumanRetargeter;
+
+	/** The character creator's panel; none: the plain UVaesenCharacterCreatorWidget. */
+	UPROPERTY(Config, EditAnywhere, Category = "Characters|Appearance")
+	TSoftClassPtr<class UVaesenCharacterCreatorWidget> CharacterCreatorWidget;
+
 	/** First names the "Randomize" button on character creation picks from. */
 	UPROPERTY(Config, EditAnywhere, Category = "Characters")
 	TArray<FString> RandomFirstNames;

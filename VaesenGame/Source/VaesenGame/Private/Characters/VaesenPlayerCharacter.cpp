@@ -1,6 +1,15 @@
 #include "Characters/VaesenPlayerCharacter.h"
 
+#include "Appearance/VaesenAppearanceComponent.h"
+#include "Appearance/VaesenAppearancePresets.h"
+#include "Appearance/VaesenRetargetAnimInstance.h"
+#include "Appearance/VaesenSkinToneTable.h"
 #include "Camera/CameraComponent.h"
+#include "Core/VaesenSettings.h"
+#include "Engine/DataTable.h"
+#include "GroomComponent.h"
+#include "Player/VaesenPlayerState.h"
+#include "Retargeter/IKRetargeter.h"
 #include "EnhancedInputComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Camera/PlayerCameraManager.h"
@@ -18,8 +27,17 @@
 #include "Misc/ConfigCacheIni.h"
 #include "Net/UnrealNetwork.h"
 
+namespace VaesenPlayerCharacter
+{
+	TAutoConsoleVariable<int32> CVarTestAppearance(
+		TEXT("vaesen.TestAppearance"), 0,
+		TEXT("Player characters without a character ID (editor play) get a generated MetaHuman look from this seed. 0: off (the mannequin)."),
+		ECVF_Cheat);
+}
+
 AVaesenPlayerCharacter::AVaesenPlayerCharacter()
 {
+	Appearance = CreateDefaultSubobject<UVaesenAppearanceComponent>(TEXT("Appearance"));
 	// The camera follows the controller's rotation; the character itself turns toward its movement (see base class).
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
@@ -66,6 +84,13 @@ void AVaesenPlayerCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty
 
 void AVaesenPlayerCharacter::BeginPlay()
 {
+	// Before the components' BeginPlay: the appearance component applies a look it already has (set on possession) then.
+	const UVaesenSettings* const Settings = UVaesenSettings::Get();
+	Appearance->PresetTable = Settings->AppearancePresets.LoadSynchronous();
+	Appearance->SkinToneTable = Settings->SkinToneTable.LoadSynchronous();
+	// The MetaHuman sits on the mannequin mesh, which keeps the character's animation and gameplay.
+	Appearance->AttachParent = GetMesh();
+	Appearance->OnMetaHumanReady.AddUObject(this, &AVaesenPlayerCharacter::HandleMetaHumanReady);
 	Super::BeginPlay();
 	DesiredCameraDistance = FMath::Clamp(CameraBoom->TargetArmLength, MinThirdPersonDistance, MaxCameraDistance);
 	CameraBoom->TargetArmLength = DesiredCameraDistance;
@@ -312,6 +337,105 @@ void AVaesenPlayerCharacter::OnRep_FirstPerson()
 	ApplyViewMode();
 }
 
+void AVaesenPlayerCharacter::PossessedBy(AController* NewController)
+{
+	Super::PossessedBy(NewController);
+	ApplyCharacterAppearance();
+}
+
+void AVaesenPlayerCharacter::ApplyCharacterAppearance()
+{
+	if (!HasAuthority())
+	{
+		return;
+	}
+	const AVaesenPlayerState* const State = GetPlayerState<AVaesenPlayerState>();
+	FVaesenAppearance Look = State ? State->GetCharacterAppearance() : FVaesenAppearance();
+	const int32 TestSeed = VaesenPlayerCharacter::CVarTestAppearance.GetValueOnGameThread();
+	if (!Look.IsSet() && (!State || State->GetCharacterId().IsEmpty()) && TestSeed != 0)
+	{
+		Look = MakeFallbackAppearance((uint32)TestSeed);
+	}
+	if (Look.IsSet())
+	{
+		Appearance->SetAppearance(Look);
+	}
+}
+
+FVaesenAppearance AVaesenPlayerCharacter::MakeFallbackAppearance(uint32 Seed)
+{
+	const UDataTable* const Presets = UVaesenSettings::Get()->AppearancePresets.LoadSynchronous();
+	const FName Sex = (Seed & 1) ? TEXT("male") : TEXT("female");
+	FVaesenRandomAppearanceSettings Random;
+	Random.bPlayerSelectableOnly = true;
+	Random.SliderSpread = 0.3f;
+	Random.MaxAge = 0.6f;
+	for (const TPair<FName, const FVaesenAppearancePresetRow*>& Slider : UVaesenAppearanceLibrary::PresetsFor(Presets, EVaesenAppearancePresetKind::Slider, Sex, true))
+	{
+		Random.Sliders.Add(Slider.Key);
+	}
+	return UVaesenAppearanceLibrary::RandomAppearance(Presets, Sex, (int32)Seed, Random);
+}
+
+void AVaesenPlayerCharacter::HandleMetaHumanReady(AActor* InMetaHuman)
+{
+	MetaHuman = InMetaHuman;
+
+	// The mannequin keeps animating (movement, sockets, equipment) but isn't drawn: the MetaHuman shows the character.
+	for (USkeletalMeshComponent* Part : GetBodyParts())
+	{
+		if (Part)
+		{
+			Part->SetVisibility(false);
+		}
+	}
+	GetMesh()->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::AlwaysTickPoseAndRefreshBones;
+
+	// Its body copies the mannequin's pose through the retargeter (its face and grooms follow the body already).
+	TArray<UPrimitiveComponent*> Primitives;
+	InMetaHuman->GetComponents(Primitives);
+	UIKRetargeter* const Retargeter = UVaesenSettings::Get()->MetaHumanRetargeter.LoadSynchronous();
+	for (UPrimitiveComponent* Primitive : Primitives)
+	{
+		Primitive->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		USkeletalMeshComponent* const Body = Primitive->GetFName() == TEXT("Body") ? Cast<USkeletalMeshComponent>(Primitive) : nullptr;
+		if (Body && Retargeter)
+		{
+			if (!Cast<UVaesenRetargetAnimInstance>(Body->GetAnimInstance()))
+			{
+				Body->SetAnimInstanceClass(UVaesenRetargetAnimInstance::StaticClass());
+			}
+			if (UVaesenRetargetAnimInstance* const Retarget = Cast<UVaesenRetargetAnimInstance>(Body->GetAnimInstance()))
+			{
+				Retarget->SetSource(GetMesh(), Retargeter);
+			}
+		}
+	}
+	ApplyMetaHumanHeadView();
+}
+
+void AVaesenPlayerCharacter::ApplyMetaHumanHeadView()
+{
+	AActor* const Shown = MetaHuman.Get();
+	if (!Shown || !IsLocallyControlled())
+	{
+		return;
+	}
+	TArray<UPrimitiveComponent*> Primitives;
+	Shown->GetComponents(Primitives);
+	for (UPrimitiveComponent* Primitive : Primitives)
+	{
+		// The face and what grows on it (hair, brows, lashes, facial hair are grooms attached to the face).
+		const bool bHead = Primitive->GetFName() == TEXT("Face") || (Primitive->IsA<UGroomComponent>() && Primitive->GetAttachParent()
+			&& Primitive->GetAttachParent()->GetFName() == TEXT("Face"));
+		if (bHead)
+		{
+			Primitive->SetRenderInMainPass(!bFirstPerson);
+			Primitive->SetRenderInDepthPass(!bFirstPerson);
+		}
+	}
+}
+
 void AVaesenPlayerCharacter::ApplyViewMode()
 {
 	// Everyone (owner, server, other players): in first person the body turns with the view, otherwise it turns
@@ -335,6 +459,7 @@ void AVaesenPlayerCharacter::ApplyViewMode()
 			HeadLayer->SetRenderInDepthPass(!bFirstPerson);
 		}
 	}
+	ApplyMetaHumanHeadView();
 	if (!bFirstPerson)
 	{
 		FollowCamera->SetRelativeLocation(FVector::ZeroVector);

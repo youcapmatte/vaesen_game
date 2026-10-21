@@ -14,11 +14,17 @@ class UVaesenCreateCharacterWidget;
 class UVaesenCreateGuildWidget;
 class UVaesenPickGuildWidget;
 class UWidget;
+class AVaesenCharacterCreatorScene;
+class UVaesenCharacterCreatorWidget;
 
 /**
  * Character select screen. Opens on the guild you used last (or your first guild), lists its characters and plays
  * the chosen one. Change Guild opens the pick-guild dialog, Create Guild the create-guild dialog (you become its
- * guild master), Create Character the create-character dialog (once the guild's characters are loaded).
+ * guild master), Create Character the character creator (once the guild's characters are loaded).
+ *
+ * With an AVaesenCharacterCreatorScene in the level, the scene is the view: it shows the selected character's look, and
+ * Create Character opens the creator there (this widget hides until the creator closes; a new character is selected).
+ * Without one, Create Character opens CreateCharacterDialog (a name and a class, no look).
  * Guilds and characters come from the API (the signed-in account's guilds).
  *
  * Widget Blueprint (e.g. WBP_CharacterSelect, parent class VaesenCharacterSelectWidget), controls by these exact names:
@@ -122,6 +128,17 @@ private:
 	const FVaesenGuild* GetSelectedGuild() const;
 	const FVaesenRosterEntry* GetSelectedEntry() const;
 	const FVaesenCharacter* GetSelectedCharacter() const;
+
+	/** Shows the selected character's look in the scene (nobody if it has none). */
+	void PreviewSelected();
+	void OpenCreator();
+	void HandleCreatorFinished(bool bCreated, const FVaesenCharacter& Character);
+
+	UPROPERTY(Transient)
+	TObjectPtr<AVaesenCharacterCreatorScene> CreatorScene;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UVaesenCharacterCreatorWidget> CreatorWidget;
 	bool IsDialogOpen() const;
 	/** Counts a request the screen waits for: shows the throbber and disables the buttons until EndLoading. */
 	void BeginLoading();

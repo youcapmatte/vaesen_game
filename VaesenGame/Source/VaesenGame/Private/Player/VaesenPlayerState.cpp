@@ -8,5 +8,6 @@ void AVaesenPlayerState::CopyProperties(APlayerState* PlayerState)
 	{
 		VaesenPlayerState->PlayerSessionId = PlayerSessionId;
 		VaesenPlayerState->CharacterId = CharacterId;
+		VaesenPlayerState->CharacterAppearance = CharacterAppearance;
 	}
 }

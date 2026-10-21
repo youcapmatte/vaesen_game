@@ -24,4 +24,7 @@ public sealed class CharacterOptions
     public List<string> Classes { get; set; } = [];
 
     public IReadOnlyList<string> EffectiveClasses => Classes.Count > 0 ? Classes : DefaultClasses;
+
+    /// <summary>What a character's appearance may contain ("Characters:Appearance").</summary>
+    public AppearanceOptions Appearance { get; set; } = new();
 }

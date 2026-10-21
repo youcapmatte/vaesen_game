@@ -12,6 +12,7 @@
 .vscode/
 .idea/
 VaesenGame/*.sln
+VaesenGame/*.slnx
 *.suo
 *.opensdf
 *.sdf

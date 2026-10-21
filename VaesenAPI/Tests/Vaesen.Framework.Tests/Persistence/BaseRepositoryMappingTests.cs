@@ -74,6 +74,42 @@ public class BaseRepositoryMappingTests
     }
 
     [Fact]
+    public void Character_Appearance_IsANestedMap_AndRoundTrips()
+    {
+        var character = new Character
+        {
+            GuildId = "guild-3f2b8c1e-1d2c-4b5a-9e8f-0123456789ab",
+            Name = "Astrid Falk",
+            Appearance = new CharacterAppearance
+            {
+                Sex = "female",
+                FacePresetId = "face_f_07",
+                SkinTone = new SkinTone { U = 0.42f, V = 0.3f },
+                FaceSliders = { ["jawWidth"] = 0.2f },
+                HairColor = new HairColor { Melanin = 0.7f },
+            },
+        };
+        var repository = new MappingProbe<Character>();
+
+        var item = repository.ToItemPublic(character);
+        var loaded = MappingProbe<Character>.FromItemPublic(item);
+
+        Assert.Equal("face_f_07", item["appearance"].M["facePresetId"].S);
+        Assert.NotNull(item["appearance"].M["faceSliders"].M["jawWidth"].N);
+        Assert.Equal("face_f_07", loaded.Appearance!.FacePresetId);
+        Assert.Equal(0.42f, loaded.Appearance.SkinTone.U, 3);
+        Assert.Equal(0.2f, loaded.Appearance.FaceSliders["jawWidth"], 3);
+    }
+
+    [Fact]
+    public void Character_WithoutAppearance_HasNoAppearanceAttribute()
+    {
+        var item = new MappingProbe<Character>().ToItemPublic(new Character { GuildId = "guild-3f2b8c1e-1d2c-4b5a-9e8f-0123456789ab", Name = "Erik Lund" });
+
+        Assert.False(item.ContainsKey("appearance"));
+    }
+
+    [Fact]
     public void Character_IsIndexedUnderItsGuild()
     {
         var character = new Character { GuildId = "guild-3f2b8c1e-1d2c-4b5a-9e8f-0123456789ab", Name = "Astrid" };

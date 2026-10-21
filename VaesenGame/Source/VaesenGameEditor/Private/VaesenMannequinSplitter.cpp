@@ -63,7 +63,8 @@ namespace VaesenMannequinSplitter
 		{
 			return EPart::Head;
 		}
-		if (StartsWithAny({ TEXT("foot"), TEXT("ball") }))
+		// Toes before fingers: MetaHuman toe bones are named like fingers ("indextoe_01_l", "bigtoe_01_l").
+		if (StartsWithAny({ TEXT("foot"), TEXT("ball") }) || Name.Contains(TEXT("toe")))
 		{
 			return EPart::Feet;
 		}
@@ -261,21 +262,35 @@ namespace VaesenMannequinSplitter
 			UE_LOG(LogVaesenMannequinSplitter, Error, TEXT("%s not found."), SourceMeshPath);
 			return false;
 		}
+		return SplitSkeletalMesh(Source, PartsFolder, TEXT("SKM_Manny"), /*bKeepHead*/ true);
+	}
 
-		// Bone index -> part, from the source's reference skeleton (the dynamic mesh's bone indices use it).
+	bool SplitSkeletalMesh(USkeletalMesh* Source, const FString& OutFolder, const FString& Prefix, bool bKeepHead)
+	{
+		const TCHAR* const PartSuffixes[] = { TEXT("_Head"), TEXT("_Torso"), TEXT("_Hands"), TEXT("_Legs"), TEXT("_Feet") };
+
+		// Bone index -> part, from the source's reference skeleton (the dynamic mesh's bone indices use it). Without a
+		// head part (a MetaHuman's head is its own face mesh), the neck stays with the torso.
 		const FReferenceSkeleton& RefSkeleton = Source->GetRefSkeleton();
 		TArray<EPart> BoneParts;
 		for (int32 BoneIndex = 0; BoneIndex < RefSkeleton.GetNum(); ++BoneIndex)
 		{
-			BoneParts.Add(ClassifyBone(RefSkeleton, BoneIndex));
+			const EPart Part = ClassifyBone(RefSkeleton, BoneIndex);
+			BoneParts.Add(!bKeepHead && Part == EPart::Head ? EPart::Torso : Part);
 		}
 
 		IAssetTools& AssetTools = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools").Get();
 		bool bAllOk = true;
 
-		for (const FPartInfo& Info : Parts)
+		for (const FPartInfo& Part : Parts)
 		{
-			const FString PackagePath = FString(PartsFolder) / Info.AssetName;
+			if (!bKeepHead && Part.Part == EPart::Head)
+			{
+				continue;
+			}
+			const FString AssetNameString = Prefix + PartSuffixes[(int32)Part.Part];
+			const FPartInfo Info{ Part.Part, *AssetNameString };
+			const FString PackagePath = OutFolder / Info.AssetName;
 			if (FPackageName::DoesPackageExist(PackagePath))
 			{
 				UE_LOG(LogVaesenMannequinSplitter, Display, TEXT("%s already exists; leaving it alone."), *PackagePath);
@@ -283,7 +298,7 @@ namespace VaesenMannequinSplitter
 			}
 
 			// Start from a copy of Manny (materials, skeleton, physics asset), keep only LOD0.
-			USkeletalMesh* Target = Cast<USkeletalMesh>(AssetTools.DuplicateAsset(Info.AssetName, PartsFolder, Source));
+			USkeletalMesh* Target = Cast<USkeletalMesh>(AssetTools.DuplicateAsset(Info.AssetName, OutFolder, Source));
 			if (!Target)
 			{
 				UE_LOG(LogVaesenMannequinSplitter, Error, TEXT("Couldn't create %s."), *PackagePath);
@@ -309,7 +324,7 @@ namespace VaesenMannequinSplitter
 			UGeometryScriptLibrary_StaticMeshFunctions::CopyMeshFromSkeletalMesh(Source, Mesh, ReadOptions, ReadLOD, Outcome);
 			if (Outcome != EGeometryScriptOutcomePins::Success)
 			{
-				UE_LOG(LogVaesenMannequinSplitter, Error, TEXT("Couldn't read %s."), SourceMeshPath);
+				UE_LOG(LogVaesenMannequinSplitter, Error, TEXT("Couldn't read %s."), *Source->GetPathName());
 				return false;
 			}
 

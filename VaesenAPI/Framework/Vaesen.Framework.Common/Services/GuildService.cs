@@ -239,7 +239,8 @@ public sealed partial class GuildService : IGuildService
         var invalid = CharacterRules.ValidatePersonName(firstName, "First name")
             ?? CharacterRules.ValidatePersonName(lastName, "Last name")
             ?? CharacterRules.ValidateClass(characterClass, _characterOptions.Value.EffectiveClasses)
-            ?? CharacterRules.ValidateHealthPoints(request?.HealthPoints);
+            ?? CharacterRules.ValidateHealthPoints(request?.HealthPoints)
+            ?? AppearanceRules.Validate(request?.Appearance, _characterOptions.Value.Appearance);
         if (invalid is not null)
         {
             return ret.Fail(invalid, ErrorCodes.Invalid);
@@ -264,6 +265,7 @@ public sealed partial class GuildService : IGuildService
             LastName = lastName!,
             Class = CharacterRules.NormalizeClass(characterClass, _characterOptions.Value.EffectiveClasses),
             HealthPoints = request?.HealthPoints ?? Character.DefaultHealthPoints,
+            Appearance = AppearanceRules.Normalize(request?.Appearance, _characterOptions.Value.Appearance),
             CreatedBy = creator.Id,
             UpdatedBy = creator.Id,
         };
