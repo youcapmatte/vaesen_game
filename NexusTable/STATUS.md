@@ -13,7 +13,8 @@ Design: [DESIGN.md](DESIGN.md). How to run: [README.md](README.md).
 | Gamemaster agent (Python) | Yes | 7 tests pass; imports and every LiveKit call checked against livekit-agents 1.8.8; **never run in a real room** |
 | Discord sign-in (Auth0) | Wired | **Not tested**: no Auth0 tenant yet; the dev login is used instead |
 | DynamoDB storage | Written | **Not tested**: no AWS table yet; development stores JSON files |
-| Mystery generator, session log, deployment | No | - |
+| Docker images (API, web app, agent) | Yes | API published and web app built with the same steps as the images; **no image built yet** (no Docker on this machine) |
+| Mystery generator, session log, AWS deployment | No | - |
 
 ## Commits (oldest first)
 
@@ -110,7 +111,7 @@ Design: [DESIGN.md](DESIGN.md). How to run: [README.md](README.md).
   - the routing step (NPC speech, question, rules question or action)
   - per-NPC voices
   - Advantage tracking per session
-  - deployment (Dockerfiles, AWS)
+  - deployment to AWS (the Dockerfiles exist)
 
 ## Working on another computer
 

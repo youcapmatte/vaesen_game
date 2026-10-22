@@ -152,6 +152,18 @@ The agent reads the full table, dark secrets included, from `GET /api/agent/tabl
 
 Voices default to two ElevenLabs premade voices. Set `NEXUS_NARRATOR_VOICE` and `NEXUS_NPC_VOICE` to the ones you like.
 
+## Docker images
+
+Each service has a Dockerfile. They are for hosting (AWS ECS Fargate is the plan); local development doesn't need Docker.
+
+| Image | Build (from the repository root) | Port | Settings |
+|---|---|---|---|
+| API | `docker build -f NexusTable/Api/Dockerfile -t nexus-table-api .` | 8080 | Environment variables with `__` for `:`, e.g. `Auth0__Domain`, `LiveKit__ApiSecret`, `Cors__Origins__0`, `Nexus__HostSubjects__0`. Runs as `Production`, so DynamoDB and no dev login. |
+| Web | `docker build -t nexus-table-web --build-arg NEXT_PUBLIC_API_URL=https://api.example.com NexusTable/Web` | 3030 | `NEXT_PUBLIC_API_URL` (required) and `NEXT_PUBLIC_DEV_LOGIN` are build arguments, baked into the browser code. The `AUTH0_*` values and `APP_BASE_URL` are read at runtime. |
+| Gamemaster agent | `docker build -t nexus-gm NexusTable/GmAgent` | 8081 (health only) | The `GmAgent/.env.example` variables. Runs `agent.py start`. |
+
+The API image's context is the repository root because it references `VaesenAPI/Framework`; `NexusTable/Api/Dockerfile.dockerignore` keeps the rest of the repository out of it.
+
 ## Next milestones (from DESIGN.md)
 
 1. **Measure and tune the voice loop.** Measure with real keys; then try the routing step (Haiku decides between NPC speech, a question, a rules question and an action), per-NPC prompts and distinct voices.

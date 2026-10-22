@@ -1,0 +1,8 @@
+# The build context is the repository root (Unreal project included), so send only what the API needs.
+*
+!VaesenAPI/Framework/Vaesen.Framework.Core/
+!NexusTable/Api/Nexus.Table/
+!NexusTable/Api/Nexus.Table.Api/
+**/bin/
+**/obj/
+**/.data/

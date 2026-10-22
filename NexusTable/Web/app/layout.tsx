@@ -6,6 +6,7 @@ import { ColorSchemeScript, MantineProvider, mantineHtmlProps } from "@mantine/c
 import { Notifications } from "@mantine/notifications";
 import type { Metadata } from "next";
 import { EB_Garamond, IM_Fell_English, IM_Fell_English_SC } from "next/font/google";
+import { connection } from "next/server";
 import { SecurityProvider } from "@/common/client/security/SecurityProvider";
 import { TableConnectionProvider } from "@/common/client/signalr/useTable";
 import { auth0, auth0Enabled } from "@/common/server/auth0";
@@ -21,6 +22,8 @@ export const metadata: Metadata = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Render per request: the Auth0 settings and the session are read when the server runs, not when the image is built.
+  await connection();
   const session = auth0 ? await auth0.getSession() : null;
   const devLoginEnabled = process.env.NEXT_PUBLIC_DEV_LOGIN === "true";
 
