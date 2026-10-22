@@ -1,0 +1,145 @@
+{
+  "id": "sawmill",
+  "version": 1,
+  "status": "draft",
+  "name": "Sawmill",
+  "tag": "sawmill",
+  "description": "A sawmill cutting timber into planks and battens for export: a frame saw driven by water or, at the newer works, by steam, with log ponds, timber yards and sawdust everywhere.",
+  "settlementTypes": [
+    "hamlet",
+    "village",
+    "town",
+    "estate",
+    "camp"
+  ],
+  "tags": [],
+  "affordances": [
+    {
+      "id": "waterwheel",
+      "tag": "waterwheel",
+      "name": "Saw wheel and race",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 0,
+        "maxCount": 1
+      },
+      "scaling": "Present where the saw is driven by water; absent at a steam saw.",
+      "contains": []
+    },
+    {
+      "id": "millpond",
+      "tag": "millpond",
+      "name": "Log pond",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 0,
+        "maxCount": 1
+      },
+      "scaling": "A dammed pond where floated logs are held before sawing; absent where logs are hauled in by sled.",
+      "contains": []
+    },
+    {
+      "id": "mill-machinery",
+      "tag": "mill-machinery",
+      "name": "Saw hall",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "scaling": "One frame saw in a country saw; several frames and an edger at an export works.",
+      "contains": []
+    },
+    {
+      "id": "drying-shed",
+      "tag": "drying-shed",
+      "name": "Timber yard",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    },
+    {
+      "id": "tool-shed",
+      "tag": "tool-shed",
+      "name": "Filing shed",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    },
+    {
+      "id": "bunkhouse",
+      "tag": "bunkhouse",
+      "name": "Workers' barracks",
+      "condition": {
+        "minSize": 2,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "scaling": "Absent where hands are local; a barracks for migrant sawmill hands at a larger works.",
+      "contains": []
+    },
+    {
+      "id": "counting-house",
+      "tag": "counting-house",
+      "name": "Sawmill office",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 2,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "scaling": "A table in the filing shed at a country saw; a clerk's office with a telegraph address at an export works.",
+      "contains": [
+        {
+          "id": "desk",
+          "tag": "desk",
+          "name": "Clerk's desk",
+          "condition": {
+            "minSize": 1,
+            "minWealth": 1,
+            "minCount": 1,
+            "maxCount": 1
+          },
+          "contains": [
+            {
+              "id": "drawer",
+              "tag": "lockable-drawer",
+              "name": "Locked drawer",
+              "condition": {
+                "minSize": 1,
+                "minWealth": 1,
+                "minCount": 1,
+                "maxCount": 1
+              },
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "strongbox",
+          "tag": "strongbox",
+          "name": "Wage box",
+          "condition": {
+            "minSize": 1,
+            "minWealth": 3,
+            "minCount": 1,
+            "maxCount": 1
+          },
+          "contains": []
+        }
+      ]
+    }
+  ]
+}

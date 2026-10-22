@@ -1,0 +1,96 @@
+{
+  "id": "church",
+  "version": 1,
+  "status": "draft",
+  "name": "Parish church",
+  "tag": "church",
+  "description": "A parish church in its churchyard: whitewashed stone or tarred timber, the centre of parish life, where banns are read and notices posted on the door.",
+  "settlementTypes": [
+    "hamlet",
+    "village",
+    "town",
+    "city",
+    "estate"
+  ],
+  "tags": [
+    "graveyard"
+  ],
+  "affordances": [
+    {
+      "id": "sacristy",
+      "tag": "sacristy",
+      "name": "Sacristy",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "scaling": "A cold vaulted room off the chancel; larger and panelled in a wealthy parish.",
+      "contains": [
+        {
+          "id": "cabinet",
+          "tag": "cabinet",
+          "name": "Vestment cupboard",
+          "condition": {
+            "minSize": 1,
+            "minWealth": 1,
+            "minCount": 1,
+            "maxCount": 1
+          },
+          "contains": []
+        },
+        {
+          "id": "chest",
+          "tag": "chest",
+          "name": "Parish chest",
+          "condition": {
+            "minSize": 1,
+            "minWealth": 1,
+            "minCount": 1,
+            "maxCount": 1
+          },
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "bell-tower",
+      "tag": "bell-tower",
+      "name": "Bell tower",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "scaling": "A separate tarred wooden bell frame (klockstapel) in a poor parish; a stone tower with a spire in a rich one.",
+      "contains": []
+    },
+    {
+      "id": "attic",
+      "tag": "attic",
+      "name": "Church loft",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    },
+    {
+      "id": "crypt",
+      "tag": "crypt",
+      "name": "Burial vault",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 3,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "scaling": "Absent in poor parishes; a gentry family's vault beneath the chancel where there is a manor.",
+      "contains": []
+    }
+  ]
+}

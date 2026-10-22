@@ -1,0 +1,96 @@
+{
+  "id": "servant-alm",
+  "version": 1,
+  "status": "draft",
+  "name": "Elin Alm",
+  "identity": {
+    "age": 19,
+    "gender": "female",
+    "occupation": "Maid of all work at the Society's headquarters",
+    "rank": "farmhand or maid",
+    "home": "A small room behind the kitchen at the Society's headquarters near Gamla Uppsala",
+    "appearance": "Sturdy and freckled, with red, chapped hands, a plaited fair braid pinned under a cap, and very sharp grey eyes that miss nothing."
+  },
+  "personality": {
+    "openness": 4,
+    "conscientiousness": 4,
+    "extraversion": 2,
+    "agreeableness": 4,
+    "neuroticism": 4
+  },
+  "drives": [
+    {
+      "id": "passage-money",
+      "text": "Save enough for a steerage passage to join her brother Per in Minnesota.",
+      "strength": 3
+    },
+    {
+      "id": "protect-the-house",
+      "text": "Keep the household she serves safe from the things she has seen in the yard at night.",
+      "strength": 2
+    },
+    {
+      "id": "grandmother",
+      "text": "Honour what her grandmother taught her without the vicar finding out.",
+      "strength": 1
+    }
+  ],
+  "voice": {
+    "register": "Quiet and correct with the gentlefolk, broad Hälsingland dialect when frightened or among her own.",
+    "mannerisms": [
+      "Answers a question with 'if the master wishes'",
+      "Touches the iron nail sewn into her apron hem when she is uneasy",
+      "Goes very still and listens before she speaks"
+    ],
+    "sampleLines": [
+      "If the master wishes. Only, I'd not leave the stable door open after dark this week. Not this week.",
+      "My grandmother used to put a pair of scissors under the cradle. I don't hold with such things, of course. But I've put a pair under the back step.",
+      "Someone was asking at the inn what time the gentlemen come and go. I didn't care for the look of him."
+    ]
+  },
+  "background": "Elin came south from a croft near Bollnäs after the famine of 1868 took her parents and sent her brother to America. Her grandmother was a respected wise woman who could stop blood and find lost cattle, and taught Elin far more than either of them ever told the vicar. She came to the headquarters through her aunt's connection with the inn and was hired because she did not scream on her first night. She half-has the Sight herself, keeps the house's old protections quietly in order, and is fiercely loyal, but she is also saving every coin she can, and coins come from more than one direction.",
+  "latentHooks": [
+    {
+      "id": "editors-coins",
+      "kind": "secret",
+      "text": "Editor Blom pays her a few skilling for harmless news of the household; she tells herself she gives him nothing that matters."
+    },
+    {
+      "id": "grandmothers-book",
+      "kind": "connection",
+      "text": "She keeps her grandmother's book of charms and remedies, written in a mixture of Swedish and old rune-signs, hidden in her trunk."
+    },
+    {
+      "id": "brothers-letters",
+      "kind": "habit",
+      "text": "Letters from Per in Minnesota arrive irregularly through the inn; one has not come in five months, and she fears the worst."
+    },
+    {
+      "id": "half-sight",
+      "kind": "secret",
+      "text": "She sometimes sees what the Society sees, and does not yet know whether to tell them."
+    }
+  ],
+  "networkLinks": [
+    {
+      "targetId": "innkeeper-strand",
+      "place": "The northern road",
+      "nature": "Niece by marriage; visits on free Sundays",
+      "influence": "Can pass word to or from the inn, and anything she says there travels."
+    },
+    {
+      "targetId": "editor-blom",
+      "place": "Uppsala",
+      "nature": "Paid, occasional informant",
+      "influence": "Can, without meaning harm, let slip the Society's movements to the press."
+    },
+    {
+      "targetId": "parish",
+      "place": "Gamla Uppsala",
+      "nature": "Communicant who must attend the household examination",
+      "influence": "Her answers at the catechism examination can draw the vicar's attention to the house."
+    }
+  ],
+  "startingAttitude": 2,
+  "attitudeReason": "Loyal to the household that took her in and frightened for it, though she keeps her own counsel and her own savings."
+}

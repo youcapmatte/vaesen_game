@@ -1,0 +1,74 @@
+{
+  "id": "smithy",
+  "version": 1,
+  "status": "draft",
+  "name": "Smithy",
+  "tag": "smithy",
+  "description": "A blacksmith's forge: horseshoes, wheel rims, scythes and nails for the district, and the smith's cottage beside it.",
+  "settlementTypes": [],
+  "tags": [],
+  "affordances": [
+    {
+      "id": "forge",
+      "tag": "forge",
+      "name": "Forge",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "scaling": "One hearth and anvil in a village; two hearths and a striker in a town.",
+      "contains": []
+    },
+    {
+      "id": "workshop",
+      "tag": "workshop",
+      "name": "Workshop",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    },
+    {
+      "id": "tool-shed",
+      "tag": "tool-shed",
+      "name": "Coal shed",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    },
+    {
+      "id": "kitchen",
+      "tag": "kitchen",
+      "name": "Smith's cottage",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": [
+        {
+          "id": "chest",
+          "tag": "chest",
+          "name": "Smith's chest",
+          "condition": {
+            "minSize": 1,
+            "minWealth": 1,
+            "minCount": 1,
+            "maxCount": 1
+          },
+          "contains": []
+        }
+      ]
+    }
+  ]
+}

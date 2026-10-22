@@ -1,0 +1,652 @@
+{
+  "id": "level-mossaby-october",
+  "version": 1,
+  "status": "draft",
+  "name": "Mossaby Parish",
+  "region": "Southern Småland, in the forest uplands",
+  "settlementType": "village",
+  "size": 2,
+  "wealth": 1,
+  "month": 10,
+  "terrain": [
+    "forest",
+    "marsh",
+    "lake",
+    "stream",
+    "moor"
+  ],
+  "description": "Mossaby is a poor forest parish in the Småland uplands, a scattering of small farms and crofts on stony ground between spruce forest, bogs and lakes. The fields are made by carrying stones off them for generations, piled in long walls through the woods. Since the famine years at the end of the 1860s, families have been leaving for America almost every month, and empty cottages stand with their doors nailed shut.",
+  "seasonNotes": "October. The rowans are red with berries and the birches yellow against dark spruce, but the stony fields have given a thin harvest again. Mists lie over the bogs each morning and rise slowly through the trees. Potatoes are being dug and stored, and lingonberries picked in the forest. The rains come and the stream rises enough for the mill to grind. The days grow short and cold, and the first frost blackens the potato tops.",
+  "travel": "From Uppsala by rail via Stockholm and the southern main line to Nässjö, about twelve hours, then by coach or farm cart into the forest, most of a day on poor roads.",
+  "publicFacts": [
+    "In the famine years of 1867 and 1868 the harvest failed twice and the parish went hungry; many sold their land.",
+    "Some forty people have left Mossaby for America in the last three years, most for Minnesota and Illinois; their letters and tickets arrive by post.",
+    "An emigration agent visits the parish twice a year selling passages via Gothenburg and Liverpool.",
+    "The vicar holds the household examination in each village in November and keeps careful records of who has gone.",
+    "The parish is crossed by stone walls built by generations of farmers clearing their fields.",
+    "A miller grinds at the stream mill only in autumn and spring, when there is enough water.",
+    "The revival preachers have a strong following in the parish, and many families hold devotions at home.",
+    "The wise man in the forest is visited by people from three parishes for sick animals and lost things."
+  ],
+  "places": [
+    {
+      "id": "church",
+      "templateId": "church",
+      "name": "Mossaby Church",
+      "description": "The church is a small white building with a tarred wooden tower, standing on a hill of glacial gravel above the lake. The churchyard wall is built of the same grey stones as every field wall in the parish. Yellow birch leaves blow across the graves. Inside it smells of damp, and the plaster on the walls is cracked.",
+      "tags": [
+        "church",
+        "graveyard"
+      ],
+      "affordances": [
+        {
+          "id": "church-sacristy",
+          "tag": "sacristy",
+          "name": "Sacristy",
+          "description": "A small vaulted room off the chancel where the vicar robes.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "church-sacristy-cabinet",
+              "tag": "cabinet",
+              "name": "Vestment cupboard",
+              "description": "A tall cupboard of chasubles, the surplice and spare altar candles.",
+              "lockable": false,
+              "contains": []
+            },
+            {
+              "id": "church-sacristy-chest",
+              "tag": "chest",
+              "name": "Parish chest",
+              "description": "An ancient iron-banded chest with three locks for the communion silver and old deeds.",
+              "lockable": true,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "church-bell-tower",
+          "tag": "bell-tower",
+          "name": "Bell tower",
+          "description": "Steep ladders up to the bells, bird droppings on the beams, wind through the louvres.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "church-attic",
+          "tag": "attic",
+          "name": "Church loft",
+          "description": "The dusty space above the vaults, full of broken pews and old hatchments.",
+          "lockable": false,
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "parsonage",
+      "templateId": "parsonage",
+      "name": "Mossaby Parsonage",
+      "description": "The parsonage is a plain red house with white corners, the best building in the parish though its roof leaks. Lingonberries are spread on cloths in the kitchen. The vicar works by lamplight early in the afternoon, adding notes of 'moved to North America' to the registers. The glebe fields around it are as stony as everyone else's.",
+      "tags": [
+        "parsonage",
+        "fields"
+      ],
+      "affordances": [
+        {
+          "id": "parsonage-office",
+          "tag": "office",
+          "name": "Vicar's study",
+          "description": "The study where the vicar writes sermons and receives parishioners.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "parsonage-office-desk",
+              "tag": "desk",
+              "name": "Vicar's desk",
+              "description": "A desk under the window with sermon drafts.",
+              "lockable": false,
+              "contains": [
+                {
+                  "id": "parsonage-office-desk-drawer",
+                  "tag": "lockable-drawer",
+                  "name": "Locked drawer",
+                  "description": "A locked drawer for private letters and certificates waiting to be signed.",
+                  "lockable": true,
+                  "contains": []
+                }
+              ]
+            },
+            {
+              "id": "parsonage-office-bookshelf",
+              "tag": "bookshelf",
+              "name": "Bookshelves",
+              "description": "Shelves of postils, Luther, hymnals and back numbers of church journals.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "parsonage-archive",
+          "tag": "archive",
+          "name": "Parish registers",
+          "description": "A locked cupboard in the study holding the parish registers, where page after page of names are marked as gone to America.",
+          "lockable": true,
+          "contains": []
+        },
+        {
+          "id": "parsonage-parlour",
+          "tag": "parlour",
+          "name": "Parlour",
+          "description": "The parsonage parlour where the vicar's wife receives.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "parsonage-kitchen",
+          "tag": "kitchen",
+          "name": "Kitchen",
+          "description": "The parsonage kitchen.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "parsonage-barn",
+          "tag": "barn",
+          "name": "Glebe barn",
+          "description": "The barn of the glebe farm.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "parsonage-cowshed",
+          "tag": "cowshed",
+          "name": "Glebe cowshed",
+          "description": "The parsonage cowshed.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "parsonage-garden",
+          "tag": "garden",
+          "name": "Parsonage garden",
+          "description": "An orchard and kitchen garden, the vicar's pride.",
+          "lockable": false,
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "farm",
+      "templateId": "farm",
+      "name": "Ingeborgs gård",
+      "description": "A small farm on a slope above the lake, its grey timber house surrounded by birches and stone walls. The farmer and his sons are digging potatoes in the wet field. Smoke rises from the bathhouse where malt is drying. A pig is fattening in a pen for the slaughter.",
+      "tags": [
+        "farm",
+        "fields",
+        "lake"
+      ],
+      "affordances": [
+        {
+          "id": "farm-yard",
+          "tag": "yard",
+          "name": "Farmyard",
+          "description": "The yard between the buildings, trodden mud and a woodpile.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-kitchen",
+          "tag": "kitchen",
+          "name": "Main room",
+          "description": "The everyday room: open hearth, long table, wall beds and the loom in the corner.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "farm-kitchen-hearth",
+              "tag": "hearth",
+              "name": "Open hearth",
+              "description": "The whitewashed corner hearth with its iron pot-hook.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "farm-cowshed",
+          "tag": "cowshed",
+          "name": "Cowshed",
+          "description": "A low dark byre, warm with cattle breath.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-stable",
+          "tag": "stable",
+          "name": "Stable",
+          "description": "A stable for the farm horse or horses.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-barn",
+          "tag": "barn",
+          "name": "Barn",
+          "description": "A timber barn for the harvest.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "farm-barn-hayloft",
+              "tag": "hayloft",
+              "name": "Hayloft",
+              "description": "The hay store over the barn floor, reached by a ladder.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "farm-drying-shed",
+          "tag": "drying-shed",
+          "name": "Threshing barn",
+          "description": "A threshing barn (loge) where the grain is threshed with flails through the autumn.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-cellar",
+          "tag": "cellar",
+          "name": "Root cellar",
+          "description": "A root cellar dug into the slope, holding potatoes, turnips and the milk.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-well",
+          "tag": "well",
+          "name": "Well",
+          "description": "A well with a sweep pole and a wooden bucket.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-bathhouse",
+          "tag": "bathhouse",
+          "name": "Bathhouse",
+          "description": "A small log bastu with a stone oven, also used for drying malt and flax.",
+          "lockable": false,
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "croft-stenbacken",
+      "templateId": "croft",
+      "name": "Stenbacken",
+      "description": "A tiny croft on a stony hill among the spruces, with a grey cottage and a byre for one cow. The family is preparing to leave for America in the spring, and the chest is already packed in the corner. Mist drips from the trees. The potato patch has been dug and only stones remain.",
+      "tags": [
+        "croft",
+        "forest"
+      ],
+      "affordances": [
+        {
+          "id": "croft-stenbacken-kitchen",
+          "tag": "kitchen",
+          "name": "Cottage room",
+          "description": "One room: hearth, a box bed for the parents, a pull-out bench for the children, a table under the window.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "croft-stenbacken-kitchen-hearth",
+              "tag": "hearth",
+              "name": "Hearth",
+              "description": "The hearth, smoke-blackened, a pot simmering.",
+              "lockable": false,
+              "contains": []
+            },
+            {
+              "id": "croft-stenbacken-kitchen-chest",
+              "tag": "chest",
+              "name": "Clothes chest",
+              "description": "The family's one chest for Sunday clothes and papers.",
+              "lockable": false,
+              "contains": []
+            },
+            {
+              "id": "croft-stenbacken-kitchen-hiding-place",
+              "tag": "hiding-place",
+              "name": "Loose board",
+              "description": "A loose floorboard by the bed where a few coins can be kept.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "croft-stenbacken-cowshed",
+          "tag": "cowshed",
+          "name": "Byre",
+          "description": "A byre built against the cottage for one cow and a few sheep.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "croft-stenbacken-cellar",
+          "tag": "cellar",
+          "name": "Earth cellar",
+          "description": "A turf-roofed earth cellar for potatoes.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "croft-stenbacken-well",
+          "tag": "well",
+          "name": "Well",
+          "description": "A shallow well or a spring-fed pit with a bucket.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "croft-stenbacken-garden",
+          "tag": "garden",
+          "name": "Potato patch",
+          "description": "A stony patch of potatoes, kale and tobacco plants.",
+          "lockable": false,
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "croft-ravmossen",
+      "templateId": "croft",
+      "name": "Rävmossen",
+      "description": "The cottage stands at the edge of a wide bog, its windows dark, its door nailed shut since the family left for America last year. Nobody has bought it, and the meadow is going back to heather and birch scrub. The mist rolls in from the bog in the morning. A path of logs leads across the bog to the forest beyond.",
+      "tags": [
+        "croft",
+        "marsh",
+        "moor"
+      ],
+      "affordances": [
+        {
+          "id": "croft-ravmossen-kitchen",
+          "tag": "kitchen",
+          "name": "Cottage room",
+          "description": "One room: hearth, a box bed for the parents, a pull-out bench for the children, a table under the window.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "croft-ravmossen-kitchen-hearth",
+              "tag": "hearth",
+              "name": "Hearth",
+              "description": "The hearth, smoke-blackened, a pot simmering.",
+              "lockable": false,
+              "contains": []
+            },
+            {
+              "id": "croft-ravmossen-kitchen-chest",
+              "tag": "chest",
+              "name": "Clothes chest",
+              "description": "The family's one chest for Sunday clothes and papers.",
+              "lockable": false,
+              "contains": []
+            },
+            {
+              "id": "croft-ravmossen-kitchen-hiding-place",
+              "tag": "hiding-place",
+              "name": "Loose board",
+              "description": "A loose floorboard by the bed where a few coins can be kept.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "croft-ravmossen-cowshed",
+          "tag": "cowshed",
+          "name": "Byre",
+          "description": "A byre built against the cottage for one cow and a few sheep.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "croft-ravmossen-cellar",
+          "tag": "cellar",
+          "name": "Earth cellar",
+          "description": "A turf-roofed earth cellar for potatoes.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "croft-ravmossen-well",
+          "tag": "well",
+          "name": "Well",
+          "description": "A shallow well or a spring-fed pit with a bucket.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "croft-ravmossen-garden",
+          "tag": "garden",
+          "name": "Potato patch",
+          "description": "A stony patch of potatoes, kale and tobacco plants.",
+          "lockable": false,
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "mill",
+      "templateId": "mill",
+      "name": "Bäckakvarn",
+      "description": "A small grey mill stands where the stream falls through a rocky gorge in the forest, its wheel turning now that the autumn rains have come. The water foams white over the stones and the noise fills the narrow valley. Moss and ferns cover every surface. The miller is an old man who grinds for half the parish in the few weeks the water lasts.",
+      "tags": [
+        "mill",
+        "running-water",
+        "stream",
+        "waterfall",
+        "forest",
+        "ravine"
+      ],
+      "affordances": [
+        {
+          "id": "mill-waterwheel",
+          "tag": "waterwheel",
+          "name": "Waterwheel and race",
+          "description": "The wheel and the timber race that feeds it.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "mill-millpond",
+          "tag": "millpond",
+          "name": "Mill pond",
+          "description": "The pond behind the dam, black and still, with a sluice gate.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "mill-mill-machinery",
+          "tag": "mill-machinery",
+          "name": "Millstones",
+          "description": "The stones, hopper and gearing, everything white with meal.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "mill-attic",
+          "tag": "attic",
+          "name": "Grain loft",
+          "description": "The loft where sacks wait to be ground.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "mill-tool-shed",
+          "tag": "tool-shed",
+          "name": "Mill store",
+          "description": "A store of spare cogs, pick-hammers for dressing the stones and sacks.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "mill-kitchen",
+          "tag": "kitchen",
+          "name": "Miller's house",
+          "description": "The miller's cottage beside the mill, with its own hearth.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "mill-kitchen-hearth",
+              "tag": "hearth",
+              "name": "Hearth",
+              "description": "The miller's hearth.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "herbalist-cottage",
+      "templateId": "herbalist-cottage",
+      "name": "The Wise Man's Cottage",
+      "description": "Deep in the forest, an hour's walk from any farm, a small cottage stands by a spring among old spruces. Bundles of plants and bark hang from every beam. A cat watches from the window. People come here from far away, though they rarely speak of it.",
+      "tags": [
+        "herbalist-cottage",
+        "woodland",
+        "forest"
+      ],
+      "affordances": [
+        {
+          "id": "herbalist-cottage-kitchen",
+          "tag": "kitchen",
+          "name": "Cottage room",
+          "description": "A single low room, dim and smelling of smoke and herbs.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "herbalist-cottage-kitchen-hearth",
+              "tag": "hearth",
+              "name": "Hearth",
+              "description": "A hearth with a brew always going.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "herbalist-cottage-herb-store",
+          "tag": "herb-store",
+          "name": "Herb store",
+          "description": "Bunches of drying herbs from the rafters, jars of salve and dried roots.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "herbalist-cottage-herb-store-cabinet",
+              "tag": "cabinet",
+              "name": "Remedy cupboard",
+              "description": "A small cupboard of bottles, wrapped in rag and labelled in a crabbed hand.",
+              "lockable": false,
+              "contains": []
+            },
+            {
+              "id": "herbalist-cottage-herb-store-coffer",
+              "tag": "coffer",
+              "name": "Small box",
+              "description": "A small wooden box kept on a high shelf.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "herbalist-cottage-garden",
+          "tag": "garden",
+          "name": "Herb garden",
+          "description": "A fenced garden of medicinal plants.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "herbalist-cottage-cellar",
+          "tag": "cellar",
+          "name": "Earth cellar",
+          "description": "A small earth cellar.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "herbalist-cottage-well",
+          "tag": "well",
+          "name": "Spring",
+          "description": "A spring-fed well with a cup on a string.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "herbalist-cottage-hiding-place",
+          "tag": "hiding-place",
+          "name": "Hollow in the wall",
+          "description": "A hollow behind a loose log in the wall.",
+          "lockable": false,
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "smithy",
+      "templateId": "smithy",
+      "name": "The Parish Smithy",
+      "description": "The smithy stands at the crossroads in the middle of the parish, an old building of stone and timber. The smith makes scythes and axes for the forest farms and repairs the emigrants' trunks. The forge glows red in the grey autumn afternoon. Farmers stop there to talk and exchange news from America.",
+      "tags": [
+        "smithy",
+        "crossroads",
+        "road"
+      ],
+      "affordances": [
+        {
+          "id": "smithy-forge",
+          "tag": "forge",
+          "name": "Forge",
+          "description": "The hearth and bellows, the anvil on its stump, the quench trough.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "smithy-workshop",
+          "tag": "workshop",
+          "name": "Workshop",
+          "description": "The bench and racks of tongs, hammers and half-finished work.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "smithy-tool-shed",
+          "tag": "tool-shed",
+          "name": "Coal shed",
+          "description": "A shed of charcoal and bar iron from the works.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "smithy-kitchen",
+          "tag": "kitchen",
+          "name": "Smith's cottage",
+          "description": "The smith's one-room cottage across the yard.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "smithy-kitchen-chest",
+              "tag": "chest",
+              "name": "Smith's chest",
+              "description": "The smith's own chest of papers and good clothes.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,645 @@
+{
+  "id": "level-skarvik-august",
+  "version": 1,
+  "status": "draft",
+  "name": "Skärvik Fishing Village",
+  "region": "Northern Bohuslän, on the Skagerrak coast",
+  "settlementType": "village",
+  "size": 2,
+  "wealth": 2,
+  "month": 8,
+  "terrain": [
+    "coast",
+    "island",
+    "moor"
+  ],
+  "description": "Skärvik clings to a cleft in the bare granite of the Bohuslän coast, its white and red houses crowded together on rock ledges above a narrow harbour. The great herring shoals that made the coast rich left sixty years ago and have not returned; the people fish for cod, ling, mackerel and lobster, farm thin patches of soil between the rocks, and look out to sea. Beyond the village lies treeless heath and skerries without number.",
+  "seasonNotes": "August, late summer. The lobster season opens and the boats go out at dawn with the creels. The water is at its warmest and the evenings are long and golden, though the first dark nights return at the month's end. The heath is purple with heather. Hay is drying in small fields between the rocks, and the women split and salt fish on the jetties. Squalls come in from the west without warning.",
+  "travel": "From Uppsala by rail to Gothenburg via Stockholm and the western line, about a day and a half, then by coastal steamer north along the skerries, a further day.",
+  "publicFacts": [
+    "The herring has not returned to the Bohuslän coast since 1808; old men still keep the salting houses in hope.",
+    "Last autumn a boat with four men from Skärvik was lost in a storm off the outer skerries; their widows receive a small parish relief.",
+    "The coastal steamer calls at Skärvik twice a week in summer and not at all when the ice comes.",
+    "Several young men have shipped out as sailors on Norwegian ships, and a few have stayed in America.",
+    "The vicar serves three island parishes and travels between them by boat.",
+    "Fishermen and farmers disagree over the rights to collect seaweed for fertiliser on the shore.",
+    "A pilot lives on the island beyond the harbour and guides ships through the skerries."
+  ],
+  "places": [
+    {
+      "id": "croft",
+      "templateId": "croft",
+      "name": "The Harbour Cottages",
+      "description": "Small fishermen's cottages huddle on the rock above the harbour, each with its boathouse below and nets hanging to dry on poles. Children jump into the cold water from the jetty. The smell of tar, fish and seaweed is everywhere. Gulls scream over the gutting tables, where the women work fast with short knives.",
+      "tags": [
+        "croft",
+        "fishing-hut",
+        "jetty",
+        "coast"
+      ],
+      "affordances": [
+        {
+          "id": "croft-kitchen",
+          "tag": "kitchen",
+          "name": "Cottage room",
+          "description": "One room: hearth, a box bed for the parents, a pull-out bench for the children, a table under the window.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "croft-kitchen-hearth",
+              "tag": "hearth",
+              "name": "Hearth",
+              "description": "The hearth, smoke-blackened, a pot simmering.",
+              "lockable": false,
+              "contains": []
+            },
+            {
+              "id": "croft-kitchen-chest",
+              "tag": "chest",
+              "name": "Clothes chest",
+              "description": "The family's one chest for Sunday clothes and papers.",
+              "lockable": false,
+              "contains": []
+            },
+            {
+              "id": "croft-kitchen-hiding-place",
+              "tag": "hiding-place",
+              "name": "Loose board",
+              "description": "A loose floorboard by the bed where a few coins can be kept.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "croft-cowshed",
+          "tag": "cowshed",
+          "name": "Byre",
+          "description": "A byre built against the cottage for one cow and a few sheep.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "croft-cellar",
+          "tag": "cellar",
+          "name": "Earth cellar",
+          "description": "A cellar cut into the rock where salted fish is kept in barrels.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "croft-well",
+          "tag": "well",
+          "name": "Well",
+          "description": "A shallow well or a spring-fed pit with a bucket.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "croft-garden",
+          "tag": "garden",
+          "name": "Potato patch",
+          "description": "A tiny garden of potatoes in soil carried up in baskets, walled against the wind.",
+          "lockable": false,
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "farm",
+      "templateId": "farm",
+      "name": "Bergsgården",
+      "description": "The only real farm in Skärvik lies inland in a hollow of the heath where enough soil has gathered for fields. Low stone walls divide the small pastures, and the house is painted white with a slate roof weighted with stones. Sheep graze among the heather and juniper. From the hill behind, you can see the whole sea and the line of the skerries.",
+      "tags": [
+        "farm",
+        "fields",
+        "moor"
+      ],
+      "affordances": [
+        {
+          "id": "farm-yard",
+          "tag": "yard",
+          "name": "Farmyard",
+          "description": "The yard between the buildings, trodden mud and a woodpile.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-kitchen",
+          "tag": "kitchen",
+          "name": "Main room",
+          "description": "The everyday room: open hearth, long table, wall beds and the loom in the corner.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "farm-kitchen-hearth",
+              "tag": "hearth",
+              "name": "Open hearth",
+              "description": "The whitewashed corner hearth with its iron pot-hook.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "farm-parlour",
+          "tag": "parlour",
+          "name": "Best room",
+          "description": "The cold best room, painted furniture, the family Bible and a clock from Mora.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "farm-parlour-chest",
+              "tag": "chest",
+              "name": "Dowry chest",
+              "description": "A painted chest with the wife's linen and the year of her wedding on the lid.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "farm-servants-quarters",
+          "tag": "servants-quarters",
+          "name": "Farmhands' chamber",
+          "description": "A bare chamber with two beds and the hands' own chests.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-cowshed",
+          "tag": "cowshed",
+          "name": "Cowshed",
+          "description": "A low dark byre, warm with cattle breath.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-stable",
+          "tag": "stable",
+          "name": "Stable",
+          "description": "A stable for the farm horse or horses.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-barn",
+          "tag": "barn",
+          "name": "Barn",
+          "description": "A timber barn for the harvest.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "farm-barn-hayloft",
+              "tag": "hayloft",
+              "name": "Hayloft",
+              "description": "The hay store over the barn floor, reached by a ladder.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "farm-drying-shed",
+          "tag": "drying-shed",
+          "name": "Threshing barn",
+          "description": "A threshing barn (loge) where the grain is threshed with flails through the autumn.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-cellar",
+          "tag": "cellar",
+          "name": "Root cellar",
+          "description": "A root cellar dug into the slope, holding potatoes, turnips and the milk.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-well",
+          "tag": "well",
+          "name": "Well",
+          "description": "A well with a sweep pole and a wooden bucket.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-bathhouse",
+          "tag": "bathhouse",
+          "name": "Bathhouse",
+          "description": "A small log bastu with a stone oven, also used for drying malt and flax.",
+          "lockable": false,
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "church",
+      "templateId": "church",
+      "name": "Skärvik Church",
+      "description": "The church stands on a bare rock above the village, white walls blinding in the sun, a landmark for boats coming home. The graves are cut into thin soil among the rocks, and many stones remember men lost at sea. Inside, a model ship hangs from the ceiling, given by sailors after a rescue. The wind never stops whistling through the bell tower.",
+      "tags": [
+        "church",
+        "graveyard"
+      ],
+      "affordances": [
+        {
+          "id": "church-sacristy",
+          "tag": "sacristy",
+          "name": "Sacristy",
+          "description": "A small vaulted room off the chancel where the vicar robes.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "church-sacristy-cabinet",
+              "tag": "cabinet",
+              "name": "Vestment cupboard",
+              "description": "A tall cupboard of chasubles, the surplice and spare altar candles.",
+              "lockable": false,
+              "contains": []
+            },
+            {
+              "id": "church-sacristy-chest",
+              "tag": "chest",
+              "name": "Parish chest",
+              "description": "An ancient iron-banded chest with three locks for the communion silver and old deeds.",
+              "lockable": true,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "church-bell-tower",
+          "tag": "bell-tower",
+          "name": "Bell tower",
+          "description": "Steep ladders up to the bells, bird droppings on the beams, wind through the louvres.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "church-attic",
+          "tag": "attic",
+          "name": "Church loft",
+          "description": "The dusty space above the vaults, full of broken pews and old hatchments.",
+          "lockable": false,
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "parsonage",
+      "templateId": "parsonage",
+      "name": "The Parsonage",
+      "description": "The parsonage is a solid house sheltered behind the church hill, with a walled garden that is the only green trees in the village. The vicar's boat is pulled up on the slip below. Roses grow against the south wall in defiance of the salt wind. Inside, the study is lined with books and smells of pipe smoke and sea damp.",
+      "tags": [
+        "parsonage",
+        "fields"
+      ],
+      "affordances": [
+        {
+          "id": "parsonage-office",
+          "tag": "office",
+          "name": "Vicar's study",
+          "description": "The study where the vicar writes sermons and receives parishioners.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "parsonage-office-desk",
+              "tag": "desk",
+              "name": "Vicar's desk",
+              "description": "A desk under the window with sermon drafts.",
+              "lockable": false,
+              "contains": [
+                {
+                  "id": "parsonage-office-desk-drawer",
+                  "tag": "lockable-drawer",
+                  "name": "Locked drawer",
+                  "description": "A locked drawer for private letters and certificates waiting to be signed.",
+                  "lockable": true,
+                  "contains": []
+                }
+              ]
+            },
+            {
+              "id": "parsonage-office-bookshelf",
+              "tag": "bookshelf",
+              "name": "Bookshelves",
+              "description": "Shelves of postils, Luther, hymnals and back numbers of church journals.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "parsonage-archive",
+          "tag": "archive",
+          "name": "Parish registers",
+          "description": "The church books: household examination rolls, birth, death and moving registers.",
+          "lockable": true,
+          "contains": []
+        },
+        {
+          "id": "parsonage-parlour",
+          "tag": "parlour",
+          "name": "Parlour",
+          "description": "The parsonage parlour where the vicar's wife receives.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "parsonage-kitchen",
+          "tag": "kitchen",
+          "name": "Kitchen",
+          "description": "The parsonage kitchen.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "parsonage-servants-quarters",
+          "tag": "servants-quarters",
+          "name": "Maids' room",
+          "description": "The room of the parsonage maids.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "parsonage-barn",
+          "tag": "barn",
+          "name": "Glebe barn",
+          "description": "The barn of the glebe farm.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "parsonage-cowshed",
+          "tag": "cowshed",
+          "name": "Glebe cowshed",
+          "description": "The parsonage cowshed.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "parsonage-garden",
+          "tag": "garden",
+          "name": "Parsonage garden",
+          "description": "An orchard and kitchen garden, the vicar's pride.",
+          "lockable": false,
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "inn",
+      "templateId": "inn",
+      "name": "The Harbour Inn",
+      "description": "The inn is a big old house at the harbour that was once a herring merchant's salting house, now with rooms for passengers waiting for the steamer. The taproom has a view of the boats through small windows and a stove for cold evenings. Fishermen gather in the evening to argue about the weather. The floor is scattered with sand and smells of the sea.",
+      "tags": [
+        "inn",
+        "road",
+        "jetty"
+      ],
+      "affordances": [
+        {
+          "id": "inn-taproom",
+          "tag": "taproom",
+          "name": "Taproom",
+          "description": "The public room: benches, a long scrubbed table, a tiled stove and the day's travellers.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "inn-kitchen",
+          "tag": "kitchen",
+          "name": "Kitchen",
+          "description": "A smoky kitchen with an open hearth, copper pans and a bread rack under the ceiling.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "inn-kitchen-pantry",
+              "tag": "pantry",
+              "name": "Pantry",
+              "description": "A cold larder of salted meat, cheeses, crispbread and the brännvin keg.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "inn-guest-room-1",
+          "tag": "guest-room",
+          "name": "Guest room 1",
+          "description": "A narrow room with a bed, a washstand and a window onto the yard.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "inn-guest-room-1-chest",
+              "tag": "chest",
+              "name": "Travelling chest",
+              "description": "A painted chest at the foot of the bed for a guest's things.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "inn-guest-room-2",
+          "tag": "guest-room",
+          "name": "Guest room 2",
+          "description": "A narrow room with a bed, a washstand and a window onto the yard.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "inn-guest-room-2-chest",
+              "tag": "chest",
+              "name": "Travelling chest",
+              "description": "A painted chest at the foot of the bed for a guest's things.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "inn-stable",
+          "tag": "stable",
+          "name": "Posting stable",
+          "description": "Stalls for the posting horses, harness on pegs, the smell of hay and dung.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "inn-cellar",
+          "tag": "cellar",
+          "name": "Cellar",
+          "description": "A stone cellar for ale, potatoes and the inn's barrels.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "inn-office",
+          "tag": "office",
+          "name": "Landlord's office",
+          "description": "A cramped room with the posting book, receipts on a spike and a calendar from a Stockholm brewer.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "inn-office-desk",
+              "tag": "desk",
+              "name": "Writing desk",
+              "description": "A writing desk of stained pine with pigeonholes for letters.",
+              "lockable": false,
+              "contains": [
+                {
+                  "id": "inn-office-desk-drawer",
+                  "tag": "lockable-drawer",
+                  "name": "Locked drawer",
+                  "description": "A drawer under the writing flap, fitted with a small iron lock.",
+                  "lockable": true,
+                  "contains": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "smithy",
+      "templateId": "smithy",
+      "name": "The Boat Smithy",
+      "description": "A small stone smithy by the slipway makes anchors, boat nails and hooks. The smith also repairs the iron rings on the jetty and the moorings. The open door looks out over the bright water. Rust and tar mix with the smell of the forge.",
+      "tags": [
+        "smithy"
+      ],
+      "affordances": [
+        {
+          "id": "smithy-forge",
+          "tag": "forge",
+          "name": "Forge",
+          "description": "The hearth and bellows, the anvil on its stump, the quench trough.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "smithy-workshop",
+          "tag": "workshop",
+          "name": "Workshop",
+          "description": "The bench and racks of tongs, hammers and half-finished work.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "smithy-tool-shed",
+          "tag": "tool-shed",
+          "name": "Coal shed",
+          "description": "A shed of charcoal and bar iron from the works.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "smithy-kitchen",
+          "tag": "kitchen",
+          "name": "Smith's cottage",
+          "description": "The smith's one-room cottage across the yard.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "smithy-kitchen-chest",
+              "tag": "chest",
+              "name": "Smith's chest",
+              "description": "The smith's own chest of papers and good clothes.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "herbalist-cottage",
+      "templateId": "herbalist-cottage",
+      "name": "The Cottage on the Heath",
+      "description": "An old woman's cottage stands alone on the open heath, sheltered by a single twisted rowan. Heather and wild thyme grow right up to the walls, and a few sheep wander round it. Seaweed and herbs dry on the rocks in the sun. From the door you can see both the village below and the sea beyond.",
+      "tags": [
+        "herbalist-cottage",
+        "woodland",
+        "moor"
+      ],
+      "affordances": [
+        {
+          "id": "herbalist-cottage-kitchen",
+          "tag": "kitchen",
+          "name": "Cottage room",
+          "description": "A single low room, dim and smelling of smoke and herbs.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "herbalist-cottage-kitchen-hearth",
+              "tag": "hearth",
+              "name": "Hearth",
+              "description": "A hearth with a brew always going.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "herbalist-cottage-herb-store",
+          "tag": "herb-store",
+          "name": "Herb store",
+          "description": "Bunches of drying herbs from the rafters, jars of salve and dried roots.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "herbalist-cottage-herb-store-cabinet",
+              "tag": "cabinet",
+              "name": "Remedy cupboard",
+              "description": "A small cupboard of bottles, wrapped in rag and labelled in a crabbed hand.",
+              "lockable": false,
+              "contains": []
+            },
+            {
+              "id": "herbalist-cottage-herb-store-coffer",
+              "tag": "coffer",
+              "name": "Small box",
+              "description": "A small wooden box kept on a high shelf.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "herbalist-cottage-garden",
+          "tag": "garden",
+          "name": "Herb garden",
+          "description": "A fenced garden of medicinal plants.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "herbalist-cottage-cellar",
+          "tag": "cellar",
+          "name": "Earth cellar",
+          "description": "A small earth cellar.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "herbalist-cottage-well",
+          "tag": "well",
+          "name": "Spring",
+          "description": "A spring-fed well with a cup on a string.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "herbalist-cottage-hiding-place",
+          "tag": "hiding-place",
+          "name": "Hollow in the wall",
+          "description": "A hollow behind a loose log in the wall.",
+          "lockable": false,
+          "contains": []
+        }
+      ]
+    }
+  ]
+}

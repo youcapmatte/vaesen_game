@@ -1,0 +1,154 @@
+{
+  "id": "parsonage",
+  "version": 1,
+  "status": "draft",
+  "name": "Parsonage",
+  "tag": "parsonage",
+  "description": "The vicarage (prästgård): the vicar's house, his glebe farm, and the parish registers - births, deaths, moves and the household examination rolls - which make him the best-informed man in the parish.",
+  "settlementTypes": [
+    "hamlet",
+    "village",
+    "town",
+    "estate"
+  ],
+  "tags": [
+    "fields"
+  ],
+  "affordances": [
+    {
+      "id": "office",
+      "tag": "office",
+      "name": "Vicar's study",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": [
+        {
+          "id": "desk",
+          "tag": "desk",
+          "name": "Vicar's desk",
+          "condition": {
+            "minSize": 1,
+            "minWealth": 1,
+            "minCount": 1,
+            "maxCount": 1
+          },
+          "contains": [
+            {
+              "id": "drawer",
+              "tag": "lockable-drawer",
+              "name": "Locked drawer",
+              "condition": {
+                "minSize": 1,
+                "minWealth": 1,
+                "minCount": 1,
+                "maxCount": 1
+              },
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "bookshelf",
+          "tag": "bookshelf",
+          "name": "Bookshelves",
+          "condition": {
+            "minSize": 1,
+            "minWealth": 1,
+            "minCount": 1,
+            "maxCount": 1
+          },
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "archive",
+      "tag": "archive",
+      "name": "Parish registers",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "scaling": "A locked cupboard in a poor parish; a vaulted fireproof room in a rich one.",
+      "contains": []
+    },
+    {
+      "id": "parlour",
+      "tag": "parlour",
+      "name": "Parlour",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    },
+    {
+      "id": "kitchen",
+      "tag": "kitchen",
+      "name": "Kitchen",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    },
+    {
+      "id": "servants-quarters",
+      "tag": "servants-quarters",
+      "name": "Maids' room",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 2,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    },
+    {
+      "id": "barn",
+      "tag": "barn",
+      "name": "Glebe barn",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    },
+    {
+      "id": "cowshed",
+      "tag": "cowshed",
+      "name": "Glebe cowshed",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    },
+    {
+      "id": "garden",
+      "tag": "garden",
+      "name": "Parsonage garden",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    }
+  ]
+}

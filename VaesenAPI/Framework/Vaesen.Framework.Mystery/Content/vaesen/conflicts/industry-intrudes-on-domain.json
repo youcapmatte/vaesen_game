@@ -1,0 +1,65 @@
+{
+  "id": "industry-intrudes-on-domain",
+  "version": 1,
+  "status": "draft",
+  "name": "An industry intrudes on a domain",
+  "description": "Modern work cuts into a place an old being holds as its own: a dam floods a rapids, a steam sawmill silts a stream, a railway cutting blasts through a hill, a mine drift breaks into a hollow under the fells. The people behind it act from need, ambition or plain ignorance, and the being answers in kind, first with warnings that are dismissed as accidents, then with harm. The industry is rarely evil and rarely innocent; the question is who knew, who was told, and who decided the warnings did not matter.",
+  "tags": [
+    "industry-intrusion",
+    "domain-violation"
+  ],
+  "reasonKinds": [
+    "domainViolated",
+    "provokedOnly"
+  ],
+  "provocationAffordances": [
+    "dam",
+    "sawmill",
+    "railway-line",
+    "mine",
+    "mine-shaft",
+    "factory",
+    "logging-camp",
+    "waterfall",
+    "mill",
+    "forest",
+    "spoil-heap"
+  ],
+  "roleSlots": [
+    {
+      "id": "provoker",
+      "name": "The one who broke ground",
+      "description": "The engineer, foreman or contractor who ordered the work into the forbidden place, often a competent, decent man under pressure from above.",
+      "required": true
+    },
+    {
+      "id": "profiteer",
+      "name": "The one who profits",
+      "description": "The investor, mill owner or company agent who gains from the work and has every reason to call the trouble sabotage or drink.",
+      "required": true
+    },
+    {
+      "id": "warner",
+      "name": "The one who warned",
+      "description": "A crofter, old charcoal burner or herd girl who told them not to dig there and was laughed at; may now be blamed for the trouble.",
+      "required": true
+    },
+    {
+      "id": "victim",
+      "name": "The one who paid",
+      "description": "A labourer or bystander hurt or killed by the being's reprisal, with a family who wants someone held to account.",
+      "required": true
+    },
+    {
+      "id": "go-between",
+      "name": "The one caught in the middle",
+      "description": "A local man hired on the works who knows the old stories and is torn between his wage and his grandmother's warnings.",
+      "required": false
+    }
+  ],
+  "decoyIdeas": [
+    "Sabotage by navvies or striking workers angry about pay and conditions.",
+    "A rival company or a displaced landowner wrecking the works to force a sale.",
+    "Plain negligence: rotten timbering, bad powder, a drunk foreman, which the company is eager to accept."
+  ]
+}

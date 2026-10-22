@@ -1,0 +1,96 @@
+{
+  "id": "docent-ekelund",
+  "version": 1,
+  "status": "draft",
+  "name": "Henrik Ekelund",
+  "identity": {
+    "age": 34,
+    "gender": "male",
+    "occupation": "Docent (lecturer) in Nordic languages at Uppsala University",
+    "rank": "burgher",
+    "home": "Rented rooms on Övre Slottsgatan, Uppsala, crammed with notebooks and dialect word-slips",
+    "appearance": "Tall and thin, with spectacles pushed up into untidy fair hair, a velvet waistcoat with a burn hole, and pockets full of folded paper slips."
+  },
+  "personality": {
+    "openness": 5,
+    "conscientiousness": 2,
+    "extraversion": 4,
+    "agreeableness": 4,
+    "neuroticism": 3
+  },
+  "drives": [
+    {
+      "id": "the-great-work",
+      "text": "Compile the definitive record of Swedish folk belief, parish by parish, before the railway and the emigrant ships erase it.",
+      "strength": 3
+    },
+    {
+      "id": "professorship",
+      "text": "Win the chair that his rival in Lund is also courting.",
+      "strength": 2
+    },
+    {
+      "id": "believe-or-not",
+      "text": "Find out, privately, whether any of it is true.",
+      "strength": 2
+    }
+  ],
+  "voice": {
+    "register": "Eager, learned and digressive; drops into dialect words with delight and corrects his own Latin.",
+    "mannerisms": [
+      "Writes words on slips of paper mid-conversation",
+      "Asks how a thing is said in your home parish",
+      "Says 'fascinating' when he means 'alarming'"
+    ],
+    "sampleLines": [
+      "In Hälsingland they don't say she was taken, they say she was 'borrowed'. Borrowed! Do you hear the difference? It means someone expects her back.",
+      "I am a man of science, naturally. But if you were to go to that mill on Midsummer Eve, would you be so kind as to take me with you?",
+      "Professor Tornell would call this peasant fancy. Professor Tornell has never sat in a cowshed in Orsa at four in the morning."
+    ]
+  },
+  "background": "Ekelund is a pastor's son from Dalarna who escaped into philology and has never quite come back down. In 1872 he helped a circle of students found one of the new dialect societies, the landsmålsföreningar, which send young men out every summer to write down the speech, songs and tales of their home provinces. His rooms are a paper flood of word-slips, transcribed charms and folk tunes. He tells his colleagues that folk belief is a fossil record of the Nordic mind; he has privately begun to suspect it is also a field report. He has worked out that the Society knows more than it says and is courting them shamelessly.",
+  "latentHooks": [
+    {
+      "id": "student-collectors",
+      "kind": "connection",
+      "text": "His student collectors spread across half the provinces every summer, and their notebooks often record strange events weeks before the papers do."
+    },
+    {
+      "id": "the-charm-he-tried",
+      "kind": "secret",
+      "text": "Last spring, alone in his rooms, he tried one of the charms he had transcribed, and something answered; he has not slept well since."
+    },
+    {
+      "id": "borrowed-manuscript",
+      "kind": "debt",
+      "text": "He borrowed a seventeenth-century manuscript of spells from the university library's closed collection and has not returned it."
+    },
+    {
+      "id": "publish-the-society",
+      "kind": "ambition",
+      "text": "He dreams of a learned paper on 'a living tradition of seers near Uppsala', which would make his name and expose the Society."
+    }
+  ],
+  "networkLinks": [
+    {
+      "targetId": "university",
+      "place": "Uppsala",
+      "nature": "Docent with friends among the younger faculty and the student nations",
+      "influence": "Can open the library's closed collections and the university's archives, or a word from him can get the Society's members barred from them."
+    },
+    {
+      "targetId": "parish",
+      "place": "Across the provinces",
+      "nature": "Corresponds with dozens of country vicars who send him local customs",
+      "influence": "Can find out quickly which parish has had strange deaths or customs revived."
+    },
+    {
+      "targetId": "press",
+      "place": "Uppsala and Stockholm",
+      "nature": "Writes popular articles on folk belief for the papers",
+      "influence": "Can make a case into a learned curiosity in print, for better or worse."
+    }
+  ],
+  "startingAttitude": 2,
+  "attitudeReason": "He sees the Society as the most exciting source he has ever found and wants their trust, and their secrets."
+}

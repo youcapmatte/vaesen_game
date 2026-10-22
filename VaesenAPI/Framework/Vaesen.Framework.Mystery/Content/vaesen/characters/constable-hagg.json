@@ -1,0 +1,96 @@
+{
+  "id": "constable-hagg",
+  "version": 1,
+  "status": "draft",
+  "name": "Karl Edvard Hägg",
+  "identity": {
+    "age": 44,
+    "gender": "male",
+    "occupation": "Senior police constable of the Uppsala town police",
+    "rank": "worker",
+    "home": "Two rooms above a harness-maker's in Svartbäcken, Uppsala",
+    "appearance": "Broad and slightly stooped, grey side-whiskers clipped short, a uniform coat brushed thin at the elbows, and a notebook he writes in with a carpenter's pencil."
+  },
+  "personality": {
+    "openness": 2,
+    "conscientiousness": 5,
+    "extraversion": 2,
+    "agreeableness": 2,
+    "neuroticism": 3
+  },
+  "drives": [
+    {
+      "id": "protect-the-gullible",
+      "text": "Keep cunning folk, spiritualists and confidence men from preying on frightened country people.",
+      "strength": 3
+    },
+    {
+      "id": "orderly-town",
+      "text": "Have Uppsala's books balanced at the end of each month: every report filed, every drunk accounted for.",
+      "strength": 2
+    },
+    {
+      "id": "pension",
+      "text": "Reach his pension without a scandal that would let the stadsfiskal pass him over.",
+      "strength": 2
+    }
+  ],
+  "voice": {
+    "register": "Plain, slow and official; Uppland country speech under a policeman's formal phrases.",
+    "mannerisms": [
+      "Writes down what you say before he answers it",
+      "Calls everyone by their full name and parish",
+      "Ends a question with a long silence instead of a second question"
+    ],
+    "sampleLines": [
+      "I'll have that again, slowly. Where were you on the evening of the fourteenth, and who will swear to it?",
+      "I've seen a widow in Bälinge sell her last cow to a man who promised to talk to her drowned boy. I don't care for gentlemen who see what others can't.",
+      "Nothing in Uppsala walks at night that can't be put in the cells by morning, sir. That is my experience."
+    ]
+  },
+  "background": "Hägg was born a farmhand's son at Vaksala, served eight years in the Uppland regiment and joined the town police when it was little more than a watch. He is honest to the point of rudeness and has never taken a coin. Fifteen years ago he arrested a travelling 'wise man' who had stripped a parish of its savings by promising to lift curses, and he watched the widow at the heart of that case hang herself in her barn before the trial. He has distrusted anyone who trades in the unseen ever since. He has heard that a group of gentlefolk near Gamla Uppsala receive strange letters from the countryside and travel out to answer them, and to him that sounds like the same trade in better clothes.",
+  "latentHooks": [
+    {
+      "id": "the-widows-barn",
+      "kind": "secret",
+      "text": "He found the widow in Bälinge alive enough to speak, and what she told him about her son's drowning is not in his report; it did not fit."
+    },
+    {
+      "id": "brother-in-law-debt",
+      "kind": "debt",
+      "text": "His wife's brother runs a tavern in Fjärdingen without a proper licence, and Hägg has been looking the other way for years."
+    },
+    {
+      "id": "sunday-ledger",
+      "kind": "habit",
+      "text": "Every Sunday afternoon he copies the week's incidents into a private ledger he keeps at home, with notes he would never put in an official report."
+    },
+    {
+      "id": "sergeant-post",
+      "kind": "ambition",
+      "text": "The post of police sergeant (överkonstapel) falls vacant next year, and a clean, celebrated arrest would win it."
+    }
+  ],
+  "networkLinks": [
+    {
+      "targetId": "police",
+      "place": "Uppsala",
+      "nature": "Senior constable, trusted by the stadsfiskal for country errands",
+      "influence": "Can have the Society's names noted as persons of interest, or quietly ask a rural länsman to refuse them help."
+    },
+    {
+      "targetId": "parish",
+      "place": "Vaksala and Uppsala",
+      "nature": "Knows the parish clerks who keep the registers",
+      "influence": "Can learn who moved into and out of a parish, and when, before the Society can."
+    },
+    {
+      "targetId": "comminister-hallgren",
+      "place": "Gamla Uppsala",
+      "nature": "Fellow-sceptic; they compare notes after church",
+      "influence": "Each feeds the other's suspicions about the Society."
+    }
+  ],
+  "startingAttitude": -2,
+  "attitudeReason": "He believes the Society are well-born charlatans of the kind he has seen ruin poor families, and he is waiting for them to make a mistake."
+}

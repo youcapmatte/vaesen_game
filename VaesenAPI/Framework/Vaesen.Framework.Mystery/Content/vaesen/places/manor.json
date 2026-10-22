@@ -1,0 +1,240 @@
+{
+  "id": "manor",
+  "version": 1,
+  "status": "draft",
+  "name": "Manor",
+  "tag": "manor",
+  "description": "A manor house (herrgård) of the gentry or a wealthy ironmaster: main building with wings, home farm, gardens, and tenant crofts whose holders owe days of labour.",
+  "settlementTypes": [
+    "village",
+    "town",
+    "estate"
+  ],
+  "tags": [
+    "fields"
+  ],
+  "affordances": [
+    {
+      "id": "parlour",
+      "tag": "parlour",
+      "name": "Salon",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "scaling": "A plain sitting room in a modest manor; a suite of salons in a great house.",
+      "contains": []
+    },
+    {
+      "id": "office",
+      "tag": "office",
+      "name": "Estate office",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": [
+        {
+          "id": "desk",
+          "tag": "desk",
+          "name": "Estate desk",
+          "condition": {
+            "minSize": 1,
+            "minWealth": 1,
+            "minCount": 1,
+            "maxCount": 1
+          },
+          "contains": [
+            {
+              "id": "drawer",
+              "tag": "lockable-drawer",
+              "name": "Locked drawer",
+              "condition": {
+                "minSize": 1,
+                "minWealth": 1,
+                "minCount": 1,
+                "maxCount": 1
+              },
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "bookshelf",
+          "tag": "bookshelf",
+          "name": "Ledger shelves",
+          "condition": {
+            "minSize": 1,
+            "minWealth": 1,
+            "minCount": 1,
+            "maxCount": 1
+          },
+          "contains": []
+        },
+        {
+          "id": "strongbox",
+          "tag": "strongbox",
+          "name": "Strongbox",
+          "condition": {
+            "minSize": 1,
+            "minWealth": 3,
+            "minCount": 1,
+            "maxCount": 1
+          },
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "reading-room",
+      "tag": "reading-room",
+      "name": "Library",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 4,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "scaling": "Only in a cultivated house; a whole panelled room of books in the richest.",
+      "contains": [
+        {
+          "id": "bookshelf",
+          "tag": "bookshelf",
+          "name": "Bookcase",
+          "condition": {
+            "minSize": 1,
+            "minWealth": 1,
+            "minCount": 2,
+            "maxCount": 4
+          },
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "bedroom",
+      "tag": "bedroom",
+      "name": "Bedroom",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 2,
+        "maxCount": 6
+      },
+      "contains": []
+    },
+    {
+      "id": "kitchen",
+      "tag": "kitchen",
+      "name": "Kitchen wing",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": [
+        {
+          "id": "pantry",
+          "tag": "pantry",
+          "name": "Larder",
+          "condition": {
+            "minSize": 1,
+            "minWealth": 1,
+            "minCount": 1,
+            "maxCount": 1
+          },
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "servants-quarters",
+      "tag": "servants-quarters",
+      "name": "Servants' wing",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    },
+    {
+      "id": "cellar",
+      "tag": "cellar",
+      "name": "Vaulted cellar",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    },
+    {
+      "id": "attic",
+      "tag": "attic",
+      "name": "Attic",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    },
+    {
+      "id": "stable",
+      "tag": "stable",
+      "name": "Stables",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    },
+    {
+      "id": "garden",
+      "tag": "garden",
+      "name": "Gardens",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 3,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    },
+    {
+      "id": "archive",
+      "tag": "archive",
+      "name": "Estate archive",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 4,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    },
+    {
+      "id": "chapel",
+      "tag": "chapel",
+      "name": "House chapel",
+      "condition": {
+        "minSize": 3,
+        "minWealth": 4,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    }
+  ]
+}

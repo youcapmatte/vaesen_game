@@ -1,0 +1,65 @@
+{
+  "id": "envy-between-neighbours",
+  "version": 1,
+  "status": "draft",
+  "name": "Envy between neighbours",
+  "description": "Two households live side by side and one prospers while the other fails: fuller cows, a better harvest, a son who came home from America with money. Envy festers, and someone turns to the old world to even the score, by a bargain, a stolen charm or simply by wishing at the wrong place. Or the prosperous one owes their luck to the old world and the neighbour's suspicion is right. Either way the feud spills over into the whole village.",
+  "tags": [
+    "envy",
+    "curse"
+  ],
+  "reasonKinds": [
+    "selfOriginatingGrievance",
+    "bargainInvited",
+    "affliction"
+  ],
+  "provocationAffordances": [
+    "farmstead",
+    "farm",
+    "croft",
+    "cowshed",
+    "barn",
+    "fields",
+    "mill",
+    "well",
+    "crossroads",
+    "herbalist-cottage"
+  ],
+  "roleSlots": [
+    {
+      "id": "envier",
+      "name": "The envious neighbour",
+      "description": "The one who resents the other's luck, perhaps with justice: the boundary stone moved, the debt never repaid.",
+      "required": true
+    },
+    {
+      "id": "envied",
+      "name": "The prosperous neighbour",
+      "description": "The household whose luck is resented; honest, smug, or itself in debt to the old world.",
+      "required": true
+    },
+    {
+      "id": "hidden-hand",
+      "name": "The one who called on the old world",
+      "description": "The person who actually made a bargain or laid a charm, who may not be the obvious envier but a spouse, child or servant.",
+      "required": false
+    },
+    {
+      "id": "caught-between",
+      "name": "The one with a foot in both houses",
+      "description": "A child courting across the feud, or a farmhand who works for both, who suffers from the quarrel.",
+      "required": true
+    },
+    {
+      "id": "stirrer",
+      "name": "The one who fans the feud",
+      "description": "A gossip, a creditor or a lay preacher who benefits from the households being at each other's throats.",
+      "required": false
+    }
+  ],
+  "decoyIdeas": [
+    "Theft and sabotage between the two farms, ordinary and spiteful.",
+    "The envied family's success comes from smuggling or shady dealing, which an investigation exposes first.",
+    "A wise woman paid by one side is blamed for everything."
+  ]
+}

@@ -1,0 +1,821 @@
+{
+  "id": "level-ekeby-april",
+  "version": 1,
+  "status": "draft",
+  "name": "Ekeby Manor and its Crofts",
+  "region": "Östergötland, on the plain south of Lake Roxen",
+  "settlementType": "estate",
+  "size": 2,
+  "wealth": 4,
+  "month": 4,
+  "terrain": [
+    "fields",
+    "lake",
+    "stream",
+    "woodland",
+    "forest"
+  ],
+  "description": "Ekeby is an old noble estate on the fertile Östergötland plain: a white manor house with two wings at the end of an avenue of limes, a home farm, its own mill, and some twenty tenant crofts scattered along the forest edge whose holders owe the estate days of labour. The present owner, a baron, spends the winters in Stockholm and has begun to replace the crofters with contract labourers (statare) paid in kind.",
+  "seasonNotes": "April, the spring thaw. The snow has gone from the fields but lies grey in the forest; the roads are axle-deep in mud and almost impassable. Meltwater fills every ditch and the stream runs loud and brown over the mill weir. The first lapwings and larks return over the fields. Ploughing waits for the ground to dry; the crofters are spreading manure and mending fences. Easter falls this month.",
+  "travel": "From Uppsala by rail via Stockholm and Katrineholm to Norrköping, about eight hours, then by the newest stretch of the eastern line or by coach, and the last miles in the estate's carriage on roads deep in thaw mud.",
+  "publicFacts": [
+    "The baron's family has owned Ekeby since the 1600s; the present baron spends winters in Stockholm and is often away.",
+    "The estate's steward manages the farm and the crofts in the baron's absence and is not well liked.",
+    "Crofters at Ekeby owe three days of labour a week in summer and two in winter, with a horse.",
+    "The baron has begun replacing crofters with statare families living in a long barracks at the home farm.",
+    "Two crofts were pulled down last year when their tenants left for America.",
+    "Ekeby's mill grinds for the estate and for the parish farmers, who pay a toll in grain.",
+    "The parish church contains the burial vault of the baron's family.",
+    "Ekeby's library is said to be one of the finest in the province."
+  ],
+  "places": [
+    {
+      "id": "manor",
+      "templateId": "manor",
+      "name": "Ekeby Manor",
+      "description": "The manor stands white and severe at the end of a lime avenue whose trees are still bare, with crows building in the tops. Meltwater gurgles in the gutters and the gravel forecourt is soft with mud. In the windows the shutters are still half closed against the winter. Inside, the house smells of wax polish, stove heat and old wood.",
+      "tags": [
+        "manor",
+        "fields"
+      ],
+      "affordances": [
+        {
+          "id": "manor-parlour",
+          "tag": "parlour",
+          "name": "Salon",
+          "description": "The salon with gilt mirrors, a tiled stove and a piano.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "manor-office",
+          "tag": "office",
+          "name": "Estate office",
+          "description": "The steward's or owner's office where the crofters' days are reckoned.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "manor-office-desk",
+              "tag": "desk",
+              "name": "Estate desk",
+              "description": "A broad desk with the estate ledgers.",
+              "lockable": false,
+              "contains": [
+                {
+                  "id": "manor-office-desk-drawer",
+                  "tag": "lockable-drawer",
+                  "name": "Locked drawer",
+                  "description": "A locked drawer of contracts with the crofters and letters.",
+                  "lockable": true,
+                  "contains": []
+                }
+              ]
+            },
+            {
+              "id": "manor-office-bookshelf",
+              "tag": "bookshelf",
+              "name": "Ledger shelves",
+              "description": "Shelves of estate accounts going back decades.",
+              "lockable": false,
+              "contains": []
+            },
+            {
+              "id": "manor-office-strongbox",
+              "tag": "strongbox",
+              "name": "Strongbox",
+              "description": "A heavy strongbox in the corner.",
+              "lockable": true,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "manor-reading-room",
+          "tag": "reading-room",
+          "name": "Library",
+          "description": "A panelled library with a reading table and a globe.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "manor-reading-room-bookshelf-1",
+              "tag": "bookshelf",
+              "name": "Bookcase 1",
+              "description": "Glass-fronted cases of French novels, sermons and agricultural treatises.",
+              "lockable": false,
+              "contains": []
+            },
+            {
+              "id": "manor-reading-room-bookshelf-2",
+              "tag": "bookshelf",
+              "name": "Bookcase 2",
+              "description": "Glass-fronted cases of French novels, sermons and agricultural treatises.",
+              "lockable": false,
+              "contains": []
+            },
+            {
+              "id": "manor-reading-room-bookshelf-3",
+              "tag": "bookshelf",
+              "name": "Bookcase 3",
+              "description": "Glass-fronted cases of French novels, sermons and agricultural treatises.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "manor-bedroom-1",
+          "tag": "bedroom",
+          "name": "Bedroom 1",
+          "description": "A bedroom with a canopied bed and a washstand.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "manor-bedroom-2",
+          "tag": "bedroom",
+          "name": "Bedroom 2",
+          "description": "A bedroom with a canopied bed and a washstand.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "manor-bedroom-3",
+          "tag": "bedroom",
+          "name": "Bedroom 3",
+          "description": "A bedroom with a canopied bed and a washstand.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "manor-bedroom-4",
+          "tag": "bedroom",
+          "name": "Bedroom 4",
+          "description": "A bedroom with a canopied bed and a washstand.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "manor-kitchen",
+          "tag": "kitchen",
+          "name": "Kitchen wing",
+          "description": "The kitchen wing with its great iron range and a cook in charge.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "manor-kitchen-pantry",
+              "tag": "pantry",
+              "name": "Larder",
+              "description": "A long larder of preserves, hams and sugar loaves.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "manor-servants-quarters",
+          "tag": "servants-quarters",
+          "name": "Servants' wing",
+          "description": "The servants' rooms in the wing, narrow and cold.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "manor-cellar",
+          "tag": "cellar",
+          "name": "Vaulted cellar",
+          "description": "A vaulted cellar older than the house above it, for wine and stores.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "manor-attic",
+          "tag": "attic",
+          "name": "Attic",
+          "description": "Attics of trunks, old portraits and discarded furniture.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "manor-stable",
+          "tag": "stable",
+          "name": "Stables",
+          "description": "The carriage horses' stables and coach house.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "manor-garden",
+          "tag": "garden",
+          "name": "Gardens",
+          "description": "A formal garden with gravel paths, an orangery and a kitchen garden behind the wall.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "manor-archive",
+          "tag": "archive",
+          "name": "Estate archive",
+          "description": "A vaulted room off the office of deeds, maps of the crofts and three centuries of family letters.",
+          "lockable": true,
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "farm",
+      "templateId": "farm",
+      "name": "Ekeby Home Farm",
+      "description": "The home farm stands behind the manor, a big quadrangle of red-painted barns, stables and cowsheds enclosing a muddy yard. The statare barracks is a long low building at one side, with children playing in the slush. Dung heaps steam in the cold morning. The steward's voice carries across the yard.",
+      "tags": [
+        "farm",
+        "fields",
+        "meadow"
+      ],
+      "affordances": [
+        {
+          "id": "farm-yard",
+          "tag": "yard",
+          "name": "Farmyard",
+          "description": "The yard between the buildings, trodden mud and a woodpile.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-kitchen",
+          "tag": "kitchen",
+          "name": "Main room",
+          "description": "The everyday room: open hearth, long table, wall beds and the loom in the corner.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "farm-kitchen-hearth",
+              "tag": "hearth",
+              "name": "Open hearth",
+              "description": "The whitewashed corner hearth with its iron pot-hook.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "farm-parlour",
+          "tag": "parlour",
+          "name": "Best room",
+          "description": "The cold best room, painted furniture, the family Bible and a clock from Mora.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "farm-parlour-chest",
+              "tag": "chest",
+              "name": "Dowry chest",
+              "description": "A painted chest with the wife's linen and the year of her wedding on the lid.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "farm-servants-quarters",
+          "tag": "servants-quarters",
+          "name": "Farmhands' chamber",
+          "description": "The statare barracks: a long building divided into one-room homes, each with a family and its rations of grain and milk.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-cowshed",
+          "tag": "cowshed",
+          "name": "Cowshed",
+          "description": "A low dark byre, warm with cattle breath.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-stable",
+          "tag": "stable",
+          "name": "Stable",
+          "description": "A stable for the farm horse or horses.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-barn",
+          "tag": "barn",
+          "name": "Barn",
+          "description": "A timber barn for the harvest.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "farm-barn-hayloft",
+              "tag": "hayloft",
+              "name": "Hayloft",
+              "description": "The hay store over the barn floor, reached by a ladder.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "farm-drying-shed",
+          "tag": "drying-shed",
+          "name": "Threshing barn",
+          "description": "A threshing barn (loge) where the grain is threshed with flails through the autumn.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-cellar",
+          "tag": "cellar",
+          "name": "Root cellar",
+          "description": "A root cellar dug into the slope, holding potatoes, turnips and the milk.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-well",
+          "tag": "well",
+          "name": "Well",
+          "description": "A well with a sweep pole and a wooden bucket.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-bathhouse",
+          "tag": "bathhouse",
+          "name": "Bathhouse",
+          "description": "A small log bastu with a stone oven, also used for drying malt and flax.",
+          "lockable": false,
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "croft-lyckan",
+      "templateId": "croft",
+      "name": "Lyckan Croft",
+      "description": "Lyckan is a red croft on a rise at the forest edge, with a lilac bush beside the door still bare of leaves. The thaw has made a pond of the yard and planks are laid across it. A cow and a pig shift in the byre. The crofter's wife is boiling washing in a pot over a fire outside.",
+      "tags": [
+        "croft",
+        "woodland"
+      ],
+      "affordances": [
+        {
+          "id": "croft-lyckan-kitchen",
+          "tag": "kitchen",
+          "name": "Cottage room",
+          "description": "One room: hearth, a box bed for the parents, a pull-out bench for the children, a table under the window.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "croft-lyckan-kitchen-hearth",
+              "tag": "hearth",
+              "name": "Hearth",
+              "description": "The hearth, smoke-blackened, a pot simmering.",
+              "lockable": false,
+              "contains": []
+            },
+            {
+              "id": "croft-lyckan-kitchen-chest",
+              "tag": "chest",
+              "name": "Clothes chest",
+              "description": "The family's one chest for Sunday clothes and papers.",
+              "lockable": false,
+              "contains": []
+            },
+            {
+              "id": "croft-lyckan-kitchen-hiding-place",
+              "tag": "hiding-place",
+              "name": "Loose board",
+              "description": "A loose floorboard by the bed where a few coins can be kept.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "croft-lyckan-cowshed",
+          "tag": "cowshed",
+          "name": "Byre",
+          "description": "A byre built against the cottage for one cow and a few sheep.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "croft-lyckan-cellar",
+          "tag": "cellar",
+          "name": "Earth cellar",
+          "description": "A turf-roofed earth cellar for potatoes.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "croft-lyckan-well",
+          "tag": "well",
+          "name": "Well",
+          "description": "A shallow well or a spring-fed pit with a bucket.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "croft-lyckan-garden",
+          "tag": "garden",
+          "name": "Potato patch",
+          "description": "A stony patch of potatoes, kale and tobacco plants.",
+          "lockable": false,
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "croft-karret",
+      "templateId": "croft",
+      "name": "Kärret Croft",
+      "description": "Kärret lies in a wet hollow by the forest, half its potato field under meltwater. The cottage is grey and needs a new roof, patched with birch bark. Smoke struggles out of the chimney in the damp air. A path leads into the forest, where the estate's woodcutters are working.",
+      "tags": [
+        "croft",
+        "forest",
+        "marsh"
+      ],
+      "affordances": [
+        {
+          "id": "croft-karret-kitchen",
+          "tag": "kitchen",
+          "name": "Cottage room",
+          "description": "One room: hearth, a box bed for the parents, a pull-out bench for the children, a table under the window.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "croft-karret-kitchen-hearth",
+              "tag": "hearth",
+              "name": "Hearth",
+              "description": "The hearth, smoke-blackened, a pot simmering.",
+              "lockable": false,
+              "contains": []
+            },
+            {
+              "id": "croft-karret-kitchen-chest",
+              "tag": "chest",
+              "name": "Clothes chest",
+              "description": "The family's one chest for Sunday clothes and papers.",
+              "lockable": false,
+              "contains": []
+            },
+            {
+              "id": "croft-karret-kitchen-hiding-place",
+              "tag": "hiding-place",
+              "name": "Loose board",
+              "description": "A loose floorboard by the bed where a few coins can be kept.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "croft-karret-cowshed",
+          "tag": "cowshed",
+          "name": "Byre",
+          "description": "A byre built against the cottage for one cow and a few sheep.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "croft-karret-cellar",
+          "tag": "cellar",
+          "name": "Earth cellar",
+          "description": "A turf-roofed earth cellar for potatoes.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "croft-karret-well",
+          "tag": "well",
+          "name": "Well",
+          "description": "A shallow well or a spring-fed pit with a bucket.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "croft-karret-garden",
+          "tag": "garden",
+          "name": "Potato patch",
+          "description": "A stony patch of potatoes, kale and tobacco plants.",
+          "lockable": false,
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "mill",
+      "templateId": "mill",
+      "name": "Ekeby Mill",
+      "description": "The estate mill is a solid stone building on the stream below the manor, roaring with the spring flood. The weir is hidden under a curtain of brown water, and spray fogs the air. The miller has opened every sluice to spare the dam. Inside, the floor trembles with the wheel.",
+      "tags": [
+        "mill",
+        "running-water",
+        "stream",
+        "waterfall",
+        "dam"
+      ],
+      "affordances": [
+        {
+          "id": "mill-waterwheel",
+          "tag": "waterwheel",
+          "name": "Waterwheel and race",
+          "description": "The wheel and the timber race that feeds it.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "mill-millpond",
+          "tag": "millpond",
+          "name": "Mill pond",
+          "description": "The pond behind the dam, black and still, with a sluice gate.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "mill-mill-machinery",
+          "tag": "mill-machinery",
+          "name": "Millstones",
+          "description": "The stones, hopper and gearing, everything white with meal.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "mill-attic",
+          "tag": "attic",
+          "name": "Grain loft",
+          "description": "The loft where sacks wait to be ground.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "mill-tool-shed",
+          "tag": "tool-shed",
+          "name": "Mill store",
+          "description": "A store of spare cogs, pick-hammers for dressing the stones and sacks.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "mill-kitchen",
+          "tag": "kitchen",
+          "name": "Miller's house",
+          "description": "The miller's cottage beside the mill, with its own hearth.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "mill-kitchen-hearth",
+              "tag": "hearth",
+              "name": "Hearth",
+              "description": "The miller's hearth.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "mill-counting-house",
+          "tag": "counting-house",
+          "name": "Mill office",
+          "description": "A small office where the miller keeps his tallies of grain and toll.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "mill-counting-house-desk",
+              "tag": "desk",
+              "name": "Miller's desk",
+              "description": "A high desk with the toll book.",
+              "lockable": false,
+              "contains": [
+                {
+                  "id": "mill-counting-house-desk-drawer",
+                  "tag": "lockable-drawer",
+                  "name": "Locked drawer",
+                  "description": "A drawer with a lock for coin and the tally book.",
+                  "lockable": true,
+                  "contains": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "church",
+      "templateId": "church",
+      "name": "Ekeby Church",
+      "description": "The parish church is a white medieval building on a mound in the fields, with the baron's family chapel built onto the north side. Snowdrops have come up in the churchyard among the old stones. Inside, the family's coats of arms hang on the walls. The bell rings for Easter with a sound that carries across the wet fields.",
+      "tags": [
+        "church",
+        "graveyard"
+      ],
+      "affordances": [
+        {
+          "id": "church-sacristy",
+          "tag": "sacristy",
+          "name": "Sacristy",
+          "description": "A small vaulted room off the chancel where the vicar robes.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "church-sacristy-cabinet",
+              "tag": "cabinet",
+              "name": "Vestment cupboard",
+              "description": "A tall cupboard of chasubles, the surplice and spare altar candles.",
+              "lockable": false,
+              "contains": []
+            },
+            {
+              "id": "church-sacristy-chest",
+              "tag": "chest",
+              "name": "Parish chest",
+              "description": "An ancient iron-banded chest with three locks for the communion silver and old deeds.",
+              "lockable": true,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "church-bell-tower",
+          "tag": "bell-tower",
+          "name": "Bell tower",
+          "description": "Steep ladders up to the bells, bird droppings on the beams, wind through the louvres.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "church-attic",
+          "tag": "attic",
+          "name": "Church loft",
+          "description": "The dusty space above the vaults, full of broken pews and old hatchments.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "church-crypt",
+          "tag": "crypt",
+          "name": "Burial vault",
+          "description": "The baronial burial vault, its iron door bearing the family's arms, coffins stacked on shelves in the brick dark.",
+          "lockable": false,
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "parsonage",
+      "templateId": "parsonage",
+      "name": "Ekeby Parsonage",
+      "description": "The parsonage is a comfortable yellow house a short walk from the church, its garden bare and wet. The vicar is a scholar who corresponds with the university in Uppsala. Crows walk in the ploughed glebe land. Inside, a fire is lit in every room against the spring damp.",
+      "tags": [
+        "parsonage",
+        "fields"
+      ],
+      "affordances": [
+        {
+          "id": "parsonage-office",
+          "tag": "office",
+          "name": "Vicar's study",
+          "description": "The study where the vicar writes sermons and receives parishioners.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "parsonage-office-desk",
+              "tag": "desk",
+              "name": "Vicar's desk",
+              "description": "A desk under the window with sermon drafts.",
+              "lockable": false,
+              "contains": [
+                {
+                  "id": "parsonage-office-desk-drawer",
+                  "tag": "lockable-drawer",
+                  "name": "Locked drawer",
+                  "description": "A locked drawer for private letters and certificates waiting to be signed.",
+                  "lockable": true,
+                  "contains": []
+                }
+              ]
+            },
+            {
+              "id": "parsonage-office-bookshelf",
+              "tag": "bookshelf",
+              "name": "Bookshelves",
+              "description": "Shelves of postils, Luther, hymnals and back numbers of church journals.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "parsonage-archive",
+          "tag": "archive",
+          "name": "Parish registers",
+          "description": "The church books: household examination rolls, birth, death and moving registers.",
+          "lockable": true,
+          "contains": []
+        },
+        {
+          "id": "parsonage-parlour",
+          "tag": "parlour",
+          "name": "Parlour",
+          "description": "The parsonage parlour where the vicar's wife receives.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "parsonage-kitchen",
+          "tag": "kitchen",
+          "name": "Kitchen",
+          "description": "The parsonage kitchen.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "parsonage-servants-quarters",
+          "tag": "servants-quarters",
+          "name": "Maids' room",
+          "description": "The room of the parsonage maids.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "parsonage-barn",
+          "tag": "barn",
+          "name": "Glebe barn",
+          "description": "The barn of the glebe farm.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "parsonage-cowshed",
+          "tag": "cowshed",
+          "name": "Glebe cowshed",
+          "description": "The parsonage cowshed.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "parsonage-garden",
+          "tag": "garden",
+          "name": "Parsonage garden",
+          "description": "An orchard and kitchen garden, the vicar's pride.",
+          "lockable": false,
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "smithy",
+      "templateId": "smithy",
+      "name": "The Estate Smithy",
+      "description": "The estate smithy stands by the road at the edge of the home farm, busy with ploughshares and harrow teeth for the coming spring work. Mud is trodden in and out of the open door. The smith is a crofter who pays his rent in iron work. The forge glow is warm in the grey April day.",
+      "tags": [
+        "smithy"
+      ],
+      "affordances": [
+        {
+          "id": "smithy-forge",
+          "tag": "forge",
+          "name": "Forge",
+          "description": "The hearth and bellows, the anvil on its stump, the quench trough.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "smithy-workshop",
+          "tag": "workshop",
+          "name": "Workshop",
+          "description": "The bench and racks of tongs, hammers and half-finished work.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "smithy-tool-shed",
+          "tag": "tool-shed",
+          "name": "Coal shed",
+          "description": "A shed of charcoal and bar iron from the works.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "smithy-kitchen",
+          "tag": "kitchen",
+          "name": "Smith's cottage",
+          "description": "The smith's one-room cottage across the yard.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "smithy-kitchen-chest",
+              "tag": "chest",
+              "name": "Smith's chest",
+              "description": "The smith's own chest of papers and good clothes.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

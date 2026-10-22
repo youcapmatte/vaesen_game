@@ -1,0 +1,271 @@
+{
+  "id": "werewolf",
+  "version": 1,
+  "status": "draft",
+  "name": "The Werewolf (Varulv)",
+  "family": "shapeshifter",
+  "summary": "A man or woman who, against or by their own will, runs as a great wolf by night and remembers it only as exhaustion, bad dreams and blood under the nails. It is an affliction, not a being with a grievance: the wolf cannot be bargained with, but the curse, the strap or the person behind it can be found.",
+  "requiredAffordances": [
+    "forest",
+    "farmstead"
+  ],
+  "domain": "The afflicted person's own body, and by night the woods and grazing around their home.",
+  "reasonModel": {
+    "nature": "By day an ordinary person, often well liked, who suffers and hides it. By night a starving animal with a human's cunning, drawn back to the people and places the person knows best.",
+    "trigger": "The night of the change, which comes on its own schedule: certain moons, Thursday nights, the long Yule nights, or whenever the strap is worn or the curse wills it.",
+    "expression": "Livestock torn in folds and byres, attacks on travellers at dusk, a household member who is absent, ill or wounded after each attack, and a growing hunt for the wolf that may kill the wrong animal or the wrong person.",
+    "resolution": "Not negotiable at the creature. The crude answer is to kill the wolf, which kills the person. The deep answer lies in the origin: lift the curse, unmask whoever laid it, destroy the strap, or perform the old release by naming the afflicted to their face or drawing their blood while they are in wolf form."
+  },
+  "reasonKinds": [
+    "affliction",
+    "bargainInvited"
+  ],
+  "resolutionShape": "notNegotiable",
+  "originSet": [
+    {
+      "id": "werewolf-origin-wedding-curse",
+      "description": "A curse laid on a bridegroom or bride by a jilted suitor, a rejected rival or a wronged relative, often at or just before the wedding. The one who laid it watches the household fall apart.",
+      "hiddenHand": true,
+      "handDisposition": "hostile"
+    },
+    {
+      "id": "werewolf-origin-famine-bargain",
+      "description": "In the hunger years someone sought out a cunning man for the wolf's shape so they could hunt and feed their children. The hunger is over; the shape will not leave, and the one who sold it wants something more.",
+      "hiddenHand": true,
+      "handDisposition": "desperate"
+    },
+    {
+      "id": "werewolf-origin-wolf-strap",
+      "description": "A belt or strap of wolf hide, bought, inherited or found, which turns its wearer when buckled on. It was used for strength, revenge or a dare, and now the wearer changes even without it, or someone else has taken it up.",
+      "hiddenHand": true,
+      "handDisposition": "lostControl"
+    },
+    {
+      "id": "werewolf-origin-birth-caul",
+      "description": "A mother, in a hard labour, followed the old advice to crawl through a foal's birth caul to ease the birth. It worked, and the son born that night became a wolf when he came of age. No one meant harm.",
+      "hiddenHand": false,
+      "handDisposition": null
+    },
+    {
+      "id": "werewolf-origin-inherited",
+      "description": "The wolf runs in the family. A grandparent was whispered about, the matter was hushed up, and now it has surfaced in a grandchild who knows nothing of it.",
+      "hiddenHand": false,
+      "handDisposition": null
+    },
+    {
+      "id": "werewolf-origin-broken-taboo",
+      "description": "Lost in the forest, the afflicted drank rainwater from a wolf's paw print, or slept bareheaded under the open sky on a holy night. It was an accident; there is no one to blame and no curse to lift, only the old releases.",
+      "hiddenHand": false,
+      "handDisposition": null
+    }
+  ],
+  "commonKnowledge": [
+    {
+      "id": "werewolf-ck-full-moon",
+      "text": "A werewolf changes at the full moon and at no other time."
+    },
+    {
+      "id": "werewolf-ck-silver",
+      "text": "Only a silver bullet can kill a werewolf."
+    },
+    {
+      "id": "werewolf-ck-outsider",
+      "text": "Werewolves are vagrants, Finns or tinkers passing through, never one of our own."
+    },
+    {
+      "id": "werewolf-ck-ordinary-wolf",
+      "text": "The gentry and the constable say it is just a big wolf come down from the north, and a proper hunt will end it."
+    },
+    {
+      "id": "werewolf-ck-evil-person",
+      "text": "A werewolf is a wicked person who chose it, and deserves what comes."
+    }
+  ],
+  "deepLore": [
+    {
+      "id": "werewolf-dl-matching-wound",
+      "text": "A wound dealt to the wolf appears on the person: a shot wolf limps off, and next morning someone in the parish has a bandaged leg and a story about an axe."
+    },
+    {
+      "id": "werewolf-dl-red-threads",
+      "text": "What the wolf bites, the person keeps: threads of a red skirt torn by the wolf turn up caught between the teeth of the husband at breakfast, or wool in a farmhand's beard."
+    },
+    {
+      "id": "werewolf-dl-naming",
+      "text": "To call a werewolf by its baptismal name while it is in wolf shape, or to tell the person to their face that you know what they are, can release them, and some say releases them for good."
+    },
+    {
+      "id": "werewolf-dl-blood-release",
+      "text": "Drawing even a little blood from the wolf with a knife, or throwing steel over its back, forces the human shape back at once. The person may be found naked and bleeding in the woods."
+    },
+    {
+      "id": "werewolf-dl-inherited-silver",
+      "text": "The bullet need not be just any silver: the old hunters say it must be cast from inherited silver, a spoon or brooch handed down in a family, and some say from the family of the victim."
+    },
+    {
+      "id": "werewolf-dl-caul",
+      "text": "A woman who crawls through a foal's caul to ease her labour bears a son who becomes a werewolf, or a daughter who becomes a mare. Midwives and old wives knew this and some still advise it anyway."
+    },
+    {
+      "id": "werewolf-dl-signs-on-body",
+      "text": "The afflicted may have eyebrows grown together over the nose, hair in the palms, or a curious coldness and hunger after dusk; the old belief says the fur grows on the inside of the skin."
+    },
+    {
+      "id": "werewolf-dl-strap",
+      "text": "A wolf-hide strap or belt is the instrument of the willing werewolf. It is hidden carefully, often in a hollow wall or under a barn floor, and burning it in the hearth ends the change for whoever owned it."
+    },
+    {
+      "id": "werewolf-dl-curse-bond",
+      "text": "A laid curse ties the werewolf to the one who laid it: the curser cannot be harmed by the wolf, and the curse lifts if the curser dies, takes it back, or is made to confess it before witnesses."
+    },
+    {
+      "id": "werewolf-dl-returns-home",
+      "text": "The wolf hunts nearest to what the person loves and hates. Its first killings are often on the person's own farm or that of a rival, which is why it is so often mistaken for a neighbour's grudge."
+    },
+    {
+      "id": "werewolf-dl-shape-in-sleep",
+      "text": "The change is preceded by restlessness, a yawning fit or a fever at dusk. Afterwards the person sleeps like the dead and wakes aching, with earth in the bedclothes, remembering only dreams of running."
+    },
+    {
+      "id": "werewolf-dl-time-limit",
+      "text": "Some curses are laid for a span, seven or nine years, after which they end on their own unless renewed; the curser then has a reason to strike again before the term runs out."
+    }
+  ],
+  "giveawayTells": [
+    {
+      "id": "werewolf-gt-wolf-walks-upright",
+      "text": "A wolf far too large for any wolf, seen at the edge of the yard rising on its hind legs to look in at a lit window.",
+      "register": "animal",
+      "alsoFits": []
+    },
+    {
+      "id": "werewolf-gt-threads-in-teeth",
+      "text": "Red wool from a torn skirt found caught between a person's teeth the morning after a wolf attacked the skirt's wearer.",
+      "register": "physical",
+      "alsoFits": []
+    },
+    {
+      "id": "werewolf-gt-matching-wound",
+      "text": "The wolf was shot in the left foreleg; the next day a neighbour has a fresh, bandaged wound in his left arm.",
+      "register": "health",
+      "alsoFits": []
+    },
+    {
+      "id": "werewolf-gt-tracks-change",
+      "text": "Wolf tracks in fresh snow that end suddenly, and from the same spot the prints of bare human feet lead on toward the farms.",
+      "register": "physical",
+      "alsoFits": []
+    },
+    {
+      "id": "werewolf-gt-howl-with-words",
+      "text": "A howl from the forest at night that breaks, for a moment, into a human voice crying a name.",
+      "register": "sound",
+      "alsoFits": []
+    }
+  ],
+  "ambiguousSigns": [
+    {
+      "id": "werewolf-as-sheep-killed",
+      "text": "Several sheep were killed in the fold overnight and barely eaten; the fence was not broken.",
+      "register": "animal",
+      "alsoFits": ["troll", "vittra", "witch", "skogsra"]
+    },
+    {
+      "id": "werewolf-as-dogs-silent",
+      "text": "The farm dogs, which bark at any fox, did not make a sound that night and would not leave the kitchen in the morning.",
+      "register": "animal",
+      "alsoFits": ["mare", "draug", "myling", "troll"]
+    },
+    {
+      "id": "werewolf-as-tired-husband",
+      "text": "A young husband is pale and exhausted every few days, sleeps until noon and says he has had bad dreams.",
+      "register": "health",
+      "alsoFits": ["mare", "skogsra", "huldra"]
+    },
+    {
+      "id": "werewolf-as-muddy-bedclothes",
+      "text": "The maid found earth and pine needles in a bed that no one is supposed to have left during the night.",
+      "register": "physical",
+      "alsoFits": ["mare", "skogsra", "huldra", "vittra"]
+    },
+    {
+      "id": "werewolf-as-traveller-attacked",
+      "text": "A pedlar was knocked down on the forest road at dusk by something he took for a big dog, and is too shaken to say more.",
+      "register": "behaviour",
+      "alsoFits": ["troll", "backahast", "lyktgubbe"]
+    },
+    {
+      "id": "werewolf-as-horses-panic",
+      "text": "The horses kicked their stalls to splinters in the night, and one has bolted into the woods.",
+      "register": "animal",
+      "alsoFits": ["mare", "nisse", "draug"]
+    },
+    {
+      "id": "werewolf-as-howling",
+      "text": "Howling from the woods several nights running, though no one has seen wolves here for years.",
+      "register": "sound",
+      "alsoFits": ["myling", "troll", "skogsra"]
+    },
+    {
+      "id": "werewolf-as-quarrel-blamed",
+      "text": "The killings fall on two farms that have been quarrelling over a boundary, and each blames the other.",
+      "register": "social",
+      "alsoFits": ["nisse", "witch", "troll"]
+    },
+    {
+      "id": "werewolf-as-dreams-of-running",
+      "text": "A boy keeps dreaming that he is running on all fours through the trees, and wakes ravenous.",
+      "register": "dream",
+      "alsoFits": ["mare", "skogsra"]
+    },
+    {
+      "id": "werewolf-as-cold-snap",
+      "text": "The killings began with the first hard frost and come on the clearest, coldest nights.",
+      "register": "weather",
+      "alsoFits": ["draug", "myling", "troll"]
+    },
+    {
+      "id": "werewolf-as-shunned-woman",
+      "text": "An old woman who keeps to herself is being blamed in the village; children throw stones at her door.",
+      "register": "social",
+      "alsoFits": ["witch", "mare", "troll"]
+    },
+    {
+      "id": "werewolf-as-silence-in-woods",
+      "text": "Woodcutters say the forest goes quiet at dusk now, with no birds, and they leave early without being told.",
+      "register": "atmosphere",
+      "alsoFits": ["skogsra", "troll", "myling", "lyktgubbe"]
+    }
+  ],
+  "confrontationConditions": {
+    "kind": "time",
+    "time": "night",
+    "placeTags": [],
+    "notes": "The wolf can only be faced on a night of the change, and the person behind it only by daylight. Accusing the afflicted by day yields denial and an alibi of sleep; the proof comes at night, or through the origin."
+  },
+  "weaknesses": [
+    "Called by its baptismal name while in wolf shape.",
+    "Blood drawn with a knife, or steel thrown over its back, forces the human shape.",
+    "A bullet cast from inherited silver.",
+    "Burning the wolf-hide strap ends the change for its owner.",
+    "A curse lifts if the one who laid it takes it back, confesses it or dies."
+  ],
+  "protections": [
+    "Steel over the byre door and in the fold.",
+    "Bring the animals in before dusk on Thursdays and through the Yule nights.",
+    "Keep a fire burning at the edge of the yard.",
+    "A dog born on a holy night will stand against it.",
+    "Never let a pregnant woman crawl through a foal's caul, whatever the midwife says."
+  ],
+  "compatibleConflictTags": [
+    "curse",
+    "affliction",
+    "bargain",
+    "inheritance",
+    "envy",
+    "love-and-longing",
+    "unjust-death"
+  ],
+  "seasonality": "Worst in the long dark from late autumn through the Yule nights, when the change comes most often and hunger drives the wolf to the farms. Light summer nights make it rarer, not impossible.",
+  "excludedMonths": []
+}

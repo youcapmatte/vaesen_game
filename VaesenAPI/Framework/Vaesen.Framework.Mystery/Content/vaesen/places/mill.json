@@ -1,0 +1,146 @@
+{
+  "id": "mill",
+  "version": 1,
+  "status": "draft",
+  "name": "Water mill",
+  "tag": "mill",
+  "description": "A grain mill on a stream or river: mill house, dam and race, waterwheel and stones, and the miller's cottage. Farmers bring their grain and wait their turn.",
+  "settlementTypes": [
+    "hamlet",
+    "village",
+    "town",
+    "estate"
+  ],
+  "tags": [
+    "running-water"
+  ],
+  "affordances": [
+    {
+      "id": "waterwheel",
+      "tag": "waterwheel",
+      "name": "Waterwheel and race",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "scaling": "A small horizontal wheel (skvaltkvarn) on a hill stream; a large undershot or overshot wheel on a river.",
+      "contains": []
+    },
+    {
+      "id": "millpond",
+      "tag": "millpond",
+      "name": "Mill pond",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "scaling": "A small pond behind a stone-and-turf dam on a stream; a broad dammed reach on a river.",
+      "contains": []
+    },
+    {
+      "id": "mill-machinery",
+      "tag": "mill-machinery",
+      "name": "Millstones",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "scaling": "One pair of stones in a farm mill; two or three pairs and a sifter in a village mill.",
+      "contains": []
+    },
+    {
+      "id": "attic",
+      "tag": "attic",
+      "name": "Grain loft",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    },
+    {
+      "id": "tool-shed",
+      "tag": "tool-shed",
+      "name": "Mill store",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    },
+    {
+      "id": "kitchen",
+      "tag": "kitchen",
+      "name": "Miller's house",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": [
+        {
+          "id": "hearth",
+          "tag": "hearth",
+          "name": "Hearth",
+          "condition": {
+            "minSize": 1,
+            "minWealth": 1,
+            "minCount": 1,
+            "maxCount": 1
+          },
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "counting-house",
+      "tag": "counting-house",
+      "name": "Mill office",
+      "condition": {
+        "minSize": 2,
+        "minWealth": 3,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "scaling": "Only where the mill grinds for many farms and takes payment in coin.",
+      "contains": [
+        {
+          "id": "desk",
+          "tag": "desk",
+          "name": "Miller's desk",
+          "condition": {
+            "minSize": 1,
+            "minWealth": 1,
+            "minCount": 1,
+            "maxCount": 1
+          },
+          "contains": [
+            {
+              "id": "drawer",
+              "tag": "lockable-drawer",
+              "name": "Locked drawer",
+              "condition": {
+                "minSize": 1,
+                "minWealth": 1,
+                "minCount": 1,
+                "maxCount": 1
+              },
+              "contains": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

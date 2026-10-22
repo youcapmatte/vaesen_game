@@ -1,0 +1,41 @@
+{
+  "id": "vaesen",
+  "version": 1,
+  "status": "draft",
+  "name": "Mythic North, 1870s",
+  "era": "Scandinavia around 1870",
+  "startYear": 1872,
+  "worldTruths": [
+    "Modernisation - railways, industry, mills, mines and science - is pushing against the old ways.",
+    "Vaesen have retreated to the rural margins as belief has faded; even rural folk only half-believe in them.",
+    "The recurring engine of conflict is human activity intruding on, or bargaining with, the old world.",
+    "The Society is a group of people with the Sight who investigate such matters, based at a headquarters near Uppsala.",
+    "Only people with the Sight see vaesen as they truly are; others see an animal, a stranger, a trick of the light, or nothing.",
+    "No one in authority admits that vaesen exist. Officials explain everything in natural terms, even when strained."
+  ],
+  "hookChannels": [
+    { "id": "contact-letter", "name": "A letter through the Society's contacts", "description": "A letter from someone who knows of the Society, or who was told to write to it by a friend of a friend.", "scales": [ "private", "local", "regional" ], "weight": 3 },
+    { "id": "newspaper", "name": "A newspaper item", "description": "A short item in a provincial or Uppsala paper that reads wrong to anyone with the Sight.", "scales": [ "local", "regional", "national" ], "weight": 2 },
+    { "id": "official-request", "name": "An official request", "description": "A discreet request from a parish, a county office or the police, who want the matter settled quietly.", "scales": [ "local", "regional", "national" ], "weight": 1 },
+    { "id": "telegram", "name": "A telegram", "description": "A short, urgent telegram, often from someone the Society has helped before.", "scales": [ "private", "local", "regional" ], "weight": 1 },
+    { "id": "in-person", "name": "An in-person plea", "description": "Someone arrives at the headquarters in person, having travelled far to ask for help.", "scales": [ "private", "local" ], "weight": 1.5 },
+    { "id": "old-world-visit", "name": "A visit from the old world", "description": "A being of the old world, or a messenger it sends, comes to the Society. Rare.", "scales": [ "private", "local", "regional" ], "weight": 0.3 }
+  ],
+  "hookGiverTypes": [ "relative", "official", "clergy", "landowner", "worker", "scholar", "physician", "merchant", "servant", "old-world" ],
+  "institutions": [
+    { "id": "police", "name": "Police and county constables", "description": "Town police and rural constables (länsman) answering to the county governor." },
+    { "id": "parish", "name": "The parish and the Church of Sweden", "description": "The vicar, the parish register, the household examinations and the church council." },
+    { "id": "physician", "name": "District physicians", "description": "Doctors with a district, who report deaths and disease to the authorities." },
+    { "id": "press", "name": "The press", "description": "Provincial and city papers, hungry for sensations and eager to mock superstition." },
+    { "id": "landowner", "name": "Landowners and estates", "description": "Manor families and large farmers who own the land and the tenants on it." },
+    { "id": "company", "name": "Mine and mill companies", "description": "Mining, timber and milling companies, with foremen, investors and contracts." },
+    { "id": "university", "name": "Uppsala University", "description": "Scholars and students, rational and modern, but some quietly curious about folklore." }
+  ],
+  "periodConventions": {
+    "travel": [ "Rail along the trunk lines, slow and coal-smoky", "Coach and post-horse along the main roads", "Horse and cart on country tracks", "Steamboat on lakes and along the coast", "Rowing boat, ski and foot in the wilds" ],
+    "communication": [ "Post, a few days between towns", "Telegraph from towns and railway stations", "Word of mouth, the fastest in the countryside", "Notices read out after church" ],
+    "money": "Riksdaler (the krona replaces it in 1873). A farmhand earns a few riksdaler a month; a night at a country inn costs about one.",
+    "socialRanks": [ "nobility", "clergy", "burgher", "officer", "freeholder farmer", "tenant farmer", "crofter", "farmhand or maid", "worker", "vagrant" ],
+    "notes": [ "Paraffin lamps and candles; no electric light outside a few city experiments.", "Emigration to America empties whole parishes after the famine years of 1867-69.", "Revival movements and the free churches challenge the state church." ]
+  }
+}

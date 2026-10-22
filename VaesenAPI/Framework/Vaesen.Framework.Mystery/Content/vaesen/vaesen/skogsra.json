@@ -1,0 +1,241 @@
+{
+  "id": "skogsra",
+  "version": 1,
+  "status": "draft",
+  "name": "The Skogsrå",
+  "family": "caretaker-spirit",
+  "summary": "The keeper of the forest: from the front a lovely woman, from behind hollow as a rotten trunk or trailing a tail. She grants game and good fortune to those she favours and takes something of them in return, leads others in circles until they lose their minds, and guards her trees and animals against careless men.",
+  "requiredAffordances": [
+    "forest"
+  ],
+  "domain": "A tract of deep forest: its trees, its game, its paths and the people who work in it.",
+  "reasonModel": {
+    "nature": "Capricious, possessive and old as the trees. She is generous to those who respect the forest and give her what she wants, and jealous of what she has given. Her interest in a man is a kind of ownership.",
+    "trigger": "Her trees felled without leave, her animals killed greedily or cruelly, a bargain for hunting luck broken or betrayed, a lover who leaves her for a mortal bride, whistling and swearing in her woods, or a man who boasts of her favours.",
+    "expression": "Paths that loop and will not let travellers out, hunters who can no longer hit anything, cattle lost in the woods, men who pine and waste and wander off to the forest at night, charcoal kilns that burn out of control, and trees that fall where they should not.",
+    "resolution": "Negotiable. Make amends to the forest, return what was taken, keep or honourably end the bargain, leave her stands of trees untouched, or break her hold on a man through church, steel and the old counter-charms. She cannot be killed in her own forest by ordinary means, but she can be bargained with or shut out."
+  },
+  "reasonKinds": [
+    "domainViolated",
+    "bargainInvited",
+    "selfOriginatingGrievance",
+    "provokedOnly"
+  ],
+  "resolutionShape": "negotiable",
+  "originSet": [
+    {
+      "id": "skogsra-origin-hunters-pact",
+      "description": "A hunter or charcoal burner made a pact with her for game or good fortune, and has since married, boasted or broken the terms. She now takes her due through him and those around him.",
+      "hiddenHand": true,
+      "handDisposition": "desperate"
+    },
+    {
+      "id": "skogsra-origin-felling",
+      "description": "No one is steering her. A timber company, a sawmill or an ironworks hungry for charcoal is felling her forest, and she answers.",
+      "hiddenHand": false,
+      "handDisposition": null
+    }
+  ],
+  "commonKnowledge": [
+    {
+      "id": "skogsra-ck-beautiful-woman",
+      "text": "The skogsrå is a beautiful woman who lures young men into the forest to ruin them."
+    },
+    {
+      "id": "skogsra-ck-tail",
+      "text": "She has a cow's tail under her skirt, and that is how you tell her from a real girl."
+    },
+    {
+      "id": "skogsra-ck-dont-whistle",
+      "text": "Do not whistle in the forest, or she will hear you."
+    },
+    {
+      "id": "skogsra-ck-drunk-lost",
+      "text": "Men who say they were led astray in the woods were drunk, and say so to explain the hours they lost."
+    },
+    {
+      "id": "skogsra-ck-wolves",
+      "text": "When cattle go missing in the woods it is wolves or bears, and the hunters should be sent out."
+    }
+  ],
+  "deepLore": [
+    {
+      "id": "skogsra-dl-hollow-back",
+      "text": "Her back is hollow like a rotten tree or covered in bark, which she hides by never turning away from the one she speaks to. A traveller who sees it and politely says nothing, or quietly warns her that her tail shows, may be rewarded."
+    },
+    {
+      "id": "skogsra-dl-inside-out",
+      "text": "When she leads a traveller in circles, the spell breaks if he turns a garment inside out, puts his shoes on the wrong feet, or shifts his cap. The path then lies plain where it always was."
+    },
+    {
+      "id": "skogsra-dl-hunting-luck",
+      "text": "She gives a hunter uncanny luck in exchange for his company, an offering or a share of the kill. While the pact holds his shots cannot miss; when he breaks it he cannot hit a barn door, and his dogs refuse to follow him into the trees."
+    },
+    {
+      "id": "skogsra-dl-taken-man",
+      "text": "A man she has taken is 'förtagen': he grows absent and melancholy, cannot settle to work or marriage, and goes to the forest at night. Church, the parson's reading and his family's patience may win him back; anger only drives him deeper in."
+    },
+    {
+      "id": "skogsra-dl-charcoal-kiln",
+      "text": "She comes to charcoal burners at their kilns on long nights to warm herself, and may tend the kiln while the burner sleeps or wake him before it bursts. A burner who offends her finds his kiln flaring through or collapsing."
+    },
+    {
+      "id": "skogsra-dl-steel-shot",
+      "text": "Shot cannot touch her unless it has been loaded with steel, silver or something inherited, or the gun has been carried over a church threshold. A hunter who fires at her with ordinary shot has the gun turned against him."
+    },
+    {
+      "id": "skogsra-dl-guards-game",
+      "text": "She is the keeper of the forest's animals. She hides the game from greedy hunters, frees animals from cruel snares and punishes those who kill more than they need or leave wounded beasts to suffer."
+    },
+    {
+      "id": "skogsra-dl-lost-cattle",
+      "text": "She may keep cattle that stray into her forest, hiding them in plain sight so the herder walks past them. They can be seen again by looking through the loop of an arm, or by throwing steel over them."
+    },
+    {
+      "id": "skogsra-dl-her-trees",
+      "text": "Certain trees are hers: an old pine or a twisted spruce, often with a hollow or a split. Felling one without asking, or without an offering, is a mortal insult; some felled trees bleed sap red as blood."
+    },
+    {
+      "id": "skogsra-dl-child",
+      "text": "A man who lay with her may be brought a child years later and told to have it baptised. Refusing it brings ruin; accepting it ties his household to her forever."
+    },
+    {
+      "id": "skogsra-dl-warning-fire",
+      "text": "She sometimes warns those who have treated the forest well: a woman's voice calling a name before a tree falls, a figure seen before a forest fire, a knock on the hut wall in the night."
+    }
+  ],
+  "giveawayTells": [
+    {
+      "id": "skogsra-gt-looping-paths",
+      "text": "A path walked a hundred times that will not lead out of the woods: however one walks, one comes back to the same split stone, until a coat is turned inside out.",
+      "register": "atmosphere",
+      "alsoFits": []
+    },
+    {
+      "id": "skogsra-gt-hollow-back",
+      "text": "A lovely woman by the kiln fire who turns to leave, and her back is hollow like a rotted trunk.",
+      "register": "physical",
+      "alsoFits": []
+    },
+    {
+      "id": "skogsra-gt-unmissing-shots",
+      "text": "A hunter who never misses, whose game falls dead before the shot, and who sets aside the first animal of each hunt at the forest's edge.",
+      "register": "behaviour",
+      "alsoFits": []
+    },
+    {
+      "id": "skogsra-gt-laughter-in-trees",
+      "text": "A woman's laughter moving through the treetops above a crew of woodcutters, and every axe slipping at once.",
+      "register": "sound",
+      "alsoFits": []
+    }
+  ],
+  "ambiguousSigns": [
+    {
+      "id": "skogsra-as-came-home-late",
+      "text": "A woodcutter came home hours after dark, sure he had only walked a short way, and will not say more.",
+      "register": "behaviour",
+      "alsoFits": ["lyktgubbe", "troll", "vittra", "huldra"]
+    },
+    {
+      "id": "skogsra-as-pining-man",
+      "text": "A young farmer, betrothed in the spring, has grown silent and thin and goes out walking alone at night.",
+      "register": "health",
+      "alsoFits": ["huldra", "nack", "mare", "werewolf"]
+    },
+    {
+      "id": "skogsra-as-cattle-missing",
+      "text": "Two cows did not come home from the forest grazing, and the herd-girl swears she counted them at noon.",
+      "register": "animal",
+      "alsoFits": ["vittra", "troll", "huldra", "werewolf"]
+    },
+    {
+      "id": "skogsra-as-sudden-luck",
+      "text": "A poor crofter has started bringing home more game than the gentry's keepers, and has paid off his debts.",
+      "register": "social",
+      "alsoFits": ["huldra", "devil-bargain", "nack"]
+    },
+    {
+      "id": "skogsra-as-tree-fell",
+      "text": "A tree fell across the logging track on a windless day, just short of the horses.",
+      "register": "physical",
+      "alsoFits": ["troll", "vittra"]
+    },
+    {
+      "id": "skogsra-as-sweet-smell",
+      "text": "A strong sweet smell, like resin and flowers, hangs in the clearing where the men eat, though nothing is in bloom.",
+      "register": "atmosphere",
+      "alsoFits": ["huldra", "vittra"]
+    },
+    {
+      "id": "skogsra-as-dogs-refuse",
+      "text": "The hunting dogs whimper at the edge of the trees and will not go in.",
+      "register": "animal",
+      "alsoFits": ["troll", "werewolf", "myling", "lyktgubbe"]
+    },
+    {
+      "id": "skogsra-as-kiln-burst",
+      "text": "A charcoal kiln burst into open flame in the night while the burner swears he was awake beside it.",
+      "register": "physical",
+      "alsoFits": ["troll", "lyktgubbe"]
+    },
+    {
+      "id": "skogsra-as-sudden-mist",
+      "text": "A low mist rose among the trunks in the middle of a clear afternoon and lifted just as quickly.",
+      "register": "weather",
+      "alsoFits": ["lyktgubbe", "huldra", "draug"]
+    },
+    {
+      "id": "skogsra-as-dream-woman",
+      "text": "Several of the timber crew have dreamed of the same dark-haired woman beckoning from between the trees.",
+      "register": "dream",
+      "alsoFits": ["huldra", "mare", "nack"]
+    },
+    {
+      "id": "skogsra-as-bare-tracks",
+      "text": "Prints of small bare feet in the frost by the hut door, going toward the forest and not coming back.",
+      "register": "physical",
+      "alsoFits": ["myling", "huldra", "vittra"]
+    },
+    {
+      "id": "skogsra-as-voice-calling",
+      "text": "Someone heard their name called from the forest in a voice they did not know.",
+      "register": "sound",
+      "alsoFits": ["myling", "huldra", "lyktgubbe", "nack"]
+    }
+  ],
+  "confrontationConditions": {
+    "kind": "place",
+    "time": null,
+    "placeTags": [
+      "forest",
+      "logging-camp",
+      "ancient-tree"
+    ],
+    "notes": "She can only be met in her own forest, most readily at dusk, by a fire, or at one of her trees. Outside the trees she has no hold and will not come."
+  },
+  "weaknesses": [
+    "Turning a garment inside out breaks her looping paths.",
+    "Shot loaded with steel, silver or something inherited, or a gun carried over a church threshold.",
+    "Church bells, hymns and the name of God weaken her hold on a man.",
+    "She has no power outside the forest.",
+    "Her vanity: seeing her hollow back and keeping politely silent wins her favour."
+  ],
+  "protections": [
+    "Carry steel in the forest: a knife, flint and steel, or a nail in the pocket.",
+    "Do not whistle, swear or boast in the woods.",
+    "Leave an offering at the forest's edge before a hunt or a felling, and never fell her trees.",
+    "Do not answer a voice calling your name from among the trees.",
+    "Never turn your back on a stranger met alone by a fire in the forest."
+  ],
+  "compatibleConflictTags": [
+    "domain-violation",
+    "industry-intrusion",
+    "bargain",
+    "love-and-longing",
+    "envy",
+    "neglected-custom"
+  ],
+  "seasonality": "Present all year. In summer she walks among hunters, herders and lovers; in the long winter nights she comes to the charcoal kilns and the logging camps.",
+  "excludedMonths": []
+}

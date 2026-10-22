@@ -1,0 +1,831 @@
+{
+  "id": "level-karrtorp-november",
+  "version": 1,
+  "status": "draft",
+  "name": "Kärrtorp Junction",
+  "region": "Närke, on the plain south of Örebro",
+  "settlementType": "town",
+  "size": 3,
+  "wealth": 3,
+  "month": 11,
+  "terrain": [
+    "fields",
+    "marsh",
+    "woodland",
+    "stream"
+  ],
+  "description": "Ten years ago Kärrtorp was a parish of farms on the flat Närke plain; then the western main line came through, a junction was built where the branch to Örebro meets it, and a town of railway workers, merchants and hotels has grown up around the station. New wooden houses stand on lots between old farms, and the church bell competes with the station bell. The farmers grumble about the smoke and the newcomers but sell them milk and hay.",
+  "seasonNotes": "November, the darkest and dreariest month. Low clouds lie over the plain, it rains or sleets most days, and the roads are rivers of mud. It is dark by half past three, and paraffin lamps burn around the station from mid-afternoon. Locomotives' smoke hangs in the wet air. Farmers are threshing and slaughtering; Martinmas brings goose dinners and the end of the servants' year, when hired hands change places.",
+  "travel": "From Uppsala by rail via Stockholm and the western main line, about seven hours; one of the best-connected places in the country.",
+  "publicFacts": [
+    "The western main line reached Kärrtorp in 1862 and the branch line to Örebro opened in 1866, making it a junction.",
+    "The railway hotel by the station is the best in the district and travellers stay there between trains.",
+    "The State Railways employ more than a hundred men at Kärrtorp: engine drivers, firemen, switchmen and workshop hands.",
+    "The marsh east of the town was partly drained for the railway embankment and floods every autumn.",
+    "The old farmers and the railway people sit on opposite sides of the church.",
+    "A free church congregation has started meeting in a hall near the station, to the vicar's displeasure.",
+    "The town's lending library was founded by the stationmaster and is open on Wednesday and Saturday evenings.",
+    "At Martinmas, servants leave their old places and new ones arrive with their chests on the trains."
+  ],
+  "places": [
+    {
+      "id": "railway-station",
+      "templateId": "railway-station",
+      "name": "Kärrtorp Junction Station",
+      "description": "The station is a large brick building with a tower clock and a long covered platform, the busiest place for many miles. Trains arrive in clouds of steam and sparks, the bell rings, and porters push trolleys of luggage through the puddles. The telegraph clatters in the office day and night. Coal smoke, wet iron and the smell of paraffin lamps fill the dark afternoon.",
+      "tags": [
+        "railway-station",
+        "telegraph",
+        "railway-line",
+        "crossroads"
+      ],
+      "affordances": [
+        {
+          "id": "railway-station-platform",
+          "tag": "platform",
+          "name": "Platform",
+          "description": "A gravel or plank platform with a lamp post and the station bell.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "railway-station-waiting-room-1",
+          "tag": "waiting-room",
+          "name": "Waiting room 1",
+          "description": "A waiting room with benches, a stove and a printed timetable.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "railway-station-waiting-room-2",
+          "tag": "waiting-room",
+          "name": "Waiting room 2",
+          "description": "A waiting room with benches, a stove and a printed timetable.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "railway-station-waiting-room-3",
+          "tag": "waiting-room",
+          "name": "Waiting room 3",
+          "description": "A waiting room with benches, a stove and a printed timetable.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "railway-station-office",
+          "tag": "office",
+          "name": "Stationmaster's office",
+          "description": "The office with the ticket window, the telegraph key and the train register.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "railway-station-office-desk",
+              "tag": "desk",
+              "name": "Stationmaster's desk",
+              "description": "A desk with the train register and telegram forms.",
+              "lockable": false,
+              "contains": [
+                {
+                  "id": "railway-station-office-desk-drawer",
+                  "tag": "lockable-drawer",
+                  "name": "Locked drawer",
+                  "description": "A locked drawer of telegrams and waybills.",
+                  "lockable": true,
+                  "contains": []
+                }
+              ]
+            },
+            {
+              "id": "railway-station-office-strongbox",
+              "tag": "strongbox",
+              "name": "Ticket safe",
+              "description": "A small safe for the ticket money.",
+              "lockable": true,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "railway-station-tool-shed",
+          "tag": "tool-shed",
+          "name": "Goods shed",
+          "description": "The goods shed with crates, sacks and a weighing scale.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "railway-station-parlour",
+          "tag": "parlour",
+          "name": "Stationmaster's rooms",
+          "description": "The stationmaster's family rooms upstairs.",
+          "lockable": false,
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "inn",
+      "templateId": "inn",
+      "name": "The Railway Hotel",
+      "description": "The railway hotel faces the station, a new three-storey building with plaster ornaments and a dining room with white tablecloths. Travellers wait there between trains, reading newspapers by the stove. The smell of coffee, cigars and roasting goose fills the lobby at Martinmas. Through the windows the lamps of the trains pass slowly in the rain.",
+      "tags": [
+        "inn",
+        "road"
+      ],
+      "affordances": [
+        {
+          "id": "inn-taproom",
+          "tag": "taproom",
+          "name": "Taproom",
+          "description": "The public room: benches, a long scrubbed table, a tiled stove and the day's travellers.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "inn-kitchen",
+          "tag": "kitchen",
+          "name": "Kitchen",
+          "description": "A smoky kitchen with an open hearth, copper pans and a bread rack under the ceiling.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "inn-kitchen-pantry",
+              "tag": "pantry",
+              "name": "Pantry",
+              "description": "A cold larder of salted meat, cheeses, crispbread and the brännvin keg.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "inn-guest-room-1",
+          "tag": "guest-room",
+          "name": "Guest room 1",
+          "description": "A narrow room with a bed, a washstand and a window onto the yard.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "inn-guest-room-1-chest",
+              "tag": "chest",
+              "name": "Travelling chest",
+              "description": "A painted chest at the foot of the bed for a guest's things.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "inn-guest-room-2",
+          "tag": "guest-room",
+          "name": "Guest room 2",
+          "description": "A narrow room with a bed, a washstand and a window onto the yard.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "inn-guest-room-2-chest",
+              "tag": "chest",
+              "name": "Travelling chest",
+              "description": "A painted chest at the foot of the bed for a guest's things.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "inn-guest-room-3",
+          "tag": "guest-room",
+          "name": "Guest room 3",
+          "description": "A narrow room with a bed, a washstand and a window onto the yard.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "inn-guest-room-3-chest",
+              "tag": "chest",
+              "name": "Travelling chest",
+              "description": "A painted chest at the foot of the bed for a guest's things.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "inn-guest-room-4",
+          "tag": "guest-room",
+          "name": "Guest room 4",
+          "description": "A narrow room with a bed, a washstand and a window onto the yard.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "inn-guest-room-4-chest",
+              "tag": "chest",
+              "name": "Travelling chest",
+              "description": "A painted chest at the foot of the bed for a guest's things.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "inn-guest-room-5",
+          "tag": "guest-room",
+          "name": "Guest room 5",
+          "description": "A narrow room with a bed, a washstand and a window onto the yard.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "inn-guest-room-5-chest",
+              "tag": "chest",
+              "name": "Travelling chest",
+              "description": "A painted chest at the foot of the bed for a guest's things.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "inn-guest-room-6",
+          "tag": "guest-room",
+          "name": "Guest room 6",
+          "description": "A narrow room with a bed, a washstand and a window onto the yard.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "inn-guest-room-6-chest",
+              "tag": "chest",
+              "name": "Travelling chest",
+              "description": "A painted chest at the foot of the bed for a guest's things.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "inn-stable",
+          "tag": "stable",
+          "name": "Posting stable",
+          "description": "Stalls for the posting horses, harness on pegs, the smell of hay and dung.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "inn-cellar",
+          "tag": "cellar",
+          "name": "Cellar",
+          "description": "A stone cellar for ale, potatoes and the inn's barrels.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "inn-office",
+          "tag": "office",
+          "name": "Landlord's office",
+          "description": "A cramped room with the posting book, receipts on a spike and a calendar from a Stockholm brewer.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "inn-office-desk",
+              "tag": "desk",
+              "name": "Writing desk",
+              "description": "A writing desk of stained pine with pigeonholes for letters.",
+              "lockable": false,
+              "contains": [
+                {
+                  "id": "inn-office-desk-drawer",
+                  "tag": "lockable-drawer",
+                  "name": "Locked drawer",
+                  "description": "A drawer under the writing flap, fitted with a small iron lock.",
+                  "lockable": true,
+                  "contains": []
+                }
+              ]
+            },
+            {
+              "id": "inn-office-strongbox",
+              "tag": "strongbox",
+              "name": "Strongbox",
+              "description": "An iron-bound strongbox bolted to the floor, holding the takings.",
+              "lockable": true,
+              "contains": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "church",
+      "templateId": "church",
+      "name": "Kärrtorp Church",
+      "description": "The old church stands on a slight rise among the farms, a quarter of an hour's walk from the station, its tower visible across the flat fields. The churchyard is muddy and the lime trees drip. Inside, the old box pews are full of farming families, the railway families in the new benches at the back. Damp has stained the plaster around the windows.",
+      "tags": [
+        "church",
+        "graveyard"
+      ],
+      "affordances": [
+        {
+          "id": "church-sacristy",
+          "tag": "sacristy",
+          "name": "Sacristy",
+          "description": "A small vaulted room off the chancel where the vicar robes.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "church-sacristy-cabinet",
+              "tag": "cabinet",
+              "name": "Vestment cupboard",
+              "description": "A tall cupboard of chasubles, the surplice and spare altar candles.",
+              "lockable": false,
+              "contains": []
+            },
+            {
+              "id": "church-sacristy-chest",
+              "tag": "chest",
+              "name": "Parish chest",
+              "description": "An ancient iron-banded chest with three locks for the communion silver and old deeds.",
+              "lockable": true,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "church-bell-tower",
+          "tag": "bell-tower",
+          "name": "Bell tower",
+          "description": "Steep ladders up to the bells, bird droppings on the beams, wind through the louvres.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "church-attic",
+          "tag": "attic",
+          "name": "Church loft",
+          "description": "The dusty space above the vaults, full of broken pews and old hatchments.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "church-crypt",
+          "tag": "crypt",
+          "name": "Burial vault",
+          "description": "A brick-lined vault under the chancel floor where a landed family lay their coffins.",
+          "lockable": false,
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "parsonage",
+      "templateId": "parsonage",
+      "name": "Kärrtorp Parsonage",
+      "description": "The parsonage is an old red farmhouse beside the church, larger than the farms around it. Sleet blows against its windows. In the yard the glebe farm's hands are threshing. The vicar's study is crowded with visitors at Martinmas, coming to collect their moving certificates.",
+      "tags": [
+        "parsonage",
+        "fields"
+      ],
+      "affordances": [
+        {
+          "id": "parsonage-office",
+          "tag": "office",
+          "name": "Vicar's study",
+          "description": "The study where the vicar writes sermons and receives parishioners.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "parsonage-office-desk",
+              "tag": "desk",
+              "name": "Vicar's desk",
+              "description": "A desk under the window with sermon drafts.",
+              "lockable": false,
+              "contains": [
+                {
+                  "id": "parsonage-office-desk-drawer",
+                  "tag": "lockable-drawer",
+                  "name": "Locked drawer",
+                  "description": "A locked drawer for private letters and certificates waiting to be signed.",
+                  "lockable": true,
+                  "contains": []
+                }
+              ]
+            },
+            {
+              "id": "parsonage-office-bookshelf",
+              "tag": "bookshelf",
+              "name": "Bookshelves",
+              "description": "Shelves of postils, Luther, hymnals and back numbers of church journals.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "parsonage-archive",
+          "tag": "archive",
+          "name": "Parish registers",
+          "description": "The church books: household examination rolls, birth, death and moving registers.",
+          "lockable": true,
+          "contains": []
+        },
+        {
+          "id": "parsonage-parlour",
+          "tag": "parlour",
+          "name": "Parlour",
+          "description": "The parsonage parlour where the vicar's wife receives.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "parsonage-kitchen",
+          "tag": "kitchen",
+          "name": "Kitchen",
+          "description": "The parsonage kitchen.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "parsonage-servants-quarters",
+          "tag": "servants-quarters",
+          "name": "Maids' room",
+          "description": "The room of the parsonage maids.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "parsonage-barn",
+          "tag": "barn",
+          "name": "Glebe barn",
+          "description": "The barn of the glebe farm.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "parsonage-cowshed",
+          "tag": "cowshed",
+          "name": "Glebe cowshed",
+          "description": "The parsonage cowshed.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "parsonage-garden",
+          "tag": "garden",
+          "name": "Parsonage garden",
+          "description": "An orchard and kitchen garden, the vicar's pride.",
+          "lockable": false,
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "smithy",
+      "templateId": "smithy",
+      "name": "Lindqvist's Smithy",
+      "description": "The smithy is on the old road where it crosses the railway, busier than ever with carts, wagons and the railway's small jobs. Two hearths burn and the smith has an apprentice and a striker. The light of the forge spills out onto the wet road. The clang of the hammer is drowned out every time a train passes.",
+      "tags": [
+        "smithy"
+      ],
+      "affordances": [
+        {
+          "id": "smithy-forge",
+          "tag": "forge",
+          "name": "Forge",
+          "description": "The hearth and bellows, the anvil on its stump, the quench trough.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "smithy-workshop",
+          "tag": "workshop",
+          "name": "Workshop",
+          "description": "The bench and racks of tongs, hammers and half-finished work.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "smithy-tool-shed",
+          "tag": "tool-shed",
+          "name": "Coal shed",
+          "description": "A shed of charcoal and bar iron from the works.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "smithy-kitchen",
+          "tag": "kitchen",
+          "name": "Smith's cottage",
+          "description": "The smith's one-room cottage across the yard.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "smithy-kitchen-chest",
+              "tag": "chest",
+              "name": "Smith's chest",
+              "description": "The smith's own chest of papers and good clothes.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "library",
+      "templateId": "library",
+      "name": "Kärrtorp Lending Library",
+      "description": "The lending library occupies two rooms in a new wooden building near the station, warm and lamplit on its open evenings. Railway workers and clerks sit at the long table with newspapers and books. Rain drums on the window. The librarian, a retired schoolmaster, peers over his spectacles at everyone who enters.",
+      "tags": [
+        "library"
+      ],
+      "affordances": [
+        {
+          "id": "library-reading-room",
+          "tag": "reading-room",
+          "name": "Reading room",
+          "description": "A room with a long table, chairs and the newspapers on poles.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "library-bookshelf-1",
+          "tag": "bookshelf",
+          "name": "Shelves 1",
+          "description": "Shelves of bound volumes: sermons, travel, agriculture, history and a few novels.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "library-bookshelf-2",
+          "tag": "bookshelf",
+          "name": "Shelves 2",
+          "description": "Shelves of bound volumes: sermons, travel, agriculture, history and a few novels.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "library-bookshelf-3",
+          "tag": "bookshelf",
+          "name": "Shelves 3",
+          "description": "Shelves of bound volumes: sermons, travel, agriculture, history and a few novels.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "library-bookshelf-4",
+          "tag": "bookshelf",
+          "name": "Shelves 4",
+          "description": "Shelves of bound volumes: sermons, travel, agriculture, history and a few novels.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "library-desk",
+          "tag": "desk",
+          "name": "Librarian's desk",
+          "description": "The librarian's desk with the lending ledger.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "library-desk-drawer",
+              "tag": "lockable-drawer",
+              "name": "Locked drawer",
+              "description": "A locked drawer with the subscription money and the lending ledger.",
+              "lockable": true,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "library-attic",
+          "tag": "attic",
+          "name": "Storage loft",
+          "description": "Bundles of pamphlets and unbound almanacs under the roof.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "library-archive",
+          "tag": "archive",
+          "name": "Archive",
+          "description": "A locked room of manuscripts, old district records and donated papers.",
+          "lockable": true,
+          "contains": [
+            {
+              "id": "library-archive-cabinet",
+              "tag": "cabinet",
+              "name": "Manuscript cabinet",
+              "description": "A cabinet of folders and bound manuscripts.",
+              "lockable": true,
+              "contains": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "farm",
+      "templateId": "farm",
+      "name": "Kärrtorp Gård",
+      "description": "The old farm that gave the town its name now stands with railway sidings at the bottom of its fields. The house is a solid two-storey building with old outbuildings, and the family refuses to sell to the railway company. The threshing goes on in the barn and the sound mixes with the trains. Geese are being fattened in a pen for Martinmas.",
+      "tags": [
+        "farm",
+        "fields",
+        "meadow"
+      ],
+      "affordances": [
+        {
+          "id": "farm-yard",
+          "tag": "yard",
+          "name": "Farmyard",
+          "description": "The yard between the buildings, trodden mud and a woodpile.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-kitchen",
+          "tag": "kitchen",
+          "name": "Main room",
+          "description": "The everyday room: open hearth, long table, wall beds and the loom in the corner.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "farm-kitchen-hearth",
+              "tag": "hearth",
+              "name": "Open hearth",
+              "description": "The whitewashed corner hearth with its iron pot-hook.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "farm-parlour",
+          "tag": "parlour",
+          "name": "Best room",
+          "description": "The cold best room, painted furniture, the family Bible and a clock from Mora.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "farm-parlour-chest",
+              "tag": "chest",
+              "name": "Dowry chest",
+              "description": "A painted chest with the wife's linen and the year of her wedding on the lid.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "farm-servants-quarters",
+          "tag": "servants-quarters",
+          "name": "Farmhands' chamber",
+          "description": "A bare chamber with two beds and the hands' own chests.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-cowshed",
+          "tag": "cowshed",
+          "name": "Cowshed",
+          "description": "A low dark byre, warm with cattle breath.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-stable",
+          "tag": "stable",
+          "name": "Stable",
+          "description": "A stable for the farm horse or horses.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-barn",
+          "tag": "barn",
+          "name": "Barn",
+          "description": "A timber barn for the harvest.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "farm-barn-hayloft",
+              "tag": "hayloft",
+              "name": "Hayloft",
+              "description": "The hay store over the barn floor, reached by a ladder.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "farm-drying-shed",
+          "tag": "drying-shed",
+          "name": "Threshing barn",
+          "description": "A threshing barn (loge) where the grain is threshed with flails through the autumn.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-cellar",
+          "tag": "cellar",
+          "name": "Root cellar",
+          "description": "A root cellar dug into the slope, holding potatoes, turnips and the milk.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-well",
+          "tag": "well",
+          "name": "Well",
+          "description": "A well with a sweep pole and a wooden bucket.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-bathhouse",
+          "tag": "bathhouse",
+          "name": "Bathhouse",
+          "description": "A small log bastu with a stone oven, also used for drying malt and flax.",
+          "lockable": false,
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "croft",
+      "templateId": "croft",
+      "name": "The Cottage on the Marsh",
+      "description": "A small grey cottage stands at the edge of the marsh where the embankment cuts across it, the trains thundering past within a stone's throw. The ground around it is waterlogged every autumn. A family of railway navvies lives there now, with the cow sold. The windows rattle at every train.",
+      "tags": [
+        "croft",
+        "marsh",
+        "railway-line"
+      ],
+      "affordances": [
+        {
+          "id": "croft-kitchen",
+          "tag": "kitchen",
+          "name": "Cottage room",
+          "description": "One room: hearth, a box bed for the parents, a pull-out bench for the children, a table under the window.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "croft-kitchen-hearth",
+              "tag": "hearth",
+              "name": "Hearth",
+              "description": "The hearth, smoke-blackened, a pot simmering.",
+              "lockable": false,
+              "contains": []
+            },
+            {
+              "id": "croft-kitchen-chest",
+              "tag": "chest",
+              "name": "Clothes chest",
+              "description": "The family's one chest for Sunday clothes and papers.",
+              "lockable": false,
+              "contains": []
+            },
+            {
+              "id": "croft-kitchen-hiding-place",
+              "tag": "hiding-place",
+              "name": "Loose board",
+              "description": "A loose floorboard by the bed where a few coins can be kept.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "croft-cowshed",
+          "tag": "cowshed",
+          "name": "Byre",
+          "description": "A byre built against the cottage for one cow and a few sheep.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "croft-cellar",
+          "tag": "cellar",
+          "name": "Earth cellar",
+          "description": "A turf-roofed earth cellar for potatoes.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "croft-well",
+          "tag": "well",
+          "name": "Well",
+          "description": "A shallow well or a spring-fed pit with a bucket.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "croft-garden",
+          "tag": "garden",
+          "name": "Potato patch",
+          "description": "A stony patch of potatoes, kale and tobacco plants.",
+          "lockable": false,
+          "contains": []
+        }
+      ]
+    }
+  ]
+}

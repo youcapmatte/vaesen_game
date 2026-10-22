@@ -1,0 +1,104 @@
+{
+  "id": "library",
+  "version": 1,
+  "status": "draft",
+  "name": "Library",
+  "tag": "library",
+  "description": "A parish lending library, a reading society's room or a town library: shelves of improving books, newspapers, and in larger places an archive of manuscripts and old papers.",
+  "settlementTypes": [
+    "village",
+    "town",
+    "city",
+    "estate"
+  ],
+  "tags": [],
+  "affordances": [
+    {
+      "id": "reading-room",
+      "tag": "reading-room",
+      "name": "Reading room",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    },
+    {
+      "id": "bookshelf",
+      "tag": "bookshelf",
+      "name": "Shelves",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 6
+      },
+      "scaling": "A single shelf in a hamlet, a cupboard of a hundred volumes in a parish, a reading room in a city.",
+      "contains": []
+    },
+    {
+      "id": "desk",
+      "tag": "desk",
+      "name": "Librarian's desk",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": [
+        {
+          "id": "drawer",
+          "tag": "lockable-drawer",
+          "name": "Locked drawer",
+          "condition": {
+            "minSize": 1,
+            "minWealth": 1,
+            "minCount": 1,
+            "maxCount": 1
+          },
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "attic",
+      "tag": "attic",
+      "name": "Storage loft",
+      "condition": {
+        "minSize": 2,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    },
+    {
+      "id": "archive",
+      "tag": "archive",
+      "name": "Archive",
+      "condition": {
+        "minSize": 3,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": [
+        {
+          "id": "cabinet",
+          "tag": "cabinet",
+          "name": "Manuscript cabinet",
+          "condition": {
+            "minSize": 1,
+            "minWealth": 1,
+            "minCount": 1,
+            "maxCount": 1
+          },
+          "contains": []
+        }
+      ]
+    }
+  ]
+}

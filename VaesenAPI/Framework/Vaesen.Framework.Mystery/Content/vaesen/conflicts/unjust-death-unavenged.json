@@ -1,0 +1,64 @@
+{
+  "id": "unjust-death-unavenged",
+  "version": 1,
+  "status": "draft",
+  "name": "An unjust death unavenged",
+  "description": "Someone died wrongly and the world moved on: a maid drowned and called a suicide, a child exposed in the famine years, a farmhand killed in a quarrel and buried as an accident. The parish register says one thing and the dead say another. The restless dead, or a being bound to the place of death, will not be quiet until the truth is acknowledged, and the living who buried it have built their lives on its silence.",
+  "tags": [
+    "unjust-death"
+  ],
+  "reasonKinds": [
+    "selfOriginatingGrievance",
+    "provokedOnly"
+  ],
+  "provocationAffordances": [
+    "graveyard",
+    "lake",
+    "river",
+    "marsh",
+    "well",
+    "forest",
+    "crossroads",
+    "cellar",
+    "hiding-place",
+    "burial-mound",
+    "ruin"
+  ],
+  "roleSlots": [
+    {
+      "id": "killer",
+      "name": "The one who caused the death",
+      "description": "The person whose hand, neglect or cruelty brought the death; may be dead, respectable now, or genuinely remorseful.",
+      "required": true
+    },
+    {
+      "id": "concealer",
+      "name": "The one who buried the truth",
+      "description": "A relative, vicar, constable or district physician who wrote the convenient verdict, for kindness, for money or to protect a name.",
+      "required": true
+    },
+    {
+      "id": "haunted",
+      "name": "The one who is haunted",
+      "description": "The person the dead now torment, not always the guilty one; a new tenant, a grandchild, an unlucky lodger.",
+      "required": true
+    },
+    {
+      "id": "mourner",
+      "name": "The one who still grieves",
+      "description": "A mother, sweetheart or sibling who never believed the verdict and may be glad of the haunting.",
+      "required": false
+    },
+    {
+      "id": "witness",
+      "name": "The one who saw",
+      "description": "Someone who saw what happened and has kept silent from fear, guilt or loyalty.",
+      "required": false
+    }
+  ],
+  "decoyIdeas": [
+    "Grief-madness or hysteria in the haunted household, as the physician insists.",
+    "A living prankster or a vengeful relative staging the haunting to frighten an heir away.",
+    "The obvious suspect for the old death is a stranger or vagrant, while the truth lies inside the family."
+  ]
+}

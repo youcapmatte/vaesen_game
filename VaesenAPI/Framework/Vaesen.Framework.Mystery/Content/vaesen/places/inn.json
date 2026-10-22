@@ -1,0 +1,160 @@
+{
+  "id": "inn",
+  "version": 1,
+  "status": "draft",
+  "name": "Inn",
+  "tag": "inn",
+  "description": "A coaching inn (gästgivaregård) or town inn with a public room, rooms to let and a stable. By law a posting station keeps fresh horses for travellers on the king's road.",
+  "settlementTypes": [
+    "hamlet",
+    "village",
+    "town",
+    "city"
+  ],
+  "tags": [
+    "road"
+  ],
+  "affordances": [
+    {
+      "id": "taproom",
+      "tag": "taproom",
+      "name": "Taproom",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "scaling": "A low room with one long table in a hamlet; a busy public room with a counter and several tables in a town.",
+      "contains": []
+    },
+    {
+      "id": "kitchen",
+      "tag": "kitchen",
+      "name": "Kitchen",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "scaling": "The landlady's own kitchen in a small house; a kitchen with a cook and a girl in a large one.",
+      "contains": [
+        {
+          "id": "pantry",
+          "tag": "pantry",
+          "name": "Pantry",
+          "condition": {
+            "minSize": 1,
+            "minWealth": 2,
+            "minCount": 1,
+            "maxCount": 1
+          },
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "guest-room",
+      "tag": "guest-room",
+      "name": "Guest room",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 6
+      },
+      "scaling": "Two box beds under the roof in a hamlet posting house; a corridor of numbered rooms in a town.",
+      "contains": [
+        {
+          "id": "chest",
+          "tag": "chest",
+          "name": "Travelling chest",
+          "condition": {
+            "minSize": 1,
+            "minWealth": 1,
+            "minCount": 1,
+            "maxCount": 1
+          },
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "stable",
+      "tag": "stable",
+      "name": "Posting stable",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "scaling": "Stalls for the statutory posting horses; more for the coaches in a town.",
+      "contains": []
+    },
+    {
+      "id": "cellar",
+      "tag": "cellar",
+      "name": "Cellar",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    },
+    {
+      "id": "office",
+      "tag": "office",
+      "name": "Landlord's office",
+      "condition": {
+        "minSize": 2,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "scaling": "A corner of the parlour in a village; a separate room with ledgers and the posting book in a town.",
+      "contains": [
+        {
+          "id": "desk",
+          "tag": "desk",
+          "name": "Writing desk",
+          "condition": {
+            "minSize": 1,
+            "minWealth": 1,
+            "minCount": 1,
+            "maxCount": 1
+          },
+          "contains": [
+            {
+              "id": "drawer",
+              "tag": "lockable-drawer",
+              "name": "Locked drawer",
+              "condition": {
+                "minSize": 1,
+                "minWealth": 1,
+                "minCount": 1,
+                "maxCount": 1
+              },
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "strongbox",
+          "tag": "strongbox",
+          "name": "Strongbox",
+          "condition": {
+            "minSize": 1,
+            "minWealth": 3,
+            "minCount": 1,
+            "maxCount": 1
+          },
+          "contains": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "id": "curse-laid-in-anger",
+  "version": 1,
+  "status": "draft",
+  "name": "A curse laid in anger",
+  "description": "In a moment of rage or humiliation someone called down harm on another: a jilted woman at the churchyard wall, a dismissed servant at the crossroads, a beggar turned from the door. Something old heard and answered. The curse now runs on its own, often far beyond what was meant, and the one who laid it may be appalled, proud, or dead. Lifting it means finding who spoke the words and why, and whether the grievance behind them was just.",
+  "tags": [
+    "curse",
+    "affliction"
+  ],
+  "reasonKinds": [
+    "affliction",
+    "selfOriginatingGrievance"
+  ],
+  "provocationAffordances": [
+    "herbalist-cottage",
+    "crossroads",
+    "graveyard",
+    "church",
+    "farmstead",
+    "cowshed",
+    "well",
+    "hearth",
+    "holy-well",
+    "ancient-tree"
+  ],
+  "roleSlots": [
+    {
+      "id": "curser",
+      "name": "The one who laid the curse",
+      "description": "The person who spoke the words or made the charm; wronged, vindictive, or now desperate to take it back.",
+      "required": true
+    },
+    {
+      "id": "cursed",
+      "name": "The one who is cursed",
+      "description": "The target, whose own conduct may well have earned the curser's anger.",
+      "required": true
+    },
+    {
+      "id": "afflicted-bystander",
+      "name": "The one caught in it",
+      "description": "A child, a servant, livestock or a whole household suffering for a quarrel they had no part in.",
+      "required": true
+    },
+    {
+      "id": "instrument",
+      "name": "The one who supplied the means",
+      "description": "A cunning man or wise woman who sold the charm or taught the words, and may have known exactly what it would do.",
+      "required": false
+    },
+    {
+      "id": "accuser",
+      "name": "The one who points the finger",
+      "description": "A neighbour who loudly names the wrong person as witch, stoking a dangerous mood in the parish.",
+      "required": false
+    }
+  ],
+  "decoyIdeas": [
+    "The village's known wise woman is blamed, though she had nothing to do with it.",
+    "Poisoning: tainted grain, ergot or a bad well, which the physician favours.",
+    "A cattle plague or fever the county veterinarian wants to quarantine."
+  ]
+}

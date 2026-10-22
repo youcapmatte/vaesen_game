@@ -1,0 +1,96 @@
+{
+  "id": "editor-blom",
+  "version": 1,
+  "status": "draft",
+  "name": "Johan August Blom",
+  "identity": {
+    "age": 47,
+    "gender": "male",
+    "occupation": "Editor and part-owner of the liberal newspaper Fyrisposten",
+    "rank": "burgher",
+    "home": "The newspaper office and flat above it on Drottninggatan, Uppsala, smelling of ink and wet paper",
+    "appearance": "Heavy-set and red-cheeked, with a magnificent brown beard, a cigar he rarely lights, and shirt cuffs grey with printer's ink."
+  },
+  "personality": {
+    "openness": 4,
+    "conscientiousness": 3,
+    "extraversion": 4,
+    "agreeableness": 2,
+    "neuroticism": 2
+  },
+  "drives": [
+    {
+      "id": "circulation",
+      "text": "Keep the paper's subscribers ahead of the conservative rival across the river.",
+      "strength": 3
+    },
+    {
+      "id": "progress",
+      "text": "Push the cause of reform: schools, railways, an end to superstition and to the clergy's grip on the countryside.",
+      "strength": 2
+    },
+    {
+      "id": "the-story",
+      "text": "Get the true story of what the Society does, whatever it is, and print it first.",
+      "strength": 2
+    }
+  ],
+  "voice": {
+    "register": "Booming, jovial and argumentative; speaks in headlines and leading articles even across a dinner table.",
+    "mannerisms": [
+      "Taps the table with a folded newspaper to make a point",
+      "Calls everyone 'my friend' especially when he disagrees",
+      "Repeats a good phrase twice to remember it for print"
+    ],
+    "sampleLines": [
+      "My friend, the age of trolls is over. The age of the telegraph is here. Superstition in the countryside, that's the headline, that's the story.",
+      "You've been to Hedesunda twice this month. I don't ask why. I merely note it. I am a noting sort of man.",
+      "Give me something true and I'll print it straight. Give me nothing and I shall have to print what people say, and people say such things."
+    ]
+  },
+  "background": "Blom was a schoolteacher in Västerås until a sharp article on the cathedral chapter cost him his post. He drifted into journalism in Stockholm, came to Uppsala to run Fyrisposten in 1864, and has turned a dull advertiser into a lively, quarrelsome liberal paper read in every coffee house in town. He mocks rural superstition in print as a matter of policy, but he is too good a newspaperman not to notice that certain country stories keep ending with the arrival of the same gentlefolk from Gamla Uppsala. He does not yet know whether the Society are a story about fraud, about science, or about something else.",
+  "latentHooks": [
+    {
+      "id": "paid-informants",
+      "kind": "connection",
+      "text": "He pays small sums to servants, coachmen and telegraph clerks for news, and some of them work close to the Society."
+    },
+    {
+      "id": "libel-suit",
+      "kind": "debt",
+      "text": "A libel suit from a Uppsala alderman is pending, and losing it would ruin him; he would trade a great deal for leverage."
+    },
+    {
+      "id": "sister-in-asylum",
+      "kind": "secret",
+      "text": "His younger sister has been in the asylum at Uppsala for ten years after seeing 'the woman in the lake'; he visits her monthly and tells no one."
+    },
+    {
+      "id": "riksdag-seat",
+      "kind": "ambition",
+      "text": "He means to stand for the second chamber of the Riksdag, and a sensational exposé would make his name across the county."
+    }
+  ],
+  "networkLinks": [
+    {
+      "targetId": "press",
+      "place": "Uppsala and Stockholm",
+      "nature": "Editor with correspondents in the provincial papers",
+      "influence": "Can put a story in print across the county within the week, praising or mocking the Society."
+    },
+    {
+      "targetId": "police",
+      "place": "Uppsala",
+      "nature": "Drinks with junior constables who sell him the night's arrests",
+      "influence": "Can learn of the Society's dealings with the police almost as soon as they happen."
+    },
+    {
+      "targetId": "innkeeper-strand",
+      "place": "The northern road",
+      "nature": "Buys road gossip from Brita Strand",
+      "influence": "Learns who has been coming and going from the Society's headquarters."
+    }
+  ],
+  "startingAttitude": 0,
+  "attitudeReason": "Neither friend nor foe; the Society is a story he has not yet decided how to write."
+}

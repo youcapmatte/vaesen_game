@@ -1,0 +1,65 @@
+{
+  "id": "old-custom-neglected",
+  "version": 1,
+  "status": "draft",
+  "name": "An old custom neglected",
+  "description": "A household or village has stopped doing what its grandparents always did: no porridge set out for the farm's guardian at Christmas, the guardian tree felled for timber, the first milk no longer poured at the stone, the well not thanked at midsummer. Perhaps a new owner from the town thinks it peasant nonsense, perhaps a revivalist preacher has forbidden it, perhaps the family simply emigrated and the newcomers never knew. The being that was kept content grows slighted, then spiteful.",
+  "tags": [
+    "neglected-custom",
+    "domain-violation"
+  ],
+  "reasonKinds": [
+    "domainViolated",
+    "provokedOnly"
+  ],
+  "provocationAffordances": [
+    "farmstead",
+    "farm",
+    "barn",
+    "cowshed",
+    "stable",
+    "ancient-tree",
+    "holy-well",
+    "hearth",
+    "mill",
+    "burial-mound",
+    "standing-stone"
+  ],
+  "roleSlots": [
+    {
+      "id": "neglecter",
+      "name": "The one who stopped the custom",
+      "description": "The new owner, modernising son or pious wife who ended the practice, often from principle rather than malice.",
+      "required": true
+    },
+    {
+      "id": "forbidder",
+      "name": "The one who preached against it",
+      "description": "A revivalist lay preacher or zealous curate who called the custom heathen idolatry.",
+      "required": false
+    },
+    {
+      "id": "keeper",
+      "name": "The one who kept it secretly",
+      "description": "An old servant or grandparent who went on leaving offerings in secret, and has now been stopped or has died.",
+      "required": true
+    },
+    {
+      "id": "suffering",
+      "name": "The one who bears the spite",
+      "description": "The person, household or herd that bears the being's displeasure: sour milk, lamed horses, a child's nightmares.",
+      "required": true
+    },
+    {
+      "id": "opportunist",
+      "name": "The one who uses the trouble",
+      "description": "A neighbour or creditor who would like the farm to fail and is happy to see the misfortune continue.",
+      "required": false
+    }
+  ],
+  "decoyIdeas": [
+    "A disgruntled farmhand or dismissed maid is sabotaging the farm out of spite.",
+    "The misfortunes are the work of a neighbour's envy and witchcraft.",
+    "Rats, a sick herd, bad hay: an ordinary run of farm bad luck the new owner insists on."
+  ]
+}

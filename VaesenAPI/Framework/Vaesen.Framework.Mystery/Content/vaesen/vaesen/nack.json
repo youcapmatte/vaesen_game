@@ -1,0 +1,254 @@
+{
+  "id": "nack",
+  "version": 1,
+  "status": "draft",
+  "name": "The Näck",
+  "family": "water-spirit",
+  "summary": "A shapeshifting spirit of rivers, falls and mill races who plays the fiddle in the moving water. It can teach a mortal to play like no one else, lure a listener to drown, or weep on a stone for the salvation it is told it will never have. Its grievances are old and specific, and they can be answered.",
+  "requiredAffordances": [
+    "running-water"
+  ],
+  "domain": "A stretch of moving water, its falls, pools and fords, and everything that drowns in it.",
+  "reasonModel": {
+    "nature": "Melancholy, proud and hungry for recognition. It wants payment for what it gives, respect for its water and, beneath everything, the hope of being saved. It is not cruel for its own sake, but it keeps its bargains to the letter.",
+    "trigger": "Its water dammed, redirected, fouled or ringed with iron; a bargain broken or left unpaid; mockery of its hope of salvation; a year passing without the life the river is owed; or someone calling it up on purpose.",
+    "expression": "Music that pulls listeners toward the water, drownings of the strong and the careful, fiddlers who cannot stop playing, a beautiful stranger who courts a lonely young person, and a pale horse that waits on the bank.",
+    "resolution": "Negotiable. Pay the debt (an offering, a returned instrument, a promise kept), undo the harm to the water, bind it with steel, or, rarest and kindest, give it a sincere word of hope for its salvation. Naming it aloud or forcing it with music can drive it off without settling anything."
+  },
+  "reasonKinds": [
+    "domainViolated",
+    "bargainInvited",
+    "selfOriginatingGrievance",
+    "provokedOnly"
+  ],
+  "resolutionShape": "negotiable",
+  "originSet": [
+    {
+      "id": "nack-origin-fiddler-debt",
+      "description": "A musician took lessons from the Näck at the falls and never paid in full, or broke the terms. The Näck now collects through the people and the music around him.",
+      "hiddenHand": true,
+      "handDisposition": "desperate"
+    },
+    {
+      "id": "nack-origin-called-up",
+      "description": "Someone who knows the old ways has been throwing a rival's belongings and name into the water on Thursday nights, setting the Näck on that person.",
+      "hiddenHand": true,
+      "handDisposition": "hostile"
+    },
+    {
+      "id": "nack-origin-wronged-water",
+      "description": "No one is steering it. A weir, a mill race or iron in its pools has wounded the water, and the Näck answers on its own account.",
+      "hiddenHand": false,
+      "handDisposition": null
+    }
+  ],
+  "commonKnowledge": [
+    {
+      "id": "nack-ck-lures-children",
+      "text": "The Näck lures children into the river, so children must keep away from the water after dark."
+    },
+    {
+      "id": "nack-ck-fiddle",
+      "text": "The Näck plays the fiddle, and a fiddler who plays too well has surely been to the falls."
+    },
+    {
+      "id": "nack-ck-handsome-man",
+      "text": "It shows itself as a handsome young man to tempt girls down to the shore."
+    },
+    {
+      "id": "nack-ck-one-a-year",
+      "text": "Every river takes one life a year, and there is nothing to be done about it."
+    },
+    {
+      "id": "nack-ck-needle-rhyme",
+      "text": "Before bathing you throw something of steel into the water and say the old rhyme, and then it cannot touch you."
+    }
+  ],
+  "deepLore": [
+    {
+      "id": "nack-dl-teaching-price",
+      "text": "It teaches music for a price paid at the water on three Thursday evenings: a black animal, brännvin, a piece of meat or silver. A short or grudging payment buys only half the skill, which can be worse than none: the pupil may tune the strings but never stop the tune."
+    },
+    {
+      "id": "nack-dl-endless-tune",
+      "text": "A tune learned from the Näck can carry dancers and player alike until they drop. The only way to stop it is to cut the strings or for someone behind the fiddler to cut the bow-hair; the fiddler cannot do it himself."
+    },
+    {
+      "id": "nack-dl-salvation",
+      "text": "What it wants most is to be told it may be saved. A sincere promise of hope, such as a pastor's or a child's blessing, can quiet it for good; mockery of that hope makes it weep and then turn bitter against the one who mocked."
+    },
+    {
+      "id": "nack-dl-iron",
+      "text": "Steel or iron in the water binds it: a knife driven into the bed, a needle dropped from a boat, nails in a weir. Bound, it cannot move freely along its water, which wounds it and makes it dangerous where the iron is not."
+    },
+    {
+      "id": "nack-dl-horse",
+      "text": "It can take the shape of a grey or pale horse that grazes by the bank and offers its back. Whoever mounts it cannot get off, and the horse goes into the deep. Saying its true name, or a word that sounds like it, breaks the shape and it flees."
+    },
+    {
+      "id": "nack-dl-drowned-debt",
+      "text": "A drowned person whose body is never found is said to belong to the Näck. A debt to it passes to the kin of one who drowned owing; and a body is given back only when the debt is paid or the water is offered something in its place."
+    },
+    {
+      "id": "nack-dl-mill-offering",
+      "text": "Old millers left something at the race at the start of each milling season: a coin, a cake, a dram. A mill that stops the offering finds its wheel jammed, its stones cracking and its race running wrong."
+    },
+    {
+      "id": "nack-dl-wet-hem",
+      "text": "When it comes to a dance on land in human shape, the left side of its coat or the hem of its clothes is always wet, and water gathers on the floor where it stands."
+    },
+    {
+      "id": "nack-dl-music-binds-back",
+      "text": "Music is also a weapon against it: a strong enough player at the shore can compel it to rise and give back what it has taken, as the old ballads say of the harp that brought a bride back from the deep."
+    },
+    {
+      "id": "nack-dl-forewarning",
+      "text": "Before it takes someone it is heard calling from the water: a cry like a voice saying the hour has come but the one is not here. Those who hear it and keep the doomed person from the water for a day may save them, at a cost to someone else."
+    },
+    {
+      "id": "nack-dl-loneliness",
+      "text": "A Näck that courts a mortal is not always lying. Some legends tell of a real longing, and of gifts of fish, luck at the nets and river gold left for a sweetheart; the harm comes when the sweetheart is taken from it."
+    }
+  ],
+  "giveawayTells": [
+    {
+      "id": "nack-gt-fiddler-in-falls",
+      "text": "A naked young man sitting in the spray of a waterfall, playing a fiddle whose sound carries over the roar.",
+      "register": "physical",
+      "alsoFits": []
+    },
+    {
+      "id": "nack-gt-weeping-salvation",
+      "text": "A voice weeping by the river at dusk, asking again and again whether it will ever be saved.",
+      "register": "sound",
+      "alsoFits": []
+    },
+    {
+      "id": "nack-gt-unstoppable-dance",
+      "text": "A fiddler who cannot stop playing while the dancers whirl on, exhausted and frightened, until someone cuts his strings.",
+      "register": "behaviour",
+      "alsoFits": []
+    },
+    {
+      "id": "nack-gt-wet-coat",
+      "text": "A beautiful stranger at the dance whose left coat-tail drips water onto the floorboards, though it has not rained.",
+      "register": "physical",
+      "alsoFits": []
+    },
+    {
+      "id": "nack-gt-river-music",
+      "text": "On a still evening the whole river seems to play: a slow, grieving tune rising from under the water itself.",
+      "register": "atmosphere",
+      "alsoFits": []
+    }
+  ],
+  "ambiguousSigns": [
+    {
+      "id": "nack-as-distant-music",
+      "text": "Several people heard music somewhere out of sight late in the evening, and no one in the parish admits to playing.",
+      "register": "sound",
+      "alsoFits": ["huldra", "skogsra", "vittra", "troll"]
+    },
+    {
+      "id": "nack-as-strong-swimmer",
+      "text": "A young man who swam well went down in calm water close to shore. The body has not been found.",
+      "register": "physical",
+      "alsoFits": ["backahast", "sjora", "draug"]
+    },
+    {
+      "id": "nack-as-cattle-wont-drink",
+      "text": "The cows will no longer drink at their usual place and have to be driven a long way round.",
+      "register": "animal",
+      "alsoFits": ["backahast", "myling", "sjora", "troll"]
+    },
+    {
+      "id": "nack-as-pining-girl",
+      "text": "A farmer's daughter has lost her appetite, sleeps badly and sits by the window looking toward the river.",
+      "register": "health",
+      "alsoFits": ["huldra", "skogsra", "mare"]
+    },
+    {
+      "id": "nack-as-wet-floor",
+      "text": "In the morning there were wet marks on the floor of the house leading from the door, though everyone had been in bed.",
+      "register": "physical",
+      "alsoFits": ["draug", "myling", "sjora"]
+    },
+    {
+      "id": "nack-as-sleepwalker",
+      "text": "A child was found standing barefoot at the end of the jetty in the night and could not say how she got there.",
+      "register": "behaviour",
+      "alsoFits": ["mare", "backahast", "myling", "huldra"]
+    },
+    {
+      "id": "nack-as-river-fog",
+      "text": "Mist has lain on the water at the bend every evening this week, even on dry, clear days.",
+      "register": "weather",
+      "alsoFits": ["lyktgubbe", "draug", "sjora"]
+    },
+    {
+      "id": "nack-as-nets-emptied",
+      "text": "The nets come up torn or empty at one stretch of the river, while the next village fishes well.",
+      "register": "physical",
+      "alsoFits": ["sjora", "draug", "troll"]
+    },
+    {
+      "id": "nack-as-new-fiddler",
+      "text": "A fiddler who was only middling last year now plays so well that people come from other parishes to hear him, and he will not say who taught him.",
+      "register": "social",
+      "alsoFits": ["devil-bargain", "huldra", "witch"]
+    },
+    {
+      "id": "nack-as-mill-trouble",
+      "text": "The mill wheel stops at night for no reason anyone can find, and the miller has started drinking.",
+      "register": "behaviour",
+      "alsoFits": ["kvarngubbe", "nisse", "troll"]
+    },
+    {
+      "id": "nack-as-dream-of-water",
+      "text": "Two people in the same household dream of being called from outside, and wake with the taste of river water.",
+      "register": "dream",
+      "alsoFits": ["mare", "myling", "draug"]
+    },
+    {
+      "id": "nack-as-horse-on-bank",
+      "text": "A grey horse no one owns has been seen grazing near the ford at dawn; it walks off when approached.",
+      "register": "animal",
+      "alsoFits": ["backahast", "sjora", "huldra"]
+    }
+  ],
+  "confrontationConditions": {
+    "kind": "place",
+    "time": null,
+    "placeTags": [
+      "running-water",
+      "waterfall",
+      "ford",
+      "waterwheel"
+    ],
+    "notes": "It can only be met at its own water. It is most readily called on Thursday evenings and at midsummer, and ice over the water keeps it below."
+  },
+  "weaknesses": [
+    "Steel or iron in the water binds it.",
+    "Speaking its name, or calling out the word for what it is, breaks its shape.",
+    "A sincere promise of salvation disarms it.",
+    "Strong music played at the shore can compel it to rise and give back what it took.",
+    "Cutting the strings of an enchanted fiddle ends its tune."
+  ],
+  "protections": [
+    "Throw a knife, needle or nail into the water before going in, with the old rhyme.",
+    "Carry steel when crossing at a ford or bridge at night.",
+    "Keep up the miller's and fisherman's offerings at the water.",
+    "Never mock it, and never promise it what you cannot give.",
+    "Stay away from the water when a cry is heard from it."
+  ],
+  "compatibleConflictTags": [
+    "industry-intrusion",
+    "domain-violation",
+    "bargain",
+    "unjust-death",
+    "love-and-longing",
+    "neglected-custom"
+  ],
+  "seasonality": "Strongest in the light nights around midsummer and on Thursday evenings. Quiet under winter ice, but restless at the spring thaw when the water rises.",
+  "excludedMonths": []
+}

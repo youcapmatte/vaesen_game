@@ -1,0 +1,66 @@
+{
+  "id": "inheritance-wakes-something",
+  "version": 1,
+  "status": "draft",
+  "name": "An inheritance quarrel wakes something",
+  "description": "An old farmer or a manor lady dies and the heirs fall out over the land: who gets the home farm, who is pushed to the edge of the parish under the enclosure reforms, who sells to the timber company. In dividing, moving, clearing and selling, they disturb something the old owner had kept quiet for decades, by custom, by a promise, or by a pact written in no will. The being now takes a side in the quarrel, or punishes all of them.",
+  "tags": [
+    "inheritance",
+    "domain-violation"
+  ],
+  "reasonKinds": [
+    "domainViolated",
+    "selfOriginatingGrievance",
+    "bargainInvited"
+  ],
+  "provocationAffordances": [
+    "farm",
+    "manor",
+    "farmstead",
+    "burial-mound",
+    "ancient-tree",
+    "chest",
+    "strongbox",
+    "archive",
+    "attic",
+    "hiding-place",
+    "fields"
+  ],
+  "roleSlots": [
+    {
+      "id": "grasping-heir",
+      "name": "The heir who wants it all",
+      "description": "The sibling or cousin pushing hardest for the land, sometimes with good reason, sometimes from greed.",
+      "required": true
+    },
+    {
+      "id": "wronged-heir",
+      "name": "The heir cut out",
+      "description": "The child, illegitimate offspring or widow left with nothing, whose bitterness looks like a motive.",
+      "required": true
+    },
+    {
+      "id": "keeper-of-the-pact",
+      "name": "The one who knew the old owner's secret",
+      "description": "A servant, foster child or neighbour who knows what the deceased did to keep the being quiet.",
+      "required": true
+    },
+    {
+      "id": "buyer",
+      "name": "The one who wants to buy",
+      "description": "A company agent, land surveyor or rich neighbour waiting for the quarrel to end in a sale.",
+      "required": false
+    },
+    {
+      "id": "official",
+      "name": "The one who writes it down",
+      "description": "The parish clerk, notary or district judge whose papers settle the land and who may have been bribed.",
+      "required": false
+    }
+  ],
+  "decoyIdeas": [
+    "The cut-out heir is staging the trouble to drive the others off the land.",
+    "Forgery: a will or a deed has been tampered with, and the haunting is blamed on a guilty conscience.",
+    "The buyer is frightening the family into selling cheap."
+  ]
+}

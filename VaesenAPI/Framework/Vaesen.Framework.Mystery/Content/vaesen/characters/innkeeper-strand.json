@@ -1,0 +1,96 @@
+{
+  "id": "innkeeper-strand",
+  "version": 1,
+  "status": "draft",
+  "name": "Brita Strand",
+  "identity": {
+    "age": 52,
+    "gender": "female",
+    "occupation": "Keeper of the coaching inn (gästgivaregård) on the northern road out of Uppsala",
+    "rank": "burgher",
+    "home": "Strands gästgivargård, by the post road a short walk from the Society's headquarters",
+    "appearance": "Small and quick, with ink-stained fingers from the post ledger, a black silk widow's cap worn rakishly, and a loud laugh that carries across the yard."
+  },
+  "personality": {
+    "openness": 3,
+    "conscientiousness": 4,
+    "extraversion": 5,
+    "agreeableness": 3,
+    "neuroticism": 2
+  },
+  "drives": [
+    {
+      "id": "keep-the-inn",
+      "text": "Keep the inn and its post-horse contract out of the hands of her late husband's cousin, who wants it.",
+      "strength": 3
+    },
+    {
+      "id": "know-everything",
+      "text": "Know every traveller's business before they have unbuckled their bags.",
+      "strength": 2
+    },
+    {
+      "id": "daughter-match",
+      "text": "See her daughter Lovisa married to someone with prospects, not the stable lad she keeps looking at.",
+      "strength": 2
+    }
+  ],
+  "voice": {
+    "register": "Warm, fast and mercantile; switches to careful politeness for gentlefolk and back again the moment they leave.",
+    "mannerisms": [
+      "Quotes prices before anyone asks",
+      "Calls regular guests by what they drink",
+      "Lowers her voice for the interesting parts and raises it for the rest"
+    ],
+    "sampleLines": [
+      "A room is one riksdaler, the horses are extra, and your secrets, my dear, are free. I'll only charge you for keeping them.",
+      "Three of you came back in the small hours on Tuesday, muddy to the knees, and not one word to old Brita. I'm hurt.",
+      "The post coach from Gävle had a lady on it who asked after your house by name. I told her nothing, naturally. Well. Very little."
+    ]
+  },
+  "background": "Brita married into the inn at nineteen and ran it in practice long before her husband drank himself into the churchyard in 1866. The inn holds the county contract to keep post-horses for travellers, which makes it a nerve of the district: coachmen, pedlars, emigrants on their way to the Gothenburg boats and commercial travellers all pass through her taproom, and she forgets nothing. She likes the Society because they pay promptly, bring interesting guests and never quibble over the bill, but she has noticed that trouble follows them up the road, and she charges accordingly.",
+  "latentHooks": [
+    {
+      "id": "cousin-claim",
+      "kind": "debt",
+      "text": "Her husband died owing money to his cousin Anders Strand, a grain merchant in Uppsala, who holds a note on the inn and could call it in."
+    },
+    {
+      "id": "post-ledger",
+      "kind": "habit",
+      "text": "She keeps the post-horse ledger meticulously, so she can say who hired horses for which road, and when, going back twenty years."
+    },
+    {
+      "id": "the-night-guest",
+      "kind": "secret",
+      "text": "One winter night years ago she gave shelter to a traveller who left before dawn and was never seen again; she kept his trunk, and something in it frightens her."
+    },
+    {
+      "id": "coachmen-network",
+      "kind": "connection",
+      "text": "Every coachman and post-boy between Uppsala and Gävle drinks at her bar and carries her gossip."
+    }
+  ],
+  "networkLinks": [
+    {
+      "targetId": "company",
+      "place": "Uppsala and Gävle",
+      "nature": "Feeds and lodges the timber and railway companies' men on the road north",
+      "influence": "Can learn when company agents travel and where, and can make a stranger's stay pleasant or very uncomfortable."
+    },
+    {
+      "targetId": "press",
+      "place": "Uppsala",
+      "nature": "Sells the editor small items of news for a few skilling",
+      "influence": "Can put a story about the Society into the paper, or keep one out of it, with a word."
+    },
+    {
+      "targetId": "servant-alm",
+      "place": "The Society's headquarters",
+      "nature": "Elin Alm's aunt by marriage; Elin visits on her free Sundays",
+      "influence": "Hears, sooner or later, most of what goes on in the headquarters' kitchen."
+    }
+  ],
+  "startingAttitude": 1,
+  "attitudeReason": "Good customers who pay on time and bring interesting company, though she suspects they are worth more than they pay."
+}

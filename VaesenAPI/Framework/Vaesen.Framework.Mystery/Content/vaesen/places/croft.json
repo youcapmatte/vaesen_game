@@ -1,0 +1,116 @@
+{
+  "id": "croft",
+  "version": 1,
+  "status": "draft",
+  "name": "Croft",
+  "tag": "croft",
+  "description": "A torp: a small holding on another man's land, paid for in days of labour, or a backstuga cottage of the landless. One room, a cow, a potato patch, and the forest edge close by.",
+  "settlementTypes": [
+    "hamlet",
+    "village",
+    "town",
+    "estate",
+    "camp"
+  ],
+  "tags": [],
+  "affordances": [
+    {
+      "id": "kitchen",
+      "tag": "kitchen",
+      "name": "Cottage room",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "scaling": "Always the single room of the croft; a second small chamber only on a better holding.",
+      "contains": [
+        {
+          "id": "hearth",
+          "tag": "hearth",
+          "name": "Hearth",
+          "condition": {
+            "minSize": 1,
+            "minWealth": 1,
+            "minCount": 1,
+            "maxCount": 1
+          },
+          "contains": []
+        },
+        {
+          "id": "chest",
+          "tag": "chest",
+          "name": "Clothes chest",
+          "condition": {
+            "minSize": 1,
+            "minWealth": 1,
+            "minCount": 1,
+            "maxCount": 1
+          },
+          "contains": []
+        },
+        {
+          "id": "hiding-place",
+          "tag": "hiding-place",
+          "name": "Loose board",
+          "condition": {
+            "minSize": 1,
+            "minWealth": 1,
+            "minCount": 0,
+            "maxCount": 1
+          },
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "cowshed",
+      "tag": "cowshed",
+      "name": "Byre",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    },
+    {
+      "id": "cellar",
+      "tag": "cellar",
+      "name": "Earth cellar",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    },
+    {
+      "id": "well",
+      "tag": "well",
+      "name": "Well",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    },
+    {
+      "id": "garden",
+      "tag": "garden",
+      "name": "Potato patch",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    }
+  ]
+}

@@ -1,0 +1,195 @@
+{
+  "id": "farm",
+  "version": 1,
+  "status": "draft",
+  "name": "Farm",
+  "tag": "farm",
+  "description": "A freeholder's or tenant farmer's farm: dwelling house, cowshed, stable, barn and outbuildings round a yard, with fields and meadow around it.",
+  "settlementTypes": [
+    "hamlet",
+    "village",
+    "town",
+    "estate"
+  ],
+  "tags": [
+    "fields"
+  ],
+  "affordances": [
+    {
+      "id": "yard",
+      "tag": "yard",
+      "name": "Farmyard",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    },
+    {
+      "id": "kitchen",
+      "tag": "kitchen",
+      "name": "Main room",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "scaling": "One room for cooking, eating and sleeping on a poor farm; a separate kitchen on a prosperous one.",
+      "contains": [
+        {
+          "id": "hearth",
+          "tag": "hearth",
+          "name": "Open hearth",
+          "condition": {
+            "minSize": 1,
+            "minWealth": 1,
+            "minCount": 1,
+            "maxCount": 1
+          },
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "parlour",
+      "tag": "parlour",
+      "name": "Best room",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 2,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "scaling": "Kept for weddings, funerals and the household examination on a farm with means.",
+      "contains": [
+        {
+          "id": "chest",
+          "tag": "chest",
+          "name": "Dowry chest",
+          "condition": {
+            "minSize": 1,
+            "minWealth": 1,
+            "minCount": 1,
+            "maxCount": 1
+          },
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "servants-quarters",
+      "tag": "servants-quarters",
+      "name": "Farmhands' chamber",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 2,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "scaling": "A loft over the brewhouse for a hand and a maid; a separate cottage on a big farm.",
+      "contains": []
+    },
+    {
+      "id": "cowshed",
+      "tag": "cowshed",
+      "name": "Cowshed",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "scaling": "Two or three cows on a small farm, a dozen on a large one.",
+      "contains": []
+    },
+    {
+      "id": "stable",
+      "tag": "stable",
+      "name": "Stable",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    },
+    {
+      "id": "barn",
+      "tag": "barn",
+      "name": "Barn",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": [
+        {
+          "id": "hayloft",
+          "tag": "hayloft",
+          "name": "Hayloft",
+          "condition": {
+            "minSize": 1,
+            "minWealth": 1,
+            "minCount": 1,
+            "maxCount": 1
+          },
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "drying-shed",
+      "tag": "drying-shed",
+      "name": "Threshing barn",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    },
+    {
+      "id": "cellar",
+      "tag": "cellar",
+      "name": "Root cellar",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    },
+    {
+      "id": "well",
+      "tag": "well",
+      "name": "Well",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    },
+    {
+      "id": "bathhouse",
+      "tag": "bathhouse",
+      "name": "Bathhouse",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 0,
+        "maxCount": 1
+      },
+      "scaling": "Common in the north and in Dalarna; rare in the south.",
+      "contains": []
+    }
+  ]
+}

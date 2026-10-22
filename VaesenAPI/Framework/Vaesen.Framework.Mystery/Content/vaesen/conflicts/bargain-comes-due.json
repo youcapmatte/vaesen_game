@@ -1,0 +1,62 @@
+{
+  "id": "bargain-comes-due",
+  "version": 1,
+  "status": "draft",
+  "name": "A bargain comes due",
+  "description": "Years ago someone struck a deal with the old world: skill on the fiddle at the waterfall, luck with the cattle from the folk under the hill, a good catch from the lake in return for a promise. The gift was given and the debt half-forgotten. Now the term has run out, the price is being collected, and it falls on someone who never agreed to it, or the debtor is trying to cheat the being and drag others in to pay instead.",
+  "tags": [
+    "bargain"
+  ],
+  "reasonKinds": [
+    "bargainInvited"
+  ],
+  "provocationAffordances": [
+    "crossroads",
+    "waterfall",
+    "holy-well",
+    "lake",
+    "river",
+    "burial-mound",
+    "smithy",
+    "mill",
+    "forest",
+    "standing-stone"
+  ],
+  "roleSlots": [
+    {
+      "id": "bargainer",
+      "name": "The one who struck the bargain",
+      "description": "The person who made the deal, now prosperous or gifted, frightened of the price and tempted to shift it onto someone else.",
+      "required": true
+    },
+    {
+      "id": "collateral",
+      "name": "The one who is owed",
+      "description": "The child, spouse, servant or firstborn named in the bargain, perhaps without knowing it.",
+      "required": true
+    },
+    {
+      "id": "beneficiary",
+      "name": "The one who lived off it",
+      "description": "A relative or partner who enjoyed the fruits of the deal and would rather not know where they came from.",
+      "required": true
+    },
+    {
+      "id": "knower",
+      "name": "The one who knows the terms",
+      "description": "A wise woman, old fiddler or parish elder who knows how such bargains are made and broken, and wants something for the telling.",
+      "required": false
+    },
+    {
+      "id": "tempted",
+      "name": "The one tempted to bargain anew",
+      "description": "Someone desperate enough to strike a second, worse bargain to buy out the first.",
+      "required": false
+    }
+  ],
+  "decoyIdeas": [
+    "The bargainer's sudden prosperity looks like embezzlement or theft, and a creditor or clerk is suspected.",
+    "A family illness taken for consumption or an inherited madness.",
+    "A jealous rival is thought to have spread rumours of witchcraft to ruin a successful man."
+  ]
+}

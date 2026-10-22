@@ -1,0 +1,745 @@
+{
+  "version": 1,
+  "tags": [
+    {
+      "id": "water",
+      "kind": "terrain",
+      "description": "Any open water: lake, river, stream, pond, marsh or sea.",
+      "implies": []
+    },
+    {
+      "id": "running-water",
+      "kind": "terrain",
+      "description": "Water that flows: a river, stream, rapids or waterfall.",
+      "implies": [
+        "water"
+      ]
+    },
+    {
+      "id": "still-water",
+      "kind": "terrain",
+      "description": "Water that stands: a lake, pond, tarn or millpond.",
+      "implies": [
+        "water"
+      ]
+    },
+    {
+      "id": "lake",
+      "kind": "terrain",
+      "description": "A lake or tarn.",
+      "implies": [
+        "still-water"
+      ]
+    },
+    {
+      "id": "river",
+      "kind": "terrain",
+      "description": "A river.",
+      "implies": [
+        "running-water"
+      ]
+    },
+    {
+      "id": "stream",
+      "kind": "terrain",
+      "description": "A brook or stream.",
+      "implies": [
+        "running-water"
+      ]
+    },
+    {
+      "id": "waterfall",
+      "kind": "terrain",
+      "description": "A waterfall, rapids or a mill race.",
+      "implies": [
+        "running-water"
+      ]
+    },
+    {
+      "id": "marsh",
+      "kind": "terrain",
+      "description": "A bog, fen or wet meadow.",
+      "implies": [
+        "water"
+      ]
+    },
+    {
+      "id": "sea",
+      "kind": "terrain",
+      "description": "The sea or a sea inlet.",
+      "implies": [
+        "water"
+      ]
+    },
+    {
+      "id": "coast",
+      "kind": "terrain",
+      "description": "A shore with skerries, boathouses and fishing grounds.",
+      "implies": [
+        "sea"
+      ]
+    },
+    {
+      "id": "forest",
+      "kind": "terrain",
+      "description": "Deep forest of spruce and pine, away from the fields.",
+      "implies": []
+    },
+    {
+      "id": "woodland",
+      "kind": "terrain",
+      "description": "Smaller woods, groves and copses near settlement.",
+      "implies": []
+    },
+    {
+      "id": "mountain",
+      "kind": "terrain",
+      "description": "Mountains or high fells.",
+      "implies": []
+    },
+    {
+      "id": "moor",
+      "kind": "terrain",
+      "description": "Open heath or moorland.",
+      "implies": []
+    },
+    {
+      "id": "fields",
+      "kind": "terrain",
+      "description": "Ploughed fields and pasture.",
+      "implies": []
+    },
+    {
+      "id": "meadow",
+      "kind": "terrain",
+      "description": "Hay meadows and grazing.",
+      "implies": [
+        "fields"
+      ]
+    },
+    {
+      "id": "island",
+      "kind": "terrain",
+      "description": "An island in a lake or the sea.",
+      "implies": []
+    },
+    {
+      "id": "cave",
+      "kind": "terrain",
+      "description": "A cave, rock cleft or grotto.",
+      "implies": [
+        "underground"
+      ]
+    },
+    {
+      "id": "ravine",
+      "kind": "terrain",
+      "description": "A steep gully or ravine.",
+      "implies": []
+    },
+    {
+      "id": "underground",
+      "kind": "terrain",
+      "description": "Anywhere below the earth: caves, mine galleries, cellars dug into rock.",
+      "implies": []
+    },
+    {
+      "id": "crossroads",
+      "kind": "feature",
+      "description": "A crossroads, where folk custom says the old powers can be met.",
+      "implies": []
+    },
+    {
+      "id": "road",
+      "kind": "feature",
+      "description": "A road or cart track through the area.",
+      "implies": []
+    },
+    {
+      "id": "railway-line",
+      "kind": "feature",
+      "description": "A railway line with its cuttings and embankments.",
+      "implies": []
+    },
+    {
+      "id": "bridge",
+      "kind": "feature",
+      "description": "A bridge over water.",
+      "implies": [
+        "water"
+      ]
+    },
+    {
+      "id": "ford",
+      "kind": "feature",
+      "description": "A ford across a river or stream.",
+      "implies": [
+        "running-water"
+      ]
+    },
+    {
+      "id": "jetty",
+      "kind": "feature",
+      "description": "A jetty or landing stage.",
+      "implies": [
+        "water"
+      ]
+    },
+    {
+      "id": "dam",
+      "kind": "feature",
+      "description": "A dam or weir holding back water.",
+      "implies": [
+        "water"
+      ]
+    },
+    {
+      "id": "graveyard",
+      "kind": "feature",
+      "description": "A churchyard or burial ground.",
+      "implies": []
+    },
+    {
+      "id": "burial-mound",
+      "kind": "feature",
+      "description": "An ancient barrow or burial mound.",
+      "implies": []
+    },
+    {
+      "id": "standing-stone",
+      "kind": "feature",
+      "description": "A standing stone, rune stone or stone circle.",
+      "implies": []
+    },
+    {
+      "id": "holy-well",
+      "kind": "feature",
+      "description": "A spring or well once thought holy, where offerings were left.",
+      "implies": [
+        "water"
+      ]
+    },
+    {
+      "id": "ancient-tree",
+      "kind": "feature",
+      "description": "A great old tree with customs attached to it: a guardian tree or offering tree.",
+      "implies": []
+    },
+    {
+      "id": "telegraph",
+      "kind": "feature",
+      "description": "A telegraph office or line.",
+      "implies": []
+    },
+    {
+      "id": "farm",
+      "kind": "place",
+      "description": "A working farm with house and outbuildings.",
+      "implies": [
+        "farmstead"
+      ]
+    },
+    {
+      "id": "farmstead",
+      "kind": "place",
+      "description": "Any farm, croft or homestead where people keep animals.",
+      "implies": []
+    },
+    {
+      "id": "croft",
+      "kind": "place",
+      "description": "A small tenant holding, poor and remote.",
+      "implies": [
+        "farmstead"
+      ]
+    },
+    {
+      "id": "manor",
+      "kind": "place",
+      "description": "A manor house or estate of the gentry.",
+      "implies": [
+        "farmstead"
+      ]
+    },
+    {
+      "id": "inn",
+      "kind": "place",
+      "description": "An inn or coaching house with rooms.",
+      "implies": []
+    },
+    {
+      "id": "church",
+      "kind": "place",
+      "description": "A parish church.",
+      "implies": []
+    },
+    {
+      "id": "parsonage",
+      "kind": "place",
+      "description": "The vicarage or parsonage.",
+      "implies": []
+    },
+    {
+      "id": "mill",
+      "kind": "place",
+      "description": "A grain mill with a waterwheel or sails.",
+      "implies": []
+    },
+    {
+      "id": "sawmill",
+      "kind": "place",
+      "description": "A sawmill, water- or steam-driven.",
+      "implies": [
+        "mill"
+      ]
+    },
+    {
+      "id": "mine",
+      "kind": "place",
+      "description": "A mine or quarry.",
+      "implies": [
+        "underground"
+      ]
+    },
+    {
+      "id": "smithy",
+      "kind": "place",
+      "description": "A blacksmith's forge.",
+      "implies": []
+    },
+    {
+      "id": "school",
+      "kind": "place",
+      "description": "A village or parish school.",
+      "implies": []
+    },
+    {
+      "id": "railway-station",
+      "kind": "place",
+      "description": "A railway station.",
+      "implies": [
+        "railway-line"
+      ]
+    },
+    {
+      "id": "library",
+      "kind": "place",
+      "description": "A library, reading room or archive.",
+      "implies": []
+    },
+    {
+      "id": "herbalist-cottage",
+      "kind": "place",
+      "description": "A cottage of a wise woman or cunning man.",
+      "implies": []
+    },
+    {
+      "id": "logging-camp",
+      "kind": "place",
+      "description": "A forest camp for timber crews.",
+      "implies": [
+        "forest"
+      ]
+    },
+    {
+      "id": "shop",
+      "kind": "place",
+      "description": "A general store or merchant's shop.",
+      "implies": []
+    },
+    {
+      "id": "police-station",
+      "kind": "place",
+      "description": "A police station, constable's house or lock-up.",
+      "implies": []
+    },
+    {
+      "id": "doctors-house",
+      "kind": "place",
+      "description": "A physician's or district doctor's house and surgery.",
+      "implies": []
+    },
+    {
+      "id": "fishing-hut",
+      "kind": "place",
+      "description": "Fishermen's huts and boathouses.",
+      "implies": []
+    },
+    {
+      "id": "ruin",
+      "kind": "place",
+      "description": "A ruined building: a chapel, castle or abandoned farm.",
+      "implies": []
+    },
+    {
+      "id": "factory",
+      "kind": "place",
+      "description": "A factory, brickworks or ironworks.",
+      "implies": []
+    },
+    {
+      "id": "newspaper-office",
+      "kind": "place",
+      "description": "A newspaper office with a press.",
+      "implies": []
+    },
+    {
+      "id": "town-hall",
+      "kind": "place",
+      "description": "A town hall or courthouse.",
+      "implies": []
+    },
+    {
+      "id": "university",
+      "kind": "place",
+      "description": "A university building.",
+      "implies": []
+    },
+    {
+      "id": "residence",
+      "kind": "place",
+      "description": "A private house in a town.",
+      "implies": []
+    },
+    {
+      "id": "summer-pasture",
+      "kind": "place",
+      "description": "A summer pasture (fäbod) with herders' huts, far from the village.",
+      "implies": [
+        "meadow"
+      ]
+    },
+    {
+      "id": "taproom",
+      "kind": "interior",
+      "description": "The public room of an inn.",
+      "implies": []
+    },
+    {
+      "id": "guest-room",
+      "kind": "interior",
+      "description": "A room let to travellers.",
+      "implies": []
+    },
+    {
+      "id": "kitchen",
+      "kind": "interior",
+      "description": "A kitchen with its hearth.",
+      "implies": []
+    },
+    {
+      "id": "cellar",
+      "kind": "interior",
+      "description": "A cellar or root cellar.",
+      "implies": []
+    },
+    {
+      "id": "attic",
+      "kind": "interior",
+      "description": "An attic or loft.",
+      "implies": []
+    },
+    {
+      "id": "hayloft",
+      "kind": "interior",
+      "description": "A hayloft above a barn.",
+      "implies": []
+    },
+    {
+      "id": "barn",
+      "kind": "interior",
+      "description": "A barn.",
+      "implies": []
+    },
+    {
+      "id": "cowshed",
+      "kind": "interior",
+      "description": "A byre or cowshed.",
+      "implies": []
+    },
+    {
+      "id": "stable",
+      "kind": "interior",
+      "description": "A stable.",
+      "implies": []
+    },
+    {
+      "id": "well",
+      "kind": "interior",
+      "description": "A well.",
+      "implies": [
+        "water"
+      ]
+    },
+    {
+      "id": "hearth",
+      "kind": "interior",
+      "description": "A hearth or fireplace.",
+      "implies": []
+    },
+    {
+      "id": "bedroom",
+      "kind": "interior",
+      "description": "A bedroom.",
+      "implies": []
+    },
+    {
+      "id": "parlour",
+      "kind": "interior",
+      "description": "A parlour or best room.",
+      "implies": []
+    },
+    {
+      "id": "office",
+      "kind": "interior",
+      "description": "An office or study.",
+      "implies": []
+    },
+    {
+      "id": "desk",
+      "kind": "interior",
+      "description": "A writing desk.",
+      "implies": []
+    },
+    {
+      "id": "bookshelf",
+      "kind": "interior",
+      "description": "Shelves of books or papers.",
+      "implies": []
+    },
+    {
+      "id": "archive",
+      "kind": "interior",
+      "description": "An archive or record room.",
+      "implies": []
+    },
+    {
+      "id": "reading-room",
+      "kind": "interior",
+      "description": "A reading room.",
+      "implies": []
+    },
+    {
+      "id": "workshop",
+      "kind": "interior",
+      "description": "A workshop.",
+      "implies": []
+    },
+    {
+      "id": "forge",
+      "kind": "interior",
+      "description": "A forge and anvil.",
+      "implies": []
+    },
+    {
+      "id": "sacristy",
+      "kind": "interior",
+      "description": "A church sacristy or vestry.",
+      "implies": []
+    },
+    {
+      "id": "crypt",
+      "kind": "interior",
+      "description": "A crypt or burial vault.",
+      "implies": [
+        "underground"
+      ]
+    },
+    {
+      "id": "bell-tower",
+      "kind": "interior",
+      "description": "A bell tower.",
+      "implies": []
+    },
+    {
+      "id": "millpond",
+      "kind": "interior",
+      "description": "A mill pond.",
+      "implies": [
+        "still-water"
+      ]
+    },
+    {
+      "id": "waterwheel",
+      "kind": "interior",
+      "description": "A waterwheel and its race.",
+      "implies": [
+        "running-water"
+      ]
+    },
+    {
+      "id": "mill-machinery",
+      "kind": "interior",
+      "description": "Millstones, saws and gearing.",
+      "implies": []
+    },
+    {
+      "id": "mine-shaft",
+      "kind": "interior",
+      "description": "A mine shaft or gallery.",
+      "implies": [
+        "underground"
+      ]
+    },
+    {
+      "id": "spoil-heap",
+      "kind": "interior",
+      "description": "A spoil heap or slag heap.",
+      "implies": []
+    },
+    {
+      "id": "tool-shed",
+      "kind": "interior",
+      "description": "A tool shed or store.",
+      "implies": []
+    },
+    {
+      "id": "bunkhouse",
+      "kind": "interior",
+      "description": "A bunkhouse or workers' barracks.",
+      "implies": []
+    },
+    {
+      "id": "drying-shed",
+      "kind": "interior",
+      "description": "A drying shed or threshing barn.",
+      "implies": []
+    },
+    {
+      "id": "bathhouse",
+      "kind": "interior",
+      "description": "A bathhouse (bastu).",
+      "implies": []
+    },
+    {
+      "id": "pantry",
+      "kind": "interior",
+      "description": "A pantry or larder.",
+      "implies": []
+    },
+    {
+      "id": "garden",
+      "kind": "interior",
+      "description": "A kitchen or herb garden.",
+      "implies": []
+    },
+    {
+      "id": "schoolroom",
+      "kind": "interior",
+      "description": "A schoolroom.",
+      "implies": []
+    },
+    {
+      "id": "waiting-room",
+      "kind": "interior",
+      "description": "A station waiting room.",
+      "implies": []
+    },
+    {
+      "id": "platform",
+      "kind": "interior",
+      "description": "A railway platform.",
+      "implies": []
+    },
+    {
+      "id": "cell",
+      "kind": "interior",
+      "description": "A lock-up cell.",
+      "implies": []
+    },
+    {
+      "id": "surgery",
+      "kind": "interior",
+      "description": "A doctor's surgery.",
+      "implies": []
+    },
+    {
+      "id": "boathouse",
+      "kind": "interior",
+      "description": "A boathouse.",
+      "implies": [
+        "water"
+      ]
+    },
+    {
+      "id": "printing-press",
+      "kind": "interior",
+      "description": "A printing press.",
+      "implies": []
+    },
+    {
+      "id": "counting-house",
+      "kind": "interior",
+      "description": "A counting house or clerk's office.",
+      "implies": []
+    },
+    {
+      "id": "servants-quarters",
+      "kind": "interior",
+      "description": "Servants' or farmhands' quarters.",
+      "implies": []
+    },
+    {
+      "id": "chapel",
+      "kind": "interior",
+      "description": "A private chapel or prayer room.",
+      "implies": []
+    },
+    {
+      "id": "herb-store",
+      "kind": "interior",
+      "description": "Bunches of drying herbs, jars and remedies.",
+      "implies": []
+    },
+    {
+      "id": "yard",
+      "kind": "interior",
+      "description": "A farmyard or courtyard.",
+      "implies": []
+    },
+    {
+      "id": "drawer",
+      "kind": "container",
+      "description": "A drawer.",
+      "implies": []
+    },
+    {
+      "id": "lockable-drawer",
+      "kind": "container",
+      "description": "A drawer that locks.",
+      "implies": [
+        "drawer"
+      ]
+    },
+    {
+      "id": "chest",
+      "kind": "container",
+      "description": "A chest or trunk.",
+      "implies": []
+    },
+    {
+      "id": "strongbox",
+      "kind": "container",
+      "description": "A strongbox or safe.",
+      "implies": []
+    },
+    {
+      "id": "cabinet",
+      "kind": "container",
+      "description": "A cabinet or cupboard.",
+      "implies": []
+    },
+    {
+      "id": "coffer",
+      "kind": "container",
+      "description": "A small box or casket.",
+      "implies": []
+    },
+    {
+      "id": "hiding-place",
+      "kind": "container",
+      "description": "A loose board, hollow wall or other hiding place.",
+      "implies": []
+    }
+  ]
+}

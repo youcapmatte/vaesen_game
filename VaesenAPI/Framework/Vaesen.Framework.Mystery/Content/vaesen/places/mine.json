@@ -1,0 +1,142 @@
+{
+  "id": "mine",
+  "version": 1,
+  "status": "draft",
+  "name": "Mine",
+  "tag": "mine",
+  "description": "An iron or copper mine: open pits and shafts, winding gear and spoil heaps, worked by fire-setting and blasting powder, in Bergslagen often owned in shares by the mining farmers.",
+  "settlementTypes": [
+    "hamlet",
+    "village",
+    "town",
+    "camp"
+  ],
+  "tags": [],
+  "affordances": [
+    {
+      "id": "mine-shaft",
+      "tag": "mine-shaft",
+      "name": "Shaft and galleries",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 3
+      },
+      "scaling": "One open pit and shaft in a farmers' mine; several shafts and levels in a company mine.",
+      "contains": []
+    },
+    {
+      "id": "spoil-heap",
+      "tag": "spoil-heap",
+      "name": "Spoil heap",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    },
+    {
+      "id": "tool-shed",
+      "tag": "tool-shed",
+      "name": "Powder house",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    },
+    {
+      "id": "workshop",
+      "tag": "workshop",
+      "name": "Mine workshop",
+      "condition": {
+        "minSize": 2,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    },
+    {
+      "id": "bunkhouse",
+      "tag": "bunkhouse",
+      "name": "Miners' barracks",
+      "condition": {
+        "minSize": 2,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "scaling": "Absent where miners live on their own farms; barracks for hired miners at a company mine.",
+      "contains": []
+    },
+    {
+      "id": "counting-house",
+      "tag": "counting-house",
+      "name": "Mine office",
+      "condition": {
+        "minSize": 2,
+        "minWealth": 2,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "scaling": "The mine foreman's room; a full office with a clerk at a company mine.",
+      "contains": [
+        {
+          "id": "desk",
+          "tag": "desk",
+          "name": "Foreman's desk",
+          "condition": {
+            "minSize": 1,
+            "minWealth": 1,
+            "minCount": 1,
+            "maxCount": 1
+          },
+          "contains": [
+            {
+              "id": "drawer",
+              "tag": "lockable-drawer",
+              "name": "Locked drawer",
+              "condition": {
+                "minSize": 1,
+                "minWealth": 1,
+                "minCount": 1,
+                "maxCount": 1
+              },
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "cabinet",
+          "tag": "cabinet",
+          "name": "Map cabinet",
+          "condition": {
+            "minSize": 3,
+            "minWealth": 1,
+            "minCount": 1,
+            "maxCount": 1
+          },
+          "contains": []
+        },
+        {
+          "id": "strongbox",
+          "tag": "strongbox",
+          "name": "Strongbox",
+          "condition": {
+            "minSize": 1,
+            "minWealth": 3,
+            "minCount": 1,
+            "maxCount": 1
+          },
+          "contains": []
+        }
+      ]
+    }
+  ]
+}

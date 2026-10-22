@@ -1,0 +1,513 @@
+{
+  "id": "level-storskog-december",
+  "version": 1,
+  "status": "draft",
+  "name": "Storskog Logging District",
+  "region": "Inland Ångermanland, Norrland",
+  "settlementType": "hamlet",
+  "size": 1,
+  "wealth": 1,
+  "month": 12,
+  "terrain": [
+    "forest",
+    "river",
+    "marsh",
+    "mountain"
+  ],
+  "description": "Storskog is a scattering of homesteads along a great northern river, three days upstream from the coast, surrounded by forest that seems to have no end. Every winter the timber companies from the coastal sawmills send crews to fell trees on land they bought cheaply from the farmers, hauling logs down to the river ice to wait for the spring flood. Beyond the last farm there are only marshes, ridges and the camps.",
+  "seasonNotes": "December, the depth of winter. The sun barely clears the ridges for a few hours around noon and the rest is blue twilight and dark. Snow lies thigh-deep in the forest and the river is frozen hard enough for horses. The cold reaches thirty degrees below on still nights, and trees crack like gunshots in the frost. Felling and hauling go on by daylight; the crews come down to the chapel for Christmas only if the weather allows.",
+  "travel": "From Uppsala by coach to Gävle, then by sleigh along the coast road through Hälsingland and up the river valley, about six days in good conditions; in summer by steamer from Stockholm to Härnösand and on by river boat.",
+  "publicFacts": [
+    "Most of the forest round Storskog was sold to a coastal sawmill company in the 1860s for a fraction of its worth; many farmers regret it.",
+    "The famine winter of 1867 is remembered here; people ate bark bread and two families died out.",
+    "Logging crews come up from the coast and from Finland each winter and leave with the spring flood.",
+    "The nearest priest serves the chapel only once a month; on other Sundays a lay reader holds the service.",
+    "The posting farm at the ferry keeps horses for travellers and sells brännvin, although it has no licence.",
+    "The river ice is reckoned safe for horses from Advent until the end of March.",
+    "Settlers have been clearing new homesteads on the crown forest land, where the government gives them years free of tax."
+  ],
+  "places": [
+    {
+      "id": "logging-camp",
+      "templateId": "logging-camp",
+      "name": "The Camp at Svartberget",
+      "description": "The camp is a pair of low log huts half buried in snow at the foot of a black ridge, smoke rising straight up in the frozen air. Inside, a long fire burns down the middle and wet socks and mittens steam on poles above it. Outside the horses stand blanketed, breath freezing in their manes, beside sleds loaded with logs. The ring of axes and the shouts of the fellers carry a long way in the silence.",
+      "tags": [
+        "logging-camp",
+        "stream"
+      ],
+      "affordances": [
+        {
+          "id": "logging-camp-bunkhouse-1",
+          "tag": "bunkhouse",
+          "name": "Log hut 1",
+          "description": "A koja of unbarked logs, sleeping benches along the walls, a smoke hole in the roof and frost on the inside of the door.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "logging-camp-bunkhouse-1-hearth",
+              "tag": "hearth",
+              "name": "Long fire",
+              "description": "The long fire of the hut, kept burning all night.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "logging-camp-bunkhouse-2",
+          "tag": "bunkhouse",
+          "name": "Log hut 2",
+          "description": "A koja of unbarked logs, sleeping benches along the walls, a smoke hole in the roof and frost on the inside of the door.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "logging-camp-bunkhouse-2-hearth",
+              "tag": "hearth",
+              "name": "Long fire",
+              "description": "The long fire of the hut, kept burning all night.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "logging-camp-stable",
+          "tag": "stable",
+          "name": "Horse shelter",
+          "description": "A shelter for the hauling horses, open to the snow on one side.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "logging-camp-tool-shed",
+          "tag": "tool-shed",
+          "name": "Tool store",
+          "description": "Axes, bow saws, chains and sled runners.",
+          "lockable": false,
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "croft",
+      "templateId": "croft",
+      "name": "Nybygget",
+      "description": "A new settler's cabin stands in a raw clearing of stumps, its logs still pale, with snow banked to the windowsills for warmth. A single cow lows in the byre built against the house. The family burns birch, and the smell carries far through the trees. Ski tracks lead off in three directions into the forest.",
+      "tags": [
+        "croft",
+        "forest"
+      ],
+      "affordances": [
+        {
+          "id": "croft-kitchen",
+          "tag": "kitchen",
+          "name": "Cottage room",
+          "description": "One room: hearth, a box bed for the parents, a pull-out bench for the children, a table under the window.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "croft-kitchen-hearth",
+              "tag": "hearth",
+              "name": "Hearth",
+              "description": "The hearth, smoke-blackened, a pot simmering.",
+              "lockable": false,
+              "contains": []
+            },
+            {
+              "id": "croft-kitchen-chest",
+              "tag": "chest",
+              "name": "Clothes chest",
+              "description": "The family's one chest for Sunday clothes and papers.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "croft-cowshed",
+          "tag": "cowshed",
+          "name": "Byre",
+          "description": "A byre built against the cottage for one cow and a few sheep.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "croft-cellar",
+          "tag": "cellar",
+          "name": "Earth cellar",
+          "description": "A turf-roofed earth cellar for potatoes.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "croft-well",
+          "tag": "well",
+          "name": "Well",
+          "description": "A shallow well or a spring-fed pit with a bucket.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "croft-garden",
+          "tag": "garden",
+          "name": "Potato patch",
+          "description": "A stony patch of potatoes, kale and tobacco plants.",
+          "lockable": false,
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "farm",
+      "templateId": "farm",
+      "name": "Storskog Farm",
+      "description": "The old farm stands on a rise above the river, a long two-storey house with outbuildings forming a closed yard against the wind. Lamps burn in the windows through the short day. The farm's women are baking flatbread for Christmas, and the warmth and smell drift out whenever the door opens. Below, the river is a white road through the forest.",
+      "tags": [
+        "farm",
+        "fields",
+        "river"
+      ],
+      "affordances": [
+        {
+          "id": "farm-yard",
+          "tag": "yard",
+          "name": "Farmyard",
+          "description": "The yard between the buildings, trodden mud and a woodpile.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-kitchen",
+          "tag": "kitchen",
+          "name": "Main room",
+          "description": "The everyday room: open hearth, long table, wall beds and the loom in the corner.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "farm-kitchen-hearth",
+              "tag": "hearth",
+              "name": "Open hearth",
+              "description": "The whitewashed corner hearth with its iron pot-hook.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "farm-cowshed",
+          "tag": "cowshed",
+          "name": "Cowshed",
+          "description": "A low dark byre, warm with cattle breath.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-stable",
+          "tag": "stable",
+          "name": "Stable",
+          "description": "A stable for the farm horse or horses.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-barn",
+          "tag": "barn",
+          "name": "Barn",
+          "description": "A timber barn for the harvest.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "farm-barn-hayloft",
+              "tag": "hayloft",
+              "name": "Hayloft",
+              "description": "The hay store over the barn floor, reached by a ladder.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "farm-drying-shed",
+          "tag": "drying-shed",
+          "name": "Threshing barn",
+          "description": "A threshing barn (loge) where the grain is threshed with flails through the autumn.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-cellar",
+          "tag": "cellar",
+          "name": "Root cellar",
+          "description": "A root cellar dug into the slope, holding potatoes, turnips and the milk.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-well",
+          "tag": "well",
+          "name": "Well",
+          "description": "A well with a sweep pole and a wooden bucket.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-bathhouse",
+          "tag": "bathhouse",
+          "name": "Bathhouse",
+          "description": "A small log bastu with a stone oven, also used for drying malt and flax.",
+          "lockable": false,
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "inn",
+      "templateId": "inn",
+      "name": "The Ferry Posting Farm",
+      "description": "At the ferry crossing a posting farm keeps a fire and a few horses, with a single guest room up a ladder. In winter the ferry is drawn up on the bank and the road runs straight across the ice, marked with spruce branches. The taproom is the farm's kitchen, where loggers sit with their caps on. A wolfskin is nailed to the barn wall.",
+      "tags": [
+        "inn",
+        "road",
+        "river",
+        "ford"
+      ],
+      "affordances": [
+        {
+          "id": "inn-taproom",
+          "tag": "taproom",
+          "name": "Taproom",
+          "description": "The public room: benches, a long scrubbed table, a tiled stove and the day's travellers.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "inn-kitchen",
+          "tag": "kitchen",
+          "name": "Kitchen",
+          "description": "A smoky kitchen with an open hearth, copper pans and a bread rack under the ceiling.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "inn-guest-room",
+          "tag": "guest-room",
+          "name": "Guest room",
+          "description": "A narrow room with a bed, a washstand and a window onto the yard.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "inn-guest-room-chest",
+              "tag": "chest",
+              "name": "Travelling chest",
+              "description": "A painted chest at the foot of the bed for a guest's things.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "inn-stable",
+          "tag": "stable",
+          "name": "Posting stable",
+          "description": "Stalls for the posting horses, harness on pegs, the smell of hay and dung.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "inn-cellar",
+          "tag": "cellar",
+          "name": "Cellar",
+          "description": "A stone cellar for ale, potatoes and the inn's barrels.",
+          "lockable": false,
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "church",
+      "templateId": "church",
+      "name": "Storskog Chapel",
+      "description": "A small wooden chapel, tarred black and roofed with shingles, stands on a knoll with a few snow-covered graves around it. The bell hangs in an open frame and its rope is stiff with frost. Inside, the pews are rough planks and the altar painting is the work of a travelling painter. On the Sundays without a priest the lay reader's voice sounds thin in the cold.",
+      "tags": [
+        "church",
+        "graveyard"
+      ],
+      "affordances": [
+        {
+          "id": "church-sacristy",
+          "tag": "sacristy",
+          "name": "Sacristy",
+          "description": "A small vaulted room off the chancel where the vicar robes.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "church-sacristy-cabinet",
+              "tag": "cabinet",
+              "name": "Vestment cupboard",
+              "description": "A tall cupboard of chasubles, the surplice and spare altar candles.",
+              "lockable": false,
+              "contains": []
+            },
+            {
+              "id": "church-sacristy-chest",
+              "tag": "chest",
+              "name": "Parish chest",
+              "description": "An ancient iron-banded chest with three locks for the communion silver and old deeds.",
+              "lockable": true,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "church-bell-tower",
+          "tag": "bell-tower",
+          "name": "Bell tower",
+          "description": "Steep ladders up to the bells, bird droppings on the beams, wind through the louvres.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "church-attic",
+          "tag": "attic",
+          "name": "Church loft",
+          "description": "The dusty space above the vaults, full of broken pews and old hatchments.",
+          "lockable": false,
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "herbalist-cottage",
+      "templateId": "herbalist-cottage",
+      "name": "Old Brita's Cottage",
+      "description": "A tiny cottage stands where the forest meets a frozen bog, so snowed in that only the chimney and a trodden path mark it. Inside, the air is thick with smoke and the smell of tar salve and dried yarrow. Reindeer hides cover the bench. The old woman who lives there sets bones for the loggers, who pay her in coffee and salt pork.",
+      "tags": [
+        "herbalist-cottage",
+        "woodland",
+        "forest",
+        "marsh"
+      ],
+      "affordances": [
+        {
+          "id": "herbalist-cottage-kitchen",
+          "tag": "kitchen",
+          "name": "Cottage room",
+          "description": "A single low room, dim and smelling of smoke and herbs.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "herbalist-cottage-kitchen-hearth",
+              "tag": "hearth",
+              "name": "Hearth",
+              "description": "A hearth with a brew always going.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "herbalist-cottage-herb-store",
+          "tag": "herb-store",
+          "name": "Herb store",
+          "description": "Bunches of drying herbs from the rafters, jars of salve and dried roots.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "herbalist-cottage-herb-store-cabinet",
+              "tag": "cabinet",
+              "name": "Remedy cupboard",
+              "description": "A small cupboard of bottles, wrapped in rag and labelled in a crabbed hand.",
+              "lockable": false,
+              "contains": []
+            },
+            {
+              "id": "herbalist-cottage-herb-store-coffer",
+              "tag": "coffer",
+              "name": "Small box",
+              "description": "A small wooden box kept on a high shelf.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "herbalist-cottage-garden",
+          "tag": "garden",
+          "name": "Herb garden",
+          "description": "A fenced garden of medicinal plants.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "herbalist-cottage-cellar",
+          "tag": "cellar",
+          "name": "Earth cellar",
+          "description": "A small earth cellar.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "herbalist-cottage-well",
+          "tag": "well",
+          "name": "Spring",
+          "description": "A spring-fed well with a cup on a string.",
+          "lockable": false,
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "smithy",
+      "templateId": "smithy",
+      "name": "The Camp Smith",
+      "description": "A rough forge in a lean-to at the foot of the river bank, where the company smith mends chains, sled runners and horseshoes for the camps. The fire's glow is the only colour in the blue noon twilight. Iron frozen to the anvil has to be warmed before it will move. Horses wait in a row to have studs fitted for the ice.",
+      "tags": [
+        "smithy"
+      ],
+      "affordances": [
+        {
+          "id": "smithy-forge",
+          "tag": "forge",
+          "name": "Forge",
+          "description": "The hearth and bellows, the anvil on its stump, the quench trough.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "smithy-workshop",
+          "tag": "workshop",
+          "name": "Workshop",
+          "description": "The bench and racks of tongs, hammers and half-finished work.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "smithy-tool-shed",
+          "tag": "tool-shed",
+          "name": "Coal shed",
+          "description": "A shed of charcoal and bar iron from the works.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "smithy-kitchen",
+          "tag": "kitchen",
+          "name": "Smith's cottage",
+          "description": "The smith's one-room cottage across the yard.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "smithy-kitchen-chest",
+              "tag": "chest",
+              "name": "Smith's chest",
+              "description": "The smith's own chest of papers and good clothes.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

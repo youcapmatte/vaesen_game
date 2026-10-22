@@ -1,0 +1,117 @@
+{
+  "id": "railway-station",
+  "version": 1,
+  "status": "draft",
+  "name": "Railway station",
+  "tag": "railway-station",
+  "description": "A station on one of the new railways: platform, waiting rooms, the stationmaster's office with its telegraph key, and a goods shed. The trains have changed how far a day's journey reaches.",
+  "settlementTypes": [
+    "village",
+    "town",
+    "city"
+  ],
+  "tags": [
+    "telegraph"
+  ],
+  "affordances": [
+    {
+      "id": "platform",
+      "tag": "platform",
+      "name": "Platform",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    },
+    {
+      "id": "waiting-room",
+      "tag": "waiting-room",
+      "name": "Waiting room",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 3
+      },
+      "scaling": "One waiting room at a halt; separate rooms for each class at a junction.",
+      "contains": []
+    },
+    {
+      "id": "office",
+      "tag": "office",
+      "name": "Stationmaster's office",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": [
+        {
+          "id": "desk",
+          "tag": "desk",
+          "name": "Stationmaster's desk",
+          "condition": {
+            "minSize": 1,
+            "minWealth": 1,
+            "minCount": 1,
+            "maxCount": 1
+          },
+          "contains": [
+            {
+              "id": "drawer",
+              "tag": "lockable-drawer",
+              "name": "Locked drawer",
+              "condition": {
+                "minSize": 1,
+                "minWealth": 1,
+                "minCount": 1,
+                "maxCount": 1
+              },
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "strongbox",
+          "tag": "strongbox",
+          "name": "Ticket safe",
+          "condition": {
+            "minSize": 1,
+            "minWealth": 2,
+            "minCount": 1,
+            "maxCount": 1
+          },
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "tool-shed",
+      "tag": "tool-shed",
+      "name": "Goods shed",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    },
+    {
+      "id": "parlour",
+      "tag": "parlour",
+      "name": "Stationmaster's rooms",
+      "condition": {
+        "minSize": 2,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    }
+  ]
+}

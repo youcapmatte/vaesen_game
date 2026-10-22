@@ -1,0 +1,247 @@
+{
+  "id": "nisse",
+  "version": 1,
+  "status": "draft",
+  "name": "The Nisse (Tomte)",
+  "family": "household-spirit",
+  "summary": "A small, ancient, fiercely proud guardian of one farm, said by some to be the spirit of the man who first cleared the land. It keeps the animals thriving and the work in order for a household that respects it, and turns spiteful, even deadly, when slighted or when its farm is wronged.",
+  "requiredAffordances": [
+    "farmstead"
+  ],
+  "domain": "One farmstead: its buildings, its animals, its people and its luck, from the first clearing to the present owners.",
+  "reasonModel": {
+    "nature": "Conservative, hardworking and touchy. It loves order, the animals and the old ways of the farm, expects its due without having to ask, and despises waste, noise, cruelty and change.",
+    "trigger": "A neglected custom (above all the Yule porridge with butter), cruelty to animals, swearing and slovenliness, work on holy days, a disrespected mound or guardian tree, a new owner who sweeps away the old ways, a move of the farm, or a gift of clothes that it takes as payment and dismissal.",
+    "expression": "Pinches and slaps in the night, animals tormented or let loose, milk spoiled, loads overturned, tools hidden, the luck of the farm draining away, a favourite animal suddenly sick, and in rage a beast or a person struck dead. It may also steal from neighbours to favour its own farm.",
+    "resolution": "Negotiable. Restore the custom, make amends at its mound or tree, treat the animals well, apologise in the old manner, or carry it properly to the new farmstead. A nisse that has been insulted past forgiveness can only be persuaded to leave, and the farm's luck goes with it."
+  },
+  "reasonKinds": [
+    "provokedOnly",
+    "domainViolated",
+    "selfOriginatingGrievance"
+  ],
+  "resolutionShape": "negotiable",
+  "originSet": [
+    {
+      "id": "nisse-origin-enticed-away",
+      "description": "A neighbour has been leaving richer offerings to lure the nisse, or its luck, to their own farm, and the old farm is failing while theirs prospers.",
+      "hiddenHand": true,
+      "handDisposition": "hostile"
+    },
+    {
+      "id": "nisse-origin-heir-dispute",
+      "description": "An heir who wants the farm sold or divided is deliberately offending the nisse so that the farm fails and the old owner gives up.",
+      "hiddenHand": true,
+      "handDisposition": "hostile"
+    },
+    {
+      "id": "nisse-origin-slight",
+      "description": "No one is steering it. The household has slighted it, out of ignorance, modern scorn or simple carelessness, and it is answering.",
+      "hiddenHand": false,
+      "handDisposition": null
+    }
+  ],
+  "commonKnowledge": [
+    {
+      "id": "nisse-ck-porridge",
+      "text": "Leave a bowl of porridge out for the nisse at Christmas, or it will make trouble."
+    },
+    {
+      "id": "nisse-ck-red-cap",
+      "text": "The nisse is a little old man with a grey beard and a red cap, friendly to children."
+    },
+    {
+      "id": "nisse-ck-harmless",
+      "text": "A nisse is a harmless household sprite that plays small pranks at worst."
+    },
+    {
+      "id": "nisse-ck-nursery-tale",
+      "text": "Educated people agree the nisse is a nursery tale for Christmas cards and children's books."
+    },
+    {
+      "id": "nisse-ck-bad-farmer",
+      "text": "When a farm fails, the farmer is lazy or drinks, and talk of the nisse is an excuse."
+    }
+  ],
+  "deepLore": [
+    {
+      "id": "nisse-dl-butter",
+      "text": "The Yule porridge must have a lump of butter in it. A nisse that thinks itself cheated of the butter may kill the best cow in a rage, and grieve terribly if it then finds the butter hidden at the bottom of the bowl."
+    },
+    {
+      "id": "nisse-dl-first-farmer",
+      "text": "Some say the nisse is the spirit of the one who first cleared the farm, buried in the mound by the yard or under the guardian tree. Offerings were poured at its roots, and cutting that tree or ploughing that mound is the deepest insult."
+    },
+    {
+      "id": "nisse-dl-clothes-dismiss",
+      "text": "To give a nisse new clothes, however kindly meant, is to pay it off. It puts them on, says it is too fine to work now, and leaves the farm for good."
+    },
+    {
+      "id": "nisse-dl-favourite-horse",
+      "text": "It keeps a favourite animal, often a horse it grooms and plaits at night. That animal grows sleek while the others starve on stolen fodder, and selling or mistreating it brings swift revenge."
+    },
+    {
+      "id": "nisse-dl-steals-for-farm",
+      "text": "It will steal hay, grain and luck from the neighbours for its own farm. When two farms' nisses meet with their loads on the boundary, they fight, and their farms' fortunes follow the fight."
+    },
+    {
+      "id": "nisse-dl-moving-farm",
+      "text": "When the land reforms broke up the old villages and farms were moved out onto their own land, the nisse had to be invited along, carried in a sack or with an ember from the old hearth. One left behind haunts the empty site and resents the family."
+    },
+    {
+      "id": "nisse-dl-hates-noise",
+      "text": "It cannot abide noise, swearing, slamming doors, spilling or throwing out water without a warning call. A farm where the new master shouts and swears at the animals is asking for trouble."
+    },
+    {
+      "id": "nisse-dl-holy-days",
+      "text": "No spinning, no chopping wood and no turning wheels on certain holy nights; the nisse punishes those who work when the farm should be at rest."
+    },
+    {
+      "id": "nisse-dl-strength",
+      "text": "It is small but unnaturally strong. A blow from a nisse can lame a grown man, and the old tales tell of farmhands thrown across the barn for mocking it."
+    },
+    {
+      "id": "nisse-dl-bound-to-place",
+      "text": "It is bound to the farm itself, not the family. When the farm passes to strangers it serves them if they keep the custom, and it may take the side of the farm against the family that sold it."
+    },
+    {
+      "id": "nisse-dl-unseen-thanks",
+      "text": "It must not be watched at its work or thanked to its face. Spying on it from the hayloft brings a sickness of the eyes, and loud thanks offend it like a tip offered to a proud man."
+    }
+  ],
+  "giveawayTells": [
+    {
+      "id": "nisse-gt-small-old-man",
+      "text": "A tiny grey-bearded man in grey homespun and a red cap, seen in lantern light carrying a single straw of hay that bends him double.",
+      "register": "physical",
+      "alsoFits": []
+    },
+    {
+      "id": "nisse-gt-tiny-footprints",
+      "text": "Prints of very small bare or booted feet in the flour on the bakehouse floor, leading to the barn.",
+      "register": "physical",
+      "alsoFits": []
+    },
+    {
+      "id": "nisse-gt-porridge-bowl",
+      "text": "The Yule porridge left in the barn is scraped clean, with a tiny spoon left in the bowl that no one owns.",
+      "register": "physical",
+      "alsoFits": []
+    },
+    {
+      "id": "nisse-gt-mane-plaited",
+      "text": "One horse's mane is finely plaited every morning, and the horse is fat and glossy while the others grow thin.",
+      "register": "animal",
+      "alsoFits": []
+    }
+  ],
+  "ambiguousSigns": [
+    {
+      "id": "nisse-as-cow-dead",
+      "text": "The best cow was found dead in her stall, with no wound and no sign of illness.",
+      "register": "animal",
+      "alsoFits": ["troll", "witch", "mare", "werewolf"]
+    },
+    {
+      "id": "nisse-as-milk-sours",
+      "text": "The milk sours as soon as it is drawn, and the butter will not come however long the maid churns.",
+      "register": "physical",
+      "alsoFits": ["witch", "troll", "mare"]
+    },
+    {
+      "id": "nisse-as-pinched-sleeper",
+      "text": "A farmhand wakes with bruises on his arms like pinches, and swears no one came near his bed.",
+      "register": "health",
+      "alsoFits": ["mare", "myling", "draug"]
+    },
+    {
+      "id": "nisse-as-animals-loose",
+      "text": "The animals are found loose in the yard in the morning though the doors were barred.",
+      "register": "animal",
+      "alsoFits": ["vittra", "troll", "mare", "werewolf"]
+    },
+    {
+      "id": "nisse-as-tools-moved",
+      "text": "Tools are not where they were left, and once a scythe was found hung neatly in the rafters.",
+      "register": "behaviour",
+      "alsoFits": ["vittra", "troll", "myling"]
+    },
+    {
+      "id": "nisse-as-sweating-horses",
+      "text": "The horses stand sweating and trembling in the morning as if they had been ridden all night.",
+      "register": "animal",
+      "alsoFits": ["mare", "witch", "troll"]
+    },
+    {
+      "id": "nisse-as-footsteps-loft",
+      "text": "Footsteps cross the hayloft at night, and the light, hurried knocking of something small.",
+      "register": "sound",
+      "alsoFits": ["myling", "vittra", "draug"]
+    },
+    {
+      "id": "nisse-as-neighbour-thrives",
+      "text": "The next farm over has had a remarkable year while this one has failed in everything, on the same soil and in the same weather.",
+      "register": "social",
+      "alsoFits": ["witch", "troll", "vittra"]
+    },
+    {
+      "id": "nisse-as-new-owner-scorn",
+      "text": "The new owner, a townsman, has laughed at the old customs and ordered the old tree in the yard cut down.",
+      "register": "social",
+      "alsoFits": ["vittra", "skogsra", "troll"]
+    },
+    {
+      "id": "nisse-as-hay-missing",
+      "text": "Hay goes missing from the barn a little at a time, and no trail of dropped stalks leads anywhere.",
+      "register": "physical",
+      "alsoFits": ["troll", "vittra"]
+    },
+    {
+      "id": "nisse-as-cold-barn",
+      "text": "The byre feels cold and unwelcoming even with the animals in it, and the maid will not go in alone after dark.",
+      "register": "atmosphere",
+      "alsoFits": ["myling", "draug", "mare"]
+    },
+    {
+      "id": "nisse-as-dream-old-man",
+      "text": "The farmer's wife dreams of a stern old man standing at the foot of her bed, shaking his head.",
+      "register": "dream",
+      "alsoFits": ["draug", "mare", "myling"]
+    }
+  ],
+  "confrontationConditions": {
+    "kind": "place",
+    "time": null,
+    "placeTags": [
+      "farmstead",
+      "barn",
+      "stable",
+      "hayloft",
+      "cowshed"
+    ],
+    "notes": "It can only be met on its own farm, usually in the outbuildings at night while it works. It is most approachable on Christmas Eve, when it comes for its porridge."
+  },
+  "weaknesses": [
+    "A gift of clothes, which pays it off and makes it leave for good.",
+    "Its pride: a proper apology and the restored custom will turn its anger.",
+    "It is bound to its farm and cannot follow anyone beyond it unless invited and carried.",
+    "Steel and church things trouble it, though they do not drive it off."
+  ],
+  "protections": [
+    "Keep the Yule porridge, with butter, and the small offerings through the year.",
+    "Treat the animals kindly and keep the farm in good order.",
+    "Call a warning before throwing water out of a door.",
+    "Leave the mound and the guardian tree untouched.",
+    "When the farm moves, invite the nisse along and carry an ember from the old hearth."
+  ],
+  "compatibleConflictTags": [
+    "neglected-custom",
+    "theft",
+    "inheritance",
+    "domain-violation",
+    "envy",
+    "industry-intrusion"
+  ],
+  "seasonality": "Present all year. Its grievances come to a head at Yule, around the porridge and the holy nights, and in late summer when the harvest and the hay are brought in.",
+  "excludedMonths": []
+}

@@ -1,0 +1,63 @@
+{
+  "id": "love-and-longing",
+  "version": 1,
+  "status": "draft",
+  "name": "Love and longing for a being",
+  "description": "Someone has fallen in love with a being of the old world, or a being with a person: a farmhand drawn nightly to the forest, a widow who keeps a place set for a lover from the lake, a herd girl at the summer pasture visited by someone too beautiful. It may be a lure, a true and doomed love, or a bargain dressed as romance. The family sees only someone wasting away or slipping from their faith and duty; the lover may not want rescuing.",
+  "tags": [
+    "love-and-longing"
+  ],
+  "reasonKinds": [
+    "bargainInvited",
+    "selfOriginatingGrievance"
+  ],
+  "provocationAffordances": [
+    "lake",
+    "water",
+    "forest",
+    "summer-pasture",
+    "waterfall",
+    "mill",
+    "meadow",
+    "ford",
+    "river",
+    "marsh"
+  ],
+  "roleSlots": [
+    {
+      "id": "beloved",
+      "name": "The one who longs",
+      "description": "The person bewitched or in love, drawn away from home and its people; may be the most sympathetic figure in the case.",
+      "required": true
+    },
+    {
+      "id": "left-behind",
+      "name": "The one left behind",
+      "description": "A betrothed, spouse or parent who feels the loss and wants the beloved back at any cost.",
+      "required": true
+    },
+    {
+      "id": "rival",
+      "name": "The jealous rival",
+      "description": "A suitor or sweetheart who resents the being and may take violent, foolish action against it.",
+      "required": false
+    },
+    {
+      "id": "arranger",
+      "name": "The one who arranged it",
+      "description": "Someone who brought the two together on purpose, to be rid of an unwanted match or for a favour from the old world.",
+      "required": false
+    },
+    {
+      "id": "watcher",
+      "name": "The one who has seen them",
+      "description": "A charcoal burner, fisherman or child who has seen the lovers meet and is not believed.",
+      "required": true
+    }
+  ],
+  "decoyIdeas": [
+    "A secret love affair with an unsuitable person from the village, a stranger, or a married man.",
+    "Melancholia or the first signs of consumption, as the physician says.",
+    "Religious mania stirred up by a revivalist preacher."
+  ]
+}

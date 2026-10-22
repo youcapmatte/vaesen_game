@@ -1,0 +1,662 @@
+{
+  "id": "level-forsby-october",
+  "version": 1,
+  "status": "draft",
+  "name": "Forsby by the Rapids",
+  "region": "Northern Uppland, on the river below Lake Tämnaren",
+  "settlementType": "village",
+  "size": 2,
+  "wealth": 3,
+  "month": 10,
+  "terrain": [
+    "river",
+    "waterfall",
+    "forest",
+    "fields"
+  ],
+  "description": "Forsby sits where the river drops over a shelf of granite in a run of white rapids before it spreads out across the Uppland plain. The rapids have turned a grain mill for three hundred years and, since 1866, a water-driven saw belonging to a timber firm in Gävle. Around them lie a dozen farms in a straggling row village, the parish church on its gravel ridge, a posting inn on the Gävle road, and spruce forest closing in on three sides.",
+  "seasonNotes": "October. The harvest is in and the flails thump in the threshing barns from dawn; every farm wants its flour ground before the roads turn to mire, so carts queue at the mill. The days shorten fast: brass-coloured light at four, dark by six. Frost whitens the stubble at dawn, then days of rain blow in from the west and the river runs high and brown. Pig slaughter begins at the month's end, and the smell of singed bristle hangs over the yards.",
+  "travel": "From Uppsala by hired coach or post-carriage north on the Gävle road, about seven hours with a change of horses at the halfway posting station. The Uppsala-Gävle railway is being surveyed but is not yet built.",
+  "publicFacts": [
+    "The grain mill has belonged to the Ers family for four generations; the present miller is a widower with two grown sons.",
+    "The sawmill below the rapids is owned by a timber company in Gävle, which bought the water rights in 1866 after a long quarrel with the village.",
+    "In dry summers the saw and the grain mill compete for water, and the parish meeting has twice had to rule on who may open the sluice first.",
+    "Three Forsby families left for America this spring; their farms were sold at auction and bought by the sawmill company.",
+    "A lay preacher of the revival holds meetings in a farmhouse kitchen on Sunday afternoons, which the vicar has spoken against from the pulpit.",
+    "The vicar's household examinations begin in the first week of November, farm by farm.",
+    "Surveyors' pegs for the coming railway run across the fields east of the village."
+  ],
+  "places": [
+    {
+      "id": "mill",
+      "templateId": "mill",
+      "name": "Forsby Mill",
+      "description": "The mill stands on the rock at the head of the rapids, its timber walls grey and furred with flour dust. The great wheel turns with a heavy wet thud you feel through the floorboards, and spray from the race hangs in the cold air. Inside, the stones grumble and the room is warm and smells of meal and wet wood. Farm carts wait in the yard in the drizzle, their horses steaming under sacking.",
+      "tags": [
+        "mill",
+        "running-water",
+        "waterfall",
+        "dam"
+      ],
+      "affordances": [
+        {
+          "id": "mill-waterwheel",
+          "tag": "waterwheel",
+          "name": "Waterwheel and race",
+          "description": "An overshot wheel twice a man's height, green with weed, fed by a timber race from the dam.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "mill-millpond",
+          "tag": "millpond",
+          "name": "Mill pond",
+          "description": "The dammed reach above the rapids, wide and slate-coloured, with the sluice gate the whole village argues over.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "mill-mill-machinery",
+          "tag": "mill-machinery",
+          "name": "Millstones",
+          "description": "The stones, hopper and gearing, everything white with meal.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "mill-attic",
+          "tag": "attic",
+          "name": "Grain loft",
+          "description": "The loft where sacks wait to be ground.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "mill-tool-shed",
+          "tag": "tool-shed",
+          "name": "Mill store",
+          "description": "A store of spare cogs, pick-hammers for dressing the stones and sacks.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "mill-kitchen",
+          "tag": "kitchen",
+          "name": "Miller's house",
+          "description": "The miller's cottage beside the mill, with its own hearth.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "mill-kitchen-hearth",
+              "tag": "hearth",
+              "name": "Hearth",
+              "description": "The miller's hearth.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "mill-counting-house",
+          "tag": "counting-house",
+          "name": "Mill office",
+          "description": "A small office where the miller keeps his tallies of grain and toll.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "mill-counting-house-desk",
+              "tag": "desk",
+              "name": "Miller's desk",
+              "description": "A high desk with the toll book.",
+              "lockable": false,
+              "contains": [
+                {
+                  "id": "mill-counting-house-desk-drawer",
+                  "tag": "lockable-drawer",
+                  "name": "Locked drawer",
+                  "description": "A drawer with a lock for coin and the tally book.",
+                  "lockable": true,
+                  "contains": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sawmill",
+      "templateId": "sawmill",
+      "name": "The Company Saw",
+      "description": "Below the rapids the company saw shrieks from first light, two frame saws rising and falling in an open-sided hall. Sawdust drifts on the water and lies in yellow banks along the shore, sodden with rain. Rafts of logs jostle in the boom, and the sawyers, most of them hired from Hälsingland, shout over the noise in their own dialect. Stacks of fresh planks smell sharply of resin.",
+      "tags": [
+        "sawmill",
+        "river"
+      ],
+      "affordances": [
+        {
+          "id": "sawmill-waterwheel",
+          "tag": "waterwheel",
+          "name": "Saw wheel and race",
+          "description": "The wheel and race that drive the frame saw.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "sawmill-millpond",
+          "tag": "millpond",
+          "name": "Log pond",
+          "description": "A boomed backwater of the river packed with floated logs, slick and dark, that men walk across with pike poles.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "sawmill-mill-machinery",
+          "tag": "mill-machinery",
+          "name": "Saw hall",
+          "description": "The saw hall: frame saws rising and falling, the floor ankle-deep in sawdust.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "sawmill-drying-shed",
+          "tag": "drying-shed",
+          "name": "Timber yard",
+          "description": "Stacked planks in rows to dry, roofed with boards.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "sawmill-tool-shed",
+          "tag": "tool-shed",
+          "name": "Filing shed",
+          "description": "Where the saw-filer sharpens blades among files and setting tools.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "sawmill-bunkhouse",
+          "tag": "bunkhouse",
+          "name": "Workers' barracks",
+          "description": "A barracks of bunks for the saw hands, damp clothes on lines across the room.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "sawmill-counting-house",
+          "tag": "counting-house",
+          "name": "Sawmill office",
+          "description": "The company office with the ledgers, timber measures and wage lists.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "sawmill-counting-house-desk",
+              "tag": "desk",
+              "name": "Clerk's desk",
+              "description": "A clerk's sloping desk with the timber tally.",
+              "lockable": false,
+              "contains": [
+                {
+                  "id": "sawmill-counting-house-desk-drawer",
+                  "tag": "lockable-drawer",
+                  "name": "Locked drawer",
+                  "description": "A locked drawer with contracts and letters from the timber merchants.",
+                  "lockable": true,
+                  "contains": []
+                }
+              ]
+            },
+            {
+              "id": "sawmill-counting-house-strongbox",
+              "tag": "strongbox",
+              "name": "Wage box",
+              "description": "An iron box holding the fortnight's wages.",
+              "lockable": true,
+              "contains": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "farm",
+      "templateId": "farm",
+      "name": "Storgården",
+      "description": "The biggest farm in Forsby is a red-painted two-storey house, its windows framed in white, facing a yard of mud churned by carts. Threshing goes on in the barn with the flails beating in pairs, and chaff blows out of the door in gusts. A dog on a chain watches every stranger. Beyond the outbuildings the stubble fields run down, wet and silver, to the river.",
+      "tags": [
+        "farm",
+        "fields",
+        "meadow"
+      ],
+      "affordances": [
+        {
+          "id": "farm-yard",
+          "tag": "yard",
+          "name": "Farmyard",
+          "description": "The yard between the buildings, trodden mud and a woodpile.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-kitchen",
+          "tag": "kitchen",
+          "name": "Main room",
+          "description": "The everyday room: open hearth, long table, wall beds and the loom in the corner.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "farm-kitchen-hearth",
+              "tag": "hearth",
+              "name": "Open hearth",
+              "description": "The whitewashed corner hearth with its iron pot-hook.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "farm-parlour",
+          "tag": "parlour",
+          "name": "Best room",
+          "description": "The cold best room, painted furniture, the family Bible and a clock from Mora.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "farm-parlour-chest",
+              "tag": "chest",
+              "name": "Dowry chest",
+              "description": "A painted chest with the wife's linen and the year of her wedding on the lid.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "farm-servants-quarters",
+          "tag": "servants-quarters",
+          "name": "Farmhands' chamber",
+          "description": "A bare chamber with two beds and the hands' own chests.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-cowshed",
+          "tag": "cowshed",
+          "name": "Cowshed",
+          "description": "A low dark byre, warm with cattle breath.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-stable",
+          "tag": "stable",
+          "name": "Stable",
+          "description": "A stable for the farm horse or horses.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-barn",
+          "tag": "barn",
+          "name": "Barn",
+          "description": "A timber barn for the harvest.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "farm-barn-hayloft",
+              "tag": "hayloft",
+              "name": "Hayloft",
+              "description": "The hay store over the barn floor, reached by a ladder.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "farm-drying-shed",
+          "tag": "drying-shed",
+          "name": "Threshing barn",
+          "description": "A threshing barn (loge) where the grain is threshed with flails through the autumn.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-cellar",
+          "tag": "cellar",
+          "name": "Root cellar",
+          "description": "A root cellar dug into the slope, holding potatoes, turnips and the milk.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-well",
+          "tag": "well",
+          "name": "Well",
+          "description": "A well with a sweep pole and a wooden bucket.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-bathhouse",
+          "tag": "bathhouse",
+          "name": "Bathhouse",
+          "description": "A small log bastu with a stone oven, also used for drying malt and flax.",
+          "lockable": false,
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "church",
+      "templateId": "church",
+      "name": "Forsby Church",
+      "description": "The medieval church sits on the gravel ridge above the village, whitewashed walls streaked grey by the rain. A separate tarred bell frame stands beside it, and the churchyard birches have dropped their leaves in yellow drifts on the graves. Inside it is colder than outdoors and smells of damp stone and tallow. Painted saints in faded red and ochre look down from the vaults.",
+      "tags": [
+        "church",
+        "graveyard"
+      ],
+      "affordances": [
+        {
+          "id": "church-sacristy",
+          "tag": "sacristy",
+          "name": "Sacristy",
+          "description": "A small vaulted room off the chancel where the vicar robes.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "church-sacristy-cabinet",
+              "tag": "cabinet",
+              "name": "Vestment cupboard",
+              "description": "A tall cupboard of chasubles, the surplice and spare altar candles.",
+              "lockable": false,
+              "contains": []
+            },
+            {
+              "id": "church-sacristy-chest",
+              "tag": "chest",
+              "name": "Parish chest",
+              "description": "An ancient iron-banded chest with three locks for the communion silver and old deeds.",
+              "lockable": true,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "church-bell-tower",
+          "tag": "bell-tower",
+          "name": "Bell tower",
+          "description": "Steep ladders up to the bells, bird droppings on the beams, wind through the louvres.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "church-attic",
+          "tag": "attic",
+          "name": "Church loft",
+          "description": "The dusty space above the vaults, full of broken pews and old hatchments.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "church-crypt",
+          "tag": "crypt",
+          "name": "Burial vault",
+          "description": "A brick-lined vault under the chancel floor where a landed family lay their coffins.",
+          "lockable": false,
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "inn",
+      "templateId": "inn",
+      "name": "Forsby Posting Inn",
+      "description": "The posting inn stands where the Gävle road crosses the river, a long low house with a lantern burning by the door from mid-afternoon. In the taproom the stove ticks and travellers' coats steam on pegs, and the landlady keeps coffee on the boil. The posting horses stamp in the stable across the yard. The posting book lies open on a shelf for every traveller to sign.",
+      "tags": [
+        "inn",
+        "road",
+        "bridge"
+      ],
+      "affordances": [
+        {
+          "id": "inn-taproom",
+          "tag": "taproom",
+          "name": "Taproom",
+          "description": "The public room: benches, a long scrubbed table, a tiled stove and the day's travellers.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "inn-kitchen",
+          "tag": "kitchen",
+          "name": "Kitchen",
+          "description": "A smoky kitchen with an open hearth, copper pans and a bread rack under the ceiling.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "inn-kitchen-pantry",
+              "tag": "pantry",
+              "name": "Pantry",
+              "description": "A cold larder of salted meat, cheeses, crispbread and the brännvin keg.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "inn-guest-room-1",
+          "tag": "guest-room",
+          "name": "Guest room 1",
+          "description": "A narrow room with a bed, a washstand and a window onto the yard.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "inn-guest-room-1-chest",
+              "tag": "chest",
+              "name": "Travelling chest",
+              "description": "A painted chest at the foot of the bed for a guest's things.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "inn-guest-room-2",
+          "tag": "guest-room",
+          "name": "Guest room 2",
+          "description": "A narrow room with a bed, a washstand and a window onto the yard.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "inn-guest-room-2-chest",
+              "tag": "chest",
+              "name": "Travelling chest",
+              "description": "A painted chest at the foot of the bed for a guest's things.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "inn-stable",
+          "tag": "stable",
+          "name": "Posting stable",
+          "description": "Stalls for the posting horses, harness on pegs, the smell of hay and dung.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "inn-cellar",
+          "tag": "cellar",
+          "name": "Cellar",
+          "description": "A stone cellar for ale, potatoes and the inn's barrels.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "inn-office",
+          "tag": "office",
+          "name": "Landlord's office",
+          "description": "A cramped room with the posting book, receipts on a spike and a calendar from a Stockholm brewer.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "inn-office-desk",
+              "tag": "desk",
+              "name": "Writing desk",
+              "description": "A writing desk of stained pine with pigeonholes for letters.",
+              "lockable": false,
+              "contains": [
+                {
+                  "id": "inn-office-desk-drawer",
+                  "tag": "lockable-drawer",
+                  "name": "Locked drawer",
+                  "description": "A drawer under the writing flap, fitted with a small iron lock.",
+                  "lockable": true,
+                  "contains": []
+                }
+              ]
+            },
+            {
+              "id": "inn-office-strongbox",
+              "tag": "strongbox",
+              "name": "Strongbox",
+              "description": "An iron-bound strongbox bolted to the floor, holding the takings.",
+              "lockable": true,
+              "contains": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "smithy",
+      "templateId": "smithy",
+      "name": "The Smithy at the Bridge",
+      "description": "The smithy is a soot-black log house by the bridge, its door open to let out the heat, so the forge glows orange against the grey afternoon. The ring of the hammer carries across the water. A horse waits patiently to be shod, tied to a ring in the wall. Inside it smells of hot iron, coal and singed hoof.",
+      "tags": [
+        "smithy"
+      ],
+      "affordances": [
+        {
+          "id": "smithy-forge",
+          "tag": "forge",
+          "name": "Forge",
+          "description": "The hearth and bellows, the anvil on its stump, the quench trough.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "smithy-workshop",
+          "tag": "workshop",
+          "name": "Workshop",
+          "description": "The bench and racks of tongs, hammers and half-finished work.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "smithy-tool-shed",
+          "tag": "tool-shed",
+          "name": "Coal shed",
+          "description": "A shed of charcoal and bar iron from the works.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "smithy-kitchen",
+          "tag": "kitchen",
+          "name": "Smith's cottage",
+          "description": "The smith's one-room cottage across the yard.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "smithy-kitchen-chest",
+              "tag": "chest",
+              "name": "Smith's chest",
+              "description": "The smith's own chest of papers and good clothes.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "croft",
+      "templateId": "croft",
+      "name": "Granbacken",
+      "description": "A grey one-room croft stands at the forest edge on a stony slope a mile above the village, its turf roof sprouting withered grass. Smoke leaks from the chimney and the potato patch is dug over and black. The spruce stand dark and dripping just behind the byre. A path of roots and stones leads down through the trees to the river.",
+      "tags": [
+        "croft",
+        "forest"
+      ],
+      "affordances": [
+        {
+          "id": "croft-kitchen",
+          "tag": "kitchen",
+          "name": "Cottage room",
+          "description": "One room: hearth, a box bed for the parents, a pull-out bench for the children, a table under the window.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "croft-kitchen-hearth",
+              "tag": "hearth",
+              "name": "Hearth",
+              "description": "The hearth, smoke-blackened, a pot simmering.",
+              "lockable": false,
+              "contains": []
+            },
+            {
+              "id": "croft-kitchen-chest",
+              "tag": "chest",
+              "name": "Clothes chest",
+              "description": "The family's one chest for Sunday clothes and papers.",
+              "lockable": false,
+              "contains": []
+            },
+            {
+              "id": "croft-kitchen-hiding-place",
+              "tag": "hiding-place",
+              "name": "Loose board",
+              "description": "A loose floorboard by the bed where a few coins can be kept.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "croft-cowshed",
+          "tag": "cowshed",
+          "name": "Byre",
+          "description": "A byre built against the cottage for one cow and a few sheep.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "croft-cellar",
+          "tag": "cellar",
+          "name": "Earth cellar",
+          "description": "A turf-roofed earth cellar for potatoes.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "croft-well",
+          "tag": "well",
+          "name": "Well",
+          "description": "A shallow well or a spring-fed pit with a bucket.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "croft-garden",
+          "tag": "garden",
+          "name": "Potato patch",
+          "description": "A stony patch of potatoes, kale and tobacco plants.",
+          "lockable": false,
+          "contains": []
+        }
+      ]
+    }
+  ]
+}

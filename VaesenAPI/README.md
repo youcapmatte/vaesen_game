@@ -19,10 +19,17 @@ Framework/
   Vaesen.Framework.GameLift/  Worlds and joining them via GameLift
     Models/ Services/ Api/ (SessionController)
     Services/GameLiftServiceExtensions.AddGameLiftServices
+  Vaesen.Framework.Mystery/   The mystery engine: canon content, assignment, generation on the Anthropic API, validator
+    Content/vaesen/           The Vaesen content pack (creatures, places, levels, conflicts, canonical characters)
+    Services/MysteryServiceExtensions.AddMysteryServices; see its README.md
 Api/
   Vaesen.Api/                 Program.cs + appsettings: registers the framework libraries and their controllers
 Tests/
   Vaesen.Framework.Tests/     Endpoint tests (in-memory stores), mapping tests, store contract tests
+  Vaesen.Framework.Mystery.Tests/  Content, assignment, validator, pipeline (scripted model) and Anthropic client tests
+Tools/
+  Vaesen.Mystery.CaseLab/     Generate and inspect mysteries offline
+  Vaesen.Mystery.ContentTool/ Validate, approve and generate canon content
 docs/
   DynamoDB.md                 Table design, AWS setup, repositories
 ```

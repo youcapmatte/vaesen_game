@@ -1,0 +1,64 @@
+{
+  "id": "affliction-with-no-fault",
+  "version": 1,
+  "status": "draft",
+  "name": "An affliction with no fault",
+  "description": "Something old has come to a place and harms people simply because that is its nature: a sickness walker in the wake of hunger, a being drawn by grief, a changeling exchanged for no reason anyone did. No one provoked it and no bargain was made, but frightened people look for fault anyway, and the hunt for a culprit becomes more dangerous than the being itself. The case is about naming the thing truly and refusing the easy scapegoat.",
+  "tags": [
+    "affliction"
+  ],
+  "reasonKinds": [
+    "affliction",
+    "none"
+  ],
+  "provocationAffordances": [
+    "farmstead",
+    "croft",
+    "marsh",
+    "fields",
+    "forest",
+    "bedroom",
+    "school",
+    "bunkhouse",
+    "road",
+    "crossroads",
+    "servants-quarters"
+  ],
+  "roleSlots": [
+    {
+      "id": "afflicted",
+      "name": "The afflicted",
+      "description": "The child, household or work crew suffering the affliction, whose plight brings the case.",
+      "required": true
+    },
+    {
+      "id": "scapegoat",
+      "name": "The one blamed",
+      "description": "An outsider, a Finn or a Romani traveller, a wise woman, a simple-minded farmhand or a newcomer whom the parish begins to blame.",
+      "required": true
+    },
+    {
+      "id": "accuser",
+      "name": "The one leading the hunt",
+      "description": "A frightened father, a zealous preacher or a constable eager for an arrest, sincere and dangerous.",
+      "required": true
+    },
+    {
+      "id": "healer",
+      "name": "The one who tries to help",
+      "description": "The district physician or a wise woman, each with a remedy that may help, harm, or do nothing.",
+      "required": true
+    },
+    {
+      "id": "profiteer",
+      "name": "The one who gains from the fear",
+      "description": "A pedlar of charms, a landowner eager to evict the blamed family, or a newspaperman selling a sensation.",
+      "required": false
+    }
+  ],
+  "decoyIdeas": [
+    "A deliberate poisoning or a curse laid by the scapegoat, which the village already believes.",
+    "An epidemic the physician wants to treat with quarantine and lime.",
+    "Neglect or cruelty within the afflicted household itself."
+  ]
+}

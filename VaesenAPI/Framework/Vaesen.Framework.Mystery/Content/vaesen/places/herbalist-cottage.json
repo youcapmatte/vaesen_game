@@ -1,0 +1,130 @@
+{
+  "id": "herbalist-cottage",
+  "version": 1,
+  "status": "draft",
+  "name": "Herbalist's cottage",
+  "tag": "herbalist-cottage",
+  "description": "The cottage of a wise woman or cunning man (klok gumma, klok gubbe) on the edge of things, where people come for salves, a charm against the toothache or a lost cow found, though they do not tell the vicar.",
+  "settlementTypes": [
+    "hamlet",
+    "village",
+    "town",
+    "estate",
+    "camp"
+  ],
+  "tags": [
+    "woodland"
+  ],
+  "affordances": [
+    {
+      "id": "kitchen",
+      "tag": "kitchen",
+      "name": "Cottage room",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": [
+        {
+          "id": "hearth",
+          "tag": "hearth",
+          "name": "Hearth",
+          "condition": {
+            "minSize": 1,
+            "minWealth": 1,
+            "minCount": 1,
+            "maxCount": 1
+          },
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "herb-store",
+      "tag": "herb-store",
+      "name": "Herb store",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": [
+        {
+          "id": "cabinet",
+          "tag": "cabinet",
+          "name": "Remedy cupboard",
+          "condition": {
+            "minSize": 1,
+            "minWealth": 1,
+            "minCount": 1,
+            "maxCount": 1
+          },
+          "contains": []
+        },
+        {
+          "id": "coffer",
+          "tag": "coffer",
+          "name": "Small box",
+          "condition": {
+            "minSize": 1,
+            "minWealth": 1,
+            "minCount": 1,
+            "maxCount": 1
+          },
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "garden",
+      "tag": "garden",
+      "name": "Herb garden",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    },
+    {
+      "id": "cellar",
+      "tag": "cellar",
+      "name": "Earth cellar",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    },
+    {
+      "id": "well",
+      "tag": "well",
+      "name": "Spring",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 1
+      },
+      "contains": []
+    },
+    {
+      "id": "hiding-place",
+      "tag": "hiding-place",
+      "name": "Hollow in the wall",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 0,
+        "maxCount": 1
+      },
+      "contains": []
+    }
+  ]
+}

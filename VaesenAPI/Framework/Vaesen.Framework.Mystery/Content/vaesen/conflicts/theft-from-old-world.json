@@ -1,0 +1,65 @@
+{
+  "id": "theft-from-old-world",
+  "version": 1,
+  "status": "draft",
+  "name": "A theft from the old world",
+  "description": "Someone has taken what belongs to the old world: silver from a barrow, a bell from a sunken chapel, offerings from a holy well, a changeling's cradle gift, a stone from a ring, a fiddle left on a rock. It may have been greed, scholarly collecting, a dare or need. The owner wants it back and does not care much who holds it now. The object has usually changed hands, and every hand it passed through is now marked.",
+  "tags": [
+    "theft",
+    "domain-violation"
+  ],
+  "reasonKinds": [
+    "provokedOnly",
+    "domainViolated"
+  ],
+  "provocationAffordances": [
+    "burial-mound",
+    "standing-stone",
+    "holy-well",
+    "cave",
+    "lake",
+    "ruin",
+    "graveyard",
+    "chest",
+    "coffer",
+    "hiding-place",
+    "strongbox"
+  ],
+  "roleSlots": [
+    {
+      "id": "thief",
+      "name": "The one who took it",
+      "description": "The grave robber, treasure hunter, student antiquarian or desperate crofter who took the object.",
+      "required": true
+    },
+    {
+      "id": "holder",
+      "name": "The one who holds it now",
+      "description": "A collector, pawnbroker, museum or innocent buyer who has the object and may refuse to give it up.",
+      "required": true
+    },
+    {
+      "id": "fence",
+      "name": "The one who sold it on",
+      "description": "A pedlar, dealer or middleman who passed it along and knows where it went.",
+      "required": false
+    },
+    {
+      "id": "marked",
+      "name": "The one who suffers for it",
+      "description": "Someone near the object who is being harried by its owner without ever having touched it.",
+      "required": true
+    },
+    {
+      "id": "guardian",
+      "name": "The one who should have stopped it",
+      "description": "A sexton, landowner or old herder who knew the place was not to be disturbed and looked away for a fee or a favour.",
+      "required": false
+    }
+  ],
+  "decoyIdeas": [
+    "An ordinary burglary or a rival collector after the object's market value.",
+    "The thief is blamed for every misfortune, though the object has long since passed to someone else.",
+    "A family curse long attributed to an unrelated old sin."
+  ]
+}
