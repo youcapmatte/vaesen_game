@@ -1,7 +1,7 @@
 "use client";
 
 import { Anchor, Avatar, Badge, Box, Button, Center, Group, Loader, Menu, Stack, Text, Title, UnstyledButton } from "@mantine/core";
-import { IconBuildingCastle, IconCandle, IconCards, IconChevronDown, IconLogout, IconUserPlus } from "@tabler/icons-react";
+import { IconBuildingCastle, IconCandle, IconCards, IconChevronDown, IconLogout, IconScript, IconUserPlus } from "@tabler/icons-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -13,6 +13,7 @@ import { Divider, SightMark } from "./Ornament";
 const NAV = [
   { href: "/society", label: "The Society", icon: IconBuildingCastle },
   { href: "/table", label: "The Table", icon: IconCandle },
+  { href: "/mysteries", label: "Case Files", icon: IconScript, hostOnly: true },
 ];
 
 /** The frame of every signed-in page: header with navigation and the player menu. Sends signed-out visitors home. */
@@ -22,6 +23,7 @@ export function PageFrame({ children, fullBleed }: { children: React.ReactNode; 
   const pathname = usePathname();
   const { data: me } = useMe();
   const live = useTableStatus();
+  const nav = NAV.filter((item) => !("hostOnly" in item) || me?.role === "Host");
 
   useEffect(() => {
     if (status === "signedOut") {
@@ -50,7 +52,7 @@ export function PageFrame({ children, fullBleed }: { children: React.ReactNode; 
               </Group>
             </Anchor>
             <Group gap={4} visibleFrom="sm">
-              {NAV.map(({ href, label, icon: Icon }) => (
+              {nav.map(({ href, label, icon: Icon }) => (
                 <Button
                   key={href}
                   component={Link}
@@ -84,7 +86,7 @@ export function PageFrame({ children, fullBleed }: { children: React.ReactNode; 
                 </UnstyledButton>
               </Menu.Target>
               <Menu.Dropdown>
-                {NAV.map(({ href, label, icon: Icon }) => (
+                {nav.map(({ href, label, icon: Icon }) => (
                   <Menu.Item key={href} hiddenFrom="sm" component={Link} href={href} leftSection={<Icon size={16} />}>{label}</Menu.Item>
                 ))}
                 {me?.activeCharacterId ? (

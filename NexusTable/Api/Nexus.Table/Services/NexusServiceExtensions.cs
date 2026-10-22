@@ -57,6 +57,15 @@ public static class NexusServiceExtensions
 
         // The mystery engine (Vaesen.Framework.Mystery), and the host's use of it at the table.
         services.AddMysteryServices(configuration);
+        // Case files sit with the other local data unless a folder is configured.
+        var localData = configuration.GetSection(LocalDataOptions.SectionName).Get<LocalDataOptions>() ?? new LocalDataOptions();
+        services.PostConfigure<Vaesen.Framework.Mystery.MysteryOptions>(o =>
+        {
+            if (string.IsNullOrWhiteSpace(o.CasePacketPath))
+            {
+                o.CasePacketPath = Path.GetFullPath(Path.Combine(localData.Directory, "cases"));
+            }
+        });
         services.AddSingleton<IMysteryService, MysteryService>();
 
         services.Configure<LiveKitOptions>(configuration.GetSection(LiveKitOptions.SectionName));

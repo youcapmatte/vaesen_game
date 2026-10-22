@@ -177,6 +177,11 @@ public sealed class MysteryController(IAccountService accounts, IMysteryService 
     public Task<ActionResult<ResultBase<MysteryJob>>> Generate(CancellationToken cancellationToken) =>
         AsCallerAsync(caller => mysteries.StartAsync(caller, cancellationToken), cancellationToken);
 
+    /// <summary>The running generation, or the last one; null when there has been none since the API started.</summary>
+    [HttpGet("jobs/current")]
+    public Task<ActionResult<ResultBase<MysteryJob?>>> CurrentJob(CancellationToken cancellationToken) =>
+        AsCallerAsync(caller => Task.FromResult(mysteries.GetCurrentJob(caller)), cancellationToken);
+
     [HttpGet("jobs/{jobId}")]
     public Task<ActionResult<ResultBase<MysteryJob>>> Job([FromRoute] string jobId, CancellationToken cancellationToken) =>
         AsCallerAsync(caller => Task.FromResult(mysteries.GetJob(caller, jobId)), cancellationToken);

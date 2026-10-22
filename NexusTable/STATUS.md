@@ -112,11 +112,16 @@ Built to the build spec, [SPEC.md](SPEC.md), milestones 3 and 4. The engine is a
 - **Generation.** Typed steps run in order: conflict, escalation, humans, clues, then the critic. Each step uses Opus 5.5 with structured outputs, streaming, prompt caching and server-side fallbacks, and is re-rolled with its issues fed back. The whole case is re-rolled when a step gives up, and every call is logged.
 - **Structural validator.** Reachability by walking the fact graph, redundancy, single-channel loss, entry styles, provenance, decoys and fair play, affordance fit, vocabulary, cast coherence, giveaways, opening convergence, resolution, beats and tension.
 - **CaseLab and ContentTool.** Command-line tools in `VaesenAPI/Tools/`.
-- **Host-only API** (`/api/mysteries`): generate in the background and poll the job, list cases, read a case file and its Markdown report. Players get 403. Nothing reaches the voice Gamemaster yet: spec milestone 4 says to wait until you are happy with the generated cases.
+- **Host-only API** (`/api/mysteries`): generate in the background and poll the job (`jobs/current` picks up a running one), list cases, read a case file and its Markdown report. Players get 403. Case files are stored under `LocalData:Directory/cases`; a failed case that got as far as a title is kept too, marked failed. Nothing reaches the voice Gamemaster yet: spec milestone 4 says to wait until you are happy with the generated cases.
+- **Case Files page** (`/mysteries`, host only, in the header as "Case Files"):
+  - "Write a new mystery" with live progress through the steps; it keeps the creature hidden, since the host may be playing.
+  - The shelf of written cases, showing only the title, place and month.
+  - Each case file behind a spoiler gate, in tabs: the truth, hook and opening, clues with every channel and its gates, people, beats and endings, and review (the checks' findings, the generation log and a Markdown download).
+  - Checked in the browser with the sample case, with a failed run (no key on that machine) and with a faked running job; players see a locked page.
 - **Not done:**
   - a real run against the API
   - your review and approval of the content
-  - a web page for the host's CaseLab view and the Start mystery button
+  - handing a chosen case to the Gamemaster ("Start mystery")
   - DynamoDB/S3 storage for case packets (files only for now)
   - seasons and the persistent cast
 

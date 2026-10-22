@@ -96,6 +96,10 @@ public sealed class AnthropicMysteryModel : IMysteryModel
         {
             ret.Fail($"The Anthropic API failed: {ex.Message}", ModelErrorCodes.Unavailable);
         }
+        catch (AnthropicApiException ex) when (ex.Message.Contains("authentication_error", StringComparison.Ordinal))
+        {
+            ret.Fail("The Anthropic API key is missing or was not accepted. Set Mystery:AnthropicApiKey (or ANTHROPIC_API_KEY) for the API.", ModelErrorCodes.Rejected);
+        }
         catch (AnthropicApiException ex)
         {
             ret.Fail($"The Anthropic API rejected the {request.Step} request: {ex.Message}", ModelErrorCodes.Rejected);

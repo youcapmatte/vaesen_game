@@ -56,6 +56,9 @@ public interface IMysteryService
 
     ResultBase<MysteryJob> GetJob(Account caller, string jobId);
 
+    /// <summary>The running generation, or the last one since the API started; null if there has been none.</summary>
+    ResultBase<MysteryJob?> GetCurrentJob(Account caller);
+
     Task<ResultBase<List<CaseSummary>>> ListAsync(Account caller, CancellationToken cancellationToken = default);
 
     Task<ResultBase<StoredCase>> GetAsync(Account caller, string mysteryId, CancellationToken cancellationToken = default);
@@ -98,7 +101,8 @@ public sealed class MysteryService(
         {
             lock (job)
             {
-                job.Progress.Add($"{p.Step}: {p.Message}");
+                // The assignment names the creature; the host may be playing, so the page only says it is done.
+                job.Progress.Add(p.Step == "assignment" ? "assignment: A place and a creature are chosen." : $"{p.Step}: {p.Message}");
             }
         });
 
@@ -124,6 +128,21 @@ public sealed class MysteryService(
         {
             return ret.Ok(JsonConvert.DeserializeObject<MysteryJob>(JsonConvert.SerializeObject(job))!);
         }
+    }
+
+    public ResultBase<MysteryJob?> GetCurrentJob(Account caller)
+    {
+        var ret = new ResultBase<MysteryJob?>();
+        if (caller.Role != AccountRole.Host)
+        {
+            return ret.Fail("Only the host can see mystery generation.", ErrorCodes.Forbidden);
+        }
+
+        var job = _jobs.Values
+            .OrderByDescending(j => j.Status == MysteryJobStatus.Running)
+            .ThenByDescending(j => j.StartedAt)
+            .FirstOrDefault();
+        return job is null ? ret.Ok(null) : ret.Ok(GetJob(caller, job.JobId).Result);
     }
 
     public async Task<ResultBase<List<CaseSummary>>> ListAsync(Account caller, CancellationToken cancellationToken = default)
@@ -164,10 +183,17 @@ public sealed class MysteryService(
         try
         {
             var result = await generator.GenerateAsync(new GenerationRequest { History = history }, progress, cancellationToken).ConfigureAwait(false);
+            // A failed case that got somewhere is kept so the host can see why it failed; the history ignores it.
+            var kept = result.Success || result.Result?.Case.Packet.Title is { Length: > 0 };
+            if (!result.Success && kept)
+            {
+                await cases.SaveAsync(result.Result!.Case, cancellationToken).ConfigureAwait(false);
+            }
+
             lock (job)
             {
                 job.EndedAt = DateTime.UtcNow;
-                job.MysteryId = result.Result?.Case.Packet.MysteryId;
+                job.MysteryId = kept ? result.Result?.Case.Packet.MysteryId : null;
                 job.Title = result.Result?.Case.Packet.Title;
                 job.Status = result.Success ? MysteryJobStatus.Succeeded : MysteryJobStatus.Failed;
                 job.Error = result.Success ? null : result.ErrorMessage;
