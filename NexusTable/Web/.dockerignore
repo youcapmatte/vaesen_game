@@ -5,3 +5,7 @@ coverage
 tsconfig.tsbuildinfo
 Dockerfile
 .dockerignore
+# Tests stay out of the image; they import the rules file from the API folder, which isn't in this build context.
+**/*.test.ts
+**/*.test.tsx
+jest.config.js
