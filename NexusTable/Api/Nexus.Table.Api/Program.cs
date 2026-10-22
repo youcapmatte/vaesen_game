@@ -71,13 +71,21 @@ app.UseMiddleware<ResultExceptionMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {
-    // OpenAPI document at /openapi/v1.json, interactive docs at /docs (Scalar, as in Redkeep and Vaesen.Api).
+    // OpenAPI document at /openapi/v1.json, interactive docs at /docs (Scalar, as in Redkeep and Vaesen.Api) and /swagger.
     app.MapOpenApi();
     app.MapScalarApiReference("docs", options =>
     {
         options.Title = "Nexus Table API";
         options.Theme = ScalarTheme.DeepSpace;
         options.ShowDeveloperTools = DeveloperToolsVisibility.Always;
+    });
+
+    // Swagger UI at /swagger, on the same OpenAPI document. Authorize takes the token without the "Bearer " prefix.
+    app.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/openapi/v1.json", "Nexus Table API v1");
+        options.DocumentTitle = "Nexus Table API";
+        options.EnablePersistAuthorization();
     });
 }
 else

@@ -7,7 +7,7 @@ Nexus Table is a web tabletop for playing Vaesen by voice, with an AI Gamemaster
 
 | Folder | What it is | Stack |
 |---|---|---|
-| `Api/Nexus.Table.Api` | The API host | .NET 10, MVC controllers, Newtonsoft JSON, SignalR, OpenAPI + Scalar at `/docs`, port 5240 |
+| `Api/Nexus.Table.Api` | The API host | .NET 10, MVC controllers, Newtonsoft JSON, SignalR, OpenAPI with Scalar at `/docs` and Swagger UI at `/swagger`, port 5240 |
 | `Api/Nexus.Table` | Domain: models, storage, services, controllers, hub, rules file | Built on `VaesenAPI/Framework/Vaesen.Framework.Core` (DynamoDB `BaseRepository`, Auth0 JWT, result envelope, error middleware) |
 | `Api/Nexus.Table.Tests` | API tests | xUnit, WebApplicationFactory |
 | `Web` | The web app | Next.js 16 App Router, React 19, Mantine 8, SWR, `@auth0/nextjs-auth0`, `@microsoft/signalr`, `livekit-client`, `@livekit/components-react`, port 3030 |

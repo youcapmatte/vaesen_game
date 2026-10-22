@@ -6,7 +6,7 @@ the voice Gamemaster (milestone 2: LiveKit call, push-to-talk, a Python agent ru
 
 | Folder | What |
 |---|---|
-| `Api/Nexus.Table.Api` | The .NET 10 host: OpenAPI + Scalar docs, CORS, SignalR hub. |
+| `Api/Nexus.Table.Api` | The .NET 10 host: OpenAPI with Scalar and Swagger UI, CORS, SignalR hub. |
 | `Api/Nexus.Table` | Accounts, the Society, characters, dice, the table hub. Built on `VaesenAPI/Framework/Vaesen.Framework.Core` (DynamoDB `BaseRepository`, Auth0, result envelope). |
 | `Api/Nexus.Table/Rules/vaesen-rules.json` | The rulebook's character rules: archetypes, attributes, skills, talents, Conditions, mementos. Mechanics as in the book; descriptions paraphrased. |
 | `Api/Nexus.Table.Tests` | xUnit tests: creation rules, rolls and pushes, permissions, dark-secret privacy. |
@@ -27,7 +27,7 @@ cd NexusTable/Web && cp .env.example .env.local && npm install && npm run dev
 ```
 
 - Web: http://localhost:3030. Without Auth0 configured, pick a seat on the title page (dev login). Mattias is the host.
-- API docs: http://localhost:5240/docs.
+- API docs: http://localhost:5240/docs (Scalar) or http://localhost:5240/swagger (Swagger UI), both on the document at /openapi/v1.json.
 - Each browser tab keeps its own dev sign-in, so one browser can be several players.
 
 Tests:
