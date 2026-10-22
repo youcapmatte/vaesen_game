@@ -34,7 +34,7 @@ public sealed class SignalRTableNotifier(IHubContext<TableHub> hub) : ITableNoti
         hub.Clients.Group(TableHub.GroupOf(societyId)).SendAsync("societyChanged", societyId, cancellationToken);
 
     public Task CharacterChangedAsync(Character character, CancellationToken cancellationToken = default) =>
-        hub.Clients.Group(TableHub.GroupOf(character.SocietyId)).SendAsync("characterChanged", character, cancellationToken);
+        hub.Clients.Group(TableHub.GroupOf(character.SocietyId)).SendAsync("characterChanged", character.VisibleTo(null), cancellationToken);
 
     public Task RollMadeAsync(Roll roll, CancellationToken cancellationToken = default) =>
         hub.Clients.Group(TableHub.GroupOf(roll.SocietyId)).SendAsync("rollMade", roll, cancellationToken);

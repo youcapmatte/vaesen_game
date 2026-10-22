@@ -94,6 +94,22 @@ public sealed class Character : BaseCore
 
     [JsonProperty("notes")]
     public string Notes { get; set; } = "";
+
+    /// <summary>
+    /// The character as <paramref name="viewer"/> may see it: the dark secret is only for its owner and the host.
+    /// Pass null for broadcasts to the whole table.
+    /// </summary>
+    public Character VisibleTo(Account? viewer)
+    {
+        if (viewer is not null && (viewer.Id == AccountId || viewer.Role == AccountRole.Host))
+        {
+            return this;
+        }
+
+        var copy = (Character)MemberwiseClone();
+        copy.DarkSecret = "";
+        return copy;
+    }
 }
 
 /// <summary>How a character feels about another player character.</summary>

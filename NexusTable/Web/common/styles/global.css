@@ -111,3 +111,21 @@ a {
   scrollbar-width: thin;
   scrollbar-color: var(--nx-umber-3) transparent;
 }
+
+/* The − and + beside pips: ink on paper, and faded rather than filled when they can't be used. */
+.nx-pip-button {
+  color: var(--nx-ink);
+}
+
+.nx-pip-button:disabled,
+.nx-pip-button[data-disabled] {
+  background: transparent;
+  color: var(--nx-ink);
+  opacity: 0.25;
+}
+
+/* Checkboxes on paper: an inked square, filled with blood red when marked. */
+.nx-parchment .mantine-Checkbox-input:not(:checked) {
+  background: rgba(255, 250, 235, 0.45);
+  border: 1px solid rgba(43, 33, 24, 0.6);
+}

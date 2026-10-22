@@ -95,6 +95,25 @@ public sealed class TableTests : IDisposable
     }
 
     [Fact]
+    public async Task The_dark_secret_is_only_for_the_owner_and_the_host()
+    {
+        var ingrid = await _factory.ClientForAsync("ingrid");
+        var johan = await _factory.ClientForAsync("johan");
+        var host = await _factory.ClientForAsync("mattias");
+        var character = await NexusApiFactory.ResultAsync<Character>(await ingrid.PostAsJsonAsync("/api/characters", Requests.Academic()));
+
+        var asOwner = await NexusApiFactory.ResultAsync<Character>(await ingrid.GetAsync($"/api/characters/{character.Id}"));
+        var asPlayer = await NexusApiFactory.ResultAsync<Character>(await johan.GetAsync($"/api/characters/{character.Id}"));
+        var asHost = await NexusApiFactory.ResultAsync<Character>(await host.GetAsync($"/api/characters/{character.Id}"));
+        var inSociety = await NexusApiFactory.ResultAsync<SocietyView>(await johan.GetAsync("/api/society"));
+
+        Assert.Equal("Burned a rival's thesis", asOwner.DarkSecret);
+        Assert.Equal("", asPlayer.DarkSecret);
+        Assert.Equal("Burned a rival's thesis", asHost.DarkSecret);
+        Assert.Equal("", inSociety.Members.Single(m => m.Character is not null).Character!.DarkSecret);
+    }
+
+    [Fact]
     public async Task Players_cannot_roll_for_someone_else()
     {
         var ingrid = await _factory.ClientForAsync("ingrid");

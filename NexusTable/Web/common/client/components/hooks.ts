@@ -24,7 +24,10 @@ export function useSociety() {
     void society.mutate(
       (current) => current && {
         ...current,
-        members: current.members.map((m) => (m.character?.id === character.id ? { ...m, character } : m)),
+        members: current.members.map((m) => (m.character?.id === character.id
+          // Broadcasts leave out the dark secret; keep the one this viewer was allowed to read.
+          ? { ...m, character: { ...character, darkSecret: character.darkSecret || m.character.darkSecret } }
+          : m)),
       },
       { revalidate: false },
     ));

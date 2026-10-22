@@ -10,8 +10,8 @@ public interface ISocietyService
     /// <summary>The Society, created from configuration on first use.</summary>
     Task<ResultBase<Society>> GetAsync(CancellationToken cancellationToken = default);
 
-    /// <summary>The Society with its members and their active characters.</summary>
-    Task<ResultBase<SocietyView>> GetViewAsync(CancellationToken cancellationToken = default);
+    /// <summary>The Society with its members and their active characters, as <paramref name="viewer"/> may see them.</summary>
+    Task<ResultBase<SocietyView>> GetViewAsync(Account viewer, CancellationToken cancellationToken = default);
 
     Task<ResultBase<Society>> AddMemberAsync(string accountId, CancellationToken cancellationToken = default);
 
@@ -69,7 +69,7 @@ public sealed class SocietyService : ISocietyService
         return society is null ? ret.Fail(created.ErrorMessage, created.ErrorCode) : ret.Ok(society);
     }
 
-    public async Task<ResultBase<SocietyView>> GetViewAsync(CancellationToken cancellationToken = default)
+    public async Task<ResultBase<SocietyView>> GetViewAsync(Account viewer, CancellationToken cancellationToken = default)
     {
         var ret = new ResultBase<SocietyView>();
         var society = await GetAsync(cancellationToken).ConfigureAwait(false);
@@ -91,7 +91,7 @@ public sealed class SocietyService : ISocietyService
                 DisplayName = a.DisplayName,
                 AvatarUrl = a.AvatarUrl,
                 Role = a.Role,
-                Character = a.ActiveCharacterId is not null && characters.TryGetValue(a.ActiveCharacterId, out var c) ? c : null,
+                Character = a.ActiveCharacterId is not null && characters.TryGetValue(a.ActiveCharacterId, out var c) ? c.VisibleTo(viewer) : null,
             })
             .ToList();
 

@@ -63,7 +63,7 @@ public sealed class SocietyController(IAccountService accounts, ISocietyService 
     /// <summary>The Society with its members and the characters they play.</summary>
     [HttpGet]
     public Task<ActionResult<ResultBase<SocietyView>>> Get(CancellationToken cancellationToken) =>
-        AsCallerAsync(_ => society.GetViewAsync(cancellationToken), cancellationToken);
+        AsCallerAsync(caller => society.GetViewAsync(caller, cancellationToken), cancellationToken);
 
     /// <summary>Host only.</summary>
     [HttpPatch]
@@ -77,11 +77,19 @@ public sealed class CharacterController(IAccountService accounts, ICharacterServ
     /// <summary>Every character in the Society.</summary>
     [HttpGet]
     public Task<ActionResult<ResultBase<IReadOnlyList<Character>>>> List(CancellationToken cancellationToken) =>
-        AsCallerAsync(_ => characters.ListAsync(cancellationToken), cancellationToken);
+        AsCallerAsync(async caller =>
+        {
+            var list = await characters.ListAsync(cancellationToken).ConfigureAwait(false);
+            return list.Success ? new ResultBase<IReadOnlyList<Character>>().Ok(list.Result!.Select(c => c.VisibleTo(caller)).ToList()) : list;
+        }, cancellationToken);
 
     [HttpGet("{characterId}")]
     public Task<ActionResult<ResultBase<Character>>> Get([FromRoute] string characterId, CancellationToken cancellationToken) =>
-        AsCallerAsync(_ => characters.GetAsync(characterId, cancellationToken), cancellationToken);
+        AsCallerAsync(async caller =>
+        {
+            var found = await characters.GetAsync(characterId, cancellationToken).ConfigureAwait(false);
+            return found.Success ? new ResultBase<Character>().Ok(found.Result!.VisibleTo(caller)) : found;
+        }, cancellationToken);
 
     /// <summary>Creates the caller's character from the twelve creation steps; it becomes the one they play.</summary>
     [HttpPost]
