@@ -8,6 +8,8 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Nexus.Table.Models;
 using Nexus.Table.Services;
+using Vaesen.Framework.Core.Models;
+using Vaesen.Framework.Mystery.Ai;
 
 namespace Nexus.Table.Tests;
 
@@ -31,6 +33,7 @@ public sealed class NexusApiFactory : WebApplicationFactory<Program>
         builder.UseEnvironment("Development");
         builder.UseSetting("DataService:Provider", NexusServiceExtensions.LocalFileProvider);
         builder.UseSetting("LocalData:Directory", _dataDirectory);
+        builder.UseSetting("Mystery:CasePacketPath", Path.Combine(_dataDirectory, "cases"));
         if (!WithoutLiveKit)
         {
             builder.UseSetting("LiveKit:Url", "wss://nexus-test.livekit.cloud");
@@ -42,6 +45,7 @@ public sealed class NexusApiFactory : WebApplicationFactory<Program>
         builder.ConfigureServices(services =>
         {
             services.Replace(ServiceDescriptor.Singleton<IDiceRoller>(Dice));
+            services.Replace(ServiceDescriptor.Singleton<IMysteryModel>(new UnavailableModel()));
             services.AddHttpClient(CallService.HttpClientName).ConfigurePrimaryHttpMessageHandler(() => LiveKit);
         });
     }
@@ -123,4 +127,11 @@ public static class Requests
         Memento = "Dried red rose",
         Equipment = ["Book collection", "Writing utensils", "Liquor"],
     };
+}
+
+/// <summary>Stands in for the Anthropic API in tests: every call fails as if the API were down, so no test reaches the network.</summary>
+public sealed class UnavailableModel : IMysteryModel
+{
+    public Task<ResultBase<ModelReply<T>>> GenerateAsync<T>(ModelRequest request, CancellationToken cancellationToken = default) where T : class =>
+        Task.FromResult(new ResultBase<ModelReply<T>>().Fail("The model is not available in tests.", ModelErrorCodes.Unavailable));
 }

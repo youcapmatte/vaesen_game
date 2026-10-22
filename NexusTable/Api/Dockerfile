@@ -7,11 +7,13 @@ WORKDIR /src
 
 # Restore first, so the package layer is reused until a project file changes.
 COPY VaesenAPI/Framework/Vaesen.Framework.Core/Vaesen.Framework.Core.csproj VaesenAPI/Framework/Vaesen.Framework.Core/
+COPY VaesenAPI/Framework/Vaesen.Framework.Mystery/Vaesen.Framework.Mystery.csproj VaesenAPI/Framework/Vaesen.Framework.Mystery/
 COPY NexusTable/Api/Nexus.Table/Nexus.Table.csproj NexusTable/Api/Nexus.Table/
 COPY NexusTable/Api/Nexus.Table.Api/Nexus.Table.Api.csproj NexusTable/Api/Nexus.Table.Api/
 RUN dotnet restore NexusTable/Api/Nexus.Table.Api/Nexus.Table.Api.csproj
 
 COPY VaesenAPI/Framework/Vaesen.Framework.Core/ VaesenAPI/Framework/Vaesen.Framework.Core/
+COPY VaesenAPI/Framework/Vaesen.Framework.Mystery/ VaesenAPI/Framework/Vaesen.Framework.Mystery/
 COPY NexusTable/Api/Nexus.Table/ NexusTable/Api/Nexus.Table/
 COPY NexusTable/Api/Nexus.Table.Api/ NexusTable/Api/Nexus.Table.Api/
 RUN dotnet publish NexusTable/Api/Nexus.Table.Api/Nexus.Table.Api.csproj -c Release -o /app --no-restore

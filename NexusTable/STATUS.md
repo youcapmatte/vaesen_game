@@ -14,7 +14,8 @@ Design: [DESIGN.md](DESIGN.md). How to run: [README.md](README.md).
 | Discord sign-in (Auth0) | Wired | **Not tested**: no Auth0 tenant yet; the dev login is used instead |
 | DynamoDB storage | Written | **Not tested**: no AWS table yet; development stores JSON files |
 | Docker images (API, web app, agent) | Yes | API published and web app built with the same steps as the images; **no image built yet** (no Docker on this machine) |
-| Mystery generator, session log, AWS deployment | No | - |
+| Mystery engine (`VaesenAPI/Framework/Vaesen.Framework.Mystery`) | Yes: content pack, assignment, generation pipeline, validator, critic, CaseLab, ContentTool, host API | 42 engine tests and 2 API tests pass; **never run against the real Anthropic API** (no key); content is draft, not reviewed |
+| Session log, runtime GM in .NET, AWS deployment | No | - |
 
 ## Commits (oldest first)
 
@@ -97,13 +98,34 @@ Design: [DESIGN.md](DESIGN.md). How to run: [README.md](README.md).
 - **Host controls.** Pause, resume, repeat the last reply, recap, leave.
 - **Latency.** It publishes the time from releasing the talk key to its first audio.
 
+## Mystery engine (added 2026-10-22)
+
+Built to the build spec, [SPEC.md](SPEC.md), milestones 3 and 4. The engine is a framework library, `VaesenAPI/Framework/Vaesen.Framework.Mystery`, so the game's backend can use the same code later. Its [README](../VaesenAPI/Framework/Vaesen.Framework.Mystery/README.md) describes how it works and how to run it.
+
+- **Content pack** (`Content/vaesen/`). Written by Claude into the content schemas and checked by the ContentValidator; all of it is draft:
+  - the setting and an affordance vocabulary of 113 tags
+  - 4 creatures: Näck, nisse, skogsrå, werewolf
+  - 14 place templates and 8 text levels (3 in October)
+  - 10 conflict archetypes
+  - 6 canonical characters
+- **Assignment.** Deterministic, with no model: creature cooldown, level and affordance fit, the reason kind and origin, whether there is a hidden hand, and the focus. Hook channel and hook-giver type are kept off the last ones used.
+- **Generation.** Typed steps run in order: conflict, escalation, humans, clues, then the critic. Each step uses Opus 5.5 with structured outputs, streaming, prompt caching and server-side fallbacks, and is re-rolled with its issues fed back. The whole case is re-rolled when a step gives up, and every call is logged.
+- **Structural validator.** Reachability by walking the fact graph, redundancy, single-channel loss, entry styles, provenance, decoys and fair play, affordance fit, vocabulary, cast coherence, giveaways, opening convergence, resolution, beats and tension.
+- **CaseLab and ContentTool.** Command-line tools in `VaesenAPI/Tools/`.
+- **Host-only API** (`/api/mysteries`): generate in the background and poll the job, list cases, read a case file and its Markdown report. Players get 403. Nothing reaches the voice Gamemaster yet: spec milestone 4 says to wait until you are happy with the generated cases.
+- **Not done:**
+  - a real run against the API
+  - your review and approval of the content
+  - a web page for the host's CaseLab view and the Start mystery button
+  - DynamoDB/S3 storage for case packets (files only for now)
+  - seasons and the persistent cast
+
 ## Not done yet
 
 - **Never run with real services.** That means the LiveKit call, the agent in a room, Deepgram, ElevenLabs and Claude. Latency against the ~1 s target is unmeasured, and the first real run will likely need fixes.
 - **Not set up** (all your accounts): Auth0 with Discord, the DynamoDB table, LiveKit Cloud, and the Deepgram, ElevenLabs and Anthropic keys.
 - **The default voices.** The two ElevenLabs voice ids are premade voices I didn't check; set your own.
 - **Not built yet:**
-  - the mystery generator
   - persistent NPCs
   - clues on the shelf
   - the session log for replay and evaluation

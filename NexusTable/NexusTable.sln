@@ -13,6 +13,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nexus.Table.Api", "Api\Nexu
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nexus.Table.Tests", "Api\Nexus.Table.Tests\Nexus.Table.Tests.csproj", "{A1AFDF1F-644F-4AC5-B15F-94720C24DB01}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Framework", "Framework", "{9A0CCAB9-4303-13B4-2371-F1B97FF5B728}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vaesen.Framework.Mystery", "..\VaesenAPI\Framework\Vaesen.Framework.Mystery\Vaesen.Framework.Mystery.csproj", "{2B0C0D63-6428-488E-81E7-496CBCC62CF9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -71,6 +75,18 @@ Global
 		{A1AFDF1F-644F-4AC5-B15F-94720C24DB01}.Release|x64.Build.0 = Release|Any CPU
 		{A1AFDF1F-644F-4AC5-B15F-94720C24DB01}.Release|x86.ActiveCfg = Release|Any CPU
 		{A1AFDF1F-644F-4AC5-B15F-94720C24DB01}.Release|x86.Build.0 = Release|Any CPU
+		{2B0C0D63-6428-488E-81E7-496CBCC62CF9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2B0C0D63-6428-488E-81E7-496CBCC62CF9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2B0C0D63-6428-488E-81E7-496CBCC62CF9}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{2B0C0D63-6428-488E-81E7-496CBCC62CF9}.Debug|x64.Build.0 = Debug|Any CPU
+		{2B0C0D63-6428-488E-81E7-496CBCC62CF9}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{2B0C0D63-6428-488E-81E7-496CBCC62CF9}.Debug|x86.Build.0 = Debug|Any CPU
+		{2B0C0D63-6428-488E-81E7-496CBCC62CF9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2B0C0D63-6428-488E-81E7-496CBCC62CF9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2B0C0D63-6428-488E-81E7-496CBCC62CF9}.Release|x64.ActiveCfg = Release|Any CPU
+		{2B0C0D63-6428-488E-81E7-496CBCC62CF9}.Release|x64.Build.0 = Release|Any CPU
+		{2B0C0D63-6428-488E-81E7-496CBCC62CF9}.Release|x86.ActiveCfg = Release|Any CPU
+		{2B0C0D63-6428-488E-81E7-496CBCC62CF9}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -79,5 +95,6 @@ Global
 		{7C409687-EB64-481D-8776-DE0798C279C6} = {D82C56D6-B2CD-F611-9E31-04638F7EC30E}
 		{4C3707AF-82B4-4557-A6A7-6122D00181B3} = {D82C56D6-B2CD-F611-9E31-04638F7EC30E}
 		{A1AFDF1F-644F-4AC5-B15F-94720C24DB01} = {D82C56D6-B2CD-F611-9E31-04638F7EC30E}
+		{2B0C0D63-6428-488E-81E7-496CBCC62CF9} = {9A0CCAB9-4303-13B4-2371-F1B97FF5B728}
 	EndGlobalSection
 EndGlobal

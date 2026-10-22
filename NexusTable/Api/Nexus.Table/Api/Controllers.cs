@@ -9,6 +9,7 @@ using Nexus.Table.Services;
 using Vaesen.Framework.Core.Api;
 using Vaesen.Framework.Core.Models;
 using Vaesen.Framework.Core.Security;
+using Vaesen.Framework.Mystery.Data;
 
 namespace Nexus.Table.Api;
 
@@ -157,6 +158,38 @@ public sealed class CallController(IAccountService accounts, ICallService call) 
     [HttpPost("gamemaster")]
     public Task<ActionResult<ResultBase<bool>>> StartGamemaster(CancellationToken cancellationToken) =>
         AsCallerAsync(caller => call.StartGamemasterAsync(caller, cancellationToken), cancellationToken);
+}
+
+/// <summary>
+/// Host only: generating mysteries and reading their case files (spoilers). Players never get here; the case file is
+/// the hidden GM file.
+/// </summary>
+[Route("api/mysteries")]
+public sealed class MysteryController(IAccountService accounts, IMysteryService mysteries) : NexusControllerBase(accounts)
+{
+    /// <summary>Generated cases, newest first (titles only).</summary>
+    [HttpGet]
+    public Task<ActionResult<ResultBase<List<CaseSummary>>>> List(CancellationToken cancellationToken) =>
+        AsCallerAsync(caller => mysteries.ListAsync(caller, cancellationToken), cancellationToken);
+
+    /// <summary>Starts generating a new case in the background; poll the job for progress.</summary>
+    [HttpPost("generate")]
+    public Task<ActionResult<ResultBase<MysteryJob>>> Generate(CancellationToken cancellationToken) =>
+        AsCallerAsync(caller => mysteries.StartAsync(caller, cancellationToken), cancellationToken);
+
+    [HttpGet("jobs/{jobId}")]
+    public Task<ActionResult<ResultBase<MysteryJob>>> Job([FromRoute] string jobId, CancellationToken cancellationToken) =>
+        AsCallerAsync(caller => Task.FromResult(mysteries.GetJob(caller, jobId)), cancellationToken);
+
+    /// <summary>The whole case file with its generation log.</summary>
+    [HttpGet("{mysteryId}")]
+    public Task<ActionResult<ResultBase<StoredCase>>> Get([FromRoute] string mysteryId, CancellationToken cancellationToken) =>
+        AsCallerAsync(caller => mysteries.GetAsync(caller, mysteryId, cancellationToken), cancellationToken);
+
+    /// <summary>The case as a readable Markdown report (the CaseLab report).</summary>
+    [HttpGet("{mysteryId}/report")]
+    public Task<ActionResult<ResultBase<string>>> Report([FromRoute] string mysteryId, CancellationToken cancellationToken) =>
+        AsCallerAsync(caller => mysteries.GetReportAsync(caller, mysteryId, cancellationToken), cancellationToken);
 }
 
 /// <summary>

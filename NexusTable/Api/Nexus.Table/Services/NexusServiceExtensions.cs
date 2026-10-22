@@ -8,6 +8,7 @@ using Nexus.Table.Data;
 using Nexus.Table.Data.Dynamo;
 using Nexus.Table.Hubs;
 using Vaesen.Framework.Core.Security;
+using Vaesen.Framework.Mystery.Services;
 
 namespace Nexus.Table.Services;
 
@@ -53,6 +54,10 @@ public static class NexusServiceExtensions
         services.AddSingleton<ICharacterService, CharacterService>();
         services.AddSingleton<IDiceService, DiceService>();
         services.AddSingleton<IDevLoginService, DevLoginService>();
+
+        // The mystery engine (Vaesen.Framework.Mystery), and the host's use of it at the table.
+        services.AddMysteryServices(configuration);
+        services.AddSingleton<IMysteryService, MysteryService>();
 
         services.Configure<LiveKitOptions>(configuration.GetSection(LiveKitOptions.SectionName));
         services.AddHttpClient(CallService.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(10));

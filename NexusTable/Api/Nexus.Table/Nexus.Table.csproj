@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\VaesenAPI\Framework\Vaesen.Framework.Core\Vaesen.Framework.Core.csproj" />
+    <ProjectReference Include="..\..\..\VaesenAPI\Framework\Vaesen.Framework.Mystery\Vaesen.Framework.Mystery.csproj" />
   </ItemGroup>
 
   <ItemGroup>
