@@ -139,7 +139,11 @@ The agent reads the full table, dark secrets included, from `GET /api/agent/tabl
    ```bash
    cd NexusTable/GmAgent && uv sync && uv run agent.py dev
    ```
-   Tests: `uv run pytest`.
+   Tests: `uv run pytest`. The agent is pinned to Python 3.12 (`.python-version`), since LiveKit's native wheels lag new releases.
+   If `uv sync` stops with "Missing expected target directory for Python minor version link", make the virtual environment from the Python uv just installed, then sync again:
+   ```bash
+   uv venv --python "%APPDATA%/uv/python/cpython-3.12.15-windows-x86_64-none/python.exe" && uv sync --python .venv/Scripts/python.exe
+   ```
 4. **Play.**
    1. Join the call from the table.
    2. As the host, press **Bring in the Gamemaster**.
