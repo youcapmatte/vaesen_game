@@ -164,6 +164,10 @@ Each service has a Dockerfile. They are for hosting (AWS ECS Fargate is the plan
 
 The API image's context is the repository root because it references `VaesenAPI/Framework`; `NexusTable/Api/Dockerfile.dockerignore` keeps the rest of the repository out of it.
 
+## Deploying to AWS
+
+[Infra/](Infra/README.md) is an AWS CDK app (C#) that runs everything at https://nexus.norse.games: DynamoDB, the three images on ECS Fargate behind one HTTPS load balancer, and the DNS. Deploy with `Infra/deploy.ps1`; the README there walks through the first deploy.
+
 ## Next milestones (from DESIGN.md)
 
 1. **Measure and tune the voice loop.** Measure with real keys; then try the routing step (Haiku decides between NPC speech, a question, a rules question and an action), per-NPC prompts and distinct voices.

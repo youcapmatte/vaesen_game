@@ -56,3 +56,7 @@ NexusTable/**/__pycache__/
 NexusTable/**/.venv/
 NexusTable/**/.pytest_cache/
 !NexusTable/GmAgent/.env.example
+NexusTable/Infra/cdk.out/
+NexusTable/Infra/cdk.context.json
+NexusTable/Infra/secrets.*.json
+!NexusTable/Infra/secrets.example.json

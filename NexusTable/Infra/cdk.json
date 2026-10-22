@@ -1,0 +1,23 @@
+{
+  "app": "dotnet run --project Nexus.Table.Infra.csproj",
+  "watch": {
+    "exclude": [
+      "bin",
+      "obj",
+      "cdk.out"
+    ]
+  },
+  "context": {
+    "region": "eu-central-1",
+    "domain": "nexus.norse.games",
+    "apiDomain": "api.nexus.norse.games",
+    "tableName": "nexus-table-prod",
+    "auth0Domain": "dev-re8bixoo5abz4icf.us.auth0.com",
+    "auth0ClientId": "g4lnXQ0R9iU1fkn7Rxj3g3g0nuRfOXA8",
+    "auth0Audience": "https://api.nexustable.game",
+    "hostSubjects": "oauth2|discord|560715902203461643",
+    "narratorVoice": "",
+    "npcVoice": "",
+    "@aws-cdk/core:defaultCrossStackReferences": "strong"
+  }
+}

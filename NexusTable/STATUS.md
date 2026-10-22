@@ -15,7 +15,8 @@ Design: [DESIGN.md](DESIGN.md). How to run: [README.md](README.md).
 | DynamoDB storage | Written | **Not tested**: no AWS table yet; development stores JSON files |
 | Docker images (API, web app, agent) | Yes | API published and web app built with the same steps as the images; **no image built yet** (no Docker on this machine) |
 | Mystery engine (`VaesenAPI/Framework/Vaesen.Framework.Mystery`) | Yes: content pack, assignment, generation pipeline, validator, critic, CaseLab, ContentTool, host API | 42 engine tests and 2 API tests pass; **never run against the real Anthropic API** (no key); content is draft, not reviewed |
-| Session log, runtime GM in .NET, AWS deployment | No | - |
+| AWS infrastructure (CDK, `Infra/`) | Yes | Templates synthesize; **never deployed** |
+| Session log, runtime GM in .NET | No | - |
 
 ## Commits (oldest first)
 
@@ -144,7 +145,6 @@ Built to the build spec, [SPEC.md](SPEC.md), milestones 3 and 4. The engine is a
   - the routing step (NPC speech, question, rules question or action)
   - per-NPC voices
   - Advantage tracking per session
-  - deployment to AWS (the Dockerfiles exist)
 
 ## Working on another computer
 
