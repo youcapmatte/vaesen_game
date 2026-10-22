@@ -1,0 +1,113 @@
+/*
+ * Nexus Table: the Vaesen rulebook as a place. Night-dark umber pages, parchment cards with stained edges,
+ * sepia ink, gold hairlines. Textures are SVG noise, so nothing is copied from the book.
+ */
+:root {
+  --nx-night: #14110e;
+  --nx-umber: #221c16;
+  --nx-umber-2: #2d251d;
+  --nx-umber-3: #383027;
+  --nx-parchment: #e8dcc2;
+  --nx-parchment-2: #d9c9a6;
+  --nx-ink: #2b2118;
+  --nx-ink-soft: #5a4632;
+  --nx-sepia: #8a6d4b;
+  --nx-gold: #b8955a;
+  --nx-gold-dim: rgba(184, 149, 90, 0.35);
+  --nx-blood: #8e2a22;
+  --nx-blood-bright: #b13628;
+  --nx-moss: #4a5a43;
+  --nx-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.35 0 0 0 0 0.27 0 0 0 0 0.18 0 0 0 0.55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --nx-fibres: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='f'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.012 0.09' numOctaves='2' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 0.45 0 0 0 0 0.35 0 0 0 0 0.2 0 0 0 0.22 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23f)'/%3E%3C/svg%3E");
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  background-color: var(--nx-night);
+  background-image:
+    radial-gradient(ellipse at 50% -10%, rgba(120, 90, 55, 0.22), transparent 60%),
+    radial-gradient(ellipse at 50% 120%, rgba(0, 0, 0, 0.7), transparent 60%),
+    var(--nx-noise);
+  background-attachment: fixed;
+  color: var(--nx-parchment);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: var(--nx-blood);
+  color: var(--nx-parchment);
+}
+
+a {
+  color: var(--nx-gold);
+}
+
+/* A sheet of old paper: for character sheets, handouts and clues. */
+.nx-parchment {
+  position: relative;
+  color: var(--nx-ink);
+  background-color: var(--nx-parchment);
+  background-image:
+    radial-gradient(ellipse at 20% 15%, rgba(255, 250, 235, 0.55), transparent 55%),
+    radial-gradient(ellipse at 85% 90%, rgba(120, 80, 40, 0.22), transparent 50%),
+    radial-gradient(circle at 92% 8%, rgba(110, 70, 30, 0.18), transparent 18%),
+    var(--nx-fibres),
+    var(--nx-noise);
+  box-shadow:
+    inset 0 0 60px rgba(90, 60, 30, 0.35),
+    inset 0 0 6px rgba(90, 60, 30, 0.4),
+    0 10px 30px rgba(0, 0, 0, 0.55);
+}
+
+.nx-parchment h1,
+.nx-parchment h2,
+.nx-parchment h3,
+.nx-parchment h4 {
+  color: var(--nx-ink);
+}
+
+/* A dark panel with a gold hairline frame, like the book's sidebars. */
+.nx-panel {
+  position: relative;
+  background-color: rgba(34, 28, 22, 0.92);
+  background-image: var(--nx-noise);
+  border: 1px solid var(--nx-gold-dim);
+  box-shadow: inset 0 0 0 3px rgba(20, 17, 14, 0.9), inset 0 0 0 4px rgba(184, 149, 90, 0.18), 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.nx-display {
+  font-family: var(--font-display), Georgia, serif;
+  letter-spacing: 0.04em;
+}
+
+.nx-flourish {
+  font-family: var(--font-flourish), Georgia, serif;
+  font-style: italic;
+}
+
+.nx-kicker {
+  font-family: var(--font-display), Georgia, serif;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: 0.78rem;
+  color: var(--nx-gold);
+}
+
+/* The first letter of a passage, set large in blood red as in the book's chapter openings. */
+.nx-dropcap::first-letter {
+  float: left;
+  font-family: var(--font-display), Georgia, serif;
+  font-size: 3.4em;
+  line-height: 0.85;
+  padding: 0.06em 0.08em 0 0;
+  color: var(--nx-blood);
+}
+
+.nx-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--nx-umber-3) transparent;
+}

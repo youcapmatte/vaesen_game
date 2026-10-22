@@ -51,3 +51,4 @@ NexusTable/**/node_modules/
 NexusTable/**/.next/
 NexusTable/**/.data/
 NexusTable/**/next-env.d.ts
+!NexusTable/Web/.env.example
