@@ -4,6 +4,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <!-- LiveKit and Auth0 secrets for local runs: dotnet user-secrets set "LiveKit:ApiSecret" "..." -->
+    <UserSecretsId>nexus-table-api</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

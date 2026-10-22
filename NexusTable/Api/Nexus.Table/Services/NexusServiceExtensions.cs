@@ -54,6 +54,10 @@ public static class NexusServiceExtensions
         services.AddSingleton<IDiceService, DiceService>();
         services.AddSingleton<IDevLoginService, DevLoginService>();
 
+        services.Configure<LiveKitOptions>(configuration.GetSection(LiveKitOptions.SectionName));
+        services.AddHttpClient(CallService.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(10));
+        services.AddSingleton<ICallService, CallService>();
+
         // Browsers can't send headers when opening a WebSocket, so the hub takes the token from the query string.
         services.PostConfigureAll<JwtBearerOptions>(options =>
         {

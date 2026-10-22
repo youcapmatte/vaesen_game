@@ -1,5 +1,9 @@
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
+using Nexus.Table.Data;
 using Nexus.Table.Models;
 using Nexus.Table.Services;
 using Vaesen.Framework.Core.Api;
@@ -138,4 +142,64 @@ public sealed class DevController(IDevLoginService devLogin) : ControllerBase
     [HttpPost("login")]
     public ActionResult<ResultBase<DevLoginResult>> Login([FromBody] DevLoginRequest? request) =>
         this.ToActionResult(devLogin.Login(request ?? new DevLoginRequest()));
+}
+
+/// <summary>The voice call: join tokens, and the host bringing in the Gamemaster.</summary>
+[Route("api/call")]
+public sealed class CallController(IAccountService accounts, ICallService call) : NexusControllerBase(accounts)
+{
+    /// <summary>A LiveKit token for the Society's room, as the caller (with their character's name).</summary>
+    [HttpPost("join")]
+    public Task<ActionResult<ResultBase<CallJoin>>> Join(CancellationToken cancellationToken) =>
+        AsCallerAsync(caller => call.JoinAsync(caller, cancellationToken), cancellationToken);
+
+    /// <summary>Host only: dispatches the Gamemaster agent into the room.</summary>
+    [HttpPost("gamemaster")]
+    public Task<ActionResult<ResultBase<bool>>> StartGamemaster(CancellationToken cancellationToken) =>
+        AsCallerAsync(caller => call.StartGamemasterAsync(caller, cancellationToken), cancellationToken);
+}
+
+/// <summary>
+/// For the GM agent only (NexusTable/GmAgent), authorized by the shared LiveKit:AgentKey in the X-Agent-Key header.
+/// Gives the Gamemaster what players can't see: every sheet with its dark secret.
+/// </summary>
+[AllowAnonymous]
+[ApiController]
+[Route("api/agent")]
+public sealed class AgentController(ICallService call, IRollStore rolls, IOptions<LiveKitOptions> options) : ControllerBase
+{
+    public const string KeyHeader = "X-Agent-Key";
+
+    [HttpGet("table")]
+    public async Task<ActionResult<ResultBase<GmTable>>> Table(CancellationToken cancellationToken)
+    {
+        if (!IsAgent())
+        {
+            return Unauthorized(new ResultBase<GmTable>().Fail("Unknown agent.", "unauthorized"));
+        }
+
+        return this.ToActionResult(await call.GetGmTableAsync(cancellationToken).ConfigureAwait(false));
+    }
+
+    /// <summary>A roll as the server threw it, so the Gamemaster never relies on what a browser claims.</summary>
+    [HttpGet("rolls/{rollId}")]
+    public async Task<ActionResult<ResultBase<Roll>>> GetRoll([FromRoute] string rollId, CancellationToken cancellationToken)
+    {
+        var ret = new ResultBase<Roll>();
+        if (!IsAgent())
+        {
+            return Unauthorized(ret.Fail("Unknown agent.", "unauthorized"));
+        }
+
+        var roll = Roll.IsValidId<Roll>(rollId) ? await rolls.GetAsync(rollId, cancellationToken).ConfigureAwait(false) : null;
+        return this.ToActionResult(roll is null ? ret.Fail("Roll not found.", ErrorCodes.NotFound) : ret.Ok(roll));
+    }
+
+    private bool IsAgent()
+    {
+        var expected = options.Value.AgentKey;
+        var given = Request.Headers[KeyHeader].ToString();
+        return expected.Length > 0
+            && CryptographicOperations.FixedTimeEquals(Encoding.UTF8.GetBytes(given), Encoding.UTF8.GetBytes(expected));
+    }
 }

@@ -16,14 +16,34 @@ public sealed class NexusApiFactory : WebApplicationFactory<Program>
 {
     private readonly string _dataDirectory = Path.Combine(Path.GetTempPath(), "nexus-table-tests", Guid.NewGuid().ToString("N"));
 
+    public const string AgentKey = "test-agent-key";
+
     public FixedDice Dice { get; } = new();
+
+    /// <summary>Stands in for LiveKit's server API; records what the API sent.</summary>
+    public FakeLiveKit LiveKit { get; } = new();
+
+    /// <summary>Set before the first request to run without LiveKit settings.</summary>
+    public bool WithoutLiveKit { get; init; }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
         builder.UseSetting("DataService:Provider", NexusServiceExtensions.LocalFileProvider);
         builder.UseSetting("LocalData:Directory", _dataDirectory);
-        builder.ConfigureServices(services => services.Replace(ServiceDescriptor.Singleton<IDiceRoller>(Dice)));
+        if (!WithoutLiveKit)
+        {
+            builder.UseSetting("LiveKit:Url", "wss://nexus-test.livekit.cloud");
+            builder.UseSetting("LiveKit:ApiKey", "APItestkey");
+            builder.UseSetting("LiveKit:ApiSecret", "a-livekit-api-secret-that-is-long-enough-for-hs256");
+            builder.UseSetting("LiveKit:AgentKey", AgentKey);
+        }
+
+        builder.ConfigureServices(services =>
+        {
+            services.Replace(ServiceDescriptor.Singleton<IDiceRoller>(Dice));
+            services.AddHttpClient(CallService.HttpClientName).ConfigurePrimaryHttpMessageHandler(() => LiveKit);
+        });
     }
 
     /// <summary>A client signed in as a dev player ("mattias" is the host).</summary>
@@ -52,6 +72,19 @@ public sealed class NexusApiFactory : WebApplicationFactory<Program>
         {
             Directory.Delete(_dataDirectory, recursive: true);
         }
+    }
+}
+
+/// <summary>Answers every LiveKit server API call with 200 and keeps the requests.</summary>
+public sealed class FakeLiveKit : HttpMessageHandler
+{
+    public List<(Uri Uri, string? Authorization, string Body)> Requests { get; } = [];
+
+    protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+    {
+        var body = request.Content is null ? "" : await request.Content.ReadAsStringAsync(cancellationToken);
+        Requests.Add((request.RequestUri!, request.Headers.Authorization?.Parameter, body));
+        return new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new StringContent("{}") };
     }
 }
 
