@@ -115,7 +115,11 @@ function WizardContent() {
         Twelve questions the Society asks of everyone it sends into the dark.
       </PageTitle>
 
+      <Text hiddenFrom="sm" ta="center" className="nx-kicker" mb="md">
+        Step {active + 1} of {WIZARD_STEPS.length} · {STEP_LABELS[step].label}
+      </Text>
       <Stepper
+        visibleFrom="sm"
         active={active}
         onStepClick={(i) => i < active && setActive(i)}
         color="blood"
