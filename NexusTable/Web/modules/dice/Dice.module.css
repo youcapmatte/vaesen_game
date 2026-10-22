@@ -1,0 +1,72 @@
+.scene {
+  perspective: 600px;
+  flex: none;
+}
+
+.cube {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+}
+
+/* Old bone: ivory with a warm stain and soft edges. */
+.face {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  place-items: center;
+  padding: calc(var(--die-size) * 0.12);
+  border-radius: calc(var(--die-size) * 0.16);
+  background:
+    radial-gradient(circle at 30% 25%, #fbf4e2, transparent 60%),
+    radial-gradient(circle at 80% 85%, rgba(120, 85, 45, 0.35), transparent 55%),
+    #e6d6b4;
+  box-shadow: inset 0 0 calc(var(--die-size) * 0.12) rgba(90, 60, 30, 0.55);
+  backface-visibility: hidden;
+}
+
+.front { transform: translateZ(calc(var(--die-size) / 2)); }
+.back { transform: rotateY(180deg) translateZ(calc(var(--die-size) / 2)); }
+.right { transform: rotateY(90deg) translateZ(calc(var(--die-size) / 2)); }
+.left { transform: rotateY(-90deg) translateZ(calc(var(--die-size) / 2)); }
+.top { transform: rotateX(90deg) translateZ(calc(var(--die-size) / 2)); }
+.bottom { transform: rotateX(-90deg) translateZ(calc(var(--die-size) / 2)); }
+
+.pip {
+  width: 64%;
+  height: 64%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #4a3a2a, #1d150e);
+  box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.6);
+}
+
+.noPip {
+  width: 64%;
+  height: 64%;
+}
+
+.star {
+  grid-column: 1 / 4;
+  grid-row: 1 / 4;
+  width: 90%;
+  height: 90%;
+  fill: #8e2a22;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.25));
+}
+
+.starEye {
+  fill: #e6d6b4;
+}
+
+.flat {
+  position: relative;
+  flex: none;
+}
+
+.flatFace {
+  padding: calc(var(--die-size) * 0.1);
+  border-radius: calc(var(--die-size) * 0.18);
+}

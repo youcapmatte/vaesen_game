@@ -1,0 +1,146 @@
+/* The table: seats on the left, the stage in the middle, the log on the right. */
+.layout {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr) 360px;
+  gap: 14px;
+  height: calc(100vh - 57px);
+  padding: 14px;
+}
+
+@media (max-width: 62em) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+  }
+}
+
+.seats {
+  overflow-y: auto;
+  min-height: 0;
+}
+
+@media (max-width: 62em) {
+  .seats {
+    flex-direction: row !important;
+    overflow-x: auto;
+  }
+
+  .seats > * {
+    min-width: 170px;
+  }
+}
+
+.tile {
+  display: block;
+  background: var(--nx-umber);
+  border: 1px solid var(--nx-gold-dim);
+  box-shadow: inset 0 0 0 3px rgba(20, 17, 14, 0.9);
+  transition: box-shadow 160ms, border-color 160ms;
+  text-align: left;
+}
+
+.tile:not(:disabled):hover {
+  border-color: var(--nx-gold);
+}
+
+.video {
+  position: relative;
+  height: 112px;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(ellipse at 50% 40%, rgba(184, 149, 90, 0.16), transparent 65%),
+    #0e0c0a;
+  border-bottom: 1px solid var(--nx-gold-dim);
+}
+
+.tileIcons {
+  position: absolute;
+  right: 6px;
+  bottom: 5px;
+  color: var(--nx-sepia);
+}
+
+.talkBadge {
+  position: absolute;
+  left: 6px;
+  top: 6px;
+}
+
+/* Whoever holds push-to-talk glows like a lit candle. */
+.talking {
+  border-color: var(--nx-blood-bright);
+  box-shadow: inset 0 0 0 3px rgba(20, 17, 14, 0.9), 0 0 0 2px var(--nx-blood), 0 0 22px rgba(177, 54, 40, 0.55);
+}
+
+.missing {
+  opacity: 0.55;
+}
+
+.gmTile {
+  border-style: dashed;
+}
+
+.stage {
+  position: relative;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.scene {
+  position: relative;
+  flex: 1;
+  min-height: 340px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(ellipse at 50% 35%, rgba(184, 149, 90, 0.12), transparent 60%),
+    radial-gradient(ellipse at 50% 110%, rgba(0, 0, 0, 0.85), transparent 60%),
+    var(--nx-noise),
+    #110e0b;
+}
+
+.diceOverlay {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(ellipse at center, rgba(14, 12, 10, 0.92), rgba(14, 12, 10, 0.8) 70%);
+  backdrop-filter: blur(3px);
+  cursor: pointer;
+  animation: fadeIn 200ms ease-out;
+  z-index: 5;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.shelf {
+  min-height: 120px;
+}
+
+.side {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.log {
+  flex: 1;
+  min-height: 200px;
+  overflow-y: auto;
+}
+
+.ptt {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  z-index: 60;
+}

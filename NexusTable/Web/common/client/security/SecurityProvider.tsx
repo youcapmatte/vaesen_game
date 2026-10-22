@@ -32,11 +32,20 @@ export interface SecurityState {
 
 const SecurityContext = createContext<SecurityState | undefined>(undefined);
 
+/**
+ * The dev token lives per tab (sessionStorage), so several tabs can be different players while testing; a new
+ * tab starts as whoever signed in last (localStorage).
+ */
 function readDevToken(): StoredDevToken | undefined {
   try {
-    const raw = window.localStorage.getItem(DEV_TOKEN_KEY);
+    const raw = window.sessionStorage.getItem(DEV_TOKEN_KEY) ?? window.localStorage.getItem(DEV_TOKEN_KEY);
     const stored = raw ? (JSON.parse(raw) as StoredDevToken) : undefined;
-    return stored && stored.expiresAt > Date.now() + 60_000 ? stored : undefined;
+    if (!raw || !stored || stored.expiresAt <= Date.now() + 60_000) {
+      return undefined;
+    }
+    // Pin this tab to that player, whoever later signs in elsewhere.
+    window.sessionStorage.setItem(DEV_TOKEN_KEY, raw);
+    return stored;
   } catch {
     return undefined;
   }
@@ -124,6 +133,7 @@ export function SecurityProvider({ auth0Enabled, devLoginEnabled, user, children
       name: result.result.name,
     };
     try {
+      window.sessionStorage.setItem(DEV_TOKEN_KEY, JSON.stringify(stored));
       window.localStorage.setItem(DEV_TOKEN_KEY, JSON.stringify(stored));
     } catch {
       // Private window: the sign-in lasts until the tab closes.
@@ -137,6 +147,7 @@ export function SecurityProvider({ auth0Enabled, devLoginEnabled, user, children
 
   const signOut = useCallback(() => {
     try {
+      window.sessionStorage.removeItem(DEV_TOKEN_KEY);
       window.localStorage.removeItem(DEV_TOKEN_KEY);
     } catch {
       // Nothing stored.

@@ -47,6 +47,7 @@ public static class NexusServiceExtensions
         services.AddSingleton<IDiceRoller, CryptoDiceRoller>();
         services.AddSingleton<IRulesService, RulesService>();
         services.AddSingleton<ITableNotifier, SignalRTableNotifier>();
+        services.AddSingleton<TablePresence>();
         services.AddSingleton<ISocietyService, SocietyService>();
         services.AddSingleton<IAccountService, AccountService>();
         services.AddSingleton<ICharacterService, CharacterService>();
