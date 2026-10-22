@@ -39,13 +39,16 @@ function isTyping(target: EventTarget | null) {
 
 /**
  * Talking to the Gamemaster: hold the key (or press it once in toggle mode). Only while this tab has focus,
- * a browser limit. The table sees who is talking; the audio will go to the Gamemaster through LiveKit.
+ * a browser limit. The table sees who is talking (hub); onStart/onEnd open and close the Gamemaster's turn in
+ * the call (LiveKit RPC), so only this speech reaches it.
  */
-export function usePushToTalk() {
+export function usePushToTalk(handlers?: { onStart?: () => void; onEnd?: () => void }) {
   const { setPushToTalk } = useTablePresence();
   const [settings, setSettings] = useState<PushToTalkSettings>(DEFAULTS);
   const [talking, setTalking] = useState(false);
   const talkingRef = useRef(false);
+  const handlersRef = useRef(handlers);
+  handlersRef.current = handlers;
 
   useEffect(() => setSettings(load()), []);
 
@@ -54,6 +57,8 @@ export function usePushToTalk() {
     talkingRef.current = active;
     setTalking(active);
     setPushToTalk(active);
+    if (active) handlersRef.current?.onStart?.();
+    else handlersRef.current?.onEnd?.();
   }, [setPushToTalk]);
 
   useEffect(() => {

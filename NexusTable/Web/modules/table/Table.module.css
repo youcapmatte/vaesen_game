@@ -160,3 +160,18 @@
     transform: none;
   }
 }
+
+.videoTrack {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: sepia(0.25) contrast(1.05);
+}
+
+/* Someone talking at the table (not to the Gamemaster): a softer gold glow. */
+.speaking {
+  border-color: var(--nx-gold);
+  box-shadow: inset 0 0 0 3px rgba(20, 17, 14, 0.9), 0 0 16px rgba(184, 149, 90, 0.45);
+}

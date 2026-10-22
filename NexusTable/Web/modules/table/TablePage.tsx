@@ -1,7 +1,7 @@
 "use client";
 
 import { Badge, Box, Button, Drawer, Group, Popover, Select, Stack, Switch, Text, Title, Tooltip } from "@mantine/core";
-import { IconBook2, IconMicrophone, IconPlayerPlay, IconSettings } from "@tabler/icons-react";
+import { IconBook2, IconMicrophone, IconSettings } from "@tabler/icons-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Character } from "@/common/api/character";
 import { RollApi, type Roll, type RollOutcome } from "@/common/api/roll";
@@ -12,6 +12,8 @@ import { Corners, Divider, SightMark } from "@/common/client/components/Ornament
 import { ErrorNote, FullPageLoader, PageFrame } from "@/common/client/components/PageFrame";
 import { useTableEvent, useTablePresence } from "@/common/client/signalr/useTable";
 import { CharacterSheet } from "@/modules/characters/CharacterSheet";
+import { CallBar, GmLine, type TranscriptLine, useTableTranscript } from "@/modules/call/CallViews";
+import { CallProvider, useGamemaster, useGamemasterActions, useSeatMedia } from "@/modules/call/Call";
 import { RollEntry, RollForm, RollOnStage } from "@/modules/dice/RollViews";
 import { Seats } from "./Seats";
 import styles from "./Table.module.css";
@@ -22,7 +24,9 @@ const STAGE_SECONDS = 7;
 export function TablePage() {
   return (
     <PageFrame fullBleed>
-      <TableContent />
+      <CallProvider>
+        <TableContent />
+      </CallProvider>
     </PageFrame>
   );
 }
@@ -33,6 +37,9 @@ function TableContent() {
   const { data: view, error, mutate: mutateSociety } = useSociety();
   const { data: rolls, mutate: mutateRolls } = useApiData<Roll[]>(RollApi.rolls);
   const { presence } = useTablePresence();
+  const media = useSeatMedia();
+  const gm = useGamemasterActions();
+  const transcript = useTableTranscript(view?.members ?? []);
   const [onStage, setOnStage] = useState<Roll>();
   const [sheetId, setSheetId] = useState<string>();
   const stageTimer = useRef<number | undefined>(undefined);
@@ -71,17 +78,27 @@ function TableContent() {
     upsertRoll(outcome.roll);
     showOnStage(outcome.roll);
     void mutateSociety();
+    // Only the roller tells the Gamemaster, so it hears each roll once.
+    void gm.reportRoll(outcome.roll.id);
   };
+  // The log: rolls and the Gamemaster's conversation, newest first.
+  const entries: { at: number; key: string; roll?: Roll; line?: TranscriptLine }[] = [
+    ...(rolls ?? []).map((roll) => ({ at: new Date(roll.createdAt).getTime(), key: roll.id, roll })),
+    ...transcript.map((line) => ({ at: line.at, key: line.id, line })),
+  ].sort((a, b) => b.at - a.at);
   const sheet = characters.find((c) => c.id === sheetId);
 
   return (
     <Box className={styles.layout}>
-      <Seats members={view.members} presence={presence} archetypeName={names.archetype} onOpenSheet={setSheetId} />
+      <Stack gap="sm" style={{ minHeight: 0 }}>
+        <CallBar />
+        <Seats members={view.members} presence={presence} media={media} archetypeName={names.archetype} isHost={me.role === "Host"} onOpenSheet={setSheetId} />
+      </Stack>
 
       <Box className={styles.stage}>
         <Box className={`${styles.scene} nx-panel`}>
           <Corners />
-          <SceneCard headquarters={view.society.headquarters} isHost={me.role === "Host"} />
+          <SceneCard headquarters={view.society.headquarters} />
           <PushToTalkBar />
           {onStage && (
             <Box className={styles.diceOverlay} onClick={() => setOnStage(undefined)}>
@@ -103,16 +120,18 @@ function TableContent() {
             )}
           </Group>
           <Box className={`${styles.log} nx-scroll`}>
-            {rolls?.length ? (
-              rolls.map((roll) => (
+            {entries.length ? (
+              entries.map((entry) => entry.roll ? (
                 <RollEntry
-                  key={roll.id}
-                  roll={roll}
+                  key={entry.key}
+                  roll={entry.roll}
                   rules={rules}
                   me={me}
-                  character={characters.find((c) => c.id === roll.characterId)}
+                  character={characters.find((c) => c.id === entry.roll!.characterId)}
                   onPushed={onRolled}
                 />
+              ) : (
+                <GmLine key={entry.key} line={entry.line!} />
               ))
             ) : (
               <Text c="var(--nx-sepia)" className="nx-flourish" fz="sm" mt="md" ta="center">
@@ -150,24 +169,18 @@ function SheetInDrawer({ character, rules, canEdit, onChange }: { character: Cha
 }
 
 /** The centre of the table: the current scene. Until the Gamemaster arrives, the Society's own rooms. */
-function SceneCard({ headquarters, isHost }: { headquarters: string; isHost: boolean }) {
+function SceneCard({ headquarters }: { headquarters: string }) {
+  const gm = useGamemaster();
   return (
     <Stack align="center" gap="sm" maw={560} ta="center" p="xl">
       <Text className="nx-kicker">The Society&apos;s rooms · {headquarters}</Text>
-      <Title order={2}>No mystery has begun</Title>
+      <Title order={2}>{gm.participant ? "The Gamemaster is at the table" : "No mystery has begun"}</Title>
       <Divider width={200} />
       <Text className="nx-flourish nx-dropcap" ta="left" c="var(--nx-parchment-2)">
-        The fire is low and the letters on the table are unopened. When the host starts a mystery, the Gamemaster will
-        join as the fifth voice at the table and paint the first scene here: the place, the people, the wrongness
-        that brought you.
+        {gm.participant
+          ? "Hold the talk key and speak to them; let go and they answer. Everything else you say stays among the Society."
+          : "The fire is low and the letters on the table are unopened. Join the call, and when the host brings in the Gamemaster, it takes the fifth seat and paints the first scene: the place, the people, the wrongness that brought you."}
       </Text>
-      {isHost && (
-        <Tooltip label="The AI Gamemaster comes in the next milestone (LiveKit, Claude and ElevenLabs).">
-          <Button mt="sm" color="blood" leftSection={<IconPlayerPlay size={16} />} data-disabled onClick={(e) => e.preventDefault()}>
-            Start a mystery
-          </Button>
-        </Tooltip>
-      )}
     </Stack>
   );
 }
@@ -203,14 +216,18 @@ const KEY_CHOICES = ["Backquote", "KeyT", "KeyV", "CapsLock", "Mouse3", "Mouse4"
 
 /** Shows push-to-talk: the key, whether you're talking to the Gamemaster, and its settings. */
 function PushToTalkBar() {
-  const { talking, settings, save } = usePushToTalk();
+  const gm = useGamemasterActions();
+  const { talking, settings, save } = usePushToTalk({ onStart: () => void gm.startTurn(), onEnd: () => void gm.endTurn() });
   return (
     <Box className={styles.ptt}>
       <Group gap={6} wrap="nowrap" className="nx-panel" px="md" py={6} style={talking ? { borderColor: "var(--nx-blood-bright)", boxShadow: "0 0 24px rgba(177,54,40,0.6)" } : undefined}>
         <IconMicrophone size={16} color={talking ? "var(--nx-blood-bright)" : "var(--nx-sepia)"} />
         <Text component="div" fz="sm" c={talking ? "var(--nx-parchment)" : "var(--nx-parchment-2)"}>
           {talking ? "Speaking to the Gamemaster…" : (
-            <>{settings.toggle ? "Press" : "Hold"} <Badge size="sm" variant="outline" color="gold">{keyLabel(settings.key)}</Badge> to speak to the Gamemaster</>
+            <>
+              {settings.toggle ? "Press" : "Hold"} <Badge size="sm" variant="outline" color="gold">{keyLabel(settings.key)}</Badge> to speak to the Gamemaster
+              {!gm.present && <Text span c="var(--nx-sepia)" fz="xs"> (not at the table yet)</Text>}
+            </>
           )}
         </Text>
         <Popover position="top" withArrow>

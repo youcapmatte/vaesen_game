@@ -52,3 +52,7 @@ NexusTable/**/.next/
 NexusTable/**/.data/
 NexusTable/**/next-env.d.ts
 !NexusTable/Web/.env.example
+NexusTable/**/__pycache__/
+NexusTable/**/.venv/
+NexusTable/**/.pytest_cache/
+!NexusTable/GmAgent/.env.example

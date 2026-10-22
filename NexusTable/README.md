@@ -1,8 +1,8 @@
 # Nexus Table
 
 A web tabletop where Claude is the Gamemaster and up to four friends play Vaesen mysteries by voice.
-The design is in [DESIGN.md](DESIGN.md); this folder is the first milestone of it: the web app and API
-around the table, ready for the voice Gamemaster to join.
+The design is in [DESIGN.md](DESIGN.md). This folder has the web app and API around the table (milestone 1) and
+the voice Gamemaster (milestone 2: LiveKit call, push-to-talk, a Python agent running Deepgram, then Claude, then ElevenLabs).
 
 | Folder | What |
 |---|---|
@@ -10,6 +10,7 @@ around the table, ready for the voice Gamemaster to join.
 | `Api/Nexus.Table` | Accounts, the Society, characters, dice, the table hub. Built on `VaesenAPI/Framework/Vaesen.Framework.Core` (DynamoDB `BaseRepository`, Auth0, result envelope). |
 | `Api/Nexus.Table/Rules/vaesen-rules.json` | The rulebook's character rules: archetypes, attributes, skills, talents, Conditions, mementos. Mechanics as in the book; descriptions paraphrased. |
 | `Api/Nexus.Table.Tests` | xUnit tests: creation rules, rolls and pushes, permissions, dark-secret privacy. |
+| `GmAgent` | The Gamemaster: a Python LiveKit Agents worker (`agent.py`, `nexus_gm/`). |
 | `Web` | Next.js 16 (App Router) + React 19 + Mantine 8 + SWR, laid out like Redkeep (`app/`, `modules/<feature>`, `common/api`, `common/client`). |
 
 ## Running it locally
@@ -67,7 +68,13 @@ cd NexusTable/Web && npm test && npm run lint
   - Dice are thrown on the server.
   - Everyone sees them land as 3D bone dice; sixes show the Sight star.
   - A failed roll can be pushed once: the sixes stay, the rest are rethrown, and the player takes a Condition of the roll's type.
-- **Push-to-talk.** A configurable key (backtick, T, V, Caps Lock, mouse side buttons), held or toggled. The whole table sees who is talking to the Gamemaster. Only the indicator exists so far; the audio comes with LiveKit.
+- **Push-to-talk.** A configurable key (backtick, T, V, Caps Lock, mouse side buttons), held or toggled. The whole table sees who is talking to the Gamemaster, and only that speech reaches it.
+- **The call (LiveKit).**
+  - Players join from the table and appear in their seats on camera.
+  - Everyone hears everyone.
+  - The host brings in the Gamemaster as an audio-only fifth seat, then controls it from there: pause, resume, repeat, recap, send away.
+  - The Gamemaster's seat shows what it is doing, and the time from releasing the talk key to its first word.
+  - The log shows what was said to and by the Gamemaster.
 
 ## Configuration
 
@@ -103,8 +110,46 @@ Items:
 - `SUBJECT#{sub}/SUBJECT` for one account per login
 - GSI1 `SOCIETY#{id}` with `CHAR#{name}` for characters and `ROLL#{time}` for rolls
 
+## The voice Gamemaster
+
+The loop for one turn:
+
+1. Holding the talk key sends a `start_turn` RPC to the agent, and it starts listening to that one player.
+2. Releasing it sends `end_turn`. Deepgram finishes the transcript, and the agent prefixes it with the speaker: `[Elin Gregorius, played by Ingrid]`.
+3. Claude Haiku 5.5 answers, streaming. Thinking is off, effort is low, and the rules and the table brief are prompt-cached (`nexus_gm/claude.py`).
+4. The reply streams to ElevenLabs as it comes. NPC lines (`<npc name="...">...</npc>`) switch to the NPC voice (`nexus_gm/speech.py`).
+
+Table talk never reaches Claude, because the agent's audio input is off outside a turn.
+
+Rolls reach the Gamemaster too. The roller's browser sends the roll id over LiveKit, and the agent reads the roll back from the API (`GET /api/agent/rolls/{id}`), so a browser can't invent results.
+
+The agent reads the full table, dark secrets included, from `GET /api/agent/table` with the shared `X-Agent-Key`.
+
+### Setting it up
+
+1. **Accounts.** Create a LiveKit Cloud project, and get keys for Deepgram, ElevenLabs and the Anthropic API (set a monthly spend limit in the Console).
+2. **API secrets** (stay out of git):
+   ```bash
+   cd NexusTable/Api/Nexus.Table.Api
+   dotnet user-secrets set "LiveKit:Url" "wss://<project>.livekit.cloud"
+   dotnet user-secrets set "LiveKit:ApiKey" "<key>"
+   dotnet user-secrets set "LiveKit:ApiSecret" "<secret>"
+   ```
+3. **The agent.** Install [uv](https://docs.astral.sh/uv/). Then copy `GmAgent/.env.example` to `GmAgent/.env.local` and fill it in, and run:
+   ```bash
+   cd NexusTable/GmAgent && uv sync && uv run agent.py dev
+   ```
+   Tests: `uv run pytest`.
+4. **Play.**
+   1. Join the call from the table.
+   2. As the host, press **Bring in the Gamemaster**.
+   3. Hold the talk key and speak; let go to hear the answer.
+   4. Read the latency badge on the Gamemaster's seat (target: about 1 s).
+
+Voices default to two ElevenLabs premade voices. Set `NEXUS_NARRATOR_VOICE` and `NEXUS_NPC_VOICE` to the ones you like.
+
 ## Next milestones (from DESIGN.md)
 
-1. **Voice.** A LiveKit room with the players' cameras in the seats; push-to-talk sends audio to a Python GM agent (LiveKit Agents: STT, then Claude, then ElevenLabs). Measure about 1 s to first audio before anything else.
+1. **Measure and tune the voice loop.** Measure with real keys; then try the routing step (Haiku decides between NPC speech, a question, a rules question and an action), per-NPC prompts and distinct voices.
 2. **The mystery generator.** Sonnet or Opus writes the hidden GM file (the vaesen, the truth, NPCs, clues with several routes, locations). It is stored in S3 with a reference in DynamoDB. The host's *Start a mystery* button and the clue shelf are already in place for it.
 3. **Sessions and the log.** Every utterance, roll, clue and state change in order, for replay and evaluation. Rolls are already stored per Society.
