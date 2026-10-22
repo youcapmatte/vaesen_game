@@ -18,6 +18,8 @@ public static class MysteryServiceExtensions
         services.Configure<MysteryOptions>(configuration.GetSection(MysteryOptions.SectionName));
         services.TryAddSingleton<IContentStore, FileContentStore>();
         services.TryAddSingleton<ICasePacketStore, FileCasePacketStore>();
+        services.TryAddSingleton<IWorldStore, FileWorldStore>();
+        services.TryAddSingleton<IWorldService, WorldService>();
         services.TryAddSingleton<IMysteryModel, AnthropicMysteryModel>();
         services.TryAddSingleton<ICoherenceValidator, CaseValidator>();
         services.TryAddSingleton<IMysteryGenerator, MysteryGenerator>();

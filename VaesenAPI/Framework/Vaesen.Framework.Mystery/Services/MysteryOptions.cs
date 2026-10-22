@@ -17,6 +17,21 @@ public sealed class MysteryOptions
     /// <summary>Where case packets are stored by the file store. Empty: .data/cases under the working directory.</summary>
     public string CasePacketPath { get; set; } = "";
 
+    /// <summary>Where Society worlds are stored by the file store. Empty: .data/worlds under the working directory.</summary>
+    public string WorldPath { get; set; } = "";
+
+    /// <summary>Seed the Society's world (persistent cast) before its first mystery.</summary>
+    public bool SeedWorld { get; set; } = true;
+
+    /// <summary>How many core characters a new world gets besides the canonical ones (spec 9.1: around a dozen).</summary>
+    public int CoreCastSize { get; set; } = 10;
+
+    /// <summary>How many background characters a new world gets.</summary>
+    public int BackgroundCastSize { get; set; } = 14;
+
+    /// <summary>How many persistent characters a case is offered to draw from, the most important first.</summary>
+    public int PersistentCastOffered { get; set; } = 24;
+
     /// <summary>The Anthropic API key. Empty: the SDK's own lookup (ANTHROPIC_API_KEY and so on).</summary>
     public string AnthropicApiKey { get; set; } = "";
 

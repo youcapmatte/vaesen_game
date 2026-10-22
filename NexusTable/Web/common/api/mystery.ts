@@ -7,6 +7,7 @@ export type MysteryJobStatus = "running" | "succeeded" | "failed";
 
 export interface MysteryJob {
   jobId: string;
+  kind: "mystery" | "world";
   status: MysteryJobStatus;
   startedAt: string;
   endedAt?: string | null;
@@ -27,7 +28,11 @@ export interface CaseSummary {
   vaesenIds: string[];
   hookChannelId: string;
   hookGiverType: string;
+  status: CaseStatus;
 }
+
+/** generated: written, not yet played to its end; rejected: generation failed and it was kept to see why. */
+export type CaseStatus = "generated" | "solved" | "failed" | "rejected";
 
 export interface CoherenceIssue {
   code: string;
@@ -114,7 +119,17 @@ export interface CasePacket {
   decoys: { threadId: string; description: string; factIds: string[]; clearedByFactIds: string[]; resolution: string }[];
   beats: { id: string; threshold: number; description: string; requires: { place?: string | null; time?: string | null }; emitsFactIds: string[]; actorId?: string | null }[];
   climax: { threshold: number; conditions: { place?: string | null; time?: string | null }; description: string };
-  resolutionLevers: { id: string; description: string; solveDepth: "crude" | "deep"; requiresFactIds: string[]; consequences: { world: string[] } }[];
+  resolutionLevers: {
+    id: string;
+    description: string;
+    solveDepth: "crude" | "deep";
+    requiresFactIds: string[];
+    consequences: {
+      world: string[];
+      attitudes: { characterId: string; change: string; delta: number }[];
+      fates: { characterId: string; status: string; reason: string }[];
+    };
+  }[];
   tension: { start: number };
   validation: { passed: boolean; issues: CoherenceIssue[]; runs: number };
 }
@@ -133,10 +148,80 @@ export interface GenerationLogEntry {
   issues: CoherenceIssue[];
 }
 
+export interface CaseClosing {
+  closedAt: string;
+  outcome: "solved" | "failed";
+  leverId?: string | null;
+  solveDepth?: string | null;
+  notes: string;
+  changes: string[];
+}
+
 export interface StoredCase {
   packet: CasePacket;
   brief: { notes: string[] };
   log: GenerationLogEntry[];
+  prompts: { system: string; context: string };
+  status: CaseStatus;
+  closing?: CaseClosing | null;
+}
+
+export interface CloseMysteryRequest {
+  outcome: "solved" | "failed";
+  leverId?: string | null;
+  notes: string;
+}
+
+/** The Society's persistent world (Vaesen.Framework.Mystery SocietyWorld). Host only. */
+export interface SocietyWorld {
+  societyId: string;
+  seededAt: string;
+  updatedAt: string;
+  characters: CharacterInstance[];
+  overlay: { mysteryId?: string | null; levelId?: string | null; text: string; at: string }[];
+  closedMysteryIds: string[];
+  seedLog: string[];
+}
+
+export type WorldTier = "canonical" | "core" | "background" | "locationResident";
+
+export interface CharacterInstance {
+  id: string;
+  definitionId?: string | null;
+  name: string;
+  tier: WorldTier;
+  status: "alive" | "dead" | "departed" | "absent";
+  importance: number;
+  home: string;
+  identity: { age: number; gender: string; occupation: string; rank: string; home: string; appearance: string };
+  drives: { id: string; text: string; strength: number }[];
+  voice: { register: string; mannerisms: string[]; sampleLines: string[] };
+  background: string;
+  latentHooks: { id: string; kind: string; text: string }[];
+  attitude: number;
+  attitudeReason: string;
+  relationships: { characterId: string; nature: string; sentiment: number }[];
+  memories: { mysteryId?: string | null; when: string; text: string }[];
+  knowledge: { mysteryId: string; factId: string; statement: string; source: string }[];
+  beliefs: string[];
+  mysteryIds: string[];
+}
+
+export const WorldApi = {
+  world: "/api/world",
+  seed: "/api/world/seed",
+};
+
+export const TierNames: Record<WorldTier, string> = {
+  canonical: "Known to every Society",
+  core: "The Society's own circle",
+  background: "Faces in the background",
+  locationResident: "Met on the road",
+};
+
+/** -3 to +3 as words. */
+export function attitudeName(attitude: number) {
+  return ["Hostile", "Resentful", "Wary", "Indifferent", "Friendly", "Loyal", "Devoted"][Math.max(-3, Math.min(3, attitude)) + 3];
 }
 
 export const MysteryApi = {
@@ -146,10 +231,12 @@ export const MysteryApi = {
   job: (jobId: string) => `/api/mysteries/jobs/${jobId}`,
   case: (mysteryId: string) => `/api/mysteries/${mysteryId}`,
   report: (mysteryId: string) => `/api/mysteries/${mysteryId}/report`,
+  close: (mysteryId: string) => `/api/mysteries/${mysteryId}/close`,
 };
 
 /** The steps generation reports progress for, in order. */
 export const GenerationSteps = [
+  { id: "world", label: "Seeding the Society's world (first time only)" },
   { id: "assignment", label: "Choosing the place and the creature" },
   { id: "conflict", label: "The conflict" },
   { id: "escalation", label: "What has happened" },

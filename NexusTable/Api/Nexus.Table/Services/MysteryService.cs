@@ -16,6 +16,10 @@ public sealed class MysteryJob
     [JsonProperty("jobId")]
     public string JobId { get; set; } = "";
 
+    /// <summary>"mystery" (writing a case) or "world" (seeding the Society's world).</summary>
+    [JsonProperty("kind")]
+    public string Kind { get; set; } = MysteryJobKinds.Mystery;
+
     /// <summary>"running", "succeeded" or "failed".</summary>
     [JsonProperty("status")]
     public string Status { get; set; } = MysteryJobStatus.Running;
@@ -37,6 +41,12 @@ public sealed class MysteryJob
 
     [JsonProperty("error")]
     public string? Error { get; set; }
+}
+
+public static class MysteryJobKinds
+{
+    public const string Mystery = "mystery";
+    public const string World = "world";
 }
 
 public static class MysteryJobStatus
@@ -64,6 +74,15 @@ public interface IMysteryService
     Task<ResultBase<StoredCase>> GetAsync(Account caller, string mysteryId, CancellationToken cancellationToken = default);
 
     Task<ResultBase<string>> GetReportAsync(Account caller, string mysteryId, CancellationToken cancellationToken = default);
+
+    /// <summary>Records how the mystery ended and writes it back to the Society's world.</summary>
+    Task<ResultBase<StoredCase>> CloseAsync(Account caller, string mysteryId, CloseMysteryRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>The Society's persistent world (host only: it holds the cast's secrets).</summary>
+    Task<ResultBase<SocietyWorld>> GetWorldAsync(Account caller, CancellationToken cancellationToken = default);
+
+    /// <summary>Seeds the Society's world now, in the background, instead of before the first mystery.</summary>
+    Task<ResultBase<MysteryJob>> StartSeedAsync(Account caller, CancellationToken cancellationToken = default);
 }
 
 public sealed class MysteryService(
@@ -71,12 +90,25 @@ public sealed class MysteryService(
     ICasePacketStore cases,
     ISocietyService society,
     ICharacterService characters,
+    IWorldService worlds,
+    IContentStore content,
+    Microsoft.Extensions.Options.IOptions<Vaesen.Framework.Mystery.MysteryOptions> options,
     IHostApplicationLifetime lifetime,
     ILogger<MysteryService> logger) : IMysteryService
 {
     private readonly ConcurrentDictionary<string, MysteryJob> _jobs = new();
 
-    public async Task<ResultBase<MysteryJob>> StartAsync(Account caller, CancellationToken cancellationToken = default)
+    public Task<ResultBase<MysteryJob>> StartAsync(Account caller, CancellationToken cancellationToken = default) =>
+        StartJobAsync(caller, MysteryJobKinds.Mystery, RunAsync, cancellationToken);
+
+    public Task<ResultBase<MysteryJob>> StartSeedAsync(Account caller, CancellationToken cancellationToken = default) =>
+        StartJobAsync(caller, MysteryJobKinds.World, RunSeedAsync, cancellationToken);
+
+    private async Task<ResultBase<MysteryJob>> StartJobAsync(
+        Account caller,
+        string kind,
+        Func<MysteryJob, SocietyHistory, IProgress<GenerationProgress>, CancellationToken, Task> run,
+        CancellationToken cancellationToken)
     {
         var ret = new ResultBase<MysteryJob>();
         if (caller.Role != AccountRole.Host)
@@ -86,7 +118,7 @@ public sealed class MysteryService(
 
         if (_jobs.Values.Any(j => j.Status == MysteryJobStatus.Running))
         {
-            return ret.Fail("A mystery is already being generated.", ErrorCodes.Conflict);
+            return ret.Fail("The engine is already at work; wait for it to finish.", ErrorCodes.Conflict);
         }
 
         var history = await HistoryAsync(cancellationToken).ConfigureAwait(false);
@@ -95,7 +127,7 @@ public sealed class MysteryService(
             return ret.Fail(history.ErrorMessage, history.ErrorCode);
         }
 
-        var job = new MysteryJob { JobId = Guid.NewGuid().ToString("N"), StartedAt = DateTime.UtcNow };
+        var job = new MysteryJob { JobId = Guid.NewGuid().ToString("N"), Kind = kind, StartedAt = DateTime.UtcNow };
         _jobs[job.JobId] = job;
         var progress = new Progress<GenerationProgress>(p =>
         {
@@ -107,7 +139,7 @@ public sealed class MysteryService(
         });
 
         // Generation takes minutes; it outlives the request and stops only with the app.
-        _ = Task.Run(() => RunAsync(job, history.Result!, progress, lifetime.ApplicationStopping), CancellationToken.None);
+        _ = Task.Run(() => run(job, history.Result!, progress, lifetime.ApplicationStopping), CancellationToken.None);
         return ret.Ok(job);
     }
 
@@ -178,6 +210,62 @@ public sealed class MysteryService(
             : ret.Fail(stored.ErrorMessage, stored.ErrorCode);
     }
 
+    public async Task<ResultBase<StoredCase>> CloseAsync(Account caller, string mysteryId, CloseMysteryRequest request, CancellationToken cancellationToken = default)
+    {
+        var ret = new ResultBase<StoredCase>();
+        if (caller.Role != AccountRole.Host)
+        {
+            return ret.Fail("Only the host can close a mystery.", ErrorCodes.Forbidden);
+        }
+
+        var societyId = await SocietyIdAsync(cancellationToken).ConfigureAwait(false);
+        return societyId is null
+            ? ret.Fail("The Society is not set up.", ErrorCodes.NotFound)
+            : await worlds.CloseMysteryAsync(societyId, mysteryId, request, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<ResultBase<SocietyWorld>> GetWorldAsync(Account caller, CancellationToken cancellationToken = default)
+    {
+        var ret = new ResultBase<SocietyWorld>();
+        if (caller.Role != AccountRole.Host)
+        {
+            return ret.Fail("Only the host can see the Society's world.", ErrorCodes.Forbidden);
+        }
+
+        var societyId = await SocietyIdAsync(cancellationToken).ConfigureAwait(false);
+        return societyId is null
+            ? ret.Fail("The Society is not set up.", ErrorCodes.NotFound)
+            : await worlds.GetAsync(societyId, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task RunSeedAsync(MysteryJob job, SocietyHistory history, IProgress<GenerationProgress> progress, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var pack = await content.GetPackAsync(options.Value.SettingId, cancellationToken).ConfigureAwait(false);
+            var result = pack.Success
+                ? await worlds.EnsureSeededAsync(history, pack.Result!.Usable(options.Value.UseDraftContent), progress, cancellationToken).ConfigureAwait(false)
+                : new ResultBase<SocietyWorld>().Fail(pack.ErrorMessage, pack.ErrorCode);
+            lock (job)
+            {
+                job.EndedAt = DateTime.UtcNow;
+                job.Status = result.Success ? MysteryJobStatus.Succeeded : MysteryJobStatus.Failed;
+                job.Error = result.Success ? null : result.ErrorMessage;
+                job.Title = result.Success ? $"{result.Result!.Characters.Count} people" : null;
+            }
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            logger.LogError(ex, "World seeding {JobId} crashed", job.JobId);
+            lock (job)
+            {
+                job.EndedAt = DateTime.UtcNow;
+                job.Status = MysteryJobStatus.Failed;
+                job.Error = ex is OperationCanceledException ? "The server stopped." : ex.Message;
+            }
+        }
+    }
+
     private async Task RunAsync(MysteryJob job, SocietyHistory history, IProgress<GenerationProgress> progress, CancellationToken cancellationToken)
     {
         try
@@ -229,7 +317,7 @@ public sealed class MysteryService(
             SocietyName = current.Result.Name,
             Investigators = (roster.Result ?? []).Select(c => $"{c.Name} ({c.Archetype}, {c.Age})").ToList(),
             Mysteries = (past.Result ?? [])
-                .Where(s => s.Passed)
+                .Where(s => s.Passed && s.Status != CaseStatuses.Rejected)
                 .OrderBy(s => s.GeneratedAt)
                 .Select(s => new PastMystery { MysteryId = s.MysteryId, LevelId = s.LevelId, VaesenIds = s.VaesenIds, HookChannelId = s.HookChannelId, HookGiverType = s.HookGiverType })
                 .ToList(),

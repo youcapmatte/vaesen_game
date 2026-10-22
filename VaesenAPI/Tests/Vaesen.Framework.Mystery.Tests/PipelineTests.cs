@@ -17,7 +17,7 @@ public sealed class PipelineTests
     private static readonly SocietyHistory History = new() { SocietyId = "society-test", SocietyName = "Test Society" };
 
     /// <summary>A seed whose assignment matches the sample case: the Näck at Forsby, a violated domain, identity as the puzzle.</summary>
-    private static int MatchingSeed(MysteryOptions options)
+    internal static int MatchingSeed(MysteryOptions options)
     {
         var pack = ContentTests.LoadPack();
         pack.Vaesen = [pack.FindVaesen("nack")!];
@@ -30,14 +30,22 @@ public sealed class PipelineTests
         });
     }
 
-    private static (MysteryGenerator generator, ScriptedModel model, FileCasePacketStore store) Build(MysteryOptions options, ScriptedModel model)
+    private static (MysteryGenerator generator, ScriptedModel model, FileCasePacketStore store) Build(MysteryOptions options, ScriptedModel model) =>
+        Build(options, model, out _);
+
+    public static (MysteryGenerator generator, ScriptedModel model, FileCasePacketStore store) Build(MysteryOptions options, ScriptedModel model, out WorldService worlds)
     {
         options.ContentPath = Path.Combine(AppContext.BaseDirectory, "Content");
         options.CasePacketPath = Directory.CreateTempSubdirectory("cases-").FullName;
+        options.WorldPath = Directory.CreateTempSubdirectory("worlds-").FullName;
         options.UseDraftContent = true;
+        options.CoreCastSize = 2;
+        options.BackgroundCastSize = 1;
         var wrapped = Microsoft.Extensions.Options.Options.Create(options);
         var store = new FileCasePacketStore(wrapped);
-        var generator = new MysteryGenerator(new FileContentStore(wrapped), store, model, new CaseValidator(), wrapped, NullLogger<MysteryGenerator>.Instance);
+        var content = new FileContentStore(wrapped);
+        worlds = new WorldService(new FileWorldStore(wrapped), store, content, model, wrapped, NullLogger<WorldService>.Instance);
+        var generator = new MysteryGenerator(content, store, model, new CaseValidator(), worlds, wrapped, NullLogger<MysteryGenerator>.Instance);
         return (generator, model, store);
     }
 
@@ -61,7 +69,7 @@ public sealed class PipelineTests
         Assert.Equal(result.Result.Case.Brief.HookChannelId, packet.Hook.Channel);
 
         // Order is fixed, and the critic's first objection sent the clues back for one more round.
-        Assert.Equal(["conflict", "escalation", "humans", "clues", "critic", "clues", "critic"], model.Calls);
+        Assert.Equal(["world", "conflict", "escalation", "humans", "clues", "critic", "clues", "critic"], model.Calls);
         Assert.Contains(result.Result.Case.Log, e => e.Step == "critic" && !e.Passed);
 
         var stored = await store.GetAsync("society-test", packet.MysteryId);
@@ -85,7 +93,7 @@ public sealed class PipelineTests
         });
 
         Assert.True(result.Success, result.ErrorMessage);
-        Assert.Equal(["conflict", "escalation", "humans", "clues", "clues"], model.Calls);
+        Assert.Equal(["world", "conflict", "escalation", "humans", "clues", "clues"], model.Calls);
         Assert.Contains("redundancy", model.Instructions[^1], StringComparison.Ordinal);
         var failed = result.Result!.Case.Log.Single(e => e.Step == "clues" && !e.Passed);
         Assert.Contains(failed.Issues, i => i.Code == IssueCodes.Redundancy);
@@ -113,7 +121,7 @@ public sealed class PipelineTests
     }
 
     /// <summary>Answers each step from the sample case; can break the clue step to exercise retries.</summary>
-    private sealed class ScriptedModel(CasePacket sample, bool criticFailsFirst) : IMysteryModel
+    public sealed class ScriptedModel(CasePacket sample, bool criticFailsFirst) : IMysteryModel
     {
         private int _criticCalls;
         private int _clueCalls;
@@ -121,6 +129,11 @@ public sealed class PipelineTests
         public List<string> Calls { get; } = [];
 
         public List<string> Instructions { get; } = [];
+
+        public List<string> Contexts { get; } = [];
+
+        /// <summary>Answers the seeding step with this instead of <see cref="Seed"/>, once.</summary>
+        public WorldSeedOutput? FirstSeed { get; set; }
 
         public bool BreakFirstClues { get; set; }
 
@@ -132,11 +145,16 @@ public sealed class PipelineTests
         {
             Calls.Add(request.Step);
             Instructions.Add(request.Instruction);
+            Contexts.Add(request.Context);
             Assert.False(string.IsNullOrWhiteSpace(request.System));
-            Assert.Contains("# The creature", request.Context, StringComparison.Ordinal);
+            if (request.Step != WorldSeeder.StepName)
+            {
+                Assert.Contains("# The creature", request.Context, StringComparison.Ordinal);
+            }
 
             object value = request.Step switch
             {
+                WorldSeeder.StepName => TakeSeed(),
                 "conflict" => Conflict(),
                 "escalation" => new EscalationOutput
                 {
@@ -157,6 +175,39 @@ public sealed class PipelineTests
                 Value = JsonConvert.DeserializeObject<T>(json)!, RawJson = json, Model = "scripted",
             }));
         }
+
+        private WorldSeedOutput TakeSeed()
+        {
+            var seed = FirstSeed ?? Seed();
+            FirstSeed = null;
+            return seed;
+        }
+
+        /// <summary>A small world: two core people tied to a canonical one, and one background face.</summary>
+        public static WorldSeedOutput Seed() => new()
+        {
+            Core =
+            [
+                SeedPerson("npc-sara-lindqvist", "Sara Lindqvist", 2, [new WorldRelationship { CharacterId = "constable-hagg", Nature = "his niece", Sentiment = 1 }]),
+                SeedPerson("npc-otto-berg", "Otto Berg", -2, [new WorldRelationship { CharacterId = "npc-sara-lindqvist", Nature = "rival bookseller", Sentiment = -2 }]),
+            ],
+            Background = [SeedPerson("npc-gustav-ek", "Gustav Ek", 0, [])],
+        };
+
+        private static SeedCharacter SeedPerson(string id, string name, int attitude, List<WorldRelationship> ties) => new()
+        {
+            Id = id,
+            Name = name,
+            Home = "Uppsala",
+            Importance = 2,
+            Identity = new CharacterIdentity { Age = 40, Occupation = "bookseller", Home = "Uppsala" },
+            Drives = [new Drive { Id = id + "-d1", Text = "to keep the shop", Strength = 2 }],
+            Voice = new CharacterVoice { Register = "dry" },
+            LatentHooks = [new LatentHook { Id = id + "-h1", Kind = LatentHookKinds.Debt, Text = "owes rent" }],
+            Attitude = attitude,
+            AttitudeReason = "first impressions",
+            Relationships = ties,
+        };
 
         private ConflictOutput Conflict() => new()
         {

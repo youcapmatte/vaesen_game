@@ -10,6 +10,8 @@ using Vaesen.Framework.Core.Api;
 using Vaesen.Framework.Core.Models;
 using Vaesen.Framework.Core.Security;
 using Vaesen.Framework.Mystery.Data;
+using Vaesen.Framework.Mystery.Models;
+using Vaesen.Framework.Mystery.Services;
 
 namespace Nexus.Table.Api;
 
@@ -191,10 +193,30 @@ public sealed class MysteryController(IAccountService accounts, IMysteryService 
     public Task<ActionResult<ResultBase<StoredCase>>> Get([FromRoute] string mysteryId, CancellationToken cancellationToken) =>
         AsCallerAsync(caller => mysteries.GetAsync(caller, mysteryId, cancellationToken), cancellationToken);
 
+    /// <summary>Records how the mystery ended and writes it back to the Society's world: attitudes, fates, memories, new people.</summary>
+    [HttpPost("{mysteryId}/close")]
+    public Task<ActionResult<ResultBase<StoredCase>>> Close([FromRoute] string mysteryId, [FromBody] CloseMysteryRequest? request, CancellationToken cancellationToken) =>
+        AsCallerAsync(caller => mysteries.CloseAsync(caller, mysteryId, request ?? new CloseMysteryRequest(), cancellationToken), cancellationToken);
+
     /// <summary>The case as a readable Markdown report (the CaseLab report).</summary>
     [HttpGet("{mysteryId}/report")]
     public Task<ActionResult<ResultBase<string>>> Report([FromRoute] string mysteryId, CancellationToken cancellationToken) =>
         AsCallerAsync(caller => mysteries.GetReportAsync(caller, mysteryId, cancellationToken), cancellationToken);
+}
+
+/// <summary>Host only: the Society's persistent world, seeded before its first mystery and written back to as mysteries close.</summary>
+[Route("api/world")]
+public sealed class WorldController(IAccountService accounts, IMysteryService mysteries) : NexusControllerBase(accounts)
+{
+    /// <summary>The world: every persistent character with attitude, memories and knowledge, and what has changed.</summary>
+    [HttpGet]
+    public Task<ActionResult<ResultBase<SocietyWorld>>> Get(CancellationToken cancellationToken) =>
+        AsCallerAsync(caller => mysteries.GetWorldAsync(caller, cancellationToken), cancellationToken);
+
+    /// <summary>Seeds the world now (a background job, polled like a generation); otherwise the first mystery does it.</summary>
+    [HttpPost("seed")]
+    public Task<ActionResult<ResultBase<MysteryJob>>> Seed(CancellationToken cancellationToken) =>
+        AsCallerAsync(caller => mysteries.StartSeedAsync(caller, cancellationToken), cancellationToken);
 }
 
 /// <summary>

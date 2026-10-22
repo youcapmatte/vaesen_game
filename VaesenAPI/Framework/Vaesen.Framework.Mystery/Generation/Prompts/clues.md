@@ -24,7 +24,7 @@ Beats, climax and resolution
 - Three to six beats at rising tension thresholds (0-1), each with what happens, who acts (actorId), where and when it requires, and the facts it puts into the world. Use them for the off-screen actions of the desperate and the creature's escalation.
 - The climax comes at a threshold of about 0.8; {{climaxRule}}
 - Tension starts around 0.1 and rises with each fact found (factWeights); make sure the facts players can reach add up past the climax threshold.
-- Two to four resolution levers with different consequences for the world and the cast. {{leverRule}} Each lever lists the facts the players need to see it (requiresFactIds).
+- Two to four resolution levers with different consequences for the world and the cast. {{leverRule}} Each lever lists the facts the players need to see it (requiresFactIds). Its consequences persist in the Society's world: what changes in the world, how each affected person's attitude toward the Society moves (attitudes, with a delta from -3 to +3 and why), and who dies or leaves the district (fates: dead or departed).
 
 Hook and scenes
 - The hook arrives by {{hookChannel}} from the hook-giver. It carries just enough convergence to justify the journey: it reports opening events (openingEventIds) and states facts (assertedFactIds), never the cause. Use a detail that does not fit, a strained official explanation, the teller's own unease, stakes and urgency. Everything it states is a fact like any other.

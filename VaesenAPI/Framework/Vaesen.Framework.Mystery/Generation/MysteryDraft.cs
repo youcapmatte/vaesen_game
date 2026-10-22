@@ -23,6 +23,9 @@ public sealed class MysteryDraft
     /// <summary>The conflict archetypes on offer, best first.</summary>
     public required List<ConflictArchetype> Conflicts { get; init; }
 
+    /// <summary>The Society's world (persistent cast and overlay); null when worlds are off.</summary>
+    public SocietyWorld? World { get; init; }
+
     public CasePacket Packet { get; set; } = new();
 
     public List<GenerationLogEntry> Log { get; } = [];
@@ -37,6 +40,11 @@ public sealed class MysteryDraft
         Level = Level,
         Vaesen = [Vaesen],
         Conflict = Pack.FindConflict(Packet.Brief.ConflictArchetypeId),
+        SocietyCharacterIds = World?.Characters.Select(c => c.Id).ToHashSet() ?? [],
+        UnavailableCharacterIds = World?.Characters
+            .Where(c => c.Status is CharacterStatuses.Dead or CharacterStatuses.Departed)
+            .Select(c => c.Id)
+            .ToHashSet() ?? [],
     };
 
     /// <summary>A deep copy of the packet, for a step to work on without touching the draft until it passes.</summary>
@@ -120,6 +128,10 @@ public sealed class GenerationLogEntry
 
     [JsonProperty("issues")]
     public List<CoherenceIssue> Issues { get; set; } = [];
+
+    /// <summary>The step's instruction as sent (the system prompt and case context are kept once, in the stored case).</summary>
+    [JsonProperty("instruction")]
+    public string? Instruction { get; set; }
 
     /// <summary>The model's raw answer, kept so a failing step can be inspected.</summary>
     [JsonProperty("output")]

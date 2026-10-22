@@ -669,6 +669,23 @@ public sealed class LeverConsequences
 
     [JsonProperty("attitudes")]
     public List<AttitudeChange> Attitudes { get; set; } = [];
+
+    /// <summary>Who dies or leaves if the Society ends it this way; written back to the world.</summary>
+    [JsonProperty("fates")]
+    public List<CharacterFate> Fates { get; set; } = [];
+}
+
+public sealed class CharacterFate
+{
+    [JsonProperty("characterId")]
+    public string CharacterId { get; set; } = "";
+
+    /// <summary>"dead" or "departed" (<see cref="CharacterStatuses"/>).</summary>
+    [JsonProperty("status")]
+    public string Status { get; set; } = CharacterStatuses.Departed;
+
+    [JsonProperty("reason")]
+    public string Reason { get; set; } = "";
 }
 
 public sealed class AttitudeChange
@@ -678,6 +695,10 @@ public sealed class AttitudeChange
 
     [JsonProperty("change")]
     public string Change { get; set; } = "";
+
+    /// <summary>How their attitude toward the Society moves, -3 to +3.</summary>
+    [JsonProperty("delta")]
+    public int Delta { get; set; }
 }
 
 public sealed class SeasonThreadLink

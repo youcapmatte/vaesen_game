@@ -68,19 +68,30 @@ public static class PromptBuilder
         var brief = draft.Brief;
         var hook = draft.Pack.Setting.FindHookChannel(brief.HookChannelId);
         var origin = draft.Vaesen.OriginSet.Find(o => o.Id == brief.OriginId);
-        var roster = draft.Pack.Characters.Where(c => brief.PersistentCastIds.Contains(c.Id)).Select(c => new
-        {
-            id = c.Id,
-            name = c.Name,
-            c.Identity.Occupation,
-            c.Identity.Home,
-            c.Identity.Age,
-            attitudeToSociety = c.StartingAttitude,
-            c.AttitudeReason,
-            voice = c.Voice.Register,
-            drives = c.Drives.Select(d => d.Text),
-            latentHooks = c.LatentHooks.Select(h => h.Text),
-        });
+        var roster = (draft.World?.Characters ?? draft.Pack.Characters.Select(WorldSeeder.Instantiate).ToList())
+            .Where(c => brief.PersistentCastIds.Contains(c.Id))
+            .OrderBy(c => brief.PersistentCastIds.IndexOf(c.Id))
+            .Select(c => new
+            {
+                id = c.Id,
+                name = c.Name,
+                tier = c.Tier,
+                status = c.Status,
+                c.Identity.Occupation,
+                c.Home,
+                c.Identity.Age,
+                attitudeToSociety = c.Attitude,
+                c.AttitudeReason,
+                voice = c.Voice.Register,
+                drives = c.Drives.Select(d => d.Text),
+                latentHooks = c.LatentHooks.Select(h => h.Text),
+                networkLinks = c.NetworkLinks.Select(l => $"{l.TargetId} ({l.Place}): {l.Influence}"),
+                ties = c.Relationships.Select(r => $"{r.CharacterId}: {r.Nature} ({r.Sentiment:+0;-0;0})"),
+                remembers = c.Memories.TakeLast(3).Select(m => $"{m.When}: {m.Text}"),
+                knowsFromBefore = c.Knowledge.TakeLast(5).Select(k => k.Statement),
+            });
+        var overlay = draft.World?.Overlay ?? [];
+        var gone = draft.World?.Characters.Where(c => c.Status is CharacterStatuses.Dead or CharacterStatuses.Departed).ToList() ?? [];
 
         var text = new StringBuilder();
         text.AppendLine("# The assignment");
@@ -108,8 +119,25 @@ public static class PromptBuilder
         text.AppendLine("# Conflict archetypes on offer");
         text.AppendLine(Json(draft.Conflicts));
         text.AppendLine();
-        text.AppendLine("# Persistent characters who may be drawn in");
+        text.AppendLine("# Persistent characters who may be drawn in (the Society's world, most important first)");
         text.AppendLine(Json(roster));
+        if (gone.Count > 0)
+        {
+            text.AppendLine();
+            text.AppendLine("# Dead or gone (must not appear; may be remembered)");
+            text.AppendLine(string.Join("; ", gone.Select(c => $"{c.Name} ({c.Id}): {c.Status}")));
+        }
+
+        if (overlay.Count > 0)
+        {
+            text.AppendLine();
+            text.AppendLine("# What the Society's past mysteries have changed in the world (true for this Society only)");
+            foreach (var entry in overlay)
+            {
+                text.AppendLine($"- {(entry.LevelId is null ? "" : entry.LevelId + ": ")}{entry.Text}");
+            }
+        }
+
         return text.ToString();
     }
 
@@ -185,10 +213,13 @@ public static class PromptBuilder
     /// <summary>The case so far, and on a retry the issues to fix and the previous answer.</summary>
     public static string WithCaseAndFeedback(string instruction, CasePacket soFar, IReadOnlyList<CoherenceIssue> feedback, string? previousJson)
     {
+        return WithFeedback($"# The case so far\n{Json(soFar)}\n\n{instruction}", feedback, previousJson);
+    }
+
+    /// <summary>The instruction, and on a retry the issues to fix and the previous answer.</summary>
+    public static string WithFeedback(string instruction, IReadOnlyList<CoherenceIssue> feedback, string? previousJson)
+    {
         var text = new StringBuilder();
-        text.AppendLine("# The case so far");
-        text.AppendLine(Json(soFar));
-        text.AppendLine();
         text.AppendLine(instruction);
         if (feedback.Count > 0)
         {

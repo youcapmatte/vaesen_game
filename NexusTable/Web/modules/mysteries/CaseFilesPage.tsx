@@ -4,7 +4,7 @@ import { Badge, Box, Button, Container, Group, Loader, SimpleGrid, Stack, Text, 
 import { IconAlertTriangle, IconCheck, IconFeather, IconLock, IconScript } from "@tabler/icons-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { GenerationSteps, levelName, MonthNames, MysteryApi, type CaseSummary, type MysteryJob } from "@/common/api/mystery";
+import { GenerationSteps, levelName, MonthNames, MysteryApi, type CaseStatus, type CaseSummary, type MysteryJob } from "@/common/api/mystery";
 import { Http, useApi, useApiData } from "@/common/client/core/Api";
 import { useMe } from "@/common/client/components/hooks";
 import { Corners, SightMark } from "@/common/client/components/Ornament";
@@ -85,9 +85,7 @@ function CaseCard({ summary }: { summary: CaseSummary }) {
       <Stack gap={6} h="100%">
         <Group justify="space-between" wrap="nowrap" align="flex-start">
           <IconScript size={22} color="var(--nx-blood)" stroke={1.5} />
-          {summary.passed
-            ? <Badge size="xs" color="moss">Passed the checks</Badge>
-            : <Badge size="xs" variant="outline" color="blood">Failed the checks</Badge>}
+          <StatusBadge status={summary.passed ? summary.status : "rejected"} />
         </Group>
         <Title order={4}>{summary.title || "Untitled"}</Title>
         <Text fz="sm" c="var(--nx-ink-soft)">
@@ -99,6 +97,18 @@ function CaseCard({ summary }: { summary: CaseSummary }) {
       </Stack>
     </Box>
   );
+}
+
+const StatusLabels: Record<CaseStatus, { label: string; color: string; variant: "filled" | "outline" }> = {
+  generated: { label: "Ready to play", color: "moss", variant: "filled" },
+  solved: { label: "Solved", color: "gold.8", variant: "filled" },
+  failed: { label: "Unresolved", color: "blood", variant: "filled" },
+  rejected: { label: "Failed the checks", color: "blood", variant: "outline" },
+};
+
+export function StatusBadge({ status }: { status: CaseStatus }) {
+  const { label, color, variant } = StatusLabels[status] ?? StatusLabels.generated;
+  return <Badge size="xs" color={color} variant={variant}>{label}</Badge>;
 }
 
 /** Starts a generation and follows it: the engine's steps, the latest news from it, and how it ended. */
@@ -159,18 +169,22 @@ function GeneratePanel({ onWritten }: { onWritten: () => void }) {
 function Progress({ job }: { job: MysteryJob }) {
   const elapsed = useElapsed(job.startedAt);
   const reached = (stepId: string) => job.progress.some((p) => p.startsWith(`${stepId}:`));
-  const current = [...GenerationSteps].reverse().find((s) => reached(s.id))?.id;
+  // Seeding the world shows only the first time; a seeding job shows nothing else.
+  const steps = job.kind === "world"
+    ? GenerationSteps.filter((s) => s.id === "world")
+    : GenerationSteps.filter((s) => s.id !== "world" || reached("world"));
+  const current = [...steps].reverse().find((s) => reached(s.id))?.id;
   const latest = job.progress.at(-1)?.replace(/^[a-z]+:\s*/, "");
   const attempts = job.progress.filter((p) => p.startsWith("assignment:")).length;
 
   return (
     <Stack gap="md">
       <Group justify="space-between">
-        <Title order={3}>Writing a mystery…</Title>
+        <Title order={3}>{job.kind === "world" ? "Seeding the Society's world…" : "Writing a mystery…"}</Title>
         <Text fz="sm" c="var(--nx-sepia)" className="nx-flourish">{elapsed}</Text>
       </Group>
       <Stack gap={8}>
-        {GenerationSteps.map((step) => {
+        {steps.map((step) => {
           const isCurrent = step.id === current;
           const done = reached(step.id) && !isCurrent;
           return (
@@ -190,6 +204,15 @@ function Progress({ job }: { job: MysteryJob }) {
 }
 
 function LastJob({ job }: { job: MysteryJob }) {
+  if (job.kind === "world" && job.status === "succeeded") {
+    return (
+      <Group gap="xs" mt="sm" justify="center">
+        <IconCheck size={16} color="var(--nx-gold)" />
+        <Text fz="sm">The Society's world is seeded: {job.title}.</Text>
+        <Button component={Link} href="/world" size="compact-sm" variant="light" color="gold">Meet them</Button>
+      </Group>
+    );
+  }
   if (job.status === "succeeded" && job.mysteryId) {
     return (
       <Group gap="xs" mt="sm" justify="center">

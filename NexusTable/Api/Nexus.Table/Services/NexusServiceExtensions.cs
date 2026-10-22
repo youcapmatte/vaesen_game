@@ -57,13 +57,18 @@ public static class NexusServiceExtensions
 
         // The mystery engine (Vaesen.Framework.Mystery), and the host's use of it at the table.
         services.AddMysteryServices(configuration);
-        // Case files sit with the other local data unless a folder is configured.
+        // Case files and the Society's world sit with the other local data unless folders are configured.
         var localData = configuration.GetSection(LocalDataOptions.SectionName).Get<LocalDataOptions>() ?? new LocalDataOptions();
         services.PostConfigure<Vaesen.Framework.Mystery.MysteryOptions>(o =>
         {
             if (string.IsNullOrWhiteSpace(o.CasePacketPath))
             {
                 o.CasePacketPath = Path.GetFullPath(Path.Combine(localData.Directory, "cases"));
+            }
+
+            if (string.IsNullOrWhiteSpace(o.WorldPath))
+            {
+                o.WorldPath = Path.GetFullPath(Path.Combine(localData.Directory, "worlds"));
             }
         });
         services.AddSingleton<IMysteryService, MysteryService>();

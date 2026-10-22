@@ -12,8 +12,9 @@ Generation/    Assignment (deterministic), the typed steps (conflict -> escalati
                the step output types, PromptBuilder and the prompt templates (Prompts/*.md)
 Validation/    FactGraph and CaseValidator: the structural checks in C#
 Ai/            IMysteryModel and the Anthropic implementation (streaming, structured outputs, caching, fallbacks)
-Data/          IContentStore, ICasePacketStore (files now; DynamoDB/S3 later)
-Services/      MysteryGenerator, ContentGenerator, CaseReport (Markdown), MysteryOptions, the tool host
+Data/          IContentStore, ICasePacketStore, IWorldStore (files now; DynamoDB/S3 later)
+Services/      MysteryGenerator, WorldService (seeding, closing, write-back), ContentGenerator, CaseReport (Markdown),
+               MysteryOptions, the tool host
 ```
 
 ## How a case is made
@@ -34,6 +35,46 @@ Services/      MysteryGenerator, ContentGenerator, CaseReport (Markdown), Myster
    - **clues**: facts, channels, minds, decoys, beats, the climax, resolution levers and the hook.
 3. **Critic**: the judgement checks that code cannot make. Its errors send the clue step round again.
 4. **Retries**: a failing step is re-rolled with its issues fed back (`MaxStepRetries`). If it still fails, the whole case is re-rolled with a new seed (`MaxCaseRetries`). If that fails too, generation fails visibly and hands back the last attempt with the full log. Every model call and validator run is logged with its tokens, cache hits and latency.
+
+## The Society's world (spec 9)
+
+Each Society has its own world: one `SocietyWorld` document holding its persistent cast and what it has changed.
+
+- **Seeding.** Before a Society's first mystery, `WorldService.EnsureSeededAsync` seeds the world (`Generation/WorldSeeding.cs`, prompt `world.md`):
+  - every canonical character gets a copy for this Society, with its starting attitude;
+  - the model writes a core cast of `CoreCastSize` people, important from the start, with drives, voices, ties and an attitude toward the Society;
+  - it also writes a background cast of `BackgroundCastSize` named faces, each with latent hooks;
+  - `WorldValidator` checks the result (every canonical character present, unique ids, values in range, ties that resolve), and a failing seed is re-rolled with its issues fed back.
+
+  The host can also seed from the World page.
+- **Reading.** Every case is offered the living persistent characters, canonical and core first, then by importance (`PersistentCastOffered`). For each one it gets their attitude and reason, drives, latent hooks, network, ties, last memories and what they know from before. It's also told who is dead or gone, and what the Society's past mysteries changed in the world. The people step may then:
+  - bring a persistent character in (`instanceRef: persistent`);
+  - raise a background character into the story (`promoted`);
+  - or create someone new.
+
+  The validator rejects a new character who takes a world id, and anyone dead or departed.
+- **Closing.** When the host closes a mystery (outcome solved or failed, plus the lever the Society pulled), `WorldWriteBack` writes it back:
+  - every cast member gets a memory of the case, what they knew, and what they thought;
+  - the case's own people join the world: residents stay with their place, the hook-giver and the hidden hand become core, the rest background;
+  - a promoted character moves up to core;
+  - the hook-giver's attitude moves +1 if the Society solved it, -1 if not;
+  - the chosen lever applies its attitude changes (`delta`), its fates (dead or departed) and its world consequences (the overlay).
+
+  The case is stored as solved or failed, together with a list of everything the write-back changed.
+
+Not built yet: the season thread (spec 10), influence at a distance through `InstitutionState`, and knowledge spreading along ties between mysteries.
+
+## Reviewing a case
+
+A stored case is one JSON file that holds everything about it. Download it from the case's Review tab ("Download everything for review"), or copy it from `{CasePacketPath}/{societyId}/{mysteryId}.json`. It contains:
+- the packet;
+- the assignment's choices;
+- the system prompt and case context it was generated with;
+- each step's instruction and the model's raw answer;
+- every validator issue;
+- the closing.
+
+That's enough for Claude to review a case and propose changes to the prompts, content or checks. The world downloads the same way from the World page.
 
 ## The structural checks (`Validation/CaseValidator.cs`)
 
@@ -113,6 +154,10 @@ dotnet run --project VaesenAPI/Tools/Vaesen.Mystery.CaseLab -- validate cases/ca
 | `RedHerringDensity` | `low` | `low`, `medium` or `high` |
 | `UseDraftContent` | `false` | `true` in Nexus Table Development and in CaseLab (unless `--approved-only`) |
 | `DefaultMonth` | 10 | the in-world month when the Society has no calendar yet |
+| `SeedWorld` | `true` | seed the Society's world before its first mystery |
+| `CoreCastSize`, `BackgroundCastSize` | 10, 14 | size of a new world's own cast, besides the canonical characters |
+| `PersistentCastOffered` | 24 | how many persistent characters a case is offered |
+| `WorldPath` | `.data/worlds` | where worlds are stored (Nexus Table: next to its other local data) |
 | `ContentPath`, `CasePacketPath` | the library's Content folder; `.data/cases` | |
 
 ## Not verified

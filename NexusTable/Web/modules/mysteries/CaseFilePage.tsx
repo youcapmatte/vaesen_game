@@ -1,7 +1,8 @@
 "use client";
 
-import { Accordion, Badge, Box, Button, Container, Group, Progress, SimpleGrid, Stack, Table, Tabs, Text, Title } from "@mantine/core";
-import { IconAlertTriangle, IconArrowLeft, IconDownload, IconEye } from "@tabler/icons-react";
+import { Accordion, Badge, Box, Button, Container, Group, Modal, Progress, SegmentedControl, Select, SimpleGrid, Stack, Table, Tabs, Text, Textarea, Title } from "@mantine/core";
+import { useDisclosure } from "@mantine/hooks";
+import { IconAlertTriangle, IconArrowLeft, IconBook2, IconDownload, IconEye, IconFileCode } from "@tabler/icons-react";
 import Link from "next/link";
 import { useState } from "react";
 import {
@@ -13,6 +14,7 @@ import {
   type CaseChannel,
   type CaseFact,
   type CasePacket,
+  type CloseMysteryRequest,
   type CastMember,
   type CoherenceIssue,
   type StoredCase,
@@ -21,7 +23,7 @@ import { Http, useApi, useApiData } from "@/common/client/core/Api";
 import { useMe } from "@/common/client/components/hooks";
 import { Corners } from "@/common/client/components/Ornament";
 import { ErrorNote, FullPageLoader, PageFrame } from "@/common/client/components/PageFrame";
-import { HostOnly } from "./CaseFilesPage";
+import { HostOnly, StatusBadge } from "./CaseFilesPage";
 
 /** One case file: the hidden GM file of a mystery, behind a spoiler warning. Host only. */
 export function CaseFilePage({ mysteryId }: { mysteryId: string }) {
@@ -35,7 +37,7 @@ export function CaseFilePage({ mysteryId }: { mysteryId: string }) {
 function CaseFileContent({ mysteryId }: { mysteryId: string }) {
   const { data: me } = useMe();
   const isHost = me?.role === "Host";
-  const { data: stored, error } = useApiData<StoredCase>(isHost ? MysteryApi.case(mysteryId) : null);
+  const { data: stored, error, mutate } = useApiData<StoredCase>(isHost ? MysteryApi.case(mysteryId) : null);
   const [revealed, setRevealed] = useState(false);
 
   if (!me) {
@@ -52,7 +54,9 @@ function CaseFileContent({ mysteryId }: { mysteryId: string }) {
       </Group>
       {error && <ErrorNote message={error.message} />}
       {!stored && !error && <FullPageLoader label="Breaking the seal…" />}
-      {stored && (revealed ? <CaseFile stored={stored} /> : <SpoilerGate packet={stored.packet} onReveal={() => setRevealed(true)} />)}
+      {stored && (revealed
+        ? <CaseFile stored={stored} onChanged={(next) => void mutate(next, { revalidate: false })} />
+        : <SpoilerGate packet={stored.packet} onReveal={() => setRevealed(true)} />)}
     </Container>
   );
 }
@@ -78,8 +82,10 @@ function SpoilerGate({ packet, onReveal }: { packet: CasePacket; onReveal: () =>
   );
 }
 
-function CaseFile({ stored }: { stored: StoredCase }) {
+function CaseFile({ stored, onChanged }: { stored: StoredCase; onChanged: (next: StoredCase) => void }) {
   const p = stored.packet;
+  const [closing, { open: openClose, close: closeClose }] = useDisclosure(false);
+  const canClose = p.validation.passed && !stored.closing;
   const errors = p.validation.issues.filter((i) => i.severity === "error").length;
   const warnings = p.validation.issues.length - errors;
 
@@ -96,8 +102,17 @@ function CaseFile({ stored }: { stored: StoredCase }) {
           {p.validation.passed
             ? <Badge color="moss" variant="light">Passed · {warnings} warning{warnings === 1 ? "" : "s"}</Badge>
             : <Badge color="blood" variant="light">Failed · {errors} error{errors === 1 ? "" : "s"}</Badge>}
+          <StatusBadge status={p.validation.passed ? stored.status : "rejected"} />
         </Group>
+        {canClose && (
+          <Button mt="sm" size="xs" variant="outline" color="gold" leftSection={<IconBook2 size={14} />} onClick={openClose}>
+            The Society has finished this mystery
+          </Button>
+        )}
       </Stack>
+
+      {stored.closing && <ClosingSummary stored={stored} />}
+      <CloseModal opened={closing} onClose={closeClose} stored={stored} onClosed={onChanged} />
 
       <Tabs defaultValue="truth" color="gold" variant="outline">
         <Tabs.List grow>
@@ -282,6 +297,7 @@ function PeopleTab({ p }: { p: CasePacket }) {
 }
 
 function EndingsTab({ p }: { p: CasePacket }) {
+  const name = (id: string) => p.cast.find((c) => c.characterId === id)?.name ?? id;
   return (
     <Stack gap="lg">
       <Sheet title="Beats">
@@ -309,6 +325,14 @@ function EndingsTab({ p }: { p: CasePacket }) {
               <Group gap={6}><Badge size="xs" color={r.solveDepth === "deep" ? "moss" : "blood"}>{r.solveDepth} solve</Badge><Text fz="xs" c="var(--nx-ink-soft)">needs {r.requiresFactIds.join(", ") || "nothing"}</Text></Group>
               <Text fz="sm" mt={2}>{r.description}</Text>
               {r.consequences.world.length > 0 && <Text fz="xs" c="var(--nx-ink-soft)" fs="italic">{r.consequences.world.join(" ")}</Text>}
+              {r.consequences.attitudes?.map((a) => (
+                <Text key={a.characterId} fz="xs" c="var(--nx-ink-soft)">
+                  {name(a.characterId)}: {a.delta > 0 ? `+${a.delta}` : a.delta} · {a.change}
+                </Text>
+              ))}
+              {r.consequences.fates?.map((f) => (
+                <Text key={f.characterId} fz="xs" c="var(--nx-blood)">{name(f.characterId)} {f.status === "dead" ? "dies" : "leaves"}: {f.reason}</Text>
+              ))}
             </Box>
           ))}
         </Stack>
@@ -336,6 +360,17 @@ function ReviewTab({ stored }: { stored: StoredCase }) {
   const issues = [...p.validation.issues].sort((a, b) => Number(a.severity !== "error") - Number(b.severity !== "error"));
   const totals = stored.log.reduce((t, e) => ({ input: t.input + e.inputTokens, cached: t.cached + e.cacheReadTokens, output: t.output + e.outputTokens, ms: t.ms + e.latencyMs }), { input: 0, cached: 0, output: 0, ms: 0 });
 
+  // Everything there is about the case, for Claude or anyone else reviewing the engine: packet, prompts, every step's
+  // instruction and raw answer, validator runs and the closing.
+  const downloadAll = () => {
+    const url = URL.createObjectURL(new Blob([JSON.stringify(stored, null, 2)], { type: "application/json" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${p.mysteryId}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const download = async () => {
     const result = await call<string>(Http.GET, MysteryApi.report(p.mysteryId));
     if (!result.success || !result.result) {
@@ -359,6 +394,7 @@ function ReviewTab({ stored }: { stored: StoredCase }) {
         </Stack>
         <Group mt="md">
           <Button variant="outline" color="umber" size="xs" leftSection={<IconDownload size={14} />} onClick={download}>Download the report (Markdown)</Button>
+          <Button variant="outline" color="umber" size="xs" leftSection={<IconFileCode size={14} />} onClick={downloadAll}>Download everything for review (JSON)</Button>
           <ErrorNote message={downloadError} />
         </Group>
       </Sheet>
@@ -401,5 +437,86 @@ function IssueLine({ issue }: { issue: CoherenceIssue }) {
       <Text fz="sm">{issue.explanation}</Text>
       {issue.suggestedFix && <Text fz="xs" fs="italic" c="var(--nx-ink-soft)">{issue.suggestedFix}</Text>}
     </Box>
+  );
+}
+
+/** How the mystery ended and what that did to the Society's world. */
+function ClosingSummary({ stored }: { stored: StoredCase }) {
+  const c = stored.closing!;
+  const lever = stored.packet.resolutionLevers.find((l) => l.id === c.leverId);
+  return (
+    <Box className="nx-panel" p="lg">
+      <Corners />
+      <Stack gap={6}>
+        <Text className="nx-kicker">
+          {c.outcome === "solved" ? "Solved" : "Unresolved"} · {new Date(c.closedAt).toLocaleDateString(undefined, { dateStyle: "medium" })}
+          {c.solveDepth ? ` · ${c.solveDepth} solve` : ""}
+        </Text>
+        {lever && <Text fz="sm">{lever.description}</Text>}
+        {c.notes && <Text fz="sm" fs="italic" c="var(--nx-parchment-2)">{c.notes}</Text>}
+        {c.changes.length > 0 && (
+          <Box mt={4}>
+            <Text fz="xs" c="var(--nx-gold)">What the world remembers</Text>
+            {c.changes.map((line, i) => <Text key={i} fz="sm" c="var(--nx-parchment-2)">· {line}</Text>)}
+          </Box>
+        )}
+      </Stack>
+    </Box>
+  );
+}
+
+/** The host records how the Society ended the mystery; the engine writes it back to the world. */
+function CloseModal({ opened, onClose, stored, onClosed }: { opened: boolean; onClose: () => void; stored: StoredCase; onClosed: (next: StoredCase) => void }) {
+  const call = useApi();
+  const p = stored.packet;
+  const [outcome, setOutcome] = useState<"solved" | "failed">("solved");
+  const [leverId, setLeverId] = useState<string | null>(p.resolutionLevers[0]?.id ?? null);
+  const [notes, setNotes] = useState("");
+  const [error, setError] = useState<string>();
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    setSaving(true);
+    setError(undefined);
+    const request: CloseMysteryRequest = { outcome, leverId: outcome === "solved" ? leverId : null, notes };
+    const result = await call<StoredCase>(Http.POST, MysteryApi.close(p.mysteryId), request);
+    setSaving(false);
+    if (!result.success || !result.result) {
+      setError(result.errorMessage);
+      return;
+    }
+    onClosed(result.result);
+    onClose();
+  };
+
+  return (
+    <Modal opened={opened} onClose={onClose} size="lg" title={<Text className="nx-display" fz="xl">How did it end?</Text>}>
+      <Stack>
+        <Text fz="sm">
+          The engine writes the ending back to the Society's world: attitudes, who died or left, what changed, and the
+          people of this case join the persistent cast to be met again. This cannot be undone.
+        </Text>
+        <SegmentedControl
+          value={outcome}
+          onChange={(v) => setOutcome(v as "solved" | "failed")}
+          data={[{ value: "solved", label: "The Society ended it" }, { value: "failed", label: "It was left unresolved" }]}
+        />
+        {outcome === "solved" && (
+          <Select
+            label="How they ended it"
+            value={leverId}
+            onChange={setLeverId}
+            data={p.resolutionLevers.map((l) => ({ value: l.id, label: `${l.solveDepth === "deep" ? "Deep" : "Crude"}: ${l.description}` }))}
+            allowDeselect={false}
+          />
+        )}
+        <Textarea label="Notes for the world's memory (optional)" autosize minRows={2} value={notes} onChange={(e) => setNotes(e.currentTarget.value)} />
+        <ErrorNote message={error} />
+        <Group justify="flex-end">
+          <Button variant="subtle" color="gold" onClick={onClose}>Cancel</Button>
+          <Button onClick={save} loading={saving}>Close the mystery</Button>
+        </Group>
+      </Stack>
+    </Modal>
   );
 }

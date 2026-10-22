@@ -59,6 +59,66 @@ public sealed class StoredCase
 
     [JsonProperty("log")]
     public List<GenerationLogEntry> Log { get; set; } = [];
+
+    /// <summary>The system prompt and case context every step of this case was sent (each step's own instruction is in its log entry).</summary>
+    [JsonProperty("prompts")]
+    public CasePrompts Prompts { get; set; } = new();
+
+    /// <summary>One of <see cref="CaseStatuses"/>.</summary>
+    [JsonProperty("status")]
+    public string Status { get; set; } = CaseStatuses.Generated;
+
+    /// <summary>How it ended, once the host closed it.</summary>
+    [JsonProperty("closing")]
+    public CaseClosing? Closing { get; set; }
+}
+
+public sealed class CasePrompts
+{
+    [JsonProperty("system")]
+    public string System { get; set; } = "";
+
+    [JsonProperty("context")]
+    public string Context { get; set; } = "";
+}
+
+public static class CaseStatuses
+{
+    /// <summary>Written and checked, not played to its end.</summary>
+    public const string Generated = "generated";
+
+    /// <summary>The Society solved it.</summary>
+    public const string Solved = "solved";
+
+    /// <summary>The Society failed or gave up.</summary>
+    public const string Failed = "failed";
+
+    /// <summary>Generation failed; kept to see why.</summary>
+    public const string Rejected = "rejected";
+}
+
+/// <summary>How a mystery ended, as the host recorded it: what it wrote back to the world.</summary>
+public sealed class CaseClosing
+{
+    [JsonProperty("closedAt")]
+    public DateTime ClosedAt { get; set; }
+
+    [JsonProperty("outcome")]
+    public string Outcome { get; set; } = CaseStatuses.Solved;
+
+    /// <summary>The resolution lever the Society pulled, if any.</summary>
+    [JsonProperty("leverId")]
+    public string? LeverId { get; set; }
+
+    [JsonProperty("solveDepth")]
+    public string? SolveDepth { get; set; }
+
+    [JsonProperty("notes")]
+    public string Notes { get; set; } = "";
+
+    /// <summary>What the write-back did, line by line, for the host and for review.</summary>
+    [JsonProperty("changes")]
+    public List<string> Changes { get; set; } = [];
 }
 
 /// <summary>Short facts about a stored case, safe to list (no truth in it).</summary>
@@ -94,6 +154,10 @@ public sealed class CaseSummary
 
     [JsonProperty("hookGiverType")]
     public string HookGiverType { get; set; } = "";
+
+    /// <summary>One of <see cref="CaseStatuses"/>.</summary>
+    [JsonProperty("status")]
+    public string Status { get; set; } = CaseStatuses.Generated;
 
     public static CaseSummary From(CasePacket p) => new()
     {
@@ -183,7 +247,9 @@ public sealed class FileCasePacketStore(IOptions<MysteryOptions> options) : ICas
                 var stored = JsonConvert.DeserializeObject<StoredCase>(await File.ReadAllTextAsync(file, cancellationToken));
                 if (stored is not null)
                 {
-                    summaries.Add(CaseSummary.From(stored.Packet));
+                    var summary = CaseSummary.From(stored.Packet);
+                    summary.Status = stored.Packet.Validation.Passed ? stored.Status : CaseStatuses.Rejected;
+                    summaries.Add(summary);
                 }
             }
             catch (JsonException)

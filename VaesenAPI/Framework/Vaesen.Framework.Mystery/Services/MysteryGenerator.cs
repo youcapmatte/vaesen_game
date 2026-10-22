@@ -60,6 +60,7 @@ public sealed class MysteryGenerator(
     ICasePacketStore cases,
     IMysteryModel model,
     ICoherenceValidator validator,
+    IWorldService worlds,
     IOptions<MysteryOptions> options,
     ILogger<MysteryGenerator> logger) : IMysteryGenerator
 {
@@ -97,6 +98,18 @@ public sealed class MysteryGenerator(
         }
 
         var pack = packResult.Result!;
+        SocietyWorld? world = null;
+        if (Options.SeedWorld)
+        {
+            var seeded = await worlds.EnsureSeededAsync(request.History, pack, progress, cancellationToken);
+            if (!seeded.Success)
+            {
+                return ret.Fail($"The Society's world could not be prepared. {seeded.ErrorMessage}", seeded.ErrorCode);
+            }
+
+            world = seeded.Result;
+        }
+
         var month = request.Month ?? Options.DefaultMonth;
         var baseSeed = request.Seed ?? Random.Shared.Next();
         var log = new List<GenerationLogEntry>();
@@ -116,13 +129,24 @@ public sealed class MysteryGenerator(
                 return ret.Fail(ex.Message, ErrorCodes.Invalid);
             }
 
-            var draft = NewDraft(pack, request.History, brief);
+            if (world is not null)
+            {
+                brief.PersistentCastIds = PersistentCast(world);
+            }
+
+            var draft = NewDraft(pack, request.History, brief, world);
             progress?.Report(new GenerationProgress(caseAttempt, "assignment",
                 $"{draft.Vaesen.Name} at {draft.Level.Name}, focus {brief.Focus}{(brief.HiddenHand ? ", with a hidden hand" : "")}."));
 
             var outcome = await RunStepsAsync(draft, caseAttempt, progress, cancellationToken);
             log.AddRange(draft.Log);
-            last = new StoredCase { Packet = draft.Packet, Brief = brief, Log = log.ToList() };
+            last = new StoredCase
+            {
+                Packet = draft.Packet,
+                Brief = brief,
+                Log = log.ToList(),
+                Prompts = new CasePrompts { System = draft.SystemPrompt, Context = draft.CaseContext },
+            };
 
             if (outcome.Success)
             {
@@ -193,7 +217,16 @@ public sealed class MysteryGenerator(
         return ret.Ok(pack);
     }
 
-    private MysteryDraft NewDraft(ContentPack pack, SocietyHistory history, AssignmentBrief brief)
+    /// <summary>The persistent characters a case is offered: the living, canonical and core first, then by importance.</summary>
+    private List<string> PersistentCast(SocietyWorld world) => world.Available
+        .OrderBy(c => c.Tier switch { WorldTiers.Canonical => 0, WorldTiers.Core => 1, WorldTiers.Background => 2, _ => 3 })
+        .ThenByDescending(c => c.Importance)
+        .ThenBy(c => c.Id, StringComparer.Ordinal)
+        .Take(Options.PersistentCastOffered)
+        .Select(c => c.Id)
+        .ToList();
+
+    private MysteryDraft NewDraft(ContentPack pack, SocietyHistory history, AssignmentBrief brief, SocietyWorld? world)
     {
         var level = pack.FindLevel(brief.LevelId)!;
         var vaesen = pack.FindVaesen(brief.VaesenId)!;
@@ -205,6 +238,7 @@ public sealed class MysteryGenerator(
             Level = level,
             Vaesen = vaesen,
             Conflicts = brief.ConflictArchetypeIds.Select(pack.FindConflict).OfType<ConflictArchetype>().ToList(),
+            World = world,
         };
 
         draft.Packet = new CasePacket

@@ -118,12 +118,18 @@ Built to the build spec, [SPEC.md](SPEC.md), milestones 3 and 4. The engine is a
   - The shelf of written cases, showing only the title, place and month.
   - Each case file behind a spoiler gate, in tabs: the truth, hook and opening, clues with every channel and its gates, people, beats and endings, and review (the checks' findings, the generation log and a Markdown download).
   - Checked in the browser with the sample case, with a failed run (no key on that machine) and with a faked running job; players see a locked page.
+- **The Society's world** (spec 9, added 2026-10-23):
+  - **Seeding.** The world is seeded before the first mystery, or from the World page: the 6 canonical characters, plus a core cast of 10 and a background cast of 14 written by the model and checked.
+  - **Cases.** Cases draw on it: persistent characters come with their attitude, memories and ties; the dead or departed are kept out; past changes to the world are told to the model.
+  - **Closing.** The host closes a mystery from its case page (solved or not, and which ending). The engine then writes it back: memories, knowledge, attitude changes, fates, world changes, and the case's people join the persistent cast.
+  - **The World page** (`/world`, host only) shows everyone by tier: attitude, importance, ties, hooks, memories, plus what the Society has changed. Both the world and each case can be downloaded as JSON for review; a case's JSON carries its prompts and every step's instruction and raw answer.
+  - **Tests.** Seeding, re-rolling a bad seed, offering the world to cases, blocking the dead, the write-back and the stored prompts are tested with the scripted model. The pages were checked in the browser with a hand-made world: closing the sample case added its 8 people, Anna Lind's attitude and the world change. The close dialog itself wasn't opened (the browser pane was hidden), but the same request was sent through the API.
 - **Not done:**
-  - a real run against the API
+  - a real run against the API (seeding included)
   - your review and approval of the content
   - handing a chosen case to the Gamemaster ("Start mystery")
-  - DynamoDB/S3 storage for case packets (files only for now)
-  - seasons and the persistent cast
+  - DynamoDB/S3 storage for case packets and worlds (files only for now)
+  - seasons (spec 10), and influence at a distance through institutions
 
 ## Not done yet
 

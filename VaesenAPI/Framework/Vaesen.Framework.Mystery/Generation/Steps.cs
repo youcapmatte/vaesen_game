@@ -58,6 +58,7 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
             var entry = new GenerationLogEntry { CaseAttempt = caseAttempt, Step = Name, Attempt = attempt };
             draft.Log.Add(entry);
 
+            entry.Instruction = PromptBuilder.WithCaseAndFeedback(Instruction(draft), draft.Packet, issues, previous);
             var reply = await model.GenerateAsync<TOutput>(new ModelRequest
             {
                 Step = Name,
@@ -66,7 +67,7 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
                 MaxTokens = options.MaxOutputTokens,
                 System = draft.SystemPrompt,
                 Context = draft.CaseContext,
-                Instruction = PromptBuilder.WithCaseAndFeedback(Instruction(draft), draft.Packet, issues, previous),
+                Instruction = entry.Instruction,
             }, cancellationToken);
 
             if (!reply.Success)
@@ -231,7 +232,9 @@ public sealed class HumansStep(IMysteryModel model, ICoherenceValidator validato
             PlotRole = c.PlotRole,
             Tier = c.Tier,
             RoleSlotId = c.RoleSlotId,
-            Identity = c.Identity ?? (c.InstanceRef == InstanceRefs.Persistent ? draft.Pack.FindCharacter(c.CharacterId)?.Identity : null),
+            Identity = c.Identity ?? (c.InstanceRef is InstanceRefs.Persistent or InstanceRefs.Promoted
+                ? draft.World?.Find(c.CharacterId)?.Identity ?? draft.Pack.FindCharacter(c.CharacterId)?.Identity
+                : null),
             HomePlaceId = string.IsNullOrWhiteSpace(c.HomePlaceId) ? null : c.HomePlaceId,
             Wants = c.Wants,
             Secrets = c.Secrets,
@@ -346,6 +349,7 @@ public sealed class CriticStep(IMysteryModel model, MysteryOptions options)
             ["solveRule"] = PromptBuilder.SolveRuleForCritic(draft.Brief),
         });
 
+        entry.Instruction = PromptBuilder.WithCaseAndFeedback(instruction, draft.Packet, [], null);
         var reply = await model.GenerateAsync<CriticOutput>(new ModelRequest
         {
             Step = Name,
@@ -354,7 +358,7 @@ public sealed class CriticStep(IMysteryModel model, MysteryOptions options)
             MaxTokens = Math.Min(options.MaxOutputTokens, 32000),
             System = draft.SystemPrompt,
             Context = draft.CaseContext,
-            Instruction = PromptBuilder.WithCaseAndFeedback(instruction, draft.Packet, [], null),
+            Instruction = entry.Instruction,
         }, cancellationToken);
 
         if (!reply.Success)

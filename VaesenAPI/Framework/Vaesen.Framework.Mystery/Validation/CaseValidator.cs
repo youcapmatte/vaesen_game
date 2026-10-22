@@ -237,13 +237,18 @@ public sealed class CaseValidator : ICoherenceValidator
                     Error(IssueCodes.Schema, at, $"Unknown tier '{member.Tier}'.");
                 }
 
-                if (member.InstanceRef == InstanceRefs.Persistent)
+                if (member.InstanceRef is InstanceRefs.Persistent or InstanceRefs.Promoted)
                 {
                     if (context.Pack.FindCharacter(member.CharacterId) is null && !context.SocietyCharacterIds.Contains(member.CharacterId))
                     {
-                        Error(IssueCodes.CastCoherence, at, "Marked persistent, but no such character exists in the persistent cast.",
-                            "Use a persistent character id from the brief, or mark them new.");
+                        Error(IssueCodes.CastCoherence, at, $"Marked {member.InstanceRef}, but no such character exists in the Society's world.",
+                            "Use a persistent character id from the list offered, or mark them new.");
                     }
+                }
+                else if (context.SocietyCharacterIds.Contains(member.CharacterId) || context.Pack.FindCharacter(member.CharacterId) is not null)
+                {
+                    Error(IssueCodes.CastCoherence, at, "A new character cannot take the id of someone already in the Society's world.",
+                        "Mark them persistent to bring that person in, or give the new person their own id.");
                 }
                 else if (member.Identity is null || string.IsNullOrWhiteSpace(member.Identity.Occupation))
                 {
@@ -256,7 +261,7 @@ public sealed class CaseValidator : ICoherenceValidator
                 }
 
                 if (member.HomePlaceId is not null && context.Level.FindPlace(member.HomePlaceId) is null
-                    && member.InstanceRef != InstanceRefs.Persistent)
+                    && member.InstanceRef == InstanceRefs.New)
                 {
                     Error(IssueCodes.AffordanceFit, at, $"Home place '{member.HomePlaceId}' is not in the level.");
                 }
