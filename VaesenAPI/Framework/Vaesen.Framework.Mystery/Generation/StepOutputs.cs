@@ -101,6 +101,10 @@ public sealed class CastDraft
     [JsonProperty("name")]
     public string Name { get; set; } = "";
 
+    /// <summary>A short handle for a significant character ("the widow"); null for residents.</summary>
+    [JsonProperty("handle")]
+    public string? Handle { get; set; }
+
     [JsonProperty("instanceRef")]
     public string InstanceRef { get; set; } = InstanceRefs.New;
 

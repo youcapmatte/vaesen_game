@@ -291,6 +291,7 @@ public sealed class HumansStep(IMysteryModel model, ICoherenceValidator validato
         {
             CharacterId = c.CharacterId,
             Name = c.Name,
+            Handle = string.IsNullOrWhiteSpace(c.Handle) ? null : c.Handle,
             InstanceRef = c.InstanceRef,
             PlotRole = c.PlotRole,
             Importance = c.Importance,

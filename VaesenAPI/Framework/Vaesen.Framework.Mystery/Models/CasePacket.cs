@@ -385,6 +385,10 @@ public sealed class CastMember
     [JsonProperty("name")]
     public string Name { get; set; } = "";
 
+    /// <summary>A short handle players can use instead of the name, heard by voice ("the widow"); null for residents.</summary>
+    [JsonProperty("handle")]
+    public string? Handle { get; set; }
+
     /// <summary>One of <see cref="InstanceRefs"/>.</summary>
     [JsonProperty("instanceRef")]
     public string InstanceRef { get; set; } = InstanceRefs.New;

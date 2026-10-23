@@ -103,6 +103,8 @@ export interface CastMember {
   instanceRef: string;
   plotRole: string;
   importance: "significant" | "resident";
+  /** A short handle for a significant character ("the widow"). */
+  handle?: string | null;
   identity?: { age: number; gender: string; occupation: string; rank: string; home: string; appearance: string } | null;
   homePlaceId?: string | null;
   knows: { factId: string; source: string; when: string }[];

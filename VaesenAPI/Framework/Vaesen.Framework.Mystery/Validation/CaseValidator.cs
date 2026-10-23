@@ -291,6 +291,11 @@ public sealed class CaseValidator : ICoherenceValidator
                     Error(IssueCodes.CastCoherence, at, "A new character needs an identity (age, occupation, appearance...).");
                 }
 
+                if (member.Importance == CastImportance.Significant && string.IsNullOrWhiteSpace(member.Handle))
+                {
+                    Warn(IssueCodes.CastCoherence, at, $"{member.Name} has no handle: give a short one players can use instead of the name (\"the widow\").");
+                }
+
                 if (context.UnavailableCharacterIds.Contains(member.CharacterId))
                 {
                     Error(IssueCodes.CastCoherence, at, "This character is dead or gone for this Society and cannot appear.");
