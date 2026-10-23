@@ -317,9 +317,10 @@ public sealed class CaseValidator : ICoherenceValidator
                     {
                         if (NameRules.FirstNameClash(member.Name, name) is { } why)
                         {
-                            WarnOn([$"{member.CharacterId}.identity"], IssueCodes.CastCoherence, at,
+                            // An error at the humans step, fixed by a patch before any later step writes the name into prose.
+                            Error(IssueCodes.CastCoherence, at,
                                 $"{member.Name} and {name}, already in the Society's world, have {why}.",
-                                $"Rename {member.Name}: a first name that does not sound like {NameRules.FirstName(name)} or any other on the list.");
+                                $"Rename {member.Name}, keeping the id: a first name that does not sound like {NameRules.FirstName(name)} or any other on the list.");
                             break;
                         }
                     }
@@ -417,9 +418,10 @@ public sealed class CaseValidator : ICoherenceValidator
                 {
                     if (NameRules.Clash(people[i].Name, people[j].Name) is { } why)
                     {
-                        var at = people[i].At.StartsWith("cast:", StringComparison.Ordinal) ? people[i].At : people[j].At;
-                        Warn(IssueCodes.CastCoherence, at, $"'{people[i].Name}' and '{people[j].Name}' sound alike ({why}); players will mix them up.",
-                            "Rename one so no two people share a first name or first syllable, and no surname holds another's first name.");
+                        // The later cast member is renamed (the first may be a persistent character or a name in the truth).
+                        var at = people[j].At.StartsWith("cast:", StringComparison.Ordinal) ? people[j].At : people[i].At;
+                        Error(IssueCodes.CastCoherence, at, $"'{people[i].Name}' and '{people[j].Name}' sound alike ({why}); players will mix them up.",
+                            $"Rename {(at == people[j].At ? people[j].Name : people[i].Name)}, keeping the id: no two people share a first name or first syllable, and no surname holds another's first name.");
                     }
                 }
             }
@@ -642,8 +644,9 @@ public sealed class CaseValidator : ICoherenceValidator
                         }
                         else if (!teller.Knows.Exists(t => t.FactId == k.FactId))
                         {
-                            Error(IssueCodes.Provenance, at, $"Knows {k.FactId}, told by {teller.Name}, who does not know it.",
-                                $"Give {teller.Name} the knowledge, with its own source.");
+                            // On the teller: the patch then holds the person whose knowledge is missing.
+                            Error(IssueCodes.Provenance, $"cast:{teller.CharacterId}", $"{member.Name} knows {k.FactId}, told by {teller.Name}, who does not know it.",
+                                $"Give {teller.Name} the knowledge of {k.FactId}, with its own source.");
                         }
                     }
                     else if (source.StartsWith(KnowledgeSources.FoundPrefix, StringComparison.Ordinal))
@@ -682,7 +685,7 @@ public sealed class CaseValidator : ICoherenceValidator
                 var person = packet.FindCast(c.SourceCharacterId);
                 if (person is not null && !person.Knows.Exists(k => k.FactId == c.FactId))
                 {
-                    Error(IssueCodes.Provenance, $"channel:{c.Id}", $"{person.Name} is a source of {c.FactId} but does not know it.",
+                    Error(IssueCodes.Provenance, $"cast:{person.CharacterId}", $"{person.Name} is the source of channel {c.Id} ({c.FactId}) but does not know {c.FactId}.",
                         $"Add {c.FactId} to {person.Name}'s knows, with how they learned it.");
                 }
             }

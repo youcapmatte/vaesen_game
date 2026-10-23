@@ -41,6 +41,7 @@ Services/      MysteryGenerator, WorldService (seeding, closing, write-back), Co
    - The critic names the ids each issue touches (`targets`: f3, c7, r2, truth.hiddenHandMotive, npc-anna.knows...). Each issue is routed to the step that owns those ids (a motive to the conflict, a lever to the arc, a channel to minds and channels), split when it spans steps, and fixed in place in pipeline order: a patch of the items named (and any new item it asks for, such as a channel for a fact nothing teaches: target `channels`), or a revised answer that changes only what the issue asks. Nothing downstream is regenerated.
    - A fix that revises an event or a fact sends the items built on it after it: the event's facts, the fact's channels and the people who know it, each patched to agree. Otherwise a corrected date stays wrong in every channel that quotes it.
    - The critic's second look gets its first look's list, at `StandardEffort`: it checks those fixes rather than reviewing from scratch and asking for new detail on a clue it already had fixed.
+   - A fix keeps every id it was given (a renamed person keeps their id), and a patch adds an item only when a problem asks for one. A round of the critic's fixes that breaks a case which passed is rolled back, and its objections stay as warnings.
    - The critic may send the case back once (`MaxCriticReworks`). After that its objections are warnings on a case that passes, and those with concrete fixes are applied in one cheap last round on `LightModel`, kept only if the case still passes its checks. Applied warnings are marked in the report.
 4. **Repairs and retries**:
    - Near misses in fixed-value fields ("Surface", "half") are repaired in code before validation and logged as warnings.
@@ -112,7 +113,7 @@ That's enough for Claude to review a case and propose changes to the prompts, co
 - **Reachability.** The walk starts from what the hook tells the players. A channel opens once every fact it is gated on (`knowsFact:f7`) is known. Trust, rolls, times and places count as reachable, because a failed roll is rerouted (spec 4.6). Beats fire as the tension from known facts reaches their threshold. Every load-bearing fact must be reached, and so must every beat and the climax.
 - **Redundancy.** Every load-bearing fact the hook does not state needs two independent sources: different people, or different spots.
 - **Order independence.** Removing any one channel must leave every load-bearing fact reachable. A group that only talks, or only searches, gets a warning if it would reach fewer than half of the load-bearing facts.
-- **Provenance.** Every testimony is backed by what the person knows. Anyone who was told something was told by someone who knew it, or by a bystander outside the cast (`told:bystander:carter`). Bystander gossip is hearsay: a channel that rests only on it never counts toward a fact's two independent sources.
+- **Provenance.** Every testimony is backed by what the person knows (the error sits on the person, so a patch can add the knowledge). Anyone who was told something was told by someone who knew it, or by a bystander outside the cast (`told:bystander:carter`). Bystander gossip is hearsay: a channel that rests only on it never counts toward a fact's two independent sources.
 - **Homes.** A trace or document in a dwelling is in its owner's own home (a warning).
 - **Decoys and fair play.**
   - Every decoy can be cleared by a reachable true fact.
@@ -130,7 +131,7 @@ That's enough for Claude to review a case and propose changes to the prompts, co
   - The solution rests on deep lore, and there is at least one knowledge-gated step.
 - **Resolution.** A hidden-hand case has both a crude solve and a discoverable deep solve. Every lever has deeds whose places, affordances and witnesses exist, at places the players reach. A creature that can be bargained with has a mind whose terms name deep-lever deeds.
 - **Beats.** Thresholds are in order and reachable. A creature with time or place conditions gets a climax that says when or where. A person who acts in a beat or the climax does one of their permitted actions, at a desperation the tension has reached (medium from 0.35, high from 0.65); otherwise a warning.
-- **Names across cases.** A new significant person whose first name matches or sounds like a persistent character's in the Society's world is warned (the humans step is also given the list).
+- **Names.** Two people in a case whose names sound alike, or a new significant person whose first name matches or sounds like a persistent character's in the Society's world, is an error at the humans step (the humans step is also given the world's names). It is patched there, before any later step writes the name into prose.
 
 ## Content
 

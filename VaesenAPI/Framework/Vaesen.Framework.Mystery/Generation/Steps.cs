@@ -114,6 +114,9 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
         var ret = new ResultBase();
         var fixing = mode is Mode.Fix or Mode.FixLight;
         var previous = last is null ? null : Newtonsoft.Json.JsonConvert.SerializeObject(last);
+
+        // A fix keeps every id it was given: a renamed person keeps their id, or every channel naming them breaks.
+        var keptIds = fixing && last is not null ? Patch.AllIds(PatchLists(last)) : null;
         // A fix names its items, so it is always a patch when it can be: answering a few dozen items beats rewriting all.
         var patchErrors = last is not null && Patch.Patchable(PatchLists(last), issues, fixing ? 1.0 : options.PatchShare, anyCode: fixing) ? issues : [];
 
@@ -185,7 +188,7 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
             var output = answer.Value;
             if (patching)
             {
-                Patch.Merge(PatchLists(last!), PatchLists(output));
+                Patch.Merge(PatchLists(last!), PatchLists(output), allowNew: patchErrors.Any(e => e.Location.StartsWith(Patch.NewItem, StringComparison.Ordinal)));
                 output = last!;
             }
 
@@ -209,6 +212,12 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
                 SocietyCharacterIds = context.SocietyCharacterIds,
             };
             var found = repairs.Concat(applyIssues).Concat(validator.Validate(packet, checkContext, Scope)).ToList();
+            if (keptIds is not null)
+            {
+                var now = Patch.AllIds(PatchLists(output));
+                found.AddRange(keptIds.Where(id => !now.Contains(id)).Select(id => CoherenceIssue.Error(IssueCodes.Schema, id,
+                    $"A fix keeps every item: {id} is gone. Change what the problems ask, and keep every id (rename a person by their name, never their id).")));
+            }
             entry.Issues = found;
             packet.Validation.Runs++;
 

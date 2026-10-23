@@ -458,8 +458,16 @@ public sealed class MysteryGenerator(
                     sentBack = critique.Where(i => i.IsError || Fixable(i)).ToList();
                     var toFix = sentBack.Concat(TargetedWarnings(draft)).ToList();
                     progress?.Report(new GenerationProgress(caseAttempt, CheckStepName, "Fixing what the critic found, step by step."));
+                    var before = Snapshot(draft);
                     await FixRoundAsync(draft, toFix, caseAttempt, light: false, ct);
-                    continue;
+                    if (StillPasses(draft, caseAttempt))
+                    {
+                        continue;
+                    }
+
+                    // The case passed before: fixes that break it are not kept, and the objections stay as warnings.
+                    logger.LogInformation("The critic's fixes broke the case's checks; keeping it as it was");
+                    Restore(draft, before);
                 }
 
                 // Past its rework, the critic's objections are warnings on a case that passes. Those with concrete
@@ -608,27 +616,17 @@ public sealed class MysteryGenerator(
     /// </summary>
     private async Task ApplyWarningsAsync(MysteryDraft draft, IReadOnlyList<CoherenceIssue> warnings, int caseAttempt, CancellationToken ct)
     {
-        var packet = draft.ClonePacket();
-        var outputs = draft.Outputs.ToDictionary(p => p.Key, p => p.Value, StringComparer.Ordinal);
+        var before = Snapshot(draft);
         var applied = await FixRoundAsync(draft, warnings, caseAttempt, light: true, ct);
         if (applied.Count == 0)
         {
             return;
         }
 
-        var check = Derived.Tension(draft.Packet);
-        check.AddRange(validator.Validate(draft.Packet, draft.ValidationContext, CheckScope.Full));
-        draft.Log.Add(new GenerationLogEntry { CaseAttempt = caseAttempt, Step = CheckStepName, Kind = LogEntryKinds.Check, Passed = !check.Exists(i => i.IsError), Issues = check });
-        if (check.Exists(i => i.IsError))
+        if (!StillPasses(draft, caseAttempt))
         {
             logger.LogInformation("Applying the critic's warnings broke the case's checks; keeping it as it was");
-            draft.Packet = packet;
-            draft.Outputs.Clear();
-            foreach (var (step, output) in outputs)
-            {
-                draft.Outputs[step] = output;
-            }
-
+            Restore(draft, before);
             return;
         }
 
@@ -638,6 +636,30 @@ public sealed class MysteryGenerator(
         }
 
         logger.LogInformation("Applied {Count} warnings in the last round: {Codes}", applied.Count, string.Join(", ", applied.Select(a => a.Code)));
+    }
+
+    /// <summary>The packet and the steps' outputs, to go back to when fixes break a case that passed.</summary>
+    private static (CasePacket Packet, Dictionary<string, object> Outputs) Snapshot(MysteryDraft draft) =>
+        (draft.ClonePacket(), draft.Outputs.ToDictionary(p => p.Key, p => p.Value, StringComparer.Ordinal));
+
+    private static void Restore(MysteryDraft draft, (CasePacket Packet, Dictionary<string, object> Outputs) snapshot)
+    {
+        draft.Packet = snapshot.Packet;
+        draft.Outputs.Clear();
+        foreach (var (step, output) in snapshot.Outputs)
+        {
+            draft.Outputs[step] = output;
+        }
+    }
+
+    /// <summary>Every structural check on the whole case, after a round of fixes; logged as a check entry.</summary>
+    private bool StillPasses(MysteryDraft draft, int caseAttempt)
+    {
+        var check = Derived.Tension(draft.Packet);
+        check.AddRange(validator.Validate(draft.Packet, draft.ValidationContext, CheckScope.Full));
+        var passed = !check.Exists(i => i.IsError);
+        draft.Log.Add(new GenerationLogEntry { CaseAttempt = caseAttempt, Step = CheckStepName, Kind = LogEntryKinds.Check, Passed = passed, Issues = check });
+        return passed;
     }
 
     public const string CheckStepName = "check";

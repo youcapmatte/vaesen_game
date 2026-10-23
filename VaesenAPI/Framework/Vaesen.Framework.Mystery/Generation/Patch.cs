@@ -75,7 +75,7 @@ public static class Patch
     /// Replaces each item of <paramref name="original"/> that the patch answered, by id, and adds the ones with new ids
     /// (a problem asked for them). Others are left alone.
     /// </summary>
-    public static void Merge(IReadOnlyList<PatchList> original, IReadOnlyList<PatchList> patch)
+    public static void Merge(IReadOnlyList<PatchList> original, IReadOnlyList<PatchList> patch, bool allowNew = true)
     {
         foreach (var answered in patch)
         {
@@ -98,13 +98,17 @@ public static class Patch
                     }
                 }
 
-                if (!replaced && !string.IsNullOrWhiteSpace(id))
+                if (!replaced && allowNew && !string.IsNullOrWhiteSpace(id))
                 {
                     target.Items.Add(item);
                 }
             }
         }
     }
+
+    /// <summary>"prefix:id" of every item, to see what a fix dropped.</summary>
+    public static HashSet<string> AllIds(IReadOnlyList<PatchList> lists) =>
+        lists.SelectMany(l => l.Items.OfType<object>().Select(i => $"{l.Prefix}:{l.Id(i)}")).ToHashSet(StringComparer.Ordinal);
 
     /// <summary>The ids of the items not being patched, so the model knows what else exists without resending it all.</summary>
     public static string OtherIds(IReadOnlyList<PatchList> lists, IReadOnlyList<CoherenceIssue> errors)

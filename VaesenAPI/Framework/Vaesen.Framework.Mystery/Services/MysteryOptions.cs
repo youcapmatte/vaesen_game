@@ -68,7 +68,7 @@ public sealed class MysteryOptions
     public int PatchMaxOutputTokens { get; set; } = 16000;
 
     /// <summary>A step is patched instead of regenerated when its field-level errors touch at most this share of its items.</summary>
-    public double PatchShare { get; set; } = 0.25;
+    public double PatchShare { get; set; } = 0.4;
 
     /// <summary>Model for the critic (judgement checks on the whole case).</summary>
     public string CriticModel { get; set; } = "claude-opus-5-5";

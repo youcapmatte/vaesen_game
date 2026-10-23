@@ -16,7 +16,7 @@
     "seed": 1
   },
   "truth": {
-    "summary": "In August the company sawmill below Forsby built a new log dam that pulls the river's flow away from the old mill race and the falls beside it. The miller, Per Holm, had always left a coin and a cake at the race when the milling season began, as his father did; this autumn the sawmill manager, Axel Wester, mocked it in front of the men and hinted that a miller who kept heathen customs might lose the lease the company now holds. Holm left nothing. The Näck of Forsby falls, its water taken and its due refused, has answered: it stops the mill wheel at night, empties the nets below the falls, and took Johan Lind, a sawmill hand and strong swimmer, at the log pond. The village blames a fiddler who suddenly plays too well. It can be answered by restoring the offering and giving the falls back their water, or bound by steel driven into the race.",
+    "summary": "In August the company sawmill below Forsby built a new log dam that pulls the river's flow away from the old mill race and the falls beside it. The miller, Per Holm, had always left a coin and a cake at the race when the milling season began, as his father did; this autumn the sawmill manager, Hugo Wester, mocked it in front of the men and hinted that a miller who kept heathen customs might lose the lease the company now holds. Holm left nothing. The Näck of Forsby falls, its water taken and its due refused, has answered: it stops the mill wheel at night, empties the nets below the falls, and took Johan Lind, a sawmill hand and strong swimmer, at the log pond. The village blames a fiddler who suddenly plays too well. It can be answered by restoring the offering and giving the falls back their water, or bound by steel driven into the race.",
     "reasonKind": "domainViolated",
     "origin": null,
     "plotCentre": { "kind": "provocation", "characterId": null },
@@ -67,7 +67,7 @@
     { "id": "f11", "statement": "Lars the fiddler plays far better than he did last winter.", "loadBearing": false, "kind": "symptom", "pointsTo": "decoy:d1", "giveaway": false, "deepLore": false, "loreIds": [ "nack-as-new-fiddler" ] },
     { "id": "f12", "statement": "Lars played in the taproom all the night Johan went missing.", "loadBearing": false, "kind": "alibi", "pointsTo": "neutral", "giveaway": false, "deepLore": false, "loreIds": [] },
     { "id": "f13", "statement": "Lars spent the summer taking lessons from a master fiddler in Uppsala.", "loadBearing": false, "kind": "alibi", "pointsTo": "neutral", "giveaway": false, "deepLore": false, "loreIds": [] },
-    { "id": "f14", "statement": "Axel Wester mocked the offering and hinted that Holm would lose the mill lease if he kept heathen customs.", "loadBearing": true, "kind": "motive", "pointsTo": "trueAnswer", "giveaway": false, "deepLore": false, "loreIds": [] },
+    { "id": "f14", "statement": "Hugo Wester mocked the offering and hinted that Holm would lose the mill lease if he kept heathen customs.", "loadBearing": true, "kind": "motive", "pointsTo": "trueAnswer", "giveaway": false, "deepLore": false, "loreIds": [] },
     { "id": "f15", "statement": "The nets below the falls come up torn or empty.", "loadBearing": false, "kind": "symptom", "pointsTo": "neutral", "giveaway": false, "deepLore": false, "loreIds": [ "nack-as-nets-emptied" ] },
     { "id": "f16", "statement": "Wester had the dam papers taken from the sawmill office.", "loadBearing": false, "kind": "colour", "pointsTo": "neutral", "giveaway": false, "deepLore": false, "loreIds": [] },
     { "id": "f17", "statement": "The miller's boy was pulled toward the race at dusk and dragged out by the smith.", "loadBearing": false, "kind": "symptom", "pointsTo": "trueAnswer", "giveaway": false, "deepLore": false, "loreIds": [] }
@@ -141,7 +141,7 @@
       "routine": "Sits at her door when it is dry; sees no one but Signe.", "voiceNotes": "Riddling, dialect-heavy, laughs at her own jokes.", "relationships": []
     },
     {
-      "characterId": "npc-axel-wester", "name": "Axel Wester", "instanceRef": "new", "plotRole": "the one who provoked", "importance": "significant", "roleSlotId": "provoker",
+      "characterId": "npc-axel-wester", "name": "Hugo Wester", "instanceRef": "new", "plotRole": "the one who provoked", "importance": "significant", "roleSlotId": "provoker",
       "identity": { "age": 36, "gender": "male", "occupation": "sawmill manager", "rank": "burgher", "home": "the sawmill house", "appearance": "Clean-shaven, a watch chain, boots too good for the mud." },
       "homePlaceId": "sawmill",
       "knows": [ { "factId": "f5", "source": "self", "when": "August" }, { "factId": "f14", "source": "self", "when": "September" }, { "factId": "f1", "source": "told:npc-per-holm", "when": "this month" } ],

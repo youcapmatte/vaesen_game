@@ -122,8 +122,9 @@ public sealed class ValidatorTests(ITestOutputHelper output)
 
         var issues = Validate(packet);
 
-        AssertError(issues, IssueCodes.Provenance, "channel:c21");
-        AssertError(issues, IssueCodes.Provenance, "cast:npc-brita-holm");
+        // Both sit on Per, whose knowledge is missing, so a patch of his mind can add it.
+        Assert.Contains(issues, i => i.IsError && i.Code == IssueCodes.Provenance && i.Location == "cast:npc-per-holm" && i.Explanation.Contains("channel c21", StringComparison.Ordinal));
+        Assert.Contains(issues, i => i.IsError && i.Code == IssueCodes.Provenance && i.Location == "cast:npc-per-holm" && i.Explanation.Contains("told by Per Holm", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -303,7 +304,7 @@ public sealed class ValidatorTests(ITestOutputHelper output)
         var issues = Validate(packet);
 
         Assert.Contains(issues, i => !i.IsError && i.Location == "beat:b2" && i.Explanation.Contains("high-desperation", StringComparison.Ordinal) && i.Targets!.SequenceEqual(["b2"]));
-        Assert.Contains(issues, i => !i.IsError && i.Location == "climax" && i.Explanation.Contains("outside Axel Wester's permitted actions", StringComparison.Ordinal));
+        Assert.Contains(issues, i => !i.IsError && i.Location == "climax" && i.Explanation.Contains("outside Hugo Wester's permitted actions", StringComparison.Ordinal));
         Assert.Equal(("arc", "lever:r3"), Generation.CriticRouting.Owner("r3-d1"));
     }
 
@@ -346,8 +347,8 @@ public sealed class ValidatorTests(ITestOutputHelper output)
             WorldNames = [("npc-per-ers", "Per Ers"), ("npc-jonas-berg", "Jonas Berg")],
         });
 
-        var flagged = Assert.Single(issues, i => i.Location == "cast:npc-per-holm" && i.Explanation.Contains("Society's world", StringComparison.Ordinal));
-        Assert.Equal(["npc-per-holm.identity"], flagged.Targets!);
+        // An error at the humans step, so it is patched before any later step writes the name into prose.
+        Assert.True(Assert.Single(issues, i => i.Location == "cast:npc-per-holm" && i.Explanation.Contains("Society's world", StringComparison.Ordinal)).IsError);
         Assert.Null(NameRules.FirstNameClash("Anna Lind", "Anders Berg"));
         Assert.NotNull(NameRules.FirstNameClash("Petter Lund", "Per Ers"));
     }
@@ -382,7 +383,7 @@ public sealed class ValidatorTests(ITestOutputHelper output)
         packet.Cast[1].Name = "Per Ers";
         packet.Truth.Summary += " Years ago the sawyer Jon Persson drowned there.";
 
-        Assert.Contains(Validate(packet), i => !i.IsError && i.Explanation.Contains("'Per Ers' and 'Jon Persson' sound alike", StringComparison.Ordinal));
+        Assert.Contains(Validate(packet), i => i.IsError && i.Location == "cast:npc-per-holm" && i.Explanation.Contains("'Per Ers' and 'Jon Persson' sound alike", StringComparison.Ordinal));
     }
 
     [Fact]
