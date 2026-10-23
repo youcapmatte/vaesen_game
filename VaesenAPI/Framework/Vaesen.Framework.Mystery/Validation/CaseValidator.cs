@@ -417,6 +417,13 @@ public sealed class CaseValidator : ICoherenceValidator
             {
                 for (var j = i + 1; j < people.Count; j++)
                 {
+                    // A first name in another's surname is a warning: it may be a patronymic of the period (Eriksdotter).
+                    if (NameRules.Clash(people[i].Name, people[j].Name) is null && NameRules.SurnameEcho(people[i].Name, people[j].Name) is { } echo)
+                    {
+                        Warn(IssueCodes.CastCoherence, people[j].At.StartsWith("cast:", StringComparison.Ordinal) ? people[j].At : people[i].At,
+                            $"'{people[i].Name}' and '{people[j].Name}': {echo}. Fine for a parent and child; otherwise players may mix them up.");
+                    }
+
                     if (NameRules.Clash(people[i].Name, people[j].Name) is { } why)
                     {
                         // The later cast member is renamed (the first may be a persistent character or a name in the truth).

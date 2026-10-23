@@ -376,7 +376,8 @@ public sealed class ValidatorTests(ITestOutputHelper output)
     [Fact]
     public void Names_that_sound_alike_anywhere_in_the_case_are_flagged()
     {
-        Assert.NotNull(NameRules.Clash("Per Ers", "Jon Persson"));
+        Assert.NotNull(NameRules.SurnameEcho("Per Ers", "Jon Persson"));
+        Assert.Null(NameRules.Clash("Erik Johansson", "Karin Eriksdotter"));
         Assert.NotNull(NameRules.Clash("Johan Berg", "Jonas Lund"));
         Assert.Null(NameRules.Clash("Anna Lind", "Karl Hagg"));
         Assert.Equal(["Jon Persson"], NameRules.Mentioned("The sawyer Jon Persson drowned below the falls."));
@@ -385,7 +386,8 @@ public sealed class ValidatorTests(ITestOutputHelper output)
         packet.Cast[1].Name = "Per Ers";
         packet.Truth.Summary += " Years ago the sawyer Jon Persson drowned there.";
 
-        Assert.Contains(Validate(packet), i => i.IsError && i.Location == "cast:npc-per-holm" && i.Explanation.Contains("'Per Ers' and 'Jon Persson' sound alike", StringComparison.Ordinal));
+        // A first name in another's surname is only a warning: it may be a patronymic (Erik and Karin Eriksdotter).
+        Assert.Contains(Validate(packet), i => !i.IsError && i.Location == "cast:npc-per-holm" && i.Explanation.Contains("'Per Ers' and 'Jon Persson'", StringComparison.Ordinal));
     }
 
     [Fact]

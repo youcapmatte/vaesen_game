@@ -131,7 +131,7 @@ That's enough for Claude to review a case and propose changes to the prompts, co
   - The solution rests on deep lore, and there is at least one knowledge-gated step.
 - **Resolution.** A hidden-hand case has both a crude solve and a discoverable deep solve. Every lever has deeds whose places, affordances and witnesses exist, at places the players reach. A creature that can be bargained with has a mind whose terms name deep-lever deeds.
 - **Beats.** Thresholds are in order and reachable. A creature with time or place conditions gets a climax that says when or where. A person who acts in a beat or the climax does one of their permitted actions, at a desperation the tension has reached (medium from 0.35, high from 0.65); otherwise a warning.
-- **Names.** Two people in a case whose names sound alike, or a new significant person whose first name matches or sounds like a persistent character's in the Society's world, is an error at the humans step (the humans step is also given the world's names). It is patched there, before any later step writes the name into prose.
+- **Names.** Two people in a case whose first names match or share a first syllable, or a new significant person whose first name matches or sounds like a persistent character's in the Society's world, is an error at the humans step (the humans step is also given the world's names). It is patched there, before any later step writes the name into prose. A first name inside another's surname is only a warning: it may be a patronymic (Karin Eriksdotter, Erik's daughter), which the truth may already use.
 
 ## Content
 

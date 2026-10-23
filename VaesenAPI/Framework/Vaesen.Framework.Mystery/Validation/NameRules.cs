@@ -14,7 +14,7 @@ public static partial class NameRules
     public static IEnumerable<string> Mentioned(string? text) =>
         string.IsNullOrEmpty(text) ? [] : MentionedName().Matches(text).Select(m => m.Value);
 
-    /// <summary>Why two names sound alike, or null: a shared first name or first syllable, or one's first name in the other's surname.</summary>
+    /// <summary>Why two names sound alike, or null: a shared first name or first syllable.</summary>
     public static string? Clash(string a, string b)
     {
         var (aFirst, aLast) = Split(a);
@@ -32,6 +32,23 @@ public static partial class NameRules
         if (string.Equals(FirstSyllable(aFirst), FirstSyllable(bFirst), StringComparison.OrdinalIgnoreCase))
         {
             return $"both begin '{FirstSyllable(aFirst)}'";
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Why one name's first name echoes in the other's surname ("Per" in "Persson"), or null. Milder than <see cref="Clash"/>:
+    /// a patronymic is the period's own naming ("Karin Eriksdotter", Erik's daughter), and the two names are still told
+    /// apart when called.
+    /// </summary>
+    public static string? SurnameEcho(string a, string b)
+    {
+        var (aFirst, aLast) = Split(a);
+        var (bFirst, bLast) = Split(b);
+        if (aFirst.Length == 0 || bFirst.Length == 0 || string.Equals(a.Trim(), b.Trim(), StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
         }
 
         if (aFirst.Length >= 3 && bLast.Contains(aFirst, StringComparison.OrdinalIgnoreCase))
