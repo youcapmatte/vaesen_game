@@ -67,6 +67,7 @@ public sealed class EscalationDraft
     [JsonProperty("placeId")]
     public string? PlaceId { get; set; }
 
+    [OneOf(typeof(SignRegisters))]
     [JsonProperty("register")]
     public string Register { get; set; } = "";
 
@@ -99,6 +100,7 @@ public sealed class CastDraft
     [JsonProperty("plotRole")]
     public string PlotRole { get; set; } = "";
 
+    [OneOf(typeof(CastTiers))]
     [JsonProperty("tier")]
     public string Tier { get; set; } = CastTiers.Significant;
 

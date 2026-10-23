@@ -61,6 +61,7 @@ public sealed class AffordanceTag
     public string Id { get; set; } = "";
 
     /// <summary>One of <see cref="AffordanceKinds"/>.</summary>
+    [OneOf(typeof(AffordanceKinds))]
     [JsonProperty("kind")]
     public string Kind { get; set; } = AffordanceKinds.Feature;
 

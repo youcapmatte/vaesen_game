@@ -121,6 +121,18 @@ public sealed class AssignmentTests
     }
 
     [Fact]
+    public void Fixed_value_fields_offer_the_model_only_their_allowed_values()
+    {
+        var clues = StructuredSchema.For(typeof(CluesOutput)).ToJsonString();
+        var humans = StructuredSchema.For(typeof(HumansOutput)).ToJsonString();
+
+        // A run invented "surface" and "shallow" for solve depths, "lore" for a fact kind and "core" for a cast tier.
+        Assert.Contains("\"enum\":[\"crude\",\"deep\"]", clues, StringComparison.Ordinal);
+        Assert.Contains($"\"enum\":[{string.Join(",", FactKinds.All.Select(k => $"\"{k}\""))}]", clues, StringComparison.Ordinal);
+        Assert.Contains($"\"enum\":[{string.Join(",", CastTiers.All.Select(k => $"\"{k}\""))}]", humans, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void A_generated_record_is_checked_against_the_pack_it_joins()
     {
         var creature = Newtonsoft.Json.JsonConvert.DeserializeObject<VaesenDefinition>(Newtonsoft.Json.JsonConvert.SerializeObject(Pack.FindVaesen("nack")))!;

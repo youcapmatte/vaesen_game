@@ -68,6 +68,7 @@ public sealed class CharacterInstance
     public string Name { get; set; } = "";
 
     /// <summary>One of <see cref="WorldTiers"/>.</summary>
+    [OneOf(typeof(WorldTiers))]
     [JsonProperty("tier")]
     public string Tier { get; set; } = WorldTiers.Background;
 

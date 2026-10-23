@@ -163,6 +163,7 @@ public sealed class VaesenSign
     public string Text { get; set; } = "";
 
     /// <summary>One of <see cref="SignRegisters"/>.</summary>
+    [OneOf(typeof(SignRegisters))]
     [JsonProperty("register")]
     public string Register { get; set; } = SignRegisters.Physical;
 
@@ -190,6 +191,7 @@ public static class SignRegisters
 public sealed class ConfrontationConditions
 {
     /// <summary>One of <see cref="ConfrontationKinds"/>.</summary>
+    [OneOf(typeof(ConfrontationKinds))]
     [JsonProperty("kind")]
     public string Kind { get; set; } = ConfrontationKinds.None;
 

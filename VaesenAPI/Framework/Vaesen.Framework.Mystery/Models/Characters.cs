@@ -113,6 +113,7 @@ public sealed class LatentHook
     public string Id { get; set; } = "";
 
     /// <summary>One of <see cref="LatentHookKinds"/>.</summary>
+    [OneOf(typeof(LatentHookKinds))]
     [JsonProperty("kind")]
     public string Kind { get; set; } = LatentHookKinds.Secret;
 

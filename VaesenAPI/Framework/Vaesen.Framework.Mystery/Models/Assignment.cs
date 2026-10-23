@@ -60,6 +60,7 @@ public sealed class AssignmentBrief
     [JsonProperty("conflictArchetypeIds")]
     public List<string> ConflictArchetypeIds { get; set; } = [];
 
+    [OneOf(typeof(ReasonKinds))]
     [JsonProperty("reasonKind")]
     public string ReasonKind { get; set; } = "";
 
@@ -72,9 +73,11 @@ public sealed class AssignmentBrief
     [JsonProperty("handDisposition")]
     public string? HandDisposition { get; set; }
 
+    [OneOf(typeof(PlotCentreKinds))]
     [JsonProperty("plotCentreKind")]
     public string PlotCentreKind { get; set; } = PlotCentreKinds.Provocation;
 
+    [OneOf(typeof(CaseFocus))]
     [JsonProperty("focus")]
     public string Focus { get; set; } = CaseFocus.What;
 

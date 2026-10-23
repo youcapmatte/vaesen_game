@@ -122,6 +122,7 @@ public sealed class CaseTruth
     [JsonProperty("summary")]
     public string Summary { get; set; } = "";
 
+    [OneOf(typeof(ReasonKinds))]
     [JsonProperty("reasonKind")]
     public string ReasonKind { get; set; } = "";
 
@@ -133,6 +134,7 @@ public sealed class CaseTruth
     public PlotCentre PlotCentre { get; set; } = new();
 
     /// <summary>One of <see cref="CaseFocus"/>.</summary>
+    [OneOf(typeof(CaseFocus))]
     [JsonProperty("focus")]
     public string Focus { get; set; } = CaseFocus.What;
 
@@ -178,6 +180,7 @@ public static class CaseFocus
 public sealed class PlotCentre
 {
     /// <summary>One of <see cref="PlotCentreKinds"/>.</summary>
+    [OneOf(typeof(PlotCentreKinds))]
     [JsonProperty("kind")]
     public string Kind { get; set; } = PlotCentreKinds.Provocation;
 
@@ -212,6 +215,7 @@ public sealed class EscalationEvent
     public string? PlaceId { get; set; }
 
     /// <summary>The register it is noticed in (<see cref="SignRegisters"/>), to spread openings across registers.</summary>
+    [OneOf(typeof(SignRegisters))]
     [JsonProperty("register")]
     public string Register { get; set; } = SignRegisters.Physical;
 
@@ -271,6 +275,7 @@ public sealed class CaseFact
     public bool LoadBearing { get; set; }
 
     /// <summary>One of <see cref="FactKinds"/>.</summary>
+    [OneOf(typeof(FactKinds))]
     [JsonProperty("kind")]
     public string Kind { get; set; } = FactKinds.Symptom;
 
@@ -328,6 +333,7 @@ public sealed class CaseChannel
     public string FactId { get; set; } = "";
 
     /// <summary>One of <see cref="ChannelKinds"/>.</summary>
+    [OneOf(typeof(ChannelKinds))]
     [JsonProperty("kind")]
     public string Kind { get; set; } = ChannelKinds.Testimony;
 
@@ -388,6 +394,7 @@ public sealed class CastMember
     public string PlotRole { get; set; } = "";
 
     /// <summary>One of <see cref="CastTiers"/>.</summary>
+    [OneOf(typeof(CastTiers))]
     [JsonProperty("tier")]
     public string Tier { get; set; } = CastTiers.Significant;
 
@@ -514,6 +521,7 @@ public sealed class CharacterAction
     public string Id { get; set; } = "";
 
     /// <summary>One of <see cref="DesperationTiers"/>.</summary>
+    [OneOf(typeof(DesperationTiers))]
     [JsonProperty("tier")]
     public string Tier { get; set; } = DesperationTiers.Low;
 
@@ -643,6 +651,7 @@ public sealed class ResolutionLever
     public string Description { get; set; } = "";
 
     /// <summary>One of <see cref="SolveDepths"/>.</summary>
+    [OneOf(typeof(SolveDepths))]
     [JsonProperty("solveDepth")]
     public string SolveDepth { get; set; } = SolveDepths.Crude;
 

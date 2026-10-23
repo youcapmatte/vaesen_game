@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Schema;
 using System.Text.Json.Serialization;
+using Vaesen.Framework.Mystery.Models;
 
 namespace Vaesen.Framework.Mystery.Ai;
 
@@ -32,11 +33,27 @@ public static class StructuredSchema
 
     private static JsonObject Build(Type type)
     {
-        var node = Options.GetJsonSchemaAsNode(type, new JsonSchemaExporterOptions { TreatNullObliviousAsNonNullable = true });
+        var node = Options.GetJsonSchemaAsNode(type, new JsonSchemaExporterOptions
+        {
+            TreatNullObliviousAsNonNullable = true,
+            TransformSchemaNode = AddAllowedValues,
+        });
         var schema = node as JsonObject ?? throw new InvalidOperationException($"No object schema for {type.Name}.");
         HoistReferences(schema);
         Normalize(schema);
         return schema;
+    }
+
+    /// <summary>A property marked <see cref="OneOfAttribute"/> gets its values as an enum.</summary>
+    private static JsonNode AddAllowedValues(JsonSchemaExporterContext context, JsonNode node)
+    {
+        var oneOf = context.PropertyInfo?.AttributeProvider?.GetCustomAttributes(typeof(OneOfAttribute), inherit: true).OfType<OneOfAttribute>().FirstOrDefault();
+        if (oneOf is not null && node is JsonObject schema)
+        {
+            schema["enum"] = new JsonArray(oneOf.Values.Select(v => (JsonNode)JsonValue.Create(v)!).ToArray());
+        }
+
+        return node;
     }
 
     /// <summary>
