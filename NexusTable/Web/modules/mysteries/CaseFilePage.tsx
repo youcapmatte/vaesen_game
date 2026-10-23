@@ -23,7 +23,9 @@ import { Http, useApi, useApiData } from "@/common/client/core/Api";
 import { useMe } from "@/common/client/components/hooks";
 import { Corners } from "@/common/client/components/Ornament";
 import { ErrorNote, FullPageLoader, PageFrame } from "@/common/client/components/PageFrame";
+import { saveFile } from "@/common/client/core/saveFile";
 import { HostOnly, StatusBadge } from "./CaseFilesPage";
+import { TableButton } from "./TableButton";
 
 /** One case file: the hidden GM file of a mystery, behind a spoiler warning. Host only. */
 export function CaseFilePage({ mysteryId }: { mysteryId: string }) {
@@ -56,12 +58,12 @@ function CaseFileContent({ mysteryId }: { mysteryId: string }) {
       {!stored && !error && <FullPageLoader label="Breaking the seal…" />}
       {stored && (revealed
         ? <CaseFile stored={stored} onChanged={(next) => void mutate(next, { revalidate: false })} />
-        : <SpoilerGate packet={stored.packet} onReveal={() => setRevealed(true)} />)}
+        : <SpoilerGate packet={stored.packet} playable={stored.packet.validation.passed && !stored.closing} onReveal={() => setRevealed(true)} />)}
     </Container>
   );
 }
 
-function SpoilerGate({ packet, onReveal }: { packet: CasePacket; onReveal: () => void }) {
+function SpoilerGate({ packet, playable, onReveal }: { packet: CasePacket; playable: boolean; onReveal: () => void }) {
   return (
     <Box className="nx-parchment" p="xl" maw={640} mx="auto" ta="center">
       <Corners color="var(--nx-blood)" />
@@ -77,6 +79,12 @@ function SpoilerGate({ packet, onReveal }: { packet: CasePacket; onReveal: () =>
           <Button component={Link} href="/mysteries" variant="subtle" color="umber">Keep it sealed</Button>
           <Button color="blood" leftSection={<IconEye size={16} />} onClick={onReveal}>Break the seal</Button>
         </Group>
+        {playable && (
+          <Stack gap={4} align="center" mt="md">
+            <Text fz="xs" c="var(--nx-ink-soft)">Or play it unread: the table sees only its title and hook.</Text>
+            <TableButton mysteryId={packet.mysteryId} playable />
+          </Stack>
+        )}
       </Stack>
     </Box>
   );
@@ -104,6 +112,7 @@ function CaseFile({ stored, onChanged }: { stored: StoredCase; onChanged: (next:
             : <Badge color="blood" variant="light">Failed · {errors} error{errors === 1 ? "" : "s"}</Badge>}
           <StatusBadge status={p.validation.passed ? stored.status : "rejected"} />
         </Group>
+        <Box mt="sm"><TableButton mysteryId={p.mysteryId} playable={canClose} /></Box>
         {canClose && (
           <Button mt="sm" size="xs" variant="outline" color="gold" leftSection={<IconBook2 size={14} />} onClick={openClose}>
             The Society has finished this mystery
@@ -362,14 +371,7 @@ function ReviewTab({ stored }: { stored: StoredCase }) {
 
   // Everything there is about the case, for Claude or anyone else reviewing the engine: packet, prompts, every step's
   // instruction and raw answer, validator runs and the closing.
-  const downloadAll = () => {
-    const url = URL.createObjectURL(new Blob([JSON.stringify(stored, null, 2)], { type: "application/json" }));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${p.mysteryId}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
-  };
+  const downloadAll = () => saveFile(`${p.mysteryId}.json`, JSON.stringify(stored, null, 2), "application/json");
 
   const download = async () => {
     const result = await call<string>(Http.GET, MysteryApi.report(p.mysteryId));
@@ -377,12 +379,7 @@ function ReviewTab({ stored }: { stored: StoredCase }) {
       setDownloadError(result.errorMessage);
       return;
     }
-    const url = URL.createObjectURL(new Blob([result.result], { type: "text/markdown" }));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${p.title || p.mysteryId}.md`;
-    link.click();
-    URL.revokeObjectURL(url);
+    saveFile(`${p.title || p.mysteryId}.md`, result.result, "text/markdown");
   };
 
   return (

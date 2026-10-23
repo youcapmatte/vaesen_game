@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using System.Globalization;
+using System.Text;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
@@ -41,12 +43,81 @@ public sealed class MysteryJob
 
     [JsonProperty("error")]
     public string? Error { get; set; }
+
+    /// <summary>A lab run: how many cases were asked for.</summary>
+    [JsonProperty("total", NullValueHandling = NullValueHandling.Ignore)]
+    public int? Total { get; set; }
+
+    /// <summary>A lab run: each case as it ends.</summary>
+    [JsonProperty("results")]
+    public List<LabResult> Results { get; set; } = [];
+
+    /// <summary>The host asked a lab run to stop after the case it is writing.</summary>
+    [JsonProperty("stopRequested")]
+    public bool StopRequested { get; set; }
 }
 
 public static class MysteryJobKinds
 {
     public const string Mystery = "mystery";
     public const string World = "world";
+
+    /// <summary>Cases written one after another for review; kept apart from the Society's own.</summary>
+    public const string Lab = "lab";
+}
+
+/// <summary>One case of a lab run.</summary>
+public sealed class LabResult
+{
+    [JsonProperty("mysteryId")]
+    public string? MysteryId { get; set; }
+
+    [JsonProperty("title")]
+    public string? Title { get; set; }
+
+    [JsonProperty("passed")]
+    public bool Passed { get; set; }
+
+    [JsonProperty("error")]
+    public string? Error { get; set; }
+}
+
+public sealed class LabRequest
+{
+    public const int MaxCount = 10;
+
+    /// <summary>How many cases to write, one after another (1 to <see cref="MaxCount"/>).</summary>
+    [JsonProperty("count")]
+    public int Count { get; set; } = 1;
+}
+
+public static class ExportFormats
+{
+    public const string Markdown = "markdown";
+    public const string Json = "json";
+}
+
+public sealed class ExportRequest
+{
+    [JsonProperty("mysteryIds")]
+    public List<string> MysteryIds { get; set; } = [];
+
+    /// <summary>"markdown" (the readable reports, for reviewing) or "json" (the whole stored cases).</summary>
+    [JsonProperty("format")]
+    public string Format { get; set; } = ExportFormats.Markdown;
+}
+
+/// <summary>A file for the host to save.</summary>
+public sealed class MysteryExport
+{
+    [JsonProperty("fileName")]
+    public string FileName { get; set; } = "";
+
+    [JsonProperty("contentType")]
+    public string ContentType { get; set; } = "";
+
+    [JsonProperty("content")]
+    public string Content { get; set; } = "";
 }
 
 public static class MysteryJobStatus
@@ -57,8 +128,9 @@ public static class MysteryJobStatus
 }
 
 /// <summary>
-/// The mystery engine at the table: the host generates cases and reads them (spoilers: host only, spec 20). Nothing
-/// here reaches players or the voice Gamemaster yet; that waits until the owner is happy with generated cases.
+/// The mystery engine at the table: the host generates cases and reads them (spoilers: host only, spec 20), writes
+/// batches in the lab to judge the engine, and brings one case to the table, where players see its title and hook and
+/// the Gamemaster gets the whole case file.
 /// </summary>
 public interface IMysteryService
 {
@@ -69,7 +141,23 @@ public interface IMysteryService
     /// <summary>The running generation, or the last one since the API started; null if there has been none.</summary>
     ResultBase<MysteryJob?> GetCurrentJob(Account caller);
 
-    Task<ResultBase<List<CaseSummary>>> ListAsync(Account caller, CancellationToken cancellationToken = default);
+    /// <summary>The Society's cases, or with <paramref name="lab"/> the lab's.</summary>
+    Task<ResultBase<List<CaseSummary>>> ListAsync(Account caller, bool lab = false, CancellationToken cancellationToken = default);
+
+    /// <summary>Writes <see cref="LabRequest.Count"/> cases one after another, kept apart from the Society's history.</summary>
+    Task<ResultBase<MysteryJob>> StartLabAsync(Account caller, LabRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>Stops a lab run after the case it is writing.</summary>
+    ResultBase<MysteryJob> StopJob(Account caller, string jobId);
+
+    /// <summary>The chosen cases as one file: their reports (Markdown) or the stored cases (JSON).</summary>
+    Task<ResultBase<MysteryExport>> ExportAsync(Account caller, ExportRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>Puts a case on the table. A lab case is moved into the Society's own cases first.</summary>
+    Task<ResultBase<Society>> BringToTableAsync(Account caller, string mysteryId, CancellationToken cancellationToken = default);
+
+    /// <summary>Takes the case off the table without closing it.</summary>
+    Task<ResultBase<Society>> ClearTableAsync(Account caller, CancellationToken cancellationToken = default);
 
     Task<ResultBase<StoredCase>> GetAsync(Account caller, string mysteryId, CancellationToken cancellationToken = default);
 
@@ -108,7 +196,8 @@ public sealed class MysteryService(
         Account caller,
         string kind,
         Func<MysteryJob, SocietyHistory, IProgress<GenerationProgress>, CancellationToken, Task> run,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        Action<MysteryJob>? setup = null)
     {
         var ret = new ResultBase<MysteryJob>();
         if (caller.Role != AccountRole.Host)
@@ -128,6 +217,7 @@ public sealed class MysteryService(
         }
 
         var job = new MysteryJob { JobId = Guid.NewGuid().ToString("N"), Kind = kind, StartedAt = DateTime.UtcNow };
+        setup?.Invoke(job);
         _jobs[job.JobId] = job;
         var progress = new Progress<GenerationProgress>(p =>
         {
@@ -177,7 +267,7 @@ public sealed class MysteryService(
         return job is null ? ret.Ok(null) : ret.Ok(GetJob(caller, job.JobId).Result);
     }
 
-    public async Task<ResultBase<List<CaseSummary>>> ListAsync(Account caller, CancellationToken cancellationToken = default)
+    public async Task<ResultBase<List<CaseSummary>>> ListAsync(Account caller, bool lab = false, CancellationToken cancellationToken = default)
     {
         var ret = new ResultBase<List<CaseSummary>>();
         if (caller.Role != AccountRole.Host)
@@ -186,8 +276,153 @@ public sealed class MysteryService(
         }
 
         var societyId = await SocietyIdAsync(cancellationToken).ConfigureAwait(false);
-        return societyId is null ? ret.Fail("The Society is not set up.", ErrorCodes.NotFound) : await cases.ListAsync(societyId, cancellationToken).ConfigureAwait(false);
+        if (societyId is null)
+        {
+            return ret.Fail("The Society is not set up.", ErrorCodes.NotFound);
+        }
+
+        return await cases.ListAsync(lab ? LabSocietyId(societyId) : societyId, cancellationToken).ConfigureAwait(false);
     }
+
+    public Task<ResultBase<MysteryJob>> StartLabAsync(Account caller, LabRequest request, CancellationToken cancellationToken = default)
+    {
+        if (request.Count is < 1 or > LabRequest.MaxCount)
+        {
+            return Task.FromResult(new ResultBase<MysteryJob>().Fail($"Write between 1 and {LabRequest.MaxCount} cases at a time.", ErrorCodes.Invalid));
+        }
+
+        return StartJobAsync(
+            caller,
+            MysteryJobKinds.Lab,
+            (job, history, progress, stopping) => RunLabAsync(job, request.Count, history, progress, stopping),
+            cancellationToken,
+            job => job.Total = request.Count);
+    }
+
+    public ResultBase<MysteryJob> StopJob(Account caller, string jobId)
+    {
+        var ret = new ResultBase<MysteryJob>();
+        if (caller.Role != AccountRole.Host)
+        {
+            return ret.Fail("Only the host can stop a generation.", ErrorCodes.Forbidden);
+        }
+
+        if (!_jobs.TryGetValue(jobId, out var job))
+        {
+            return ret.Fail("No such generation.", ErrorCodes.NotFound);
+        }
+
+        lock (job)
+        {
+            job.StopRequested = true;
+        }
+
+        return GetJob(caller, jobId);
+    }
+
+    public async Task<ResultBase<MysteryExport>> ExportAsync(Account caller, ExportRequest request, CancellationToken cancellationToken = default)
+    {
+        var ret = new ResultBase<MysteryExport>();
+        var ids = request.MysteryIds.Where(id => !string.IsNullOrWhiteSpace(id)).Distinct(StringComparer.Ordinal).ToList();
+        if (ids.Count == 0)
+        {
+            return ret.Fail("Choose at least one case to export.", ErrorCodes.Invalid);
+        }
+
+        if (request.Format is not (ExportFormats.Markdown or ExportFormats.Json))
+        {
+            return ret.Fail("The format is markdown or json.", ErrorCodes.Invalid);
+        }
+
+        var stored = new List<StoredCase>();
+        foreach (var id in ids)
+        {
+            var one = await GetAsync(caller, id, cancellationToken).ConfigureAwait(false);
+            if (!one.Success)
+            {
+                return ret.Fail($"{id}: {one.ErrorMessage}", one.ErrorCode);
+            }
+
+            stored.Add(one.Result!);
+        }
+
+        var stamp = DateTime.UtcNow.ToString("yyyyMMdd-HHmm", CultureInfo.InvariantCulture);
+        if (request.Format == ExportFormats.Json)
+        {
+            return ret.Ok(new MysteryExport
+            {
+                FileName = $"nexus-mysteries-{stamp}.json",
+                ContentType = "application/json",
+                Content = JsonConvert.SerializeObject(stored, Formatting.Indented),
+            });
+        }
+
+        // One document for a reviewer: a contents list, then each case's full report.
+        var s = new StringBuilder();
+        s.AppendLine("# Nexus Table: generated mysteries for review");
+        s.AppendLine();
+        s.AppendLine(CultureInfo.InvariantCulture, $"Exported {DateTime.UtcNow:yyyy-MM-dd HH:mm} UTC. {stored.Count} case(s), each with its truth, cast, clues, validation and generation log.");
+        s.AppendLine();
+        for (var i = 0; i < stored.Count; i++)
+        {
+            var packet = stored[i].Packet;
+            s.AppendLine(CultureInfo.InvariantCulture, $"{i + 1}. {packet.Title} ({packet.MysteryId}): {(packet.Validation.Passed ? "passed" : "failed")} validation");
+        }
+
+        foreach (var one in stored)
+        {
+            s.AppendLine();
+            s.AppendLine("---");
+            s.AppendLine();
+            s.Append(CaseReport.ToMarkdown(one.Packet, one.Brief, one.Log));
+        }
+
+        return ret.Ok(new MysteryExport { FileName = $"nexus-mysteries-{stamp}.md", ContentType = "text/markdown", Content = s.ToString() });
+    }
+
+    public async Task<ResultBase<Society>> BringToTableAsync(Account caller, string mysteryId, CancellationToken cancellationToken = default)
+    {
+        var ret = new ResultBase<Society>();
+        var stored = await GetAsync(caller, mysteryId, cancellationToken).ConfigureAwait(false);
+        if (!stored.Success)
+        {
+            return ret.Fail(stored.ErrorMessage, stored.ErrorCode);
+        }
+
+        var packet = stored.Result!.Packet;
+        if (!packet.Validation.Passed || string.IsNullOrWhiteSpace(packet.Hook.Text))
+        {
+            return ret.Fail("Only a case that passed its checks, with a hook, can be played.", ErrorCodes.Invalid);
+        }
+
+        if (stored.Result.Status is CaseStatuses.Solved or CaseStatuses.Failed)
+        {
+            return ret.Fail("This case has already been played to its end.", ErrorCodes.Invalid);
+        }
+
+        // A case from the lab becomes one of the Society's own: it is played, closed and remembered like the rest.
+        var societyId = await SocietyIdAsync(cancellationToken).ConfigureAwait(false);
+        if (societyId is not null && packet.SocietyId != societyId)
+        {
+            packet.SocietyId = societyId;
+            var saved = await cases.SaveAsync(stored.Result, cancellationToken).ConfigureAwait(false);
+            if (!saved.Success)
+            {
+                return ret.Fail(saved.ErrorMessage, saved.ErrorCode);
+            }
+        }
+
+        return await society.SetAtTableAsync(caller, new MysteryAtTable
+        {
+            MysteryId = packet.MysteryId,
+            Title = packet.Title,
+            HookText = packet.Hook.Text,
+            BroughtAt = DateTime.UtcNow,
+        }, cancellationToken).ConfigureAwait(false);
+    }
+
+    public Task<ResultBase<Society>> ClearTableAsync(Account caller, CancellationToken cancellationToken = default) =>
+        society.SetAtTableAsync(caller, null, cancellationToken);
 
     public async Task<ResultBase<StoredCase>> GetAsync(Account caller, string mysteryId, CancellationToken cancellationToken = default)
     {
@@ -198,7 +433,14 @@ public sealed class MysteryService(
         }
 
         var societyId = await SocietyIdAsync(cancellationToken).ConfigureAwait(false);
-        return societyId is null ? ret.Fail("The Society is not set up.", ErrorCodes.NotFound) : await cases.GetAsync(societyId, mysteryId, cancellationToken).ConfigureAwait(false);
+        if (societyId is null)
+        {
+            return ret.Fail("The Society is not set up.", ErrorCodes.NotFound);
+        }
+
+        // The Society's own cases first, then the lab's.
+        var found = await cases.GetAsync(societyId, mysteryId, cancellationToken).ConfigureAwait(false);
+        return found.Success ? found : await cases.GetAsync(LabSocietyId(societyId), mysteryId, cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<ResultBase<string>> GetReportAsync(Account caller, string mysteryId, CancellationToken cancellationToken = default)
@@ -218,10 +460,20 @@ public sealed class MysteryService(
             return ret.Fail("Only the host can close a mystery.", ErrorCodes.Forbidden);
         }
 
-        var societyId = await SocietyIdAsync(cancellationToken).ConfigureAwait(false);
-        return societyId is null
-            ? ret.Fail("The Society is not set up.", ErrorCodes.NotFound)
-            : await worlds.CloseMysteryAsync(societyId, mysteryId, request, cancellationToken).ConfigureAwait(false);
+        var current = await society.GetAsync(cancellationToken).ConfigureAwait(false);
+        if (!current.Success)
+        {
+            return ret.Fail("The Society is not set up.", ErrorCodes.NotFound);
+        }
+
+        var closed = await worlds.CloseMysteryAsync(current.Result!.Id, mysteryId, request, cancellationToken).ConfigureAwait(false);
+        if (closed.Success && current.Result.AtTable?.MysteryId == mysteryId)
+        {
+            // A closed case leaves the table; the next one is chosen fresh.
+            await society.SetAtTableAsync(caller, null, cancellationToken).ConfigureAwait(false);
+        }
+
+        return closed;
     }
 
     public async Task<ResultBase<SocietyWorld>> GetWorldAsync(Account caller, CancellationToken cancellationToken = default)
@@ -298,6 +550,70 @@ public sealed class MysteryService(
             }
         }
     }
+
+    /// <summary>
+    /// Cases one after another, each from the Society's real history, so every run samples "the next mystery". They are
+    /// stored under the lab's id and never become history themselves, so the runs don't steer one another.
+    /// </summary>
+    private async Task RunLabAsync(MysteryJob job, int count, SocietyHistory history, IProgress<GenerationProgress> progress, CancellationToken cancellationToken)
+    {
+        var labId = LabSocietyId(history.SocietyId);
+        try
+        {
+            for (var run = 1; run <= count; run++)
+            {
+                lock (job)
+                {
+                    if (job.StopRequested)
+                    {
+                        job.Progress.Add($"lab: Stopped after {run - 1} of {count}.");
+                        break;
+                    }
+
+                    job.Progress.Add($"lab: Case {run} of {count}.");
+                }
+
+                var result = await generator.GenerateAsync(new GenerationRequest { History = history, Store = false }, progress, cancellationToken).ConfigureAwait(false);
+                var written = result.Result?.Case;
+                var labResult = new LabResult { Passed = result.Success, Error = result.Success ? null : result.ErrorMessage, Title = written?.Packet.Title };
+                if (written is not null && written.Packet.Title is { Length: > 0 })
+                {
+                    written.Packet.SocietyId = labId;
+                    if (!result.Success)
+                    {
+                        written.Status = CaseStatuses.Rejected;
+                    }
+
+                    var saved = await cases.SaveAsync(written, cancellationToken).ConfigureAwait(false);
+                    labResult.MysteryId = saved.Success ? written.Packet.MysteryId : null;
+                }
+
+                lock (job)
+                {
+                    job.Results.Add(labResult);
+                }
+            }
+
+            lock (job)
+            {
+                job.EndedAt = DateTime.UtcNow;
+                job.Status = MysteryJobStatus.Succeeded;
+                job.Title = $"{job.Results.Count(r => r.Passed)} of {job.Results.Count} passed";
+            }
+        }
+        catch (Exception ex) when (ex is not OutOfMemoryException)
+        {
+            logger.LogError(ex, "Lab run {JobId} crashed", job.JobId);
+            lock (job)
+            {
+                job.EndedAt = DateTime.UtcNow;
+                job.Status = MysteryJobStatus.Failed;
+                job.Error = ex is OperationCanceledException ? "The server stopped." : ex.Message;
+            }
+        }
+    }
+
+    private static string LabSocietyId(string societyId) => societyId + "-lab";
 
     /// <summary>What the assignment needs: the Society, its investigators and the creatures and hooks it has met.</summary>
     private async Task<ResultBase<SocietyHistory>> HistoryAsync(CancellationToken cancellationToken)

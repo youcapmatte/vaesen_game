@@ -1,12 +1,12 @@
 "use client";
 
 import { Badge, Box, Button, Container, Group, Loader, SimpleGrid, Stack, Text, ThemeIcon, Title } from "@mantine/core";
-import { IconAlertTriangle, IconCheck, IconFeather, IconLock, IconScript } from "@tabler/icons-react";
+import { IconAlertTriangle, IconCandle, IconCheck, IconFeather, IconFlask, IconLock, IconScript } from "@tabler/icons-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { GenerationSteps, levelName, MonthNames, MysteryApi, type CaseStatus, type CaseSummary, type MysteryJob } from "@/common/api/mystery";
 import { Http, useApi, useApiData } from "@/common/client/core/Api";
-import { useMe } from "@/common/client/components/hooks";
+import { useMe, useSociety } from "@/common/client/components/hooks";
 import { Corners, SightMark } from "@/common/client/components/Ornament";
 import { ErrorNote, FullPageLoader, PageFrame, PageTitle } from "@/common/client/components/PageFrame";
 
@@ -48,12 +48,19 @@ export function HostOnly() {
 
 function HostCaseFiles() {
   const { data: cases, error, mutate: refreshCases } = useApiData<CaseSummary[]>(MysteryApi.list);
+  const { data: view } = useSociety();
+  const atTableId = view?.society.atTable?.mysteryId;
 
   return (
     <Container size="lg">
       <PageTitle kicker="Host only" title="The Case Files">
         Mysteries written for the Society by the engine. The list keeps its secrets; a case file itself is all spoilers.
       </PageTitle>
+      <Group justify="center" mb="lg">
+        <Button component={Link} href="/mysteries/lab" variant="light" color="gold" leftSection={<IconFlask size={16} />}>
+          The Mystery Lab: write many, export them for review
+        </Button>
+      </Group>
 
       <GeneratePanel onWritten={() => void refreshCases()} />
 
@@ -66,18 +73,18 @@ function HostCaseFiles() {
         <Text ta="center" className="nx-flourish" c="var(--nx-sepia)">No mystery has been written yet.</Text>
       )}
       <SimpleGrid cols={{ base: 1, sm: 2, md: 3 }} spacing="lg">
-        {cases?.map((summary) => <CaseCard key={summary.mysteryId} summary={summary} />)}
+        {cases?.map((summary) => <CaseCard key={summary.mysteryId} summary={summary} atTable={summary.mysteryId === atTableId} />)}
       </SimpleGrid>
     </Container>
   );
 }
 
 /** One case on the shelf: no creature, no truth, just enough to tell them apart. */
-function CaseCard({ summary }: { summary: CaseSummary }) {
+export function CaseCard({ summary, atTable = false, href }: { summary: CaseSummary; atTable?: boolean; href?: string }) {
   return (
     <Box
       component={Link}
-      href={`/mysteries/${summary.mysteryId}`}
+      href={href ?? `/mysteries/${summary.mysteryId}`}
       className="nx-parchment"
       p="lg"
       style={{ textDecoration: "none", display: "block", minHeight: 150 }}
@@ -85,7 +92,10 @@ function CaseCard({ summary }: { summary: CaseSummary }) {
       <Stack gap={6} h="100%">
         <Group justify="space-between" wrap="nowrap" align="flex-start">
           <IconScript size={22} color="var(--nx-blood)" stroke={1.5} />
-          <StatusBadge status={summary.passed ? summary.status : "rejected"} />
+          <Group gap={4}>
+            {atTable && <Badge size="xs" color="gold" leftSection={<IconCandle size={10} />}>At the table</Badge>}
+            <StatusBadge status={summary.passed ? summary.status : "rejected"} />
+          </Group>
         </Group>
         <Title order={4}>{summary.title || "Untitled"}</Title>
         <Text fz="sm" c="var(--nx-ink-soft)">
@@ -145,7 +155,13 @@ function GeneratePanel({ onWritten }: { onWritten: () => void }) {
   return (
     <Box className="nx-panel" p="xl" maw={760} mx="auto">
       <Corners />
-      {running ? (
+      {running && job.kind === "lab" ? (
+        <Stack align="center" gap="xs" ta="center">
+          <Loader color="gold" type="dots" />
+          <Text>The lab is writing case {Math.min(job.results.length + 1, job.total ?? 1)} of {job.total}; the engine takes one job at a time.</Text>
+          <Button component={Link} href="/mysteries/lab" size="compact-sm" variant="light" color="gold">Open the lab</Button>
+        </Stack>
+      ) : running ? (
         <Progress job={job} />
       ) : (
         <Stack align="center" gap="sm" ta="center">
@@ -166,7 +182,7 @@ function GeneratePanel({ onWritten }: { onWritten: () => void }) {
   );
 }
 
-function Progress({ job }: { job: MysteryJob }) {
+export function Progress({ job }: { job: MysteryJob }) {
   const elapsed = useElapsed(job.startedAt);
   const reached = (stepId: string) => job.progress.some((p) => p.startsWith(`${stepId}:`));
   // Seeding the world shows only the first time; a seeding job shows nothing else.
@@ -204,6 +220,15 @@ function Progress({ job }: { job: MysteryJob }) {
 }
 
 function LastJob({ job }: { job: MysteryJob }) {
+  if (job.kind === "lab") {
+    return (
+      <Group gap="xs" mt="sm" justify="center">
+        <IconFlask size={16} color="var(--nx-gold)" />
+        <Text fz="sm">The last lab run: {job.title ?? job.error ?? "ended"}.</Text>
+        <Button component={Link} href="/mysteries/lab" size="compact-sm" variant="light" color="gold">Open the lab</Button>
+      </Group>
+    );
+  }
   if (job.kind === "world" && job.status === "succeeded") {
     return (
       <Group gap="xs" mt="sm" justify="center">
@@ -240,7 +265,7 @@ function LastJob({ job }: { job: MysteryJob }) {
 }
 
 /** "3 min 12 s" since <paramref name="since"/>, ticking each second. */
-function useElapsed(since: string) {
+export function useElapsed(since: string) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);

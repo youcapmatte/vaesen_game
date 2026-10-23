@@ -7,7 +7,7 @@ export type MysteryJobStatus = "running" | "succeeded" | "failed";
 
 export interface MysteryJob {
   jobId: string;
-  kind: "mystery" | "world";
+  kind: "mystery" | "world" | "lab";
   status: MysteryJobStatus;
   startedAt: string;
   endedAt?: string | null;
@@ -15,6 +15,28 @@ export interface MysteryJob {
   mysteryId?: string | null;
   title?: string | null;
   error?: string | null;
+  /** A lab run: how many cases were asked for, each one as it ends, and whether the host asked it to stop. */
+  total?: number | null;
+  results: LabResult[];
+  stopRequested: boolean;
+}
+
+export interface LabResult {
+  mysteryId?: string | null;
+  title?: string | null;
+  passed: boolean;
+  error?: string | null;
+}
+
+/** The most cases one lab run writes. */
+export const LabMaxCount = 10;
+
+export type ExportFormat = "markdown" | "json";
+
+export interface MysteryExport {
+  fileName: string;
+  contentType: string;
+  content: string;
 }
 
 export interface CaseSummary {
@@ -226,7 +248,13 @@ export function attitudeName(attitude: number) {
 
 export const MysteryApi = {
   list: "/api/mysteries",
+  labList: "/api/mysteries?lab=true",
   generate: "/api/mysteries/generate",
+  lab: "/api/mysteries/lab",
+  stop: (jobId: string) => `/api/mysteries/jobs/${jobId}/stop`,
+  export: "/api/mysteries/export",
+  table: (mysteryId: string) => `/api/mysteries/${mysteryId}/table`,
+  clearTable: "/api/mysteries/table",
   currentJob: "/api/mysteries/jobs/current",
   job: (jobId: string) => `/api/mysteries/jobs/${jobId}`,
   case: (mysteryId: string) => `/api/mysteries/${mysteryId}`,

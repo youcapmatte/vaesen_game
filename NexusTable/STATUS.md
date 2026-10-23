@@ -125,10 +125,18 @@ Built to the build spec, [SPEC.md](SPEC.md), milestones 3 and 4. The engine is a
   - **Closing.** The host closes a mystery from its case page (solved or not, and which ending). The engine then writes it back: memories, knowledge, attitude changes, fates, world changes, and the case's people join the persistent cast.
   - **The World page** (`/world`, host only) shows everyone by tier: attitude, importance, ties, hooks, memories, plus what the Society has changed. Both the world and each case can be downloaded as JSON for review; a case's JSON carries its prompts and every step's instruction and raw answer.
   - **Tests.** Seeding, re-rolling a bad seed, offering the world to cases, blocking the dead, the write-back and the stored prompts are tested with the scripted model. The pages were checked in the browser with a hand-made world: closing the sample case added its 8 people, Anna Lind's attitude and the world change. The close dialog itself wasn't opened (the browser pane was hidden), but the same request was sent through the API.
+- **The case at the table** (added 2026-10-23):
+  - **Bring to the table** on a case file (also from the spoiler gate, to play a case unread) puts it on the Society. A lab case moves into the Society's own cases first. Closing a case takes it off the table.
+  - **Players** see only its title and hook letter: the scene shows the title, and the letter lies first on the clue shelf, readable in full.
+  - **The Gamemaster** gets the whole case file (the report without the generation log) from `/api/agent/table`, with rules for running a prepared case, and opens by presenting the hook. The case's names go to Deepgram as keyterms. It reads the case when it joins, so changing cases means sending it away and bringing it in again.
+- **The Mystery Lab** (`/mysteries/lab`, host only, linked from the Case Files page, added 2026-10-23):
+  - Writes 1, 3, 5 or 10 cases one after another, each from the Society's real history, stored apart (`{society}-lab`) so they never count as played or steer one another. The run can be stopped after the current case.
+  - Lists lab cases (or the Society's), with checkboxes, and exports the chosen ones as one Markdown review document (contents, then each full report) or as JSON, with a ready request for Claude to assess them.
+- **Tests for the table and lab:** 5 API tests (who may do what, what players and the Gamemaster see, refusing a failed case, both exports, a lab run) and 3 agent tests (the prompt with and without a case, keyterms). Checked in the browser with the sample case: the lab shelf, bringing it to the table, the scene and the letter. A real lab run needs the Anthropic key in the API.
 - **Not done:**
   - a real run against the API (seeding included)
   - your review and approval of the content
-  - handing a chosen case to the Gamemaster ("Start mystery")
+  - tracking which clues the players have found (the shelf shows only the hook)
   - DynamoDB/S3 storage for case packets and worlds (files only for now)
   - seasons (spec 10), and influence at a distance through institutions
 

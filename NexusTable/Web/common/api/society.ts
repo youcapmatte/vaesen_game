@@ -7,6 +7,16 @@ export interface Society extends BaseCore {
   headquarters: string;
   memberAccountIds: string[];
   mysteryIds: string[];
+  /** The case being played: only its title and hook, which the whole table may see. */
+  atTable?: MysteryAtTable;
+}
+
+export interface MysteryAtTable {
+  mysteryId: string;
+  title: string;
+  /** The letter, article or plea that brings the Society in. */
+  hookText: string;
+  broughtAt: string;
 }
 
 export interface SocietyMember {

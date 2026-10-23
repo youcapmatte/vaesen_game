@@ -39,7 +39,7 @@ from livekit.plugins import deepgram, elevenlabs  # noqa: E402
 
 from nexus_gm import nexus_api  # noqa: E402
 from nexus_gm.claude import MODEL, GamemasterModel, Turn  # noqa: E402
-from nexus_gm.prompt import GM_RULES, build_table_brief  # noqa: E402
+from nexus_gm.prompt import GM_RULES, build_table_brief, opening_instruction, speech_keyterms  # noqa: E402
 from nexus_gm.speech import NARRATOR, SpeakerParser, strip_tags  # noqa: E402
 
 logger = logging.getLogger("nexus-gm")
@@ -172,11 +172,10 @@ server = AgentServer()
 async def gamemaster(ctx: agents.JobContext) -> None:
     table = await nexus_api.get_table()
     model = GamemasterModel(GM_RULES, build_table_brief(table))
-    character_names = [p["character"]["name"] for p in table.get("players", []) if p.get("character")]
 
     session = AgentSession(
         # Names of the characters help Deepgram hear them right.
-        stt=deepgram.STT(model="nova-3", language="en", keyterm=character_names),
+        stt=deepgram.STT(model="nova-3", language="en", keyterm=speech_keyterms(table)),
         # The pipeline needs an LLM object; replies come from Gamemaster.llm_node (Anthropic SDK, nexus_gm/claude.py).
         llm=anthropic_plugin.LLM(model=MODEL),
         tts=elevenlabs.TTS(voice_id=NARRATOR_VOICE, model=TTS_MODEL),
@@ -292,10 +291,7 @@ async def gamemaster(ctx: agents.JobContext) -> None:
             logger.info("gm: %s", strip_tags(state["last_reply"]))
 
     await set_state("idle")
-    session.generate_reply(
-        user_input="[Table] The Gamemaster has just joined the table. Welcome the Society in two short sentences, "
-        "give one quiet opening image of where they are, and ask who will begin."
-    )
+    session.generate_reply(user_input=opening_instruction(table))
 
 
 if __name__ == "__main__":

@@ -169,10 +169,35 @@ public sealed class CallController(IAccountService accounts, ICallService call) 
 [Route("api/mysteries")]
 public sealed class MysteryController(IAccountService accounts, IMysteryService mysteries) : NexusControllerBase(accounts)
 {
-    /// <summary>Generated cases, newest first (titles only).</summary>
+    /// <summary>Generated cases, newest first (titles only). With lab=true, the lab's cases instead of the Society's.</summary>
     [HttpGet]
-    public Task<ActionResult<ResultBase<List<CaseSummary>>>> List(CancellationToken cancellationToken) =>
-        AsCallerAsync(caller => mysteries.ListAsync(caller, cancellationToken), cancellationToken);
+    public Task<ActionResult<ResultBase<List<CaseSummary>>>> List([FromQuery] bool lab, CancellationToken cancellationToken) =>
+        AsCallerAsync(caller => mysteries.ListAsync(caller, lab, cancellationToken), cancellationToken);
+
+    /// <summary>Writes several cases one after another for review, kept apart from the Society's history; poll the job.</summary>
+    [HttpPost("lab")]
+    public Task<ActionResult<ResultBase<MysteryJob>>> Lab([FromBody] LabRequest? request, CancellationToken cancellationToken) =>
+        AsCallerAsync(caller => mysteries.StartLabAsync(caller, request ?? new LabRequest(), cancellationToken), cancellationToken);
+
+    /// <summary>Stops a lab run after the case it is writing.</summary>
+    [HttpPost("jobs/{jobId}/stop")]
+    public Task<ActionResult<ResultBase<MysteryJob>>> StopJob([FromRoute] string jobId, CancellationToken cancellationToken) =>
+        AsCallerAsync(caller => Task.FromResult(mysteries.StopJob(caller, jobId)), cancellationToken);
+
+    /// <summary>The chosen cases as one file to save: their reports (markdown) or the stored cases (json).</summary>
+    [HttpPost("export")]
+    public Task<ActionResult<ResultBase<MysteryExport>>> Export([FromBody] ExportRequest? request, CancellationToken cancellationToken) =>
+        AsCallerAsync(caller => mysteries.ExportAsync(caller, request ?? new ExportRequest(), cancellationToken), cancellationToken);
+
+    /// <summary>Puts the case on the table: players see its title and hook, the Gamemaster gets the case file.</summary>
+    [HttpPost("{mysteryId}/table")]
+    public Task<ActionResult<ResultBase<Society>>> BringToTable([FromRoute] string mysteryId, CancellationToken cancellationToken) =>
+        AsCallerAsync(caller => mysteries.BringToTableAsync(caller, mysteryId, cancellationToken), cancellationToken);
+
+    /// <summary>Takes the case off the table without closing it.</summary>
+    [HttpDelete("table")]
+    public Task<ActionResult<ResultBase<Society>>> ClearTable(CancellationToken cancellationToken) =>
+        AsCallerAsync(caller => mysteries.ClearTableAsync(caller, cancellationToken), cancellationToken);
 
     /// <summary>Starts generating a new case in the background; poll the job for progress.</summary>
     [HttpPost("generate")]

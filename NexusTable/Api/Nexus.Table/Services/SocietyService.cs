@@ -17,6 +17,9 @@ public interface ISocietyService
 
     /// <summary>Host only.</summary>
     Task<ResultBase<Society>> UpdateAsync(Account caller, UpdateSocietyRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>Host only: puts a case on the table (and in the Society's list of mysteries), or clears it with null.</summary>
+    Task<ResultBase<Society>> SetAtTableAsync(Account caller, MysteryAtTable? atTable, CancellationToken cancellationToken = default);
 }
 
 public sealed class SocietyService : ISocietyService
@@ -147,6 +150,42 @@ public sealed class SocietyService : ISocietyService
         society.Result.Headquarters = headquarters ?? society.Result.Headquarters;
         society.Result.UpdatedBy = caller.Id;
         var updated = await _societies.UpdateAsync(society.Result, cancellationToken).ConfigureAwait(false);
+        if (updated.Success)
+        {
+            await _notifier.SocietyChangedAsync(updated.Result!.Id, cancellationToken).ConfigureAwait(false);
+        }
+
+        return updated;
+    }
+
+    public async Task<ResultBase<Society>> SetAtTableAsync(Account caller, MysteryAtTable? atTable, CancellationToken cancellationToken = default)
+    {
+        var ret = new ResultBase<Society>();
+        if (caller.Role != AccountRole.Host)
+        {
+            return ret.Fail("Only the host can choose the mystery at the table.", ErrorCodes.Forbidden);
+        }
+
+        var society = await GetAsync(cancellationToken).ConfigureAwait(false);
+        if (!society.Success)
+        {
+            return society;
+        }
+
+        society.Result!.AtTable = atTable;
+        if (atTable is not null && !society.Result.MysteryIds.Contains(atTable.MysteryId, StringComparer.Ordinal))
+        {
+            society.Result.MysteryIds.Add(atTable.MysteryId);
+        }
+
+        society.Result.UpdatedBy = caller.Id;
+        var updated = await _societies.UpdateAsync(society.Result, cancellationToken).ConfigureAwait(false);
+        if (updated.ErrorCode == ErrorCodes.Conflict)
+        {
+            // Changed at the same moment (someone joined): read again and retry.
+            return await SetAtTableAsync(caller, atTable, cancellationToken).ConfigureAwait(false);
+        }
+
         if (updated.Success)
         {
             await _notifier.SocietyChangedAsync(updated.Result!.Id, cancellationToken).ConfigureAwait(false);

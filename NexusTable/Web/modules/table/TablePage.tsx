@@ -1,10 +1,12 @@
 "use client";
 
-import { Badge, Box, Button, Drawer, Group, Popover, Select, Stack, Switch, Text, Title, Tooltip } from "@mantine/core";
-import { IconBook2, IconMicrophone, IconSettings } from "@tabler/icons-react";
+import { Anchor, Badge, Box, Button, Drawer, Group, Modal, Popover, Select, Stack, Switch, Text, Title, Tooltip } from "@mantine/core";
+import { IconBook2, IconMail, IconMicrophone, IconScript, IconSettings } from "@tabler/icons-react";
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Character } from "@/common/api/character";
 import { RollApi, type Roll, type RollOutcome } from "@/common/api/roll";
+import type { MysteryAtTable } from "@/common/api/society";
 import type { VaesenRules } from "@/common/api/rules";
 import { useApiData } from "@/common/client/core/Api";
 import { ruleNames, useMe, useRules, useSociety } from "@/common/client/components/hooks";
@@ -98,7 +100,7 @@ function TableContent() {
       <Box className={styles.stage}>
         <Box className={`${styles.scene} nx-panel`}>
           <Corners />
-          <SceneCard headquarters={view.society.headquarters} />
+          <SceneCard headquarters={view.society.headquarters} atTable={view.society.atTable} isHost={me.role === "Host"} />
           <PushToTalkBar />
           {onStage && (
             <Box className={styles.diceOverlay} onClick={() => setOnStage(undefined)}>
@@ -106,7 +108,7 @@ function TableContent() {
             </Box>
           )}
         </Box>
-        <ClueShelf />
+        <ClueShelf atTable={view.society.atTable} />
       </Box>
 
       <Box className={styles.side}>
@@ -168,33 +170,70 @@ function SheetInDrawer({ character, rules, canEdit, onChange }: { character: Cha
   return <CharacterSheet character={character} rules={rules} canEdit={canEdit} canSeeSecret={canEdit && Boolean(character.darkSecret)} onChange={onChange} compact />;
 }
 
-/** The centre of the table: the current scene. Until the Gamemaster arrives, the Society's own rooms. */
-function SceneCard({ headquarters }: { headquarters: string }) {
+/**
+ * The centre of the table: the current scene. With a case on the table, its title and how it began; before that, the
+ * Society's own rooms. The host also gets the way to the case files.
+ */
+function SceneCard({ headquarters, atTable, isHost }: { headquarters: string; atTable?: MysteryAtTable; isHost: boolean }) {
   const gm = useGamemaster();
+  const text = atTable
+    ? gm.participant
+      ? "The Gamemaster has the case. Hold the talk key and speak to them; let go and they answer. Everything else you say stays among the Society."
+      : "A letter has come to the Society; it lies with the clues below. Join the call, and when the host brings in the Gamemaster, the mystery begins."
+    : gm.participant
+      ? "Hold the talk key and speak to them; let go and they answer. Everything else you say stays among the Society."
+      : "The fire is low and the letters on the table are unopened. Join the call, and when the host brings in the Gamemaster, it takes the fifth seat and paints the first scene: the place, the people, the wrongness that brought you.";
+
   return (
     <Stack align="center" gap="sm" maw={560} ta="center" p="xl">
-      <Text className="nx-kicker">The Society&apos;s rooms · {headquarters}</Text>
-      <Title order={2}>{gm.participant ? "The Gamemaster is at the table" : "No mystery has begun"}</Title>
+      <Text className="nx-kicker">{atTable ? "The mystery at the table" : <>The Society&apos;s rooms · {headquarters}</>}</Text>
+      <Title order={2}>{atTable ? atTable.title : gm.participant ? "The Gamemaster is at the table" : "No mystery has begun"}</Title>
       <Divider width={200} />
-      <Text className="nx-flourish nx-dropcap" ta="left" c="var(--nx-parchment-2)">
-        {gm.participant
-          ? "Hold the talk key and speak to them; let go and they answer. Everything else you say stays among the Society."
-          : "The fire is low and the letters on the table are unopened. Join the call, and when the host brings in the Gamemaster, it takes the fifth seat and paints the first scene: the place, the people, the wrongness that brought you."}
-      </Text>
+      <Text className="nx-flourish nx-dropcap" ta="left" c="var(--nx-parchment-2)">{text}</Text>
+      {isHost && (
+        <Stack gap={2} align="center">
+          <Anchor component={Link} href="/mysteries" fz="sm" c="gold.4">
+            <Group gap={4} component="span"><IconScript size={14} />{atTable ? "Open the case files" : "Choose a case for the table"}</Group>
+          </Anchor>
+          {atTable && gm.participant && (
+            <Text fz="xs" c="var(--nx-sepia)">The Gamemaster reads the case when it joins: to change cases, send it away and bring it in again.</Text>
+          )}
+        </Stack>
+      )}
     </Stack>
   );
 }
 
-/** Found clues and handouts, laid out like papers on the table. */
-function ClueShelf() {
+/** Found clues and handouts, laid out like papers on the table. The hook that brought the Society in comes first. */
+function ClueShelf({ atTable }: { atTable?: MysteryAtTable }) {
+  const [reading, setReading] = useState(false);
   return (
     <Box className={`${styles.shelf} nx-panel`} p="md">
       <Group justify="space-between" mb="xs">
         <Text className="nx-kicker">Clues &amp; handouts</Text>
-        <Badge variant="outline" color="umber.3">0 found</Badge>
+        <Badge variant="outline" color="umber.3">{atTable ? "1" : "0"} found</Badge>
       </Group>
       <Group gap="md">
-        {["A letter", "A map", "A testimony"].map((label, i) => (
+        {atTable && (
+          <Tooltip label="Read the letter" withArrow>
+            <Box
+              component="button"
+              type="button"
+              className="nx-parchment"
+              w={120}
+              h={72}
+              p={8}
+              onClick={() => setReading(true)}
+              style={{ transform: "rotate(-2deg)", display: "grid", placeItems: "center", cursor: "pointer", border: 0 }}
+            >
+              <Stack gap={2} align="center">
+                <IconMail size={18} color="var(--nx-blood)" />
+                <Text fz={11} c="var(--nx-ink)" lh={1.1} lineClamp={2}>{atTable.title}</Text>
+              </Stack>
+            </Box>
+          </Tooltip>
+        )}
+        {(atTable ? ["A map", "A testimony"] : ["A letter", "A map", "A testimony"]).map((label, i) => (
           <Box
             key={label}
             className="nx-parchment"
@@ -208,6 +247,15 @@ function ClueShelf() {
         ))}
         <Text className="nx-flourish" c="var(--nx-sepia)" fz="sm" maw={260}>What you uncover will be pinned here for everyone to read.</Text>
       </Group>
+      {atTable && (
+        <Modal opened={reading} onClose={() => setReading(false)} title={<Text className="nx-kicker">How it began</Text>} centered size="lg">
+          <Box className="nx-parchment" p="xl">
+            <Corners color="var(--nx-blood)" />
+            <Title order={3} mb="sm">{atTable.title}</Title>
+            <Text className="nx-flourish" c="var(--nx-ink)" style={{ whiteSpace: "pre-wrap" }}>{atTable.hookText}</Text>
+          </Box>
+        </Modal>
+      )}
     </Box>
   );
 }

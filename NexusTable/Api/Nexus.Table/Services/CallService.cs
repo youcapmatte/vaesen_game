@@ -10,6 +10,8 @@ using Newtonsoft.Json.Converters;
 using Nexus.Table.Data;
 using Nexus.Table.Models;
 using Vaesen.Framework.Core.Models;
+using Vaesen.Framework.Mystery.Data;
+using Vaesen.Framework.Mystery.Services;
 
 namespace Nexus.Table.Services;
 
@@ -84,6 +86,31 @@ public sealed class GmTable
 
     [JsonProperty("players")]
     public List<GmPlayer> Players { get; set; } = [];
+
+    /// <summary>The case at the table, whole: what the Gamemaster runs. Null between mysteries.</summary>
+    [JsonProperty("mystery", NullValueHandling = NullValueHandling.Ignore)]
+    public GmMystery? Mystery { get; set; }
+}
+
+public sealed class GmMystery
+{
+    [JsonProperty("mysteryId")]
+    public string MysteryId { get; set; } = "";
+
+    [JsonProperty("title")]
+    public string Title { get; set; } = "";
+
+    /// <summary>The hook as the Society receives it: how the Gamemaster opens the mystery.</summary>
+    [JsonProperty("hookText")]
+    public string HookText { get; set; } = "";
+
+    /// <summary>The case file as Markdown (the CaseLab report without the generation log): truth, cast, places, clues.</summary>
+    [JsonProperty("caseFile")]
+    public string CaseFile { get; set; } = "";
+
+    /// <summary>The names of the case's people, for speech to text.</summary>
+    [JsonProperty("castNames")]
+    public List<string> CastNames { get; set; } = [];
 }
 
 public sealed class GmPlayer
@@ -128,6 +155,7 @@ public sealed class CallService : ICallService
     private readonly ISocietyService _society;
     private readonly ICharacterStore _characters;
     private readonly IAccountStore _accounts;
+    private readonly ICasePacketStore _cases;
     private readonly IHttpClientFactory _http;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<CallService> _logger;
@@ -138,6 +166,7 @@ public sealed class CallService : ICallService
         ISocietyService society,
         ICharacterStore characters,
         IAccountStore accounts,
+        ICasePacketStore cases,
         IHttpClientFactory http,
         TimeProvider timeProvider,
         ILogger<CallService> logger)
@@ -147,6 +176,7 @@ public sealed class CallService : ICallService
         _society = society;
         _characters = characters;
         _accounts = accounts;
+        _cases = cases;
         _http = http;
         _timeProvider = timeProvider;
         _logger = logger;
@@ -245,9 +275,32 @@ public sealed class CallService : ICallService
         var accounts = await _accounts.GetManyAsync(society.Result!.MemberAccountIds, cancellationToken).ConfigureAwait(false);
         var characters = (await _characters.ListBySocietyAsync(society.Result.Id, cancellationToken).ConfigureAwait(false))
             .ToDictionary(c => c.Id, StringComparer.Ordinal);
+
+        GmMystery? mystery = null;
+        if (society.Result.AtTable is { } atTable)
+        {
+            var stored = await _cases.GetAsync(society.Result.Id, atTable.MysteryId, cancellationToken).ConfigureAwait(false);
+            if (stored.Success)
+            {
+                mystery = new GmMystery
+                {
+                    MysteryId = atTable.MysteryId,
+                    Title = stored.Result!.Packet.Title,
+                    HookText = stored.Result.Packet.Hook.Text,
+                    CaseFile = CaseReport.ToMarkdown(stored.Result.Packet),
+                    CastNames = stored.Result.Packet.Cast.Select(c => c.Name).Where(n => n.Length > 0).Distinct().ToList(),
+                };
+            }
+            else
+            {
+                _logger.LogWarning("The case at the table, {MysteryId}, could not be read: {Error}", atTable.MysteryId, stored.ErrorMessage);
+            }
+        }
+
         return ret.Ok(new GmTable
         {
             Society = society.Result,
+            Mystery = mystery,
             Players = accounts.Select(a => new GmPlayer
             {
                 AccountId = a.Id,
