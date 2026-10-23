@@ -17,8 +17,9 @@ Close the editor, then run the commandlet. It only creates what's missing, so ru
 - Each shot is the gun recorded at 5, 25, 100 and 300 m, blended by how far you are from the shooter.
 - The Krag's bolt sound is timed to the hand working it.
 - Bullets crack as they pass.
+- The muzzle-loader has a stand-in: the pack's pump shotgun (R870), pitched down to sound like black powder, until there's a black-powder pack.
 
-The muzzle-loader, bows, melee weapons and impacts still need other packs.
+Bows, crossbows, melee weapons and impacts still need other packs.
 
 ```
 UnrealEditor-Cmd.exe VaesenGame.uproject -run=VaesenCreateWidgets

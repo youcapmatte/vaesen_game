@@ -90,12 +90,15 @@ namespace VaesenSoundSetup
 		return Node;
 	}
 
-	/** A slight random pitch and loudness on top, so the same sound twice doesn't sound copied. */
-	USoundNode* Vary(USoundCue* Cue, USoundNode* Child, float Pitch = 0.03f)
+	/**
+	 * A slight random pitch and loudness on top, so the same sound twice doesn't sound copied; Centre shifts the whole
+	 * pitch (below 1: deeper and slower).
+	 */
+	USoundNode* Vary(USoundCue* Cue, USoundNode* Child, float Pitch = 0.03f, float Centre = 1.0f)
 	{
 		USoundNodeModulator* Modulator = Cue->ConstructSoundNode<USoundNodeModulator>();
-		Modulator->PitchMin = 1.0f - Pitch;
-		Modulator->PitchMax = 1.0f + Pitch;
+		Modulator->PitchMin = Centre - Pitch;
+		Modulator->PitchMax = Centre + Pitch;
 		Modulator->VolumeMin = 0.9f;
 		Modulator->VolumeMax = 1.0f;
 		Modulator->ChildNodes.Add(Child);
@@ -131,9 +134,9 @@ namespace VaesenSoundSetup
 
 	/**
 	 * A gunshot heard as it is at the listener's distance: the 5, 25, 100 and 300 m recordings, each crossfading into
-	 * the next (cm). Recordings missing from the pack are left out.
+	 * the next (cm). Recordings missing from the pack are left out. Pitch below 1 makes it deeper.
 	 */
-	USoundCue* DistanceShot(const FString& Name, const TCHAR* Group, const TCHAR* Gun)
+	USoundCue* DistanceShot(const FString& Name, const TCHAR* Group, const TCHAR* Gun, float Pitch = 1.0f)
 	{
 		USoundCue* Existing;
 		USoundCue* Cue = OpenCue(Name, Existing);
@@ -169,7 +172,7 @@ namespace VaesenSoundSetup
 		{
 			return nullptr;
 		}
-		return Finish(Cue, Vary(Cue, Fade, 0.02f));
+		return Finish(Cue, Vary(Cue, Fade, 0.02f, Pitch));
 	}
 
 	/** One of several takes at random. */
@@ -341,6 +344,16 @@ namespace VaesenSoundSetup
 			{ EVaesenWeaponSound::Fire, DistanceShot(TEXT("SC_RollingBlock_Fire"), TEXT("PS"), TEXT("PS44MAGNUM2")) },
 			{ EVaesenWeaponSound::Draw, PistolDraw },
 			{ EVaesenWeaponSound::Sheath, PistolDraw },
+			{ EVaesenWeaponSound::DropLand, Drop },
+			{ EVaesenWeaponSound::Flyby, Flyby },
+		}));
+
+		// The muzzle-loader, until there's a black-powder pack: a pump shotgun's boom (the pack's nearest to a
+		// smoothbore) pitched down, deeper and slower, like black powder.
+		Assign(TEXT("BP_Weapon_MuzzleLoader"), SoundSet(TEXT("DA_WeaponSounds_MuzzleLoader"), {
+			{ EVaesenWeaponSound::Fire, DistanceShot(TEXT("SC_MuzzleLoader_Fire"), TEXT("SG"), TEXT("SGR870"), 0.86f) },
+			{ EVaesenWeaponSound::Draw, RifleDraw },
+			{ EVaesenWeaponSound::Sheath, RifleDraw },
 			{ EVaesenWeaponSound::DropLand, Drop },
 			{ EVaesenWeaponSound::Flyby, Flyby },
 		}));
