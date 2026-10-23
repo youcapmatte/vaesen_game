@@ -201,6 +201,20 @@ public:
 	/** Puts every weapon actor where it belongs now (hand or sheath). Called when one arrives on a client too. */
 	void RefreshWeaponAttachments();
 
+	/** The drawn weapon's stance again (its grip changed). */
+	void RefreshDrawnLook() { ApplyDrawnLook(); }
+
+	/**
+	 * V: a weapon that can be held in both hands (a sword, an axe) switches between both hands and one. It's in both
+	 * whenever the off hand is free, unless the player chose one; a shield in the off hand always means one.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Equipment|Weapons")
+	void RequestToggleGrip();
+
+	/** The player keeps one hand free even when the off hand is empty. */
+	UFUNCTION(BlueprintPure, Category = "Equipment|Weapons")
+	bool PrefersOneHand() const { return bPrefersOneHand; }
+
 	/** A weapon was drawn or sheathed (at the grab moment, on every machine). */
 	UPROPERTY(BlueprintAssignable, Category = "Equipment|Weapons")
 	FVaesenDrawStateChanged OnDrawStateChanged;
@@ -264,6 +278,15 @@ private:
 
 	UFUNCTION(Server, Reliable)
 	void ServerSetWeaponDrawn(bool bDraw, EVaesenEquipmentSlot WeaponSlot);
+
+	UFUNCTION(Server, Reliable)
+	void ServerSetPrefersOneHand(bool bOneHand);
+
+	/** Holds the main-hand weapon in both hands or one, as the off hand and the player's choice say. */
+	void UpdateGrip();
+
+	UPROPERTY(Replicated)
+	bool bPrefersOneHand = false;
 
 	UFUNCTION()
 	void OnRep_DrawState();

@@ -27,6 +27,7 @@ void UVaesenWeaponItem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Ou
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(UVaesenWeaponItem, CurrentDurability);
 	DOREPLIFETIME(UVaesenWeaponItem, WeaponActor);
+	DOREPLIFETIME(UVaesenWeaponItem, bHeldTwoHanded);
 }
 
 UVaesenItem* UVaesenWeaponItem::DuplicateItem(UObject* NewOuter, int32 NewQuantity) const
@@ -44,11 +45,53 @@ const FVaesenCategoryDefaults& UVaesenWeaponItem::GetCategoryDefaults() const
 
 TSubclassOf<UAnimInstance> UVaesenWeaponItem::GetAnimLayer() const
 {
+	if (IsInTwoHandedGrip() && GetCategoryDefaults().TwoHanded.AnimLayer)
+	{
+		return GetCategoryDefaults().TwoHanded.AnimLayer;
+	}
 	return AnimLayerOverride ? AnimLayerOverride : GetCategoryDefaults().AnimLayer;
+}
+
+UObject* UVaesenWeaponItem::GetLocomotionDatabase() const
+{
+	const FVaesenCategoryDefaults& Defaults = GetCategoryDefaults();
+	if (IsInTwoHandedGrip() && !Defaults.TwoHanded.LocomotionDatabase.IsNull())
+	{
+		return Defaults.TwoHanded.LocomotionDatabase.Get();
+	}
+	return Defaults.LocomotionDatabase.Get();
+}
+
+void UVaesenWeaponItem::SetHeldTwoHanded(bool bInBothHands)
+{
+	const bool bNow = bInBothHands && bCanBeTwoHanded && !bTwoHanded;
+	if (bHeldTwoHanded != bNow)
+	{
+		bHeldTwoHanded = bNow;
+		OnRep_HeldTwoHanded();
+	}
+}
+
+void UVaesenWeaponItem::OnRep_HeldTwoHanded()
+{
+	// The stance for the new grip, if it's drawn.
+	const AVaesenBaseCharacter* Character = WeaponActor ? WeaponActor->GetOwningCharacter() : nullptr;
+	if (UVaesenEquipmentComponent* Equipment = Character ? Character->GetEquipment() : nullptr)
+	{
+		Equipment->RefreshDrawnLook();
+	}
 }
 
 UAnimMontage* UVaesenWeaponItem::GetMontage(TObjectPtr<UAnimMontage> FVaesenWeaponMontages::* Which) const
 {
+	// In both hands: the category's two-handed montage first.
+	if (IsInTwoHandedGrip())
+	{
+		if (UAnimMontage* TwoHanded = GetCategoryDefaults().TwoHanded.Montages.*Which)
+		{
+			return TwoHanded;
+		}
+	}
 	if (UAnimMontage* Own = MontageOverrides.*Which)
 	{
 		return Own;

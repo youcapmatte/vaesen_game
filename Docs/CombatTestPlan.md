@@ -107,6 +107,7 @@ Dummy protections: `BP_TrainingDummy` has none. `BP_TrainingDummy_Armored` has S
 | Draw / sheathe | H | Hold Y / Triangle |
 | Draw the other carried weapon (sidearm ↔ main hand) | Q | — |
 | Crouch (toggle) | C | B / Circle |
+| Sword, axe, club or warhammer in both hands or one (off hand free) | V | D-pad down |
 
 ### 0.5 Debug tools
 
@@ -168,11 +169,22 @@ In a running game (PIE with a dedicated server is fine), open the console and ty
 
 It first checks that the interaction trace finds every pickup in the map and picks up a rifle through its interaction. It then runs the test Blueprints: revolver (draw, reload, fire, armored target), Krag (left hand on LeftGrip from the hip and aimed, shouldered, the bolt worked by hand at the shoulder, the case out as the bolt comes back), punch, sword (stamina, block, parry, wear), stone throw, and bow.
 
-Every check prints PASS or FAIL on screen and in the log, and everything it spawned is removed at the end. In `L_CombatTest` it reported **49 passed, 0 failed**.
+Every check prints PASS or FAIL on screen and in the log, and everything it spawned is removed at the end. In `L_CombatTest` it reported **51 passed, 0 failed**.
 
 It checks what the C++ tests can't: the generated assets, the Blueprints and the map's collision together. Both clients should see the fighter do everything. The sword swing is reported as INFO until an attack montage exists, because without one the blade stays where the hand hangs.
 
 This replaces functional-test actors. The engine's FunctionalTesting module is developer-only and would break shipping builds.
+
+### 0.7b One hand or two (swords, axes, clubs, warhammers)
+
+A weapon with **Can Be Held Two-Handed** (Weapon Blueprint → Weapon) is held in **both hands** whenever the off hand is free. A shield or anything else in the off hand means **one** hand. **V** keeps one hand free by choice (D-pad down on a gamepad), and V again goes back to two. The server decides; every player sees the same grip.
+
+In both hands:
+- The left hand goes to the weapon's **`LeftGrip`** socket (grey-box places on the handle; tune them in the Weapon Fit rig).
+- The weapon uses its category's **Two-Handed** section (`DA_WeaponCategoryDefaults` → category → Two-Handed): its own stance layer, montages and attacks. Each empty entry falls back to the one-handed one.
+- Without its own attacks, the one-handed attacks hit harder (**Damage Scale 1.25**) and cost more stamina (**1.2**), with more knockback (**1.25**). A two-handed block profile is optional.
+
+The always-two-handed setting (rifles, bows) is separate and unchanged. Test: `Vaesen.Combat.Melee.VersatileGrip`. In the self-test, the old sword is held in both hands and its light swing costs 12 stamina, not 10.
 
 ### 0.8 How weapons are held (sockets), and the Weapon Fit rig
 

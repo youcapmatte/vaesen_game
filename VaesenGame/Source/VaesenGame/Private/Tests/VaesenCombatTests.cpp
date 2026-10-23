@@ -1078,3 +1078,54 @@ bool FVaesenWeaponFitRigTest::RunTest(const FString& Parameters)
 	return true;
 }
 #endif
+
+// --- Versatile grip: a sword in both hands with the off hand free, in one with a shield or by choice (V) ---
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenVersatileGripTest, "Vaesen.Combat.Melee.VersatileGrip", CombatTestFlags)
+bool FVaesenVersatileGripTest::RunTest(const FString& Parameters)
+{
+	FTestWorld TestWorld;
+	AVaesenPlayerCharacter* Player = SpawnFighter(TestWorld);
+	UVaesenEquipmentComponent* Equipment = Player ? Player->GetEquipment() : nullptr;
+	UVaesenMeleeWeaponItem* Sword = Equipment ? Cast<UVaesenMeleeWeaponItem>(GiveAndEquip(Player, UVaesenTestVersatileSword::StaticClass())) : nullptr;
+	if (!TestNotNull(TEXT("A sword that can be held in both hands, equipped"), Sword))
+	{
+		return false;
+	}
+	TestTrue(TEXT("Off hand free: held in both hands"), Sword->IsHeldTwoHanded());
+
+	// In both hands it hits harder (the category's two-handed scale) and costs more stamina.
+	const FVaesenTwoHandedGrip& TwoHanded = Sword->GetCategoryDefaults().TwoHanded;
+	FVaesenMeleeAttack InBoth;
+	TestTrue(TEXT("It has a light attack"), Sword->GetAttack(false, InBoth));
+	const float OneHandedDamage = Sword->GetCategoryDefaults().LightAttack.Damage.GetTotal();
+	TestTrue(FString::Printf(TEXT("In both hands it hits harder (%.1f, one hand %.1f)"), InBoth.Damage.GetTotal(), OneHandedDamage),
+		FMath::IsNearlyEqual(InBoth.Damage.GetTotal(), OneHandedDamage * TwoHanded.DamageScale, 0.01f));
+	TestTrue(TEXT("...and costs more stamina"),
+		FMath::IsNearlyEqual(InBoth.StaminaCost, Sword->GetCategoryDefaults().LightAttack.StaminaCost * TwoHanded.StaminaScale, 0.01f));
+
+	// A shield in the off hand: one hand, and the plain attack.
+	UVaesenWeaponItem* Buckler = GiveAndEquip(Player, UVaesenTestBuckler::StaticClass());
+	TestNotNull(TEXT("A buckler equipped in the off hand"), Buckler);
+	TestFalse(TEXT("With a shield: held in one hand"), Sword->IsHeldTwoHanded());
+	FVaesenMeleeAttack InOne;
+	Sword->GetAttack(false, InOne);
+	TestTrue(TEXT("In one hand: the one-handed damage"), FMath::IsNearlyEqual(InOne.Damage.GetTotal(), OneHandedDamage, 0.01f));
+	TestTrue(TEXT("V does nothing to the shield"), Equipment->GetItemInSlot(EVaesenEquipmentSlot::OffHand) != nullptr);
+
+	// The shield off: both hands again.
+	Equipment->UnequipToInventory(EVaesenEquipmentSlot::OffHand, Player->GetInventory());
+	TestTrue(TEXT("Shield off: both hands again"), Sword->IsHeldTwoHanded());
+
+	// V: one hand by choice, and back.
+	Equipment->RequestToggleGrip();
+	TestTrue(TEXT("V: the player keeps a hand free"), Equipment->PrefersOneHand());
+	TestFalse(TEXT("V: held in one hand"), Sword->IsHeldTwoHanded());
+	Equipment->RequestToggleGrip();
+	TestTrue(TEXT("V again: both hands"), Sword->IsHeldTwoHanded());
+
+	// Taken off: in one hand next time (the grip belongs to the body holding it).
+	Equipment->UnequipToInventory(EVaesenEquipmentSlot::MainHand, Player->GetInventory());
+	TestFalse(TEXT("Unequipped: not held in both hands"), Sword->IsHeldTwoHanded());
+	return true;
+}

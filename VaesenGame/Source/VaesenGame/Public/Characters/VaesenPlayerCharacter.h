@@ -158,6 +158,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Input")
 	TObjectPtr<UInputAction> CrouchAction;
 
+	/** V: a sword or an axe in both hands, or one (when the off hand is free). */
+	UPROPERTY(EditDefaultsOnly, Category = "Input")
+	TObjectPtr<UInputAction> SwitchGripAction;
+
 	/** Third-person camera distance while aiming (closer, over the shoulder). */
 	UPROPERTY(EditDefaultsOnly, Category = "Camera|Aim", meta = (ClampMin = "0", Units = "cm"))
 	float AimCameraDistance = 180.0f;
@@ -262,6 +266,8 @@ private:
 	void PressAbility(EVaesenAbilityInput Input);
 	void ReleaseAbility(EVaesenAbilityInput Input);
 	void ToggleCrouch();
+
+	void ToggleGrip();
 	void PressTriggerAttack();
 	void ReleaseTriggerAttack();
 

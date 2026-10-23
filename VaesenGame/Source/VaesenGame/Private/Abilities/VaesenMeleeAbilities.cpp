@@ -66,12 +66,10 @@ bool UVaesenGA_MeleeAttack::ResolveAttack(const FGameplayAbilityActorInfo* Actor
 
 	if (const UVaesenMeleeWeaponItem* Melee = Cast<UVaesenMeleeWeaponItem>(Weapon))
 	{
-		const FVaesenMeleeAttack* Found = Melee->GetAttack(bHeavy);
-		if (!Found)
+		if (!Melee->GetAttack(bHeavy, OutAttack))
 		{
 			return false;
 		}
-		OutAttack = *Found;
 	}
 	else
 	{

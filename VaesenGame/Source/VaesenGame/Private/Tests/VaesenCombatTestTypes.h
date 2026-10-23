@@ -141,3 +141,32 @@ public:
 		AcceptedItemTags.AddTag(VaesenTags::Item_Ammo);
 	}
 };
+
+/** A sword that can be held in both hands (the off hand free) or one. */
+UCLASS(NotBlueprintable, HideDropdown, meta = (HiddenNode))
+class UVaesenTestVersatileSword : public UVaesenMeleeWeaponItem
+{
+	GENERATED_BODY()
+
+public:
+	UVaesenTestVersatileSword()
+	{
+		Category = EVaesenWeaponCategory::OneHandedSword;
+		Slot = EVaesenEquipmentSlot::MainHand;
+		bCanBeTwoHanded = true;
+	}
+};
+
+/** A buckler for the off hand. */
+UCLASS(NotBlueprintable, HideDropdown, meta = (HiddenNode))
+class UVaesenTestBuckler : public UVaesenMeleeWeaponItem
+{
+	GENERATED_BODY()
+
+public:
+	UVaesenTestBuckler()
+	{
+		Category = EVaesenWeaponCategory::Shield;
+		Slot = EVaesenEquipmentSlot::OffHand;
+	}
+};

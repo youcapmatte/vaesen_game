@@ -19,6 +19,7 @@
 #include "Items/VaesenEquippableItem.h"
 #include "Items/VaesenPickup.h"
 #include "Interaction/VaesenInteractionComponent.h"
+#include "Items/VaesenMeleeWeaponItem.h"
 #include "Items/VaesenRangedWeaponItem.h"
 #include "TimerManager.h"
 #include "Abilities/VaesenGeneralAbilities.h"
@@ -446,7 +447,7 @@ void UVaesenCombatSelfTest::BuildSteps()
 	} });
 
 	// --- Krag: magazine reload, projectile, automatic bolt cycle ---
-	Steps.Add({ TEXT("Krag-Jørgensen"), [this, Equipment, Inventory, Holster, Tap]()
+	Steps.Add({ TEXT("Krag-JÃ¸rgensen"), [this, Equipment, Inventory, Holster, Tap]()
 	{
 		ResetAll();
 		Check(GiveAndEquip(*Path(Weapons, TEXT("BP_Weapon_KragRifle"))), TEXT("rifle equipped (main hand)"));
@@ -620,9 +621,13 @@ void UVaesenCombatSelfTest::BuildSteps()
 	{
 		const UVaesenWeaponItem* Sword = Equipment->GetDrawnWeapon();
 		Check(Sword && Sword->Category == EVaesenWeaponCategory::OneHandedSword, TEXT("sword drawn"));
+		// The off hand is free: the sword is held in both hands (it can be), and its swing costs what that grip's does.
+		Check(Sword && Sword->IsHeldTwoHanded(), TEXT("the sword is held in both hands (off hand free)"));
 		const float Before = ASC->GetNumericAttribute(UVaesenAttributeSet::GetStaminaAttribute());
 		Tap(Attack);
-		const float Cost = Sword ? Sword->GetCategoryDefaults().LightAttack.StaminaCost : 0.0f;
+		FVaesenMeleeAttack Light;
+		const UVaesenMeleeWeaponItem* Melee = Cast<UVaesenMeleeWeaponItem>(Sword);
+		const float Cost = Melee && Melee->GetAttack(false, Light) ? Light.StaminaCost : 0.0f;
 		Check(FMath::IsNearlyEqual(Before - ASC->GetNumericAttribute(UVaesenAttributeSet::GetStaminaAttribute()), Cost, 0.5f), FString::Printf(TEXT("light attack cost %.0f stamina"), Cost));
 		return 1.2f;
 	} });

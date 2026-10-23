@@ -96,6 +96,55 @@ public:
 	const FVaesenImpactEntry* FindEntry(const FGameplayTag& DamageType, EPhysicalSurface Surface) const;
 };
 
+/**
+ * A category's weapons held in both hands (a sword or an axe that can be: UVaesenWeaponItem::bCanBeTwoHanded). Each
+ * empty entry falls back to the one-handed one, so a category only needs what's different.
+ */
+USTRUCT(BlueprintType)
+struct FVaesenTwoHandedGrip
+{
+	GENERATED_BODY()
+
+	/** The stance while drawn in both hands. Empty = the one-handed stance. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Two-Handed")
+	TSubclassOf<UAnimInstance> AnimLayer;
+
+	/** Motion matching (later): locomotion in both hands. Empty = the one-handed database. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Two-Handed", meta = (AllowedClasses = "/Script/PoseSearch.PoseSearchDatabase,/Script/Chooser.ChooserTable"))
+	TSoftObjectPtr<UObject> LocomotionDatabase;
+
+	/** Montages in both hands (attacks, block, draw...). Each empty one = the one-handed montage. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Two-Handed")
+	FVaesenWeaponMontages Montages;
+
+	/** Its own attacks in both hands; otherwise the one-handed attacks, scaled below. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Two-Handed")
+	bool bOverrideAttacks = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Two-Handed", meta = (EditCondition = "bOverrideAttacks"))
+	FVaesenMeleeAttack LightAttack;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Two-Handed", meta = (EditCondition = "bOverrideAttacks"))
+	FVaesenMeleeAttack HeavyAttack;
+
+	/** The one-handed attacks in both hands: harder, and heavier on stamina. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Two-Handed", meta = (EditCondition = "!bOverrideAttacks", ClampMin = "0"))
+	float DamageScale = 1.25f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Two-Handed", meta = (EditCondition = "!bOverrideAttacks", ClampMin = "0"))
+	float StaminaScale = 1.2f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Two-Handed", meta = (EditCondition = "!bOverrideAttacks", ClampMin = "0"))
+	float KnockbackScale = 1.25f;
+
+	/** Blocking in both hands. Off = the one-handed block. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Two-Handed")
+	bool bOverrideBlockProfile = false;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Two-Handed", meta = (EditCondition = "bOverrideBlockProfile"))
+	FVaesenBlockProfile BlockProfile;
+};
+
 /** What a weapon category uses unless the weapon overrides it. */
 USTRUCT(BlueprintType)
 struct FVaesenCategoryDefaults
@@ -138,6 +187,10 @@ struct FVaesenCategoryDefaults
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Category")
 	TObjectPtr<UVaesenWeaponSoundSet> Sounds;
+
+	/** Held in both hands (weapons that can be: bCanBeTwoHanded), when the off hand is free. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Category")
+	FVaesenTwoHandedGrip TwoHanded;
 };
 
 /** A place on the body a weapon is carried (a sheath socket on the mannequin) and how it's drawn from there. */

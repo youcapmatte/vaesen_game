@@ -39,8 +39,11 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Melee", meta = (EditCondition = "bOverrideBlockProfile"))
 	FVaesenBlockProfile BlockProfile;
 
-	/** The light (or heavy) attack; null when it has no heavy attack. */
-	const FVaesenMeleeAttack* GetAttack(bool bHeavy) const;
+	/**
+	 * The light (or heavy) attack as it is in the grip it's held in: in both hands, the category's two-handed attack, or
+	 * the one-handed one scaled (harder, more stamina). False when it has no heavy attack.
+	 */
+	bool GetAttack(bool bHeavy, FVaesenMeleeAttack& OutAttack) const;
 
 	virtual const FVaesenBlockProfile& GetBlockProfile() const override;
 

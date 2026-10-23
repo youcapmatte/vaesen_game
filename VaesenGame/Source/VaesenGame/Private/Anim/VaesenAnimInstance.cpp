@@ -118,8 +118,9 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 
 	bWeaponDrawn = Weapon != nullptr;
 	WeaponCategory = Weapon ? Weapon->Category : EVaesenWeaponCategory::Unarmed;
-	bTwoHanded = Weapon && Weapon->bTwoHanded;
-	LocomotionDatabase = UVaesenWeaponCategoryDefaults::Get()->GetCategory(WeaponCategory).LocomotionDatabase.Get();
+	// In both hands: always (rifles, bows) or held so now (a sword or an axe with the off hand free).
+	bTwoHanded = Weapon && Weapon->IsHeldTwoHanded();
+	LocomotionDatabase = Weapon ? Weapon->GetLocomotionDatabase() : UVaesenWeaponCategoryDefaults::Get()->GetCategory(WeaponCategory).LocomotionDatabase.Get();
 
 	const AVaesenRangedWeaponActor* Ranged = Cast<AVaesenRangedWeaponActor>(WeaponActor);
 	BowDrawAlpha = Ranged ? Ranged->GetDrawAlpha() : 0.0f;

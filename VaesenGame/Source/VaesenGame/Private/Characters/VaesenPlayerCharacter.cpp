@@ -139,6 +139,10 @@ void AVaesenPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 	{
 		EnhancedInput->BindAction(CrouchAction, ETriggerEvent::Started, this, &AVaesenPlayerCharacter::ToggleCrouch);
 	}
+	if (SwitchGripAction)
+	{
+		EnhancedInput->BindAction(SwitchGripAction, ETriggerEvent::Started, this, &AVaesenPlayerCharacter::ToggleGrip);
+	}
 	if (TriggerAttackAction)
 	{
 		EnhancedInput->BindAction(TriggerAttackAction, ETriggerEvent::Started, this, &AVaesenPlayerCharacter::PressTriggerAttack);
@@ -454,5 +458,13 @@ void AVaesenPlayerCharacter::ToggleCrouch()
 	else
 	{
 		Crouch();
+	}
+}
+
+void AVaesenPlayerCharacter::ToggleGrip()
+{
+	if (UVaesenEquipmentComponent* Gear = GetEquipment())
+	{
+		Gear->RequestToggleGrip();
 	}
 }

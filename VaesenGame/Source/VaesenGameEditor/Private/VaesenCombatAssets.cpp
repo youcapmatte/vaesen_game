@@ -674,6 +674,7 @@ namespace VaesenCombatAssets
 		UInputAction* Holster = GetOrCreateAction(TEXT("IA_Holster"));
 		UInputAction* Swap = GetOrCreateAction(TEXT("IA_SwapWeapon"));
 		UInputAction* Crouch = GetOrCreateAction(TEXT("IA_Crouch"));
+		UInputAction* SwitchGrip = GetOrCreateAction(TEXT("IA_SwitchGrip"));
 
 		bool bChanged = false;
 		bChanged |= MapOnce(Mappings, HeavyModifier, EKeys::LeftShift);
@@ -709,6 +710,8 @@ namespace VaesenCombatAssets
 		bChanged |= MapOnce(Mappings, Swap, EKeys::Q);
 		bChanged |= MapOnce(Mappings, Crouch, EKeys::C);
 		bChanged |= MapOnce(Mappings, Crouch, EKeys::Gamepad_FaceButton_Right);
+		bChanged |= MapOnce(Mappings, SwitchGrip, EKeys::V);
+		bChanged |= MapOnce(Mappings, SwitchGrip, EKeys::Gamepad_DPad_Down);
 		if (bChanged)
 		{
 			Save(Mappings);
@@ -721,6 +724,7 @@ namespace VaesenCombatAssets
 			{ TEXT("AimOrBlockAction"), AimBlock }, { TEXT("ReloadAction"), Reload }, { TEXT("ThrowAction"), Throw },
 			{ TEXT("HolsterAction"), Holster }, { TEXT("SwapWeaponAction"), Swap },
 			{ TEXT("CrouchAction"), Crouch },
+			{ TEXT("SwitchGripAction"), SwitchGrip },
 		};
 		for (const TPair<const TCHAR*, UInputAction*>& Property : Properties)
 		{
@@ -1123,6 +1127,43 @@ namespace VaesenCombatAssets
 		Save(World, true);
 		World->DestroyWorld(false);
 	}
+	/**
+	 * Melee weapons that can also be held in both hands (V switches; a shield means one): the sword, the hand axe, the
+	 * club, the warhammer. Each gets a LeftGrip socket on its handle for the second hand (grey-box places: tune them in
+	 * the Weapon Fit rig once there are two-handed animations).
+	 */
+	void MakeVersatile()
+	{
+		struct FVersatile { const TCHAR* Weapon; const TCHAR* Mesh; FVector LeftGrip; };
+		const FVersatile Weapons[] = {
+			{ TEXT("BP_Weapon_OldSword"), TEXT("SM_GB_Sword"), FVector(-13.0, 0.0, 0.0) },
+			{ TEXT("BP_Weapon_HandAxe"), TEXT("SM_GB_HandAxe"), FVector(6.0, 0.0, 0.0) },
+			{ TEXT("BP_Weapon_Club"), TEXT("SM_GB_Club"), FVector(9.0, 0.0, 0.0) },
+			{ TEXT("BP_Weapon_Warhammer"), TEXT("SM_GB_Warhammer"), FVector(6.0, 0.0, 0.0) },
+		};
+		for (const FVersatile& Each : Weapons)
+		{
+			if (UBlueprint* Blueprint = LoadAsset<UBlueprint>(Join(WeaponsFolder, Each.Weapon)))
+			{
+				UVaesenWeaponItem* Defaults = DefaultsOf<UVaesenWeaponItem>(Blueprint);
+				if (!Defaults->bCanBeTwoHanded && !Defaults->bTwoHanded)
+				{
+					Defaults->bCanBeTwoHanded = true;
+					Finish(Blueprint);
+				}
+			}
+			UStaticMesh* Mesh = LoadAsset<UStaticMesh>(Join(GreyBoxFolder, Each.Mesh));
+			if (Mesh && !Mesh->FindSocket(TEXT("LeftGrip")))
+			{
+				UStaticMeshSocket* Socket = NewObject<UStaticMeshSocket>(Mesh);
+				Socket->SocketName = TEXT("LeftGrip");
+				Socket->RelativeLocation = Each.LeftGrip;
+				Mesh->AddSocket(Socket);
+				Save(Mesh);
+			}
+		}
+	}
+
 }
 
 void VaesenCombatAssets::SetupCombat()
@@ -1134,6 +1175,7 @@ void VaesenCombatAssets::SetupCombat()
 	CreateEffectsAndAbilities();
 	SetupCombatInput();
 	CreateTestItems(Meshes);
+	MakeVersatile();
 	CreateDummies(Materials);
 	CreateTestMap(Materials);
 	CreateWeaponFitMap();

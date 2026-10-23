@@ -34,6 +34,7 @@ void UVaesenEquipmentComponent::GetLifetimeReplicatedProps(TArray<FLifetimePrope
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(UVaesenEquipmentComponent, Equipped);
 	DOREPLIFETIME(UVaesenEquipmentComponent, DrawState);
+	DOREPLIFETIME(UVaesenEquipmentComponent, bPrefersOneHand);
 }
 
 bool UVaesenEquipmentComponent::ReplicateSubobjects(UActorChannel* Channel, FOutBunch* Bunch, FReplicationFlags* RepFlags)
@@ -213,6 +214,11 @@ void UVaesenEquipmentComponent::SetEquipped(EVaesenEquipmentSlot Slot, UVaesenEq
 		}
 		if (Equipped[Index].Item)
 		{
+			// Off the body: in one hand again, next time.
+			if (UVaesenWeaponItem* Leaving = Cast<UVaesenWeaponItem>(Equipped[Index].Item))
+			{
+				Leaving->SetHeldTwoHanded(false);
+			}
 			RemoveReplicatedSubObject(Equipped[Index].Item);
 		}
 		Equipped.RemoveAt(Index);
@@ -226,6 +232,7 @@ void UVaesenEquipmentComponent::SetEquipped(EVaesenEquipmentSlot Slot, UVaesenEq
 		Entry.Item = Item;
 	}
 
+	UpdateGrip();
 	ApplyAppearance();
 
 	// The drawn weapon went (taken off, dropped, thrown): nothing is in the hand any more.
@@ -526,6 +533,39 @@ UVaesenMeleeWeaponItem* UVaesenEquipmentComponent::GetDrawnShield() const
 	}
 	UVaesenMeleeWeaponItem* Shield = Cast<UVaesenMeleeWeaponItem>(GetWeaponInSlot(EVaesenEquipmentSlot::OffHand));
 	return Shield && Shield->IsShield() ? Shield : nullptr;
+}
+
+void UVaesenEquipmentComponent::RequestToggleGrip()
+{
+	const UVaesenWeaponItem* MainHand = GetWeaponInSlot(EVaesenEquipmentSlot::MainHand);
+	if (!MainHand || !MainHand->bCanBeTwoHanded || MainHand->bTwoHanded)
+	{
+		return;
+	}
+	const bool bOneHand = !bPrefersOneHand;
+	if (!GetOwner()->HasAuthority())
+	{
+		// Seen at once here; the server agrees and tells everyone.
+		bPrefersOneHand = bOneHand;
+		UpdateGrip();
+	}
+	ServerSetPrefersOneHand(bOneHand);
+}
+
+void UVaesenEquipmentComponent::ServerSetPrefersOneHand_Implementation(bool bOneHand)
+{
+	bPrefersOneHand = bOneHand;
+	UpdateGrip();
+}
+
+void UVaesenEquipmentComponent::UpdateGrip()
+{
+	UVaesenWeaponItem* MainHand = GetWeaponInSlot(EVaesenEquipmentSlot::MainHand);
+	if (MainHand)
+	{
+		// Both hands when it can be, the off hand is free and the player hasn't chosen one.
+		MainHand->SetHeldTwoHanded(!GetItemInSlot(EVaesenEquipmentSlot::OffHand) && !bPrefersOneHand);
+	}
 }
 
 void UVaesenEquipmentComponent::RequestToggleWeapon()

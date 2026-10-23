@@ -48,9 +48,26 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
 	EVaesenWeaponCategory Category = EVaesenWeaponCategory::Improvised;
 
-	/** Takes both hands (the off hand stays empty). */
+	/** Always takes both hands (the off hand stays empty): rifles, bows. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
 	bool bTwoHanded = false;
+
+	/**
+	 * Can also be held in both hands (a sword, an axe): it is while the off hand is free (no shield) and the player
+	 * hasn't switched to one hand (V). Uses the category's Two-Handed animations and attacks, and its LeftGrip socket.
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon", meta = (EditCondition = "!bTwoHanded"))
+	bool bCanBeTwoHanded = false;
+
+	/** In both hands now: always, or held so (the equipment decides; replicated). */
+	UFUNCTION(BlueprintPure, Category = "Weapon")
+	bool IsHeldTwoHanded() const { return bTwoHanded || bHeldTwoHanded; }
+
+	/** Held in both hands by choice (not always two-handed): its category's Two-Handed data applies. */
+	bool IsInTwoHandedGrip() const { return bHeldTwoHanded && !bTwoHanded; }
+
+	/** The equipment: holds it in both hands or one (only weapons that can be). */
+	void SetHeldTwoHanded(bool bInBothHands);
 
 	// --- Mesh ---
 
@@ -136,12 +153,15 @@ public:
 	/** Its category's defaults (DA_WeaponCategoryDefaults, or the built-in ones). */
 	const FVaesenCategoryDefaults& GetCategoryDefaults() const;
 
-	/** The anim layer while drawn: its own, else the category's (may be empty). */
+	/** The anim layer while drawn: its own, else the category's; in both hands, the category's two-handed one if set. */
 	UFUNCTION(BlueprintPure, Category = "Weapon")
 	TSubclassOf<UAnimInstance> GetAnimLayer() const;
 
-	/** One of its montages: its own override, else the category's (may be null). */
+	/** One of its montages: its own override, else the category's (two-handed first, in both hands; may be null). */
 	UAnimMontage* GetMontage(TObjectPtr<UAnimMontage> FVaesenWeaponMontages::* Which) const;
+
+	/** Motion matching (later): the locomotion database for the grip it's in (may be empty). */
+	UObject* GetLocomotionDatabase() const;
 
 	/** Its sound for a moment, else the category's (may be null). */
 	UFUNCTION(BlueprintPure, Category = "Weapon")
@@ -185,9 +205,17 @@ protected:
 	UPROPERTY(ReplicatedUsing = OnRep_Durability, BlueprintReadOnly, Category = "Weapon")
 	float CurrentDurability = -1.0f;
 
+	/** Held in both hands by choice (bCanBeTwoHanded); set by the equipment. */
+	UPROPERTY(ReplicatedUsing = OnRep_HeldTwoHanded)
+	bool bHeldTwoHanded = false;
+
 private:
 	UFUNCTION()
 	void OnRep_Durability();
+
+	/** The grip changed: the stance changes with it. */
+	UFUNCTION()
+	void OnRep_HeldTwoHanded();
 
 	/** The actor and this pointer to it can reach a client in either order; whichever comes second attaches it. */
 	UFUNCTION()
