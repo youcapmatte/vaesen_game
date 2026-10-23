@@ -27,9 +27,51 @@ public static class StructuredSchema
     private static readonly string[] Unsupported =
         ["minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum", "multipleOf", "minLength", "maxLength", "pattern", "minItems", "maxItems", "uniqueItems", "default", "$schema"];
 
+    /// <summary>Where a property marked <see cref="IdsOfAttribute"/> keeps its id kind until a call fills it in.</summary>
+    private const string IdsMarker = "x-ids";
+
     public static JsonObject For<T>() => For(typeof(T));
 
-    public static JsonObject For(Type type) => (JsonObject)Cache.GetOrAdd(type, Build).DeepClone();
+    /// <summary>
+    /// The schema of <paramref name="type"/>, with every id field an enum of the case's ids of its kind (fixes 3,
+    /// section 1). A kind missing from <paramref name="ids"/>, or with none yet, stays a free string.
+    /// </summary>
+    public static JsonObject For(Type type, IReadOnlyDictionary<string, IReadOnlyList<string>>? ids = null)
+    {
+        var schema = (JsonObject)Cache.GetOrAdd(type, Build).DeepClone();
+        FillIds(schema, ids);
+        return schema;
+    }
+
+    private static void FillIds(JsonNode? node, IReadOnlyDictionary<string, IReadOnlyList<string>>? ids)
+    {
+        switch (node)
+        {
+            case JsonObject obj:
+                if (obj[IdsMarker] is JsonValue marker)
+                {
+                    obj.Remove(IdsMarker);
+                    if (ids is not null && ids.TryGetValue(marker.GetValue<string>(), out var values) && values.Count > 0)
+                    {
+                        obj["enum"] = new JsonArray(values.Distinct(StringComparer.Ordinal).Select(v => (JsonNode)JsonValue.Create(v)!).ToArray());
+                    }
+                }
+
+                foreach (var child in obj.Select(p => p.Value).ToList())
+                {
+                    FillIds(child, ids);
+                }
+
+                break;
+            case JsonArray array:
+                foreach (var child in array)
+                {
+                    FillIds(child, ids);
+                }
+
+                break;
+        }
+    }
 
     private static JsonObject Build(Type type)
     {
@@ -44,9 +86,19 @@ public static class StructuredSchema
         return schema;
     }
 
-    /// <summary>A property marked <see cref="OneOfAttribute"/> gets its values as an enum.</summary>
+    /// <summary>
+    /// A property marked <see cref="OneOfAttribute"/> gets its values as an enum; one marked <see cref="IdsOfAttribute"/>
+    /// (or, for a list, its items) gets a marker that <see cref="FillIds"/> turns into the case's ids.
+    /// </summary>
     private static JsonNode AddAllowedValues(JsonSchemaExporterContext context, JsonNode node)
     {
+        var idsOf = context.PropertyInfo?.AttributeProvider?.GetCustomAttributes(typeof(IdsOfAttribute), inherit: true).OfType<IdsOfAttribute>().FirstOrDefault();
+        if (idsOf is not null && node is JsonObject holder)
+        {
+            var target = holder["items"] as JsonObject ?? holder;
+            target[IdsMarker] = idsOf.Kind;
+        }
+
         var oneOf = context.PropertyInfo?.AttributeProvider?.GetCustomAttributes(typeof(OneOfAttribute), inherit: true).OfType<OneOfAttribute>().FirstOrDefault();
         if (oneOf is not null && node is JsonObject schema)
         {

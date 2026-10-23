@@ -29,7 +29,8 @@ public static class CaseView
             truth = new { p.Truth.Summary, p.Truth.Provocation, p.Truth.ProvocationPlaceId, p.Truth.PlotCentre, p.Truth.HiddenHandMotive },
             escalation = Events(p),
             facts = p.Facts.Select(f => new { f.Id, f.Statement, f.Kind, f.LoadBearing, f.PointsTo }),
-            cast = Cast(p, withSecrets: false),
+            places = p.Channels.Select(c => c.PlaceId).OfType<string>().Distinct(),
+            cast = Cast(p, withSecrets: false, withActions: true),
         },
         HookStep.StepName => new
         {
@@ -51,7 +52,7 @@ public static class CaseView
         p.Truth.Escalation.Select(e => new { e.Id, e.Description, e.When, e.PlaceId, e.Opening, e.FactIds });
 
     /// <summary>Who the people are, without the voice notes, routines and pressure actions later steps do not use.</summary>
-    private static object Cast(CasePacket p, bool withSecrets) => p.Cast.Select(c => new
+    private static object Cast(CasePacket p, bool withSecrets, bool withActions = false) => p.Cast.Select(c => new
     {
         c.CharacterId,
         c.Name,
@@ -60,9 +61,11 @@ public static class CaseView
         c.Importance,
         c.InstanceRef,
         c.HomePlaceId,
+        c.HomeAffordanceId,
         occupation = c.Identity?.Occupation,
         secrets = withSecrets ? c.Secrets : null,
         guilt = withSecrets ? c.Wants.Guilt : null,
+        permittedActions = withActions ? c.Wants.PermittedActions.Select(a => new { a.Id, a.Desperation, a.Description }) : null,
     });
 
     /// <summary>Every place a channel, a beat or the climax uses: what the scenes are written for.</summary>

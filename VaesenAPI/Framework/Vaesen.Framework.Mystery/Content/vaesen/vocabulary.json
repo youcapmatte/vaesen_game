@@ -740,6 +740,30 @@
       "kind": "container",
       "description": "A loose board, hollow wall or other hiding place.",
       "implies": []
+    },
+    {
+      "id": "workers-cottages",
+      "kind": "interior",
+      "description": "A row of workers' cottages, one room and a kitchen each.",
+      "implies": []
+    },
+    {
+      "id": "dwelling",
+      "kind": "interior",
+      "description": "One person's or one family's home: a cottage or a room.",
+      "implies": []
+    },
+    {
+      "id": "bed",
+      "kind": "feature",
+      "description": "A bed or box bed.",
+      "implies": []
+    },
+    {
+      "id": "root-cellar",
+      "kind": "container",
+      "description": "A root cellar dug under or beside a house.",
+      "implies": []
     }
   ]
 }

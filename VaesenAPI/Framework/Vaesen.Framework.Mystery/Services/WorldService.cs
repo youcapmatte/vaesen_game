@@ -24,6 +24,10 @@ public sealed class CloseMysteryRequest
     /// <summary>The host's own words on how it ended; kept with the case and in the memories it writes.</summary>
     [JsonProperty("notes")]
     public string Notes { get; set; } = "";
+
+    /// <summary>The levers' deeds the Society carried out (fixes 3, section 9), as the session recorded them.</summary>
+    [JsonProperty("deedsDone")]
+    public List<string> DeedsDone { get; set; } = [];
 }
 
 public interface IWorldService
@@ -117,6 +121,12 @@ public sealed class WorldService(
             return ret.Fail($"The case has no lever '{request.LeverId}'.", ErrorCodes.Invalid);
         }
 
+        var deeds = storedCase.Packet.ResolutionLevers.SelectMany(l => l.RequiredDeeds).Select(d => d.Id).ToHashSet(StringComparer.Ordinal);
+        if (request.DeedsDone.FirstOrDefault(d => !deeds.Contains(d)) is { } unknownDeed)
+        {
+            return ret.Fail($"The case has no deed '{unknownDeed}'.", ErrorCodes.Invalid);
+        }
+
         var world = await worlds.GetAsync(societyId, cancellationToken);
         if (!world.Success)
         {
@@ -148,6 +158,7 @@ public sealed class WorldService(
             LeverId = lever?.Id,
             SolveDepth = lever?.SolveDepth,
             Notes = request.Notes,
+            DeedsDone = request.DeedsDone,
             Changes = changes,
         };
         return await cases.SaveAsync(storedCase, cancellationToken);

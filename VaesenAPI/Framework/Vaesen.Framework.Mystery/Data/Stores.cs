@@ -120,6 +120,10 @@ public sealed class CaseClosing
     [JsonProperty("notes")]
     public string Notes { get; set; } = "";
 
+    /// <summary>The levers' deeds the Society carried out, as the session recorded them.</summary>
+    [JsonProperty("deedsDone")]
+    public List<string> DeedsDone { get; set; } = [];
+
     /// <summary>What the write-back did, line by line, for the host and for review.</summary>
     [JsonProperty("changes")]
     public List<string> Changes { get; set; } = [];

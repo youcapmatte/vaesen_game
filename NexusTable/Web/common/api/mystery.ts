@@ -145,19 +145,23 @@ export interface CasePacket {
   channels: CaseChannel[];
   cast: CastMember[];
   decoys: { threadId: string; description: string; factIds: string[]; clearedByFactIds: string[]; resolution: string }[];
-  beats: { id: string; threshold: number; description: string; requires: { place?: string | null; time?: string | null }; emitsFactIds: string[]; actorId?: string | null }[];
-  climax: { threshold: number; conditions: { place?: string | null; time?: string | null }; description: string };
+  beats: { id: string; threshold: number; description: string; requires: { place?: string | null; time?: string | null }; emitsFactIds: string[]; actorId?: string | null; actionId?: string | null }[];
+  climax: { threshold: number; conditions: { place?: string | null; time?: string | null }; description: string; actorId?: string | null; actionId?: string | null };
   resolutionLevers: {
     id: string;
     description: string;
     solveDepth: "crude" | "partial" | "deep";
     requiresFactIds: string[];
+    requiredDeeds?: LeverDeed[];
+    deedOrder?: "any" | "listed";
     consequences: {
       world: string[];
       attitudes: { characterId: string; change: string; delta: number }[];
       fates: { characterId: string; status: string; reason: string }[];
     };
   }[];
+  /** The minds of creatures the players can speak or bargain with. */
+  creatureMinds?: { vaesenId: string; wants: string[]; terms: string[]; termDeedIds: string[]; redLines: string[]; voice: string }[];
   tension: { start: number };
   validation: { passed: boolean; issues: CoherenceIssue[]; runs: number };
 }
@@ -180,12 +184,25 @@ export interface GenerationLogEntry {
   issues: CoherenceIssue[];
 }
 
+/** What the players must do for a lever to take effect: where, when and before whom. */
+export interface LeverDeed {
+  id: string;
+  description: string;
+  place?: string | null;
+  affordanceId?: string | null;
+  time?: string | null;
+  witnesses: string[];
+  witnessRule: "any" | "all";
+}
+
 export interface CaseClosing {
   closedAt: string;
   outcome: "solved" | "failed";
   leverId?: string | null;
   solveDepth?: string | null;
   notes: string;
+  /** The levers' deeds the Society carried out. */
+  deedsDone?: string[];
   changes: string[];
 }
 
@@ -204,6 +221,7 @@ export interface CloseMysteryRequest {
   outcome: "solved" | "failed";
   leverId?: string | null;
   notes: string;
+  deedsDone?: string[];
 }
 
 /** The Society's persistent world (Vaesen.Framework.Mystery SocietyWorld). Host only. */

@@ -59,6 +59,14 @@ Services/      MysteryGenerator, WorldService (seeding, closing, write-back), Co
 
 The engine sets the fact weights. Colour and season facts, and what the group knows on arrival, weigh nothing, so the dial starts at its start; decoy facts weigh half, load-bearing ones double. The weights are scaled so the deep solve's path (its lever's facts and what gates them) ends 15% past the climax. A beat with a time fires when its threshold is reached and its time has come, whichever is later.
 
+### Ids, deeds and minds
+
+- **Ids as enums.** Every field that refers to a fact, an event, a person, a place, an affordance or a channel requirement is marked `[IdsOf]`. Each call's schema carries the case's ids of that kind as an enum (`CaseIds`), so the model cannot write a fact's title where its id belongs. A step that defines ids (the facts step its facts) leaves them open. Something the players must have in hand goes in a channel's free `item` field, so `requires` can be a closed list.
+- **Deeds.** Every lever lists `requiredDeeds`: what the players must do for it to take effect (where, when, before whom), besides knowing its facts. Closing a mystery can record the deeds done (`deedsDone`). Tracking them live is the runtime's job (milestone 5).
+- **Creature minds.** A creature that can be bargained with gets a `creatureMind`: wants, terms (tied to the deep lever's deeds by `termDeedIds`), red lines, what it knows and believes, its voice and how it answers an offering, a threat, steel, a prayer, a bargain, an apology and a lie.
+- **Homes.** A cast member may live in a dwelling of the level (`homeAffordanceId`). One whose place has none asks for `newDwelling`, and the engine adds a home with a bed, a hearth and a chest to its copy of the level, recorded in `level.addedAffordances` (`LevelDefinition.ForCase` rebuilds it). Mines, sawmills, mills and logging camps now offer workers' cottages.
+- **Warnings that name their items** (an action outside a person's permitted ones, a home trace in someone else's house, a first name the Society's world already has) go to their owning steps with the critic's issues, and in the light last round.
+
 ## The Society's world (spec 9)
 
 Each Society has its own world: one `SocietyWorld` document holding its persistent cast and what it has changed.
@@ -104,7 +112,8 @@ That's enough for Claude to review a case and propose changes to the prompts, co
 - **Reachability.** The walk starts from what the hook tells the players. A channel opens once every fact it is gated on (`knowsFact:f7`) is known. Trust, rolls, times and places count as reachable, because a failed roll is rerouted (spec 4.6). Beats fire as the tension from known facts reaches their threshold. Every load-bearing fact must be reached, and so must every beat and the climax.
 - **Redundancy.** Every load-bearing fact the hook does not state needs two independent sources: different people, or different spots.
 - **Order independence.** Removing any one channel must leave every load-bearing fact reachable. A group that only talks, or only searches, gets a warning if it would reach fewer than half of the load-bearing facts.
-- **Provenance.** Every testimony is backed by what the person knows. Anyone who was told something was told by someone who knew it.
+- **Provenance.** Every testimony is backed by what the person knows. Anyone who was told something was told by someone who knew it, or by a bystander outside the cast (`told:bystander:carter`). Bystander gossip is hearsay: a channel that rests only on it never counts toward a fact's two independent sources.
+- **Homes.** A trace or document in a dwelling is in its owner's own home (a warning).
 - **Decoys and fair play.**
   - Every decoy can be cleared by a reachable true fact.
   - An honest clue to the true answer is open early and not locked behind a decoy.
@@ -119,8 +128,9 @@ That's enough for Claude to review a case and propose changes to the prompts, co
   - The hook never states the cause.
   - In a `what` case, giveaway tells are kept out of the opening and gated late.
   - The solution rests on deep lore, and there is at least one knowledge-gated step.
-- **Resolution.** A hidden-hand case has both a crude solve and a discoverable deep solve.
-- **Beats.** Thresholds are in order and reachable. A creature with time or place conditions gets a climax that says when or where.
+- **Resolution.** A hidden-hand case has both a crude solve and a discoverable deep solve. Every lever has deeds whose places, affordances and witnesses exist, at places the players reach. A creature that can be bargained with has a mind whose terms name deep-lever deeds.
+- **Beats.** Thresholds are in order and reachable. A creature with time or place conditions gets a climax that says when or where. A person who acts in a beat or the climax does one of their permitted actions, at a desperation the tension has reached (medium from 0.35, high from 0.65); otherwise a warning.
+- **Names across cases.** A new significant person whose first name matches or sounds like a persistent character's in the Society's world is warned (the humans step is also given the list).
 
 ## Content
 

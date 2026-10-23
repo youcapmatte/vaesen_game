@@ -92,7 +92,8 @@ public static class CaseReport
             foreach (var c in p.Channels.Where(c => c.FactId == f.Id))
             {
                 var where = c.SourceCharacterId is not null ? Name(p, c.SourceCharacterId) : $"{c.PlaceId}/{c.AffordanceId}";
-                var gate = c.Access.Requires.Count == 0 ? "open" : string.Join(", ", c.Access.Requires);
+                var gates = c.Access.Requires.Concat(c.Access.Item is { Length: > 0 } item ? [$"item: {item}"] : Array.Empty<string>()).ToList();
+                var gate = gates.Count == 0 ? "open" : string.Join(", ", gates);
                 s.AppendLine(inv, $"  - {c.Id} {c.Kind} via {where} [{gate}]: {c.Reveal}");
             }
         }
@@ -140,6 +141,28 @@ public static class CaseReport
         foreach (var r in p.ResolutionLevers)
         {
             s.AppendLine(inv, $"- **{r.Id}** ({r.SolveDepth}, needs {Ids(r.RequiresFactIds)}): {r.Description} World: {string.Join(" ", r.Consequences.World)}");
+            if (r.RequiredDeeds.Count > 0)
+            {
+                s.AppendLine(inv, $"  - Deeds ({(r.DeedOrder == DeedOrders.Listed ? "in order" : "any order")}):");
+                foreach (var d in r.RequiredDeeds)
+                {
+                    var where = string.Join(", ", new[] { d.Place, d.AffordanceId, d.Time }.OfType<string>());
+                    var before = d.Witnesses.Count == 0 ? "" : $", before {(d.Witnesses.Count > 1 ? d.WitnessRule + " of " : "")}{string.Join(", ", d.Witnesses)}";
+                    s.AppendLine(inv, $"    - {d.Id}: {d.Description}{(where.Length == 0 ? "" : $" [{where}]")}{before}");
+                }
+            }
+        }
+
+        foreach (var m in p.CreatureMinds)
+        {
+            Section(s, $"The creature's mind ({m.VaesenId})");
+            s.AppendLine(inv, $"- Wants: {string.Join("; ", m.Wants)}");
+            s.AppendLine(inv, $"- Terms: {string.Join("; ", m.Terms)} (deeds {Ids(m.TermDeedIds)})");
+            s.AppendLine(inv, $"- Red lines: {string.Join("; ", m.RedLines)}");
+            s.AppendLine(inv, $"- Knows {Ids(m.Knows.Select(k => k.FactId))}; thinks: {string.Join("; ", m.Thinks.Select(t => $"{t.Belief} ({(t.True ? "true" : "false")})"))}");
+            s.AppendLine(inv, $"- Voice: {m.Voice}");
+            var r = m.Reactions;
+            s.AppendLine(inv, $"- Offering: {r.Offering} Threat: {r.Threat} Steel: {r.Steel} Prayer: {r.Prayer} Bargain: {r.Bargain} Apology: {r.Apology} Lie: {r.Lie}");
         }
 
         if (p.Level.SceneDescriptions.Count > 0)

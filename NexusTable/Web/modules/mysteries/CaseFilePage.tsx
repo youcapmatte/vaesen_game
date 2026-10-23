@@ -1,6 +1,6 @@
 "use client";
 
-import { Accordion, Badge, Box, Button, Container, Group, Modal, Progress, SegmentedControl, Select, SimpleGrid, Stack, Table, Tabs, Text, Textarea, Title } from "@mantine/core";
+import { Accordion, Badge, Box, Button, Container, Group, Modal, MultiSelect, Progress, SegmentedControl, Select, SimpleGrid, Stack, Table, Tabs, Text, Textarea, Title } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { IconAlertTriangle, IconArrowLeft, IconBook2, IconDownload, IconEye, IconFileCode } from "@tabler/icons-react";
 import Link from "next/link";
@@ -338,6 +338,13 @@ function EndingsTab({ p }: { p: CasePacket }) {
             <Box key={r.id}>
               <Group gap={6}><Badge size="xs" color={r.solveDepth === "deep" ? "moss" : r.solveDepth === "partial" ? "gold.8" : "blood"}>{r.solveDepth} solve</Badge><Text fz="xs" c="var(--nx-ink-soft)">needs {r.requiresFactIds.join(", ") || "nothing"}</Text></Group>
               <Text fz="sm" mt={2}>{r.description}</Text>
+              {r.requiredDeeds?.map((d) => (
+                <Text key={d.id} fz="xs" c="var(--nx-parchment-2)">
+                  {d.id}: {d.description}
+                  {[d.place, d.time].filter(Boolean).length > 0 && ` (${[d.place, d.time].filter(Boolean).join(", ")})`}
+                  {d.witnesses.length > 0 && `, before ${d.witnesses.length > 1 ? `${d.witnessRule} of ` : ""}${d.witnesses.map(name).join(", ")}`}
+                </Text>
+              ))}
               {r.consequences.world.length > 0 && <Text fz="xs" c="var(--nx-ink-soft)" fs="italic">{r.consequences.world.join(" ")}</Text>}
               {r.consequences.attitudes?.map((a) => (
                 <Text key={a.characterId} fz="xs" c="var(--nx-ink-soft)">
@@ -458,6 +465,7 @@ function ClosingSummary({ stored }: { stored: StoredCase }) {
         </Text>
         {lever && <Text fz="sm">{lever.description}</Text>}
         {c.notes && <Text fz="sm" fs="italic" c="var(--nx-parchment-2)">{c.notes}</Text>}
+        {(c.deedsDone?.length ?? 0) > 0 && <Text fz="xs" c="var(--nx-ink-soft)">Deeds done: {c.deedsDone!.join(", ")}</Text>}
         {c.changes.length > 0 && (
           <Box mt={4}>
             <Text fz="xs" c="var(--nx-gold)">What the world remembers</Text>
@@ -476,13 +484,14 @@ function CloseModal({ opened, onClose, stored, onClosed }: { opened: boolean; on
   const [outcome, setOutcome] = useState<"solved" | "failed">("solved");
   const [leverId, setLeverId] = useState<string | null>(p.resolutionLevers[0]?.id ?? null);
   const [notes, setNotes] = useState("");
+  const [deedsDone, setDeedsDone] = useState<string[]>([]);
   const [error, setError] = useState<string>();
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
     setSaving(true);
     setError(undefined);
-    const request: CloseMysteryRequest = { outcome, leverId: outcome === "solved" ? leverId : null, notes };
+    const request: CloseMysteryRequest = { outcome, leverId: outcome === "solved" ? leverId : null, notes, deedsDone };
     const result = await call<StoredCase>(Http.POST, MysteryApi.close(p.mysteryId), request);
     setSaving(false);
     if (!result.success || !result.result) {
@@ -514,6 +523,13 @@ function CloseModal({ opened, onClose, stored, onClosed }: { opened: boolean; on
             allowDeselect={false}
           />
         )}
+        <MultiSelect
+          label="Deeds the Society carried out"
+          value={deedsDone}
+          onChange={setDeedsDone}
+          data={p.resolutionLevers.flatMap((l) => (l.requiredDeeds ?? []).map((d) => ({ value: d.id, label: `${d.id}: ${d.description}` })))}
+          clearable
+        />
         <Textarea label="Notes for the world's memory (optional)" autosize minRows={2} value={notes} onChange={(e) => setNotes(e.currentTarget.value)} />
         <ErrorNote message={error} />
         <Group justify="flex-end">

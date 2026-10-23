@@ -24,6 +24,7 @@ public sealed class ConflictOutput
     [JsonProperty("provocation")]
     public string Provocation { get; set; } = "";
 
+    [IdsOf(IdKinds.Place)]
     [JsonProperty("provocationPlaceId")]
     public string ProvocationPlaceId { get; set; } = "";
 
@@ -71,6 +72,7 @@ public sealed class EscalationDraft
     [JsonProperty("when")]
     public string When { get; set; } = "";
 
+    [IdsOf(IdKinds.Place)]
     [JsonProperty("placeId")]
     public string? PlaceId { get; set; }
 
@@ -121,8 +123,18 @@ public sealed class CastDraft
     [JsonProperty("identity")]
     public CharacterIdentity? Identity { get; set; }
 
+    [IdsOf(IdKinds.Place)]
     [JsonProperty("homePlaceId")]
     public string? HomePlaceId { get; set; }
+
+    /// <summary>The dwelling in their home place where they live (a cottage, the barracks, a farmhouse kitchen), if any.</summary>
+    [IdsOf(IdKinds.Affordance)]
+    [JsonProperty("homeAffordanceId")]
+    public string? HomeAffordanceId { get; set; }
+
+    /// <summary>A significant person whose home place has no dwelling for them: the engine builds them one.</summary>
+    [JsonProperty("newDwelling")]
+    public bool NewDwelling { get; set; }
 
     [JsonProperty("wants")]
     public CastWants Wants { get; set; } = new();
@@ -187,6 +199,7 @@ public sealed class FactDraft
 
 public sealed class EventFacts
 {
+    [IdsOf(IdKinds.Event)]
     [JsonProperty("eventId")]
     public string EventId { get; set; } = "";
 
@@ -207,6 +220,7 @@ public sealed class MindsOutput
 
 public sealed class CastMind
 {
+    [IdsOf(IdKinds.Cast)]
     [JsonProperty("characterId")]
     public string CharacterId { get; set; } = "";
 
@@ -231,6 +245,9 @@ public sealed class ArcOutput
 
     [JsonProperty("resolutionLevers")]
     public List<ResolutionLever> ResolutionLevers { get; set; } = [];
+
+    [JsonProperty("creatureMinds")]
+    public List<CreatureMind> CreatureMinds { get; set; } = [];
 }
 
 /// <summary>Sub-step 6d, the hook and the scenes.</summary>
@@ -239,6 +256,7 @@ public sealed class HookOutput
     [JsonProperty("hook")]
     public HookDraft Hook { get; set; } = new();
 
+    [IdsOf(IdKinds.Place)]
     [JsonProperty("placesUsed")]
     public List<string> PlacesUsed { get; set; } = [];
 
@@ -248,21 +266,25 @@ public sealed class HookOutput
 
 public sealed class HookDraft
 {
+    [IdsOf(IdKinds.Cast)]
     [JsonProperty("hookGiverId")]
     public string HookGiverId { get; set; } = "";
 
     [JsonProperty("text")]
     public string Text { get; set; } = "";
 
+    [IdsOf(IdKinds.Fact)]
     [JsonProperty("assertedFactIds")]
     public List<string> AssertedFactIds { get; set; } = [];
 
+    [IdsOf(IdKinds.Event)]
     [JsonProperty("openingEventIds")]
     public List<string> OpeningEventIds { get; set; } = [];
 }
 
 public sealed class SceneDescription
 {
+    [IdsOf(IdKinds.Place)]
     [JsonProperty("placeId")]
     public string PlaceId { get; set; } = "";
 
@@ -325,6 +347,15 @@ public static class CriticChecks
     /// <summary>Facts, what people know and when, their secrets and the reveals agree on when things happened.</summary>
     public const string Timeline = "timeline";
 
+    /// <summary>Sabotage, traps, accidents, wounds and evidence behave as they would in the period (fixes 3, section 3).</summary>
+    public const string Mechanisms = "mechanisms";
+
+    /// <summary>A character acting against their own plan has a stated reason (fixes 3, section 4).</summary>
+    public const string ActsToPlan = "actsToPlan";
+
+    /// <summary>Threats and bargains say why the threatened party believes them (fixes 3, section 5).</summary>
+    public const string Leverage = "leverage";
+
     public static readonly IReadOnlyList<string> All =
-        [DeepLoreTrail, NonTrivial, KnowledgeGate, HumansFromConflict, DifficultyOnFocus, Hook, FairClues, HonestRedHerrings, Solves, WorldConsistency, Timeline];
+        [DeepLoreTrail, NonTrivial, KnowledgeGate, HumansFromConflict, DifficultyOnFocus, Hook, FairClues, HonestRedHerrings, Solves, WorldConsistency, Timeline, Mechanisms, ActsToPlan, Leverage];
 }

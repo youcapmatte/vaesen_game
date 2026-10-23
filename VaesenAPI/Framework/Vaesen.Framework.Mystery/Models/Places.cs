@@ -128,6 +128,21 @@ public sealed class LevelDefinition : ContentRecord
 
     public LevelPlace? FindPlace(string? id) => Places.Find(p => p.Id == id);
 
+    /// <summary>A copy of this level as a case uses it: with the homes the case added for its people.</summary>
+    public LevelDefinition ForCase(CaseLevel caseLevel)
+    {
+        var copy = JsonConvert.DeserializeObject<LevelDefinition>(JsonConvert.SerializeObject(this))!;
+        foreach (var added in caseLevel.AddedAffordances)
+        {
+            if (copy.FindPlace(added.PlaceId) is { } place && place.FindAffordance(added.Affordance.Id) is null)
+            {
+                place.Affordances.Add(added.Affordance);
+            }
+        }
+
+        return copy;
+    }
+
     /// <summary>Every tag the level offers: terrain, places, their tags and all affordances inside them.</summary>
     public IEnumerable<string> AllTags()
     {
@@ -186,6 +201,37 @@ public sealed class LevelPlace
     }
 
     public IEnumerable<string> AllTags() => Tags.Concat(AllAffordances().Select(a => a.Tag));
+}
+
+/// <summary>Affordance tags people live in: a trace there belongs to whoever lives there (fixes 3, section 6).</summary>
+public static class Dwellings
+{
+    public const string Dwelling = "dwelling";
+    public const string WorkersCottages = "workers-cottages";
+
+    public static readonly IReadOnlySet<string> Tags = new HashSet<string>(StringComparer.Ordinal)
+    {
+        Dwelling, WorkersCottages, "bunkhouse", "bedroom", "kitchen", "guest-room",
+    };
+
+    /// <summary>A minimal home for one person in a place that has none to give them: a room with a bed, a hearth and a chest.</summary>
+    public static LevelAffordance For(string placeId, string characterId, string name)
+    {
+        var id = $"{placeId}-home-{characterId.Replace("npc-", "", StringComparison.Ordinal)}";
+        return new LevelAffordance
+        {
+            Id = id,
+            Tag = Dwelling,
+            Name = $"{name}'s home",
+            Description = $"Where {name} lives.",
+            Contains =
+            [
+                new LevelAffordance { Id = $"{id}-bed", Tag = "bed", Name = "Bed", Description = $"{name}'s bed." },
+                new LevelAffordance { Id = $"{id}-hearth", Tag = "hearth", Name = "Hearth", Description = "A small hearth." },
+                new LevelAffordance { Id = $"{id}-chest", Tag = "chest", Name = "Chest", Description = $"{name}'s chest.", Lockable = true },
+            ],
+        };
+    }
 }
 
 public sealed class LevelAffordance

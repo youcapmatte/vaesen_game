@@ -24,8 +24,8 @@ Period: {{periodConventions}}
 # Conventions
 
 - Ids: facts f1, f2...; channels c1, c2...; escalation events e1, e2...; beats b1...; decoy threads d1...; levers r1...; new characters npc-firstname-lastname (lowercase, hyphens); persistent characters keep their canonical id.
-- Channel access requirements are short strings: knowsFact:<factId> (the players must already know that fact), trust>=<0-3> (how far the person must trust them), roll:<skill> (investigation, inspection, observation, learning, manipulation, force, agility, stealth, medicine, survival, vigilance), time:<when>, place:<placeId>, item:<what>.
-- Knowledge sources: witnessed, self (they did it), lore (old knowledge), told:<characterId>, found:<channelId>.
+- Channel access requirements are short strings: knowsFact:<factId> (the players must already know that fact), trust>=<0-3> (how far the person must trust them), roll:<skill> (investigation, inspection, observation, learning, manipulation, force, agility, stealth, medicine, survival, vigilance), time:<when> (dawn, morning, midday, day, evening, dusk, night, sunday, weekday), place:<placeId>. Something the players must have in hand goes in the channel's item field, not in requires.
+- Knowledge sources: witnessed, self (they did it), lore (old knowledge), told:<characterId>, told:bystander:<role>, found:<channelId>.
 - Tension runs from 0 to 1. Beats fire at thresholds; the climax comes last.
 - Answer with the JSON the schema asks for and nothing else.
 - Fields with listed allowed values take exactly one of those values, spelled as listed. Never invent a value. If none fits perfectly, pick the closest.

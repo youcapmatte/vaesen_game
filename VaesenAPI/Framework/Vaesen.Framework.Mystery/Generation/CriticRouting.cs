@@ -58,9 +58,15 @@ public static partial class CriticRouting
             return (HookStep.StepName, t);
         }
 
-        if (t is "climax")
+        if (t is "climax" or "creatureMinds" or "creatureMind")
         {
             return (ArcStep.StepName, t);
+        }
+
+        // A lever's deed ("r3-d1") is the lever's.
+        if (DeedId().Match(t) is { Success: true } deed)
+        {
+            return (ArcStep.StepName, $"lever:{deed.Groups[1].Value}");
         }
 
         if (t is "eventFacts")
@@ -102,6 +108,9 @@ public static partial class CriticRouting
         "critic." + CriticChecks.DeepLoreTrail => FactsStep.StepName,
         "critic." + CriticChecks.HonestRedHerrings => FactsStep.StepName,
         "critic." + CriticChecks.HumansFromConflict => HumansStep.StepName,
+        "critic." + CriticChecks.Leverage => HumansStep.StepName,
+        "critic." + CriticChecks.Mechanisms => EscalationStep.StepName,
+        "critic." + CriticChecks.ActsToPlan => ArcStep.StepName,
         _ => MindsStep.StepName,
     };
 
@@ -156,4 +165,7 @@ public static partial class CriticRouting
 
     [GeneratedRegex("^([efdcbr])\\d+$")]
     private static partial Regex ItemId();
+
+    [GeneratedRegex(@"^(r\d+)-d\d+$")]
+    private static partial Regex DeedId();
 }

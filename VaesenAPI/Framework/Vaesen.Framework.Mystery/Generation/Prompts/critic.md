@@ -19,5 +19,8 @@ Keep explanation and suggestedFix to about 60 words each: the items and the chan
 - fairClues: every clue is fairly discoverable and its reveal says enough to be understood.
 - honestRedHerrings: misdirection uses true facts that license a wrong inference; nothing physical lies; the true culprit has an honest early clue.
 - solves: {{solveRule}}
-- worldConsistency: nothing contradicts the world truths, the period, the level or the creature's lore.
+- worldConsistency: nothing contradicts the world truths, the period, the level or the creature's lore. Trades, tools and work are described as the period would: what a smith, miller, stoker or sawyer actually does, and with what.
+- mechanisms: physical mechanisms in the case (sabotage, traps, accidents, wounds, evidence) behave as they would in the period, and their consequences are stated correctly. A tampering whose real result differs from what the person intends says so, and whether they know it.
+- actsToPlan: when a character acts against their own stated plan (the wrong time, the wrong target, a higher risk), the case states why: desperation, a changed plan or a mistake. Beats and the climax agree with the hidden hand's plan.
+- leverage: every threat, blackmail or bargain states why the threatened party believes it; mutual exposure is addressed (who would be believed, and why).
 - timeline: the facts, what each person knows and when, their secrets and the channels' reveals agree on when things happened.

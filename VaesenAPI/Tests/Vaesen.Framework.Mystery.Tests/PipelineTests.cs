@@ -305,7 +305,7 @@ public sealed class PipelineTests
                 "humans" => new HumansOutput { Cast = sample.Cast.Select(Draft).ToList() },
                 "facts" => Facts(request.Instruction),
                 "minds" => Minds(),
-                "arc" => new ArcOutput { Beats = sample.Beats, Climax = sample.Climax, ResolutionLevers = sample.ResolutionLevers },
+                "arc" => new ArcOutput { Beats = sample.Beats, Climax = sample.Climax, ResolutionLevers = sample.ResolutionLevers, CreatureMinds = sample.CreatureMinds },
                 "hook" => new HookOutput
                 {
                     Hook = new HookDraft

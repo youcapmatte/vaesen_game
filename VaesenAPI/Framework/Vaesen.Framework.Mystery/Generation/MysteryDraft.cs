@@ -57,6 +57,7 @@ public sealed class MysteryDraft
         Vaesen = [Vaesen],
         Conflict = Pack.FindConflict(Packet.Brief.ConflictArchetypeId),
         SocietyCharacterIds = World?.Characters.Select(c => c.Id).ToHashSet() ?? [],
+        WorldNames = World?.Characters.Select(c => (c.Id, c.Name)).ToList() ?? [],
         UnavailableCharacterIds = World?.Characters
             .Where(c => c.Status is CharacterStatuses.Dead or CharacterStatuses.Departed)
             .Select(c => c.Id)

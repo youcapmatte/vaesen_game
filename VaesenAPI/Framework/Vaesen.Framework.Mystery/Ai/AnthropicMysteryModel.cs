@@ -118,7 +118,7 @@ public sealed class AnthropicMysteryModel : IMysteryModel
     private async Task<Answer> StreamAsync<T>(ModelRequest request, bool structured, CancellationToken cancellationToken)
     {
         var stopwatch = Stopwatch.StartNew();
-        var schema = StructuredSchema.For<T>();
+        var schema = StructuredSchema.For(typeof(T), request.Ids);
 
         var content = new List<BetaContentBlockParam>();
         if (!string.IsNullOrWhiteSpace(request.Context))

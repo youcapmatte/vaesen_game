@@ -6,3 +6,4 @@ Write what the creature (or the hand behind it) has concretely done so far: the 
 - Opening events are each deniable alone and inexplicable together, spread over different registers, and described in the plainest terms their mundane reading allows.
 - {{giveawayRule}}
 - Later events (not opening) may be stranger; they are what the players arrive into or what happens while they are there.
+- When a person tampers with machinery, a building, a boat, a weapon or anything else that works by physical rules, state the mechanism and its real consequence in 1870s terms. If the consequence is not what the person intends (they want a pump stopped, but the act risks a boiler explosion), say so, and decide whether they know it. Either can be a strong plot point, but the case must say which.

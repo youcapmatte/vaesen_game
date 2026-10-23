@@ -47,6 +47,34 @@ public static partial class NameRules
         return null;
     }
 
+    /// <summary>
+    /// Why a first name is too close to one already used in the Society's world, or null (fixes 3, section 7): the same
+    /// name, or the same opening syllable when that syllable is a real one ("Per" and "Petter", "Johan" and "Jonas"; not
+    /// "Anna" and "Anders", which share only a vowel).
+    /// </summary>
+    public static string? FirstNameClash(string a, string b)
+    {
+        var (aFirst, _) = Split(a);
+        var (bFirst, _) = Split(b);
+        if (aFirst.Length == 0 || bFirst.Length == 0)
+        {
+            return null;
+        }
+
+        if (string.Equals(aFirst, bFirst, StringComparison.OrdinalIgnoreCase))
+        {
+            return "the same first name";
+        }
+
+        var syllable = FirstSyllable(aFirst);
+        return syllable.Length >= 2 && string.Equals(syllable, FirstSyllable(bFirst), StringComparison.OrdinalIgnoreCase)
+            ? $"both begin '{syllable}'"
+            : null;
+    }
+
+    /// <summary>The first name of a full name ("Per" for "Per Ers").</summary>
+    public static string FirstName(string name) => Split(name).First;
+
     /// <summary>True when a lie's story says what the fact says: most of the fact's words, in the story.</summary>
     public static bool SaysTheSame(string story, string fact)
     {

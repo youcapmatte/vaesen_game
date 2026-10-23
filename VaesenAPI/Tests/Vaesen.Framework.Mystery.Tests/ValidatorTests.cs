@@ -231,6 +231,146 @@ public sealed class ValidatorTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void Each_calls_schema_takes_the_cases_ids_as_enums()
+    {
+        var packet = SampleCase();
+        var level = Pack.FindLevel(packet.Brief.LevelId)!;
+        var draft = new Generation.MysteryDraft
+        {
+            Brief = new AssignmentBrief { LevelId = level.Id, VaesenId = "nack" },
+            Pack = Pack,
+            History = new SocietyHistory(),
+            Level = level,
+            Vaesen = Pack.FindVaesen("nack")!,
+            Conflicts = [],
+            Packet = packet,
+        };
+        string Enum(IEnumerable<string> ids) => new System.Text.Json.Nodes.JsonArray(ids.Distinct().Select(i => (System.Text.Json.Nodes.JsonNode)i!).ToArray()).ToJsonString();
+
+        var ids = Generation.CaseIds.For(draft, "minds");
+        var minds = Ai.StructuredSchema.For(typeof(Generation.MindsOutput), ids).ToJsonString();
+
+        Assert.Contains(Enum(packet.Facts.Select(f => f.Id)), minds, StringComparison.Ordinal);
+        Assert.Contains(Enum(packet.Cast.Select(c => c.CharacterId)), minds, StringComparison.Ordinal);
+        Assert.Contains(Enum(level.Places.Select(p => p.Id)), minds, StringComparison.Ordinal);
+        Assert.Contains(Enum(level.Places.SelectMany(p => p.AllAffordances()).Select(a => a.Id)), minds, StringComparison.Ordinal);
+        Assert.Contains(Enum(AccessRequirement.Allowed(packet.Facts.Select(f => f.Id), level.Places.Select(p => p.Id))), minds, StringComparison.Ordinal);
+        Assert.DoesNotContain("x-ids", minds, StringComparison.Ordinal);
+
+        // The facts step names its own facts: their ids stay open there, and events are fixed.
+        var facts = Ai.StructuredSchema.For(typeof(Generation.FactsOutput), Generation.CaseIds.For(draft, "facts")).ToJsonString();
+        Assert.DoesNotContain(Enum(packet.Facts.Select(f => f.Id)), facts, StringComparison.Ordinal);
+        Assert.Contains(Enum(packet.Truth.Escalation.Select(e => e.Id)), facts, StringComparison.Ordinal);
+
+        // Without ids the schema is the plain one.
+        Assert.DoesNotContain("x-ids", Ai.StructuredSchema.For<Generation.ArcOutput>().ToJsonString(), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Gossip_from_bystanders_is_hearsay_and_never_a_facts_own_way_in()
+    {
+        var packet = SampleCase();
+        var fact = packet.Facts.First(f => f.LoadBearing && packet.Channels.Count(c => c.FactId == f.Id) == 2);
+        var tellers = packet.Channels.Where(c => c.FactId == fact.Id).ToList();
+        foreach (var c in tellers)
+        {
+            c.Kind = ChannelKinds.Testimony;
+            c.PlaceId = null;
+            c.AffordanceId = null;
+            var person = packet.Cast.First(m => m.Importance == CastImportance.Significant && m.CharacterId != tellers[0].SourceCharacterId || c == tellers[0]);
+            c.SourceCharacterId ??= person.CharacterId;
+            var teller = packet.FindCast(c.SourceCharacterId)!;
+            teller.Knows.RemoveAll(k => k.FactId == fact.Id);
+            teller.Knows.Add(new CastKnowledge { FactId = fact.Id, Source = "told:bystander:carter", When = "last week" });
+        }
+
+        var issues = Validate(packet);
+
+        Assert.DoesNotContain(issues, i => i.Code == IssueCodes.Provenance && i.Explanation.Contains("carter", StringComparison.Ordinal));
+        AssertError(issues, IssueCodes.Redundancy, $"fact:{fact.Id}");
+    }
+
+    [Fact]
+    public void A_beat_or_climax_act_must_be_permitted_and_unlocked_by_its_tension()
+    {
+        var packet = SampleCase();
+        var axel = packet.FindCast("npc-axel-wester")!;
+        axel.Wants.PermittedActions.Add(new CharacterAction { Id = "wester-burn", Desperation = DesperationTiers.High, Description = "Burn the dam papers and the office." });
+        packet.Beats.First(b => b.Id == "b2").ActionId = "wester-burn";
+        packet.Climax.ActorId = axel.CharacterId;
+        packet.Climax.ActionId = "wester-sabotage";
+
+        var issues = Validate(packet);
+
+        Assert.Contains(issues, i => !i.IsError && i.Location == "beat:b2" && i.Explanation.Contains("high-desperation", StringComparison.Ordinal) && i.Targets!.SequenceEqual(["b2"]));
+        Assert.Contains(issues, i => !i.IsError && i.Location == "climax" && i.Explanation.Contains("outside Axel Wester's permitted actions", StringComparison.Ordinal));
+        Assert.Equal(("arc", "lever:r3"), Generation.CriticRouting.Owner("r3-d1"));
+    }
+
+    [Fact]
+    public void A_home_trace_sits_in_its_owners_own_home()
+    {
+        var packet = SampleCase();
+        var level = Pack.FindLevel(packet.Brief.LevelId)!;
+        var (place, dwelling) = level.Places.SelectMany(p => p.AllAffordances().Select(a => (p, a))).First(x => Dwellings.Tags.Contains(x.a.Tag));
+        var owner = packet.Cast.First(m => m.Importance == CastImportance.Significant);
+        var other = packet.Cast.First(m => m.Importance == CastImportance.Significant && m != owner);
+        other.HomePlaceId = place.Id;
+        other.HomeAffordanceId = dwelling.Id;
+        var trace = packet.Channels.First(c => c.Kind == ChannelKinds.Trace);
+        trace.PlaceId = place.Id;
+        trace.AffordanceId = dwelling.Id;
+        trace.SourceCharacterId = owner.CharacterId;
+
+        Assert.Contains(Validate(packet), i => !i.IsError && i.Location == $"channel:{trace.Id}" && i.Explanation.Contains($"in {other.Name}'s home", StringComparison.Ordinal));
+
+        // Their own home, built by the engine and kept on the packet, is fine.
+        var home = Dwellings.For(place.Id, owner.CharacterId, owner.Name);
+        packet.Level.AddedAffordances.Add(new AddedAffordance { PlaceId = place.Id, Affordance = home });
+        owner.HomePlaceId = place.Id;
+        owner.HomeAffordanceId = home.Id;
+        trace.AffordanceId = home.Contains[2].Id;
+        var context = ContextFor(packet);
+        var issues = new CaseValidator().Validate(packet, new ValidationContext { Pack = context.Pack, Level = level.ForCase(packet.Level), Vaesen = context.Vaesen, Conflict = context.Conflict });
+        Assert.DoesNotContain(issues, i => i.Location == $"channel:{trace.Id}");
+    }
+
+    [Fact]
+    public void A_new_significant_person_must_not_echo_a_first_name_from_the_societys_world()
+    {
+        var packet = SampleCase();
+        var context = ContextFor(packet);
+        var issues = new CaseValidator().Validate(packet, new ValidationContext
+        {
+            Pack = context.Pack, Level = context.Level, Vaesen = context.Vaesen, Conflict = context.Conflict,
+            WorldNames = [("npc-per-ers", "Per Ers"), ("npc-jonas-berg", "Jonas Berg")],
+        });
+
+        var flagged = Assert.Single(issues, i => i.Location == "cast:npc-per-holm" && i.Explanation.Contains("Society's world", StringComparison.Ordinal));
+        Assert.Equal(["npc-per-holm.identity"], flagged.Targets!);
+        Assert.Null(NameRules.FirstNameClash("Anna Lind", "Anders Berg"));
+        Assert.NotNull(NameRules.FirstNameClash("Petter Lund", "Per Ers"));
+    }
+
+    [Fact]
+    public void Levers_need_deeds_with_real_ids_and_a_bargaining_creature_a_mind_that_matches_them()
+    {
+        var packet = SampleCase();
+        packet.ResolutionLevers[0].RequiredDeeds.Clear();
+        packet.ResolutionLevers[1].RequiredDeeds[0].Witnesses = ["npc-nobody"];
+        packet.CreatureMinds[0].TermDeedIds = ["r1-d1"];
+
+        var issues = Validate(packet);
+
+        AssertError(issues, IssueCodes.Resolution, "lever:r1");
+        AssertError(issues, IssueCodes.UnknownReference, "lever:r2");
+        Assert.Contains(issues, i => i.IsError && i.Location == "creatureMinds" && i.Explanation.Contains("'r1-d1'", StringComparison.Ordinal));
+
+        packet.CreatureMinds.Clear();
+        Assert.Contains(Validate(packet), i => i.IsError && i.Location == "creatureMinds" && i.Explanation.Contains("has no mind", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void Names_that_sound_alike_anywhere_in_the_case_are_flagged()
     {
         Assert.NotNull(NameRules.Clash("Per Ers", "Jon Persson"));

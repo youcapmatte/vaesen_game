@@ -18,6 +18,9 @@ public sealed class ValidationContext
 
     /// <summary>Character ids the Society's persistent cast holds besides the canonical roster.</summary>
     public HashSet<string> SocietyCharacterIds { get; init; } = [];
+
+    /// <summary>The Society's persistent characters (id, name), whose first names a new significant person must not echo.</summary>
+    public List<(string Id, string Name)> WorldNames { get; init; } = [];
 }
 
 /// <summary>
@@ -87,6 +90,7 @@ public sealed class CaseValidator : ICoherenceValidator
         {
             run.CheckChannels();
             run.CheckProvenance();
+            run.CheckHomes();
         }
 
         if (scope.HasFlag(CheckScope.Arc))
@@ -129,6 +133,14 @@ public sealed class CaseValidator : ICoherenceValidator
         private void Error(string code, string at, string text, string? fix = null) => Issues.Add(CoherenceIssue.Error(code, at, text, fix));
 
         private void Warn(string code, string at, string text, string? fix = null) => Issues.Add(CoherenceIssue.Warning(code, at, text, fix));
+
+        /// <summary>A warning naming the ids it is about, so the last round can send it to the step that owns them.</summary>
+        private void WarnOn(List<string> targets, string code, string at, string text, string fix)
+        {
+            var issue = CoherenceIssue.Warning(code, at, text, fix);
+            issue.Targets = targets;
+            Issues.Add(issue);
+        }
 
         // ---- Conflict step ------------------------------------------------------------------------------------
 
@@ -289,6 +301,20 @@ public sealed class CaseValidator : ICoherenceValidator
                 else if (member.Identity is null || string.IsNullOrWhiteSpace(member.Identity.Occupation))
                 {
                     Error(IssueCodes.CastCoherence, at, "A new character needs an identity (age, occupation, appearance...).");
+                }
+
+                if (member.Importance == CastImportance.Significant && member.InstanceRef == InstanceRefs.New)
+                {
+                    foreach (var (id, name) in context.WorldNames.Where(w => w.Id != member.CharacterId))
+                    {
+                        if (NameRules.FirstNameClash(member.Name, name) is { } why)
+                        {
+                            WarnOn([$"{member.CharacterId}.identity"], IssueCodes.CastCoherence, at,
+                                $"{member.Name} and {name}, already in the Society's world, have {why}.",
+                                $"Rename {member.Name}: a first name that does not sound like {NameRules.FirstName(name)} or any other on the list.");
+                            break;
+                        }
+                    }
                 }
 
                 if (member.Importance == CastImportance.Significant && string.IsNullOrWhiteSpace(member.Handle))
@@ -592,7 +618,14 @@ public sealed class CaseValidator : ICoherenceValidator
                         continue;
                     }
 
-                    if (source.StartsWith(KnowledgeSources.ToldPrefix, StringComparison.Ordinal))
+                    if (KnowledgeSources.IsHearsay(source))
+                    {
+                        if (source.Length == KnowledgeSources.BystanderPrefix.Length)
+                        {
+                            Error(IssueCodes.Provenance, at, $"Knows {k.FactId} from a bystander with no role.", "Write told:bystander:<role>, such as told:bystander:carter.");
+                        }
+                    }
+                    else if (source.StartsWith(KnowledgeSources.ToldPrefix, StringComparison.Ordinal))
                     {
                         var teller = packet.FindCast(source[KnowledgeSources.ToldPrefix.Length..]);
                         if (teller is null)
@@ -615,8 +648,8 @@ public sealed class CaseValidator : ICoherenceValidator
                     }
                     else
                     {
-                        Error(IssueCodes.Provenance, at, $"Knows {k.FactId} from an unreadable source '{source}'. Allowed: witnessed, self, lore, told:<characterId>, found:<channelId>.",
-                            "Use witnessed, self, lore, told:<characterId> or found:<channelId>.");
+                        Error(IssueCodes.Provenance, at, $"Knows {k.FactId} from an unreadable source '{source}'. Allowed: witnessed, self, lore, told:<characterId>, told:bystander:<role>, found:<channelId>.",
+                            "Use witnessed, self, lore, told:<characterId>, told:bystander:<role> or found:<channelId>.");
                     }
                 }
             }
@@ -634,8 +667,9 @@ public sealed class CaseValidator : ICoherenceValidator
                 }
             }
 
-            // A person can only tell what they know: every testimony is backed by a knowledge entry.
-            foreach (var c in packet.Channels.Where(c => !string.IsNullOrEmpty(c.SourceCharacterId) && c.Kind != ChannelKinds.Document))
+            // A person can only tell what they know: every testimony is backed by a knowledge entry. A trace or document
+            // that names a person is theirs (in their home), not something they say.
+            foreach (var c in packet.Channels.Where(c => !string.IsNullOrEmpty(c.SourceCharacterId) && c.Kind is not (ChannelKinds.Document or ChannelKinds.Trace)))
             {
                 var person = packet.FindCast(c.SourceCharacterId);
                 if (person is not null && !person.Knows.Exists(k => k.FactId == c.FactId))
@@ -644,6 +678,72 @@ public sealed class CaseValidator : ICoherenceValidator
                         $"Add {c.FactId} to {person.Name}'s knows, with how they learned it.");
                 }
             }
+        }
+
+        /// <summary>
+        /// A trace or document in a dwelling is in its owner's own home (fixes 3, section 6): not another person's house,
+        /// not a shared building they do not live in. A warning, sent to minds and channels.
+        /// </summary>
+        public void CheckHomes()
+        {
+            foreach (var c in packet.Channels.Where(c => c.Kind is ChannelKinds.Trace or ChannelKinds.Document && c.PlaceId is not null && c.AffordanceId is not null))
+            {
+                if (context.Level.FindPlace(c.PlaceId) is not { } place || Dwelling(place, c.AffordanceId!) is not { } home)
+                {
+                    continue;
+                }
+
+                var owner = packet.FindCast(c.SourceCharacterId);
+                var resident = packet.Cast.Find(m => m.HomeAffordanceId == home.Id && m.HomePlaceId == place.Id);
+                string? problem = null;
+                if (owner is null)
+                {
+                    problem = resident is null ? null : $"sits in {resident.Name}'s home ({home.Name}) but names no owner";
+                }
+                else if (owner.HomeAffordanceId is null)
+                {
+                    problem = resident is not null && resident != owner
+                        ? $"puts {owner.Name}'s things in {resident.Name}'s home ({home.Name})"
+                        : $"puts {owner.Name}'s things in {home.Name}, which is not said to be their home";
+                }
+                else if (owner.HomeAffordanceId != home.Id || owner.HomePlaceId != place.Id)
+                {
+                    problem = $"puts {owner.Name}'s things in {home.Name}, not in their own home ({owner.HomeAffordanceId})";
+                }
+
+                if (problem is not null)
+                {
+                    WarnOn([c.Id], IssueCodes.AffordanceFit, $"channel:{c.Id}", $"Channel {c.Id} {problem}.",
+                        owner?.HomeAffordanceId is { } own
+                            ? $"Move it to {own} or something inside it."
+                            : "Name the owner and place it in their own home; give them a homeAffordanceId, or newDwelling if their place has none.");
+                }
+            }
+        }
+
+        /// <summary>The dwelling an affordance is, or is inside, if any.</summary>
+        private static LevelAffordance? Dwelling(LevelPlace place, string affordanceId)
+        {
+            LevelAffordance? Find(IEnumerable<LevelAffordance> items, LevelAffordance? home)
+            {
+                foreach (var a in items)
+                {
+                    var here = Dwellings.Tags.Contains(a.Tag) ? a : home;
+                    if (a.Id == affordanceId)
+                    {
+                        return here;
+                    }
+
+                    if (Find(a.Contains, here) is { } found)
+                    {
+                        return found;
+                    }
+                }
+
+                return null;
+            }
+
+            return Find(place.Affordances, null);
         }
 
         // ---- Sub-step 6c: the arc -----------------------------------------------------------------------------
@@ -682,6 +782,7 @@ public sealed class CaseValidator : ICoherenceValidator
             }
 
             CheckResolution();
+            CheckActors();
 
             var conditions = Creature?.ConfrontationConditions;
             if (conditions is not null)
@@ -694,6 +795,38 @@ public sealed class CaseValidator : ICoherenceValidator
                 if (conditions.Kind is ConfrontationKinds.Place or ConfrontationKinds.Both && string.IsNullOrWhiteSpace(packet.Climax.Conditions.Place))
                 {
                     Error(IssueCodes.Beats, "climax", $"{Creature!.Name} can only be confronted at certain places; the climax must say where.");
+                }
+            }
+        }
+
+        /// <summary>
+        /// A beat or the climax where a cast member acts is one of their permitted actions, at a desperation the beat's
+        /// threshold unlocks (fixes 3, section 4). A warning, sent to the arc.
+        /// </summary>
+        private void CheckActors()
+        {
+            var acts = packet.Beats.Select(b => (Target: b.Id, Label: $"Beat {b.Id}", b.ActorId, b.ActionId, b.Threshold))
+                .Append(("climax", "The climax", packet.Climax.ActorId, packet.Climax.ActionId, packet.Climax.Threshold));
+            foreach (var (target, label, actorId, actionId, threshold) in acts)
+            {
+                if (packet.FindCast(actorId) is not { } actor || actor.Wants.PermittedActions.Count == 0)
+                {
+                    continue;
+                }
+
+                var options = string.Join("; ", actor.Wants.PermittedActions.Select(a => $"{a.Id} ({a.Desperation}): {a.Description}"));
+                var action = actor.Wants.PermittedActions.Find(a => a.Id == actionId);
+                if (action is null)
+                {
+                    WarnOn([target], IssueCodes.Beats, target == "climax" ? "climax" : $"beat:{target}",
+                        $"{label} has {actor.CharacterId} act outside {actor.Name}'s permitted actions.",
+                        $"Name the action as actionId, one of {options}; or change what {actor.Name} does.");
+                }
+                else if (!DesperationTiers.UnlockedAt(threshold).Contains(action.Desperation))
+                {
+                    WarnOn([target], IssueCodes.Beats, target == "climax" ? "climax" : $"beat:{target}",
+                        $"{label} at {threshold:0.00} has {actor.Name} {action.Id}, a {action.Desperation}-desperation act; at that tension only {string.Join(" and ", DesperationTiers.UnlockedAt(threshold))} are open.",
+                        $"Move it to a threshold of at least {(action.Desperation == DesperationTiers.High ? DesperationTiers.HighFrom : DesperationTiers.MediumFrom):0.00}, or give {actor.Name} a milder act.");
                 }
             }
         }
@@ -732,6 +865,112 @@ public sealed class CaseValidator : ICoherenceValidator
             foreach (var lever in packet.ResolutionLevers.Where(l => l.SolveDepth == SolveDepths.Deep && l.RequiresFactIds.Count == 0))
             {
                 Warn(IssueCodes.Resolution, $"lever:{lever.Id}", "A deep solve should name the facts it takes to see it.");
+            }
+
+            CheckDeeds();
+            CheckCreatureMinds();
+        }
+
+        /// <summary>
+        /// A creature that can be bargained with has a mind, whose terms ask for the deep lever's deeds (fixes 3,
+        /// section 10): otherwise the runtime has nothing to play it from, or its terms and the deep solve disagree.
+        /// </summary>
+        private void CheckCreatureMinds()
+        {
+            foreach (var mind in packet.CreatureMinds)
+            {
+                foreach (var k in mind.Knows)
+                {
+                    Fact(k.FactId, "creatureMinds");
+                }
+            }
+
+            if (Creature is null || Creature.ResolutionShape != ResolutionShapes.Negotiable)
+            {
+                return;
+            }
+
+            var mindOf = packet.CreatureMinds.Find(m => m.VaesenId == Creature.Id);
+            if (mindOf is null)
+            {
+                Error(IssueCodes.Resolution, "creatureMinds", $"{Creature.Name} can be bargained with but has no mind: what it wants, its terms, its red lines and how it answers.",
+                    $"Add one creatureMinds entry with vaesenId {Creature.Id}.");
+                return;
+            }
+
+            var deep = packet.ResolutionLevers.Where(l => l.SolveDepth == SolveDepths.Deep).SelectMany(l => l.RequiredDeeds).Select(d => d.Id).ToHashSet(StringComparer.Ordinal);
+            if (mindOf.Terms.Count == 0 || mindOf.TermDeedIds.Count == 0)
+            {
+                Error(IssueCodes.Resolution, "creatureMinds", $"{Creature.Name}'s mind has no terms tied to the deep lever's deeds.",
+                    "Give its terms, and list in termDeedIds the deep lever's deeds that meet them.");
+            }
+            else if (mindOf.TermDeedIds.FirstOrDefault(d => !deep.Contains(d)) is { } stray)
+            {
+                Error(IssueCodes.Resolution, "creatureMinds", $"{Creature.Name}'s terms name '{stray}', which is not a deed of a deep lever.",
+                    $"Use the deep lever's deed ids: {string.Join(", ", deep)}.");
+            }
+        }
+
+        /// <summary>
+        /// Every lever says what the players must do (fixes 3, section 9), with ids that exist, at places the players can
+        /// reach: the climax's place or one a channel, a beat or a scene uses.
+        /// </summary>
+        private void CheckDeeds()
+        {
+            var reachable = packet.Channels.Select(c => c.PlaceId)
+                .Concat(packet.Beats.Select(b => b.Requires.Place))
+                .Append(packet.Climax.Conditions.Place)
+                .Concat(packet.Level.PlacesUsed)
+                .OfType<string>()
+                .ToHashSet(StringComparer.Ordinal);
+            foreach (var lever in packet.ResolutionLevers)
+            {
+                var at = $"lever:{lever.Id}";
+                if (lever.RequiredDeeds.Count == 0)
+                {
+                    Error(IssueCodes.Resolution, at, $"Lever {lever.Id} has no required deeds: what must the players do for it to take effect?",
+                        "List its deeds: where, when and before whom. A lever that only needs force has one deed (defeat or drive off the creature).");
+                }
+
+                if (!DeedOrders.All.Contains(lever.DeedOrder))
+                {
+                    Error(IssueCodes.Schema, at, $"Unknown deed order '{lever.DeedOrder}'.{CoherenceIssue.Allowed(DeedOrders.All)}");
+                }
+
+                foreach (var deed in lever.RequiredDeeds)
+                {
+                    var place = deed.Place is null ? null : context.Level.FindPlace(deed.Place);
+                    if (deed.Place is not null && place is null)
+                    {
+                        Error(IssueCodes.UnknownReference, at, $"Deed {deed.Id} is at '{deed.Place}', which is not a place of the level.");
+                    }
+
+                    if (deed.AffordanceId is not null && (place ?? context.Level.Places.Find(p => p.FindAffordance(deed.AffordanceId) is not null))?.FindAffordance(deed.AffordanceId) is null)
+                    {
+                        Error(IssueCodes.AffordanceFit, at, $"Deed {deed.Id} uses '{deed.AffordanceId}', which is not an affordance of {(place?.Name ?? "the level")}.");
+                    }
+
+                    foreach (var witness in deed.Witnesses)
+                    {
+                        Person(witness, at);
+                    }
+
+                    if (!WitnessRules.All.Contains(deed.WitnessRule))
+                    {
+                        Error(IssueCodes.Schema, at, $"Deed {deed.Id} has unknown witness rule '{deed.WitnessRule}'.{CoherenceIssue.Allowed(WitnessRules.All)}");
+                    }
+
+                    if (deed.Time is { Length: > 0 } time && !AccessRequirement.Times.Contains(time))
+                    {
+                        Warn(IssueCodes.Resolution, at, $"Deed {deed.Id} needs the time '{time}'.{CoherenceIssue.Allowed(AccessRequirement.Times)}");
+                    }
+
+                    if (place is not null && !reachable.Contains(place.Id))
+                    {
+                        WarnOn([lever.Id], IssueCodes.Resolution, at, $"Deed {deed.Id} is at {place.Name}, which nothing in the case brings the players to.",
+                            "Put it where the climax happens or at a place a channel or beat uses.");
+                    }
+                }
             }
         }
 

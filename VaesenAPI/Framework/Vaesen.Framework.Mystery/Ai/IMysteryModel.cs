@@ -39,6 +39,9 @@ public sealed class ModelRequest
     /// critic's second look. A first call leaves it off and saves the write premium.
     /// </summary>
     public bool Cache { get; init; } = true;
+
+    /// <summary>The case's ids by <see cref="IdKinds"/> kind: the output schema takes them as enums.</summary>
+    public IReadOnlyDictionary<string, IReadOnlyList<string>>? Ids { get; init; }
 }
 
 public sealed class ModelReply<T>

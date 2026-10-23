@@ -196,6 +196,7 @@ public static class PromptBuilder
         }
 
         var withAffordances = step == MindsStep.StepName;
+        var dwellingsOnly = step == HumansStep.StepName;
         return new
         {
             level.Id,
@@ -213,7 +214,9 @@ public static class PromptBuilder
                 p.Name,
                 p.Description,
                 p.Tags,
-                affordances = withAffordances ? Affordances(p.Affordances).ToList() : null,
+                affordances = withAffordances ? Affordances(p.Affordances).ToList()
+                    : dwellingsOnly ? p.AllAffordances().Where(a => Dwellings.Tags.Contains(a.Tag)).Select(a => $"{a.Id} ({a.Tag}): {a.Name}").ToList()
+                    : null,
             }),
         };
     }
@@ -236,6 +239,23 @@ public static class PromptBuilder
         },
         _ => v,
     };
+
+    /// <summary>
+    /// The first names the Society's world already holds (fixes 3, section 7), for the humans step: a new significant
+    /// person must not echo one of them across cases.
+    /// </summary>
+    public static string UsedNames(SocietyWorld? world)
+    {
+        var names = (world?.Characters ?? [])
+            .Select(c => Validation.NameRules.FirstName(c.Name))
+            .Where(n => n.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.Ordinal)
+            .ToList();
+        return names.Count == 0
+            ? ""
+            : $"- First names already used in the Society's world: {string.Join(", ", names)}. Do not give a new significant character a first name on this list, or one that sounds like it. Common names may still be used for residents and the dead.";
+    }
 
     /// <summary>How many persistent characters a case sees in full; the rest get one line each (fixes, section 10).</summary>
     public const int FullDetailCast = 8;
@@ -335,6 +355,11 @@ public static class PromptBuilder
         : vaesen.ResolutionShape == ResolutionShapes.Negotiable
             ? "The creature's grievance can be answered. solveDepth is exactly one of: crude, partial, deep. The lever that answers the grievance at its root is deep. A lever that eases it or drives the creature off without answering the cause is partial. One that simply defeats or destroys is crude. Include at least one deep lever and at least one cruder one."
             : "solveDepth is exactly one of: crude, partial, deep. The creature cannot be bargained with: the levers are about driving it off, ending the provocation or protecting its victims.";
+
+    /// <summary>When the arc writes the creature's mind (fixes 3, section 10): always for one that can be bargained with.</summary>
+    public static string CreatureMindRule(VaesenDefinition vaesen) => vaesen.ResolutionShape == ResolutionShapes.Negotiable
+        ? $"{vaesen.Name} can be bargained with: write its mind as one entry in creatureMinds (vaesenId {vaesen.Id}). What it wants; its terms, what it would accept to be appeased, which must agree with the deep lever's deeds (list those deed ids in termDeedIds); its red lines; the facts it knows (source witnessed) and what it believes, true or false; its voice; and how it answers an offering, a threat, steel, a prayer, a bargain, an apology and a lie."
+        : $"If {vaesen.Name} can be spoken to, write its mind as one entry in creatureMinds (vaesenId {vaesen.Id}): wants, terms, red lines, what it knows and believes, its voice, and how it answers an offering, a threat, steel, a prayer, a bargain, an apology and a lie. If it cannot be spoken to, leave creatureMinds empty.";
 
     public static string SeasonRule(AssignmentBrief brief) => brief.SeasonThreads.Count == 0
         ? "There is no season thread yet: leave seasonThreads empty."

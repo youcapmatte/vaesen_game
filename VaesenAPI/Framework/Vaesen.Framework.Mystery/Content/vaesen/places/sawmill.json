@@ -140,6 +140,68 @@
           "contains": []
         }
       ]
+    },
+    {
+      "id": "workers-cottages",
+      "tag": "workers-cottages",
+      "name": "Workers' cottages",
+      "condition": {
+        "minSize": 1,
+        "minWealth": 1,
+        "minCount": 1,
+        "maxCount": 4
+      },
+      "scaling": "One cottage per family that works here and does not live on a farm of its own; none where all hands live in barracks.",
+      "contains": [
+        {
+          "id": "cottage-bed",
+          "tag": "bed",
+          "name": "Bed",
+          "condition": {
+            "minSize": 1,
+            "minWealth": 1,
+            "minCount": 1,
+            "maxCount": 1
+          },
+          "contains": []
+        },
+        {
+          "id": "cottage-hearth",
+          "tag": "hearth",
+          "name": "Hearth",
+          "condition": {
+            "minSize": 1,
+            "minWealth": 1,
+            "minCount": 1,
+            "maxCount": 1
+          },
+          "contains": []
+        },
+        {
+          "id": "cottage-chest",
+          "tag": "chest",
+          "name": "Chest",
+          "condition": {
+            "minSize": 1,
+            "minWealth": 1,
+            "minCount": 1,
+            "maxCount": 1
+          },
+          "contains": []
+        },
+        {
+          "id": "cottage-root-cellar",
+          "tag": "root-cellar",
+          "name": "Root cellar",
+          "condition": {
+            "minSize": 1,
+            "minWealth": 1,
+            "minCount": 1,
+            "maxCount": 1
+          },
+          "contains": []
+        }
+      ]
     }
   ]
 }

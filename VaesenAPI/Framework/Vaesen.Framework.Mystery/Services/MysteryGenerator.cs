@@ -231,7 +231,8 @@ public sealed class MysteryGenerator(
 
     private MysteryDraft NewDraft(ContentPack pack, SocietyHistory history, AssignmentBrief brief, SocietyWorld? world)
     {
-        var level = pack.FindLevel(brief.LevelId)!;
+        // The case's own copy: it may add homes for its people (fixes 3, section 6) without touching the content pack.
+        var level = Newtonsoft.Json.JsonConvert.DeserializeObject<LevelDefinition>(Newtonsoft.Json.JsonConvert.SerializeObject(pack.FindLevel(brief.LevelId)!))!;
         var vaesen = pack.FindVaesen(brief.VaesenId)!;
         var draft = new MysteryDraft
         {
@@ -437,8 +438,8 @@ public sealed class MysteryGenerator(
                     // The critic's objections, and its warnings with concrete fixes, go to the steps that own them and
                     // are fixed in place, in pipeline order; then the whole case is checked and reviewed once more.
                     criticReworks++;
-                    var toFix = critique.Where(i => i.IsError || Fixable(i)).ToList();
-                    sentBack = toFix;
+                    sentBack = critique.Where(i => i.IsError || Fixable(i)).ToList();
+                    var toFix = sentBack.Concat(TargetedWarnings(draft)).ToList();
                     progress?.Report(new GenerationProgress(caseAttempt, CheckStepName, "Fixing what the critic found, step by step."));
                     await FixRoundAsync(draft, toFix, caseAttempt, light: false, ct);
                     continue;
@@ -448,7 +449,7 @@ public sealed class MysteryGenerator(
                 // fixes are applied in one cheap round, kept only if the case still passes its checks.
                 critique = critique.Select(i => i.IsError ? AsWarning(i) : i).ToList();
                 draft.Packet.Validation.Issues.AddRange(critique);
-                var last = critique.Where(Fixable).ToList();
+                var last = critique.Where(Fixable).Concat(TargetedWarnings(draft)).ToList();
                 if (last.Count > 0)
                 {
                     progress?.Report(new GenerationProgress(caseAttempt, CheckStepName, "Applying the critic's last suggestions."));
@@ -507,6 +508,15 @@ public sealed class MysteryGenerator(
         draft.Packet.Validation.Runs++;
         return whole;
     }
+
+    /// <summary>
+    /// The structural checks' warnings that name their items (an actor's action, a home trace, a reused name): they go
+    /// to their owning steps with the critic's issues (fixes 3, sections 4, 6 and 7).
+    /// </summary>
+    private List<CoherenceIssue> TargetedWarnings(MysteryDraft draft) =>
+        validator.Validate(draft.Packet, draft.ValidationContext, CheckScope.Full)
+            .Where(i => !i.IsError && i.Source == IssueSources.Structural && Fixable(i))
+            .ToList();
 
     /// <summary>A critic issue that names its items and says how to fix them.</summary>
     private static bool Fixable(CoherenceIssue issue) => issue.Targets is { Count: > 0 } && !string.IsNullOrWhiteSpace(issue.SuggestedFix);
@@ -571,7 +581,7 @@ public sealed class MysteryGenerator(
             }
         }
 
-        return applied.Where(i => i.Source == IssueSources.Critic).Distinct().ToList();
+        return applied.Where(i => i.Code != IssueCodes.Consistency).Distinct().ToList();
     }
 
     /// <summary>
@@ -609,7 +619,7 @@ public sealed class MysteryGenerator(
             issue.Applied = applied.Exists(a => a.Code == issue.Code && a.Explanation == issue.Explanation);
         }
 
-        logger.LogInformation("Applied {Count} of the critic's warnings: {Codes}", applied.Count, string.Join(", ", applied.Select(a => a.Code)));
+        logger.LogInformation("Applied {Count} warnings in the last round: {Codes}", applied.Count, string.Join(", ", applied.Select(a => a.Code)));
     }
 
     public const string CheckStepName = "check";

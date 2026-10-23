@@ -65,6 +65,13 @@ public sealed class CasePacket
     [JsonProperty("resolutionLevers")]
     public List<ResolutionLever> ResolutionLevers { get; set; } = [];
 
+    /// <summary>
+    /// The mind of each creature the players can speak or bargain with (fixes 3, section 10): what the runtime plays it
+    /// from, like a cast member's bounded context.
+    /// </summary>
+    [JsonProperty("creatureMinds")]
+    public List<CreatureMind> CreatureMinds { get; set; } = [];
+
     [JsonProperty("seasonThreads")]
     public List<SeasonThreadLink> SeasonThreads { get; set; } = [];
 
@@ -260,6 +267,19 @@ public sealed class CaseLevel
     /// <summary>Scene text per place id, written for this case (the level's own description is the fallback).</summary>
     [JsonProperty("sceneDescriptions")]
     public Dictionary<string, string> SceneDescriptions { get; set; } = [];
+
+    /// <summary>Homes the case added to the level for people it had none for (fixes 3, section 6); the runtime adds them too.</summary>
+    [JsonProperty("addedAffordances")]
+    public List<AddedAffordance> AddedAffordances { get; set; } = [];
+}
+
+public sealed class AddedAffordance
+{
+    [JsonProperty("placeId")]
+    public string PlaceId { get; set; } = "";
+
+    [JsonProperty("affordance")]
+    public LevelAffordance Affordance { get; set; } = new();
 }
 
 /// <summary>One fact of the case. Load-bearing facts are the ones the case cannot be solved without.</summary>
@@ -329,6 +349,7 @@ public sealed class CaseChannel
     [JsonProperty("id")]
     public string Id { get; set; } = "";
 
+    [IdsOf(IdKinds.Fact)]
     [JsonProperty("factId")]
     public string FactId { get; set; } = "";
 
@@ -337,12 +358,15 @@ public sealed class CaseChannel
     [JsonProperty("kind")]
     public string Kind { get; set; } = ChannelKinds.Testimony;
 
+    [IdsOf(IdKinds.Cast)]
     [JsonProperty("sourceCharacterId")]
     public string? SourceCharacterId { get; set; }
 
+    [IdsOf(IdKinds.Place)]
     [JsonProperty("placeId")]
     public string? PlaceId { get; set; }
 
+    [IdsOf(IdKinds.Affordance)]
     [JsonProperty("affordanceId")]
     public string? AffordanceId { get; set; }
 
@@ -372,8 +396,16 @@ public static class ChannelKinds
 /// </summary>
 public sealed class ChannelAccess
 {
+    [IdsOf(IdKinds.Requirement)]
     [JsonProperty("requires")]
     public List<string> Requires { get; set; } = [];
+
+    /// <summary>
+    /// Something the players must have in hand to open it ("the clerk's key"), if anything. Kept apart from
+    /// <see cref="Requires"/>, which is a closed list per case; "item:..." in Requires is still read in older packets.
+    /// </summary>
+    [JsonProperty("item")]
+    public string? Item { get; set; }
 }
 
 public sealed class CastMember
@@ -422,6 +454,10 @@ public sealed class CastMember
 
     [JsonProperty("homePlaceId")]
     public string? HomePlaceId { get; set; }
+
+    /// <summary>The house or room in their home place where they live, if the level has one for them.</summary>
+    [JsonProperty("homeAffordanceId")]
+    public string? HomeAffordanceId { get; set; }
 
     [JsonProperty("knows")]
     public List<CastKnowledge> Knows { get; set; } = [];
@@ -475,10 +511,14 @@ public static class CastImportance
 /// <summary>A fact a character knows and how they came to know it.</summary>
 public sealed class CastKnowledge
 {
+    [IdsOf(IdKinds.Fact)]
     [JsonProperty("factId")]
     public string FactId { get; set; } = "";
 
-    /// <summary>"witnessed", "self" (they did it), "lore" (old knowledge), "told:{characterId}" or "found:{channelId}".</summary>
+    /// <summary>
+    /// "witnessed", "self" (they did it), "lore" (old knowledge), "told:{characterId}", "told:bystander:{role}" (gossip
+    /// from someone outside the cast: hearsay) or "found:{channelId}".
+    /// </summary>
     [JsonProperty("source")]
     public string Source { get; set; } = KnowledgeSources.Witnessed;
 
@@ -492,6 +532,11 @@ public static class KnowledgeSources
     public const string Self = "self";
     public const string Lore = "lore";
     public const string ToldPrefix = "told:";
+
+    /// <summary>Gossip from someone outside the cast ("told:bystander:carter"): hearsay, never a fact's own way in.</summary>
+    public const string BystanderPrefix = "told:bystander:";
+
+    public static bool IsHearsay(string? source) => source?.StartsWith(BystanderPrefix, StringComparison.Ordinal) == true;
     public const string FoundPrefix = "found:";
 
     public static string Told(string characterId) => ToldPrefix + characterId;
@@ -567,11 +612,21 @@ public static class DesperationTiers
     public const string High = "high";
 
     public static readonly IReadOnlyList<string> All = [Low, Medium, High];
+
+    /// <summary>Tension at which medium and high desperation are reached: the pressure the case has built by then.</summary>
+    public const double MediumFrom = 0.35;
+
+    public const double HighFrom = 0.65;
+
+    /// <summary>The tiers of action open to a desperate person once tension reaches <paramref name="threshold"/>.</summary>
+    public static IReadOnlyList<string> UnlockedAt(double threshold) =>
+        threshold >= HighFrom ? All : threshold >= MediumFrom ? [Low, Medium] : [Low];
 }
 
 public sealed class CastLie
 {
     /// <summary>The fact they lie about.</summary>
+    [IdsOf(IdKinds.Fact)]
     [JsonProperty("about")]
     public string About { get; set; } = "";
 
@@ -606,10 +661,12 @@ public sealed class DecoyThread
     public string? VaesenId { get; set; }
 
     /// <summary>The facts that point down this trail.</summary>
+    [IdsOf(IdKinds.Fact)]
     [JsonProperty("factIds")]
     public List<string> FactIds { get; set; } = [];
 
     /// <summary>True facts that clear the trail from every angle.</summary>
+    [IdsOf(IdKinds.Fact)]
     [JsonProperty("clearedByFactIds")]
     public List<string> ClearedByFactIds { get; set; } = [];
 
@@ -634,16 +691,23 @@ public sealed class CaseBeat
     public BeatRequirements Requires { get; set; } = new();
 
     /// <summary>Facts the beat puts into the world (and usually in front of the players).</summary>
+    [IdsOf(IdKinds.Fact)]
     [JsonProperty("emitsFactIds")]
     public List<string> EmitsFactIds { get; set; } = [];
 
     /// <summary>The cast member who acts, if any.</summary>
+    [IdsOf(IdKinds.Cast)]
     [JsonProperty("actorId")]
     public string? ActorId { get; set; }
+
+    /// <summary>Which of the actor's permitted actions this is (fixes 3, section 4).</summary>
+    [JsonProperty("actionId")]
+    public string? ActionId { get; set; }
 }
 
 public sealed class BeatRequirements
 {
+    [IdsOf(IdKinds.Place)]
     [JsonProperty("place")]
     public string? Place { get; set; }
 
@@ -661,6 +725,15 @@ public sealed class CaseClimax
 
     [JsonProperty("description")]
     public string Description { get; set; } = "";
+
+    /// <summary>The cast member who acts in the climax, if any.</summary>
+    [IdsOf(IdKinds.Cast)]
+    [JsonProperty("actorId")]
+    public string? ActorId { get; set; }
+
+    /// <summary>Which of the actor's permitted actions it is.</summary>
+    [JsonProperty("actionId")]
+    public string? ActionId { get; set; }
 }
 
 /// <summary>A way to end the case once the truth is understood, and what it does to the world.</summary>
@@ -678,11 +751,135 @@ public sealed class ResolutionLever
     public string SolveDepth { get; set; } = SolveDepths.Crude;
 
     /// <summary>Facts the players must have to see this lever at all.</summary>
+    [IdsOf(IdKinds.Fact)]
     [JsonProperty("requiresFactIds")]
     public List<string> RequiresFactIds { get; set; } = [];
 
     [JsonProperty("consequences")]
     public LeverConsequences Consequences { get; set; } = new();
+
+    /// <summary>
+    /// What the players must do for the lever to take effect, besides knowing its facts (fixes 3, section 9): where,
+    /// when and before whom. The runtime marks each done as it happens.
+    /// </summary>
+    [JsonProperty("requiredDeeds")]
+    public List<LeverDeed> RequiredDeeds { get; set; } = [];
+
+    /// <summary>One of <see cref="DeedOrders"/>: whether the deeds must be done in the order listed.</summary>
+    [OneOf(typeof(DeedOrders))]
+    [JsonProperty("deedOrder")]
+    public string DeedOrder { get; set; } = DeedOrders.Any;
+}
+
+/// <summary>What a creature wants, will accept and will not forgive, and how it answers what the players try.</summary>
+public sealed class CreatureMind
+{
+    [JsonProperty("vaesenId")]
+    public string VaesenId { get; set; } = "";
+
+    [JsonProperty("wants")]
+    public List<string> Wants { get; set; } = [];
+
+    /// <summary>What it would accept to be appeased.</summary>
+    [JsonProperty("terms")]
+    public List<string> Terms { get; set; } = [];
+
+    /// <summary>The deep lever's deeds its terms ask for: how the runtime knows the terms are met.</summary>
+    [JsonProperty("termDeedIds")]
+    public List<string> TermDeedIds { get; set; } = [];
+
+    /// <summary>What insults it beyond appeasing.</summary>
+    [JsonProperty("redLines")]
+    public List<string> RedLines { get; set; } = [];
+
+    [JsonProperty("knows")]
+    public List<CastKnowledge> Knows { get; set; } = [];
+
+    [JsonProperty("thinks")]
+    public List<CastBelief> Thinks { get; set; } = [];
+
+    /// <summary>How it speaks, if at all.</summary>
+    [JsonProperty("voice")]
+    public string Voice { get; set; } = "";
+
+    [JsonProperty("reactions")]
+    public CreatureReactions Reactions { get; set; } = new();
+}
+
+/// <summary>How the creature answers each approach the players may take.</summary>
+public sealed class CreatureReactions
+{
+    [JsonProperty("offering")]
+    public string Offering { get; set; } = "";
+
+    [JsonProperty("threat")]
+    public string Threat { get; set; } = "";
+
+    [JsonProperty("steel")]
+    public string Steel { get; set; } = "";
+
+    [JsonProperty("prayer")]
+    public string Prayer { get; set; } = "";
+
+    [JsonProperty("bargain")]
+    public string Bargain { get; set; } = "";
+
+    [JsonProperty("apology")]
+    public string Apology { get; set; } = "";
+
+    [JsonProperty("lie")]
+    public string Lie { get; set; } = "";
+}
+
+/// <summary>One thing the players must do for a lever: dig up the strap, burn it, expose the hand before witnesses.</summary>
+public sealed class LeverDeed
+{
+    /// <summary>"r3-d1": the lever's id and the deed's number.</summary>
+    [JsonProperty("id")]
+    public string Id { get; set; } = "";
+
+    [JsonProperty("description")]
+    public string Description { get; set; } = "";
+
+    /// <summary>Where it must happen; null for anywhere.</summary>
+    [IdsOf(IdKinds.Place)]
+    [JsonProperty("place")]
+    public string? Place { get; set; }
+
+    /// <summary>The spot in that place, if it matters.</summary>
+    [IdsOf(IdKinds.Affordance)]
+    [JsonProperty("affordanceId")]
+    public string? AffordanceId { get; set; }
+
+    /// <summary>When it must happen (the channels' times: night, dusk, sunday...); null for any time.</summary>
+    [JsonProperty("time")]
+    public string? Time { get; set; }
+
+    /// <summary>Cast members who must be present.</summary>
+    [IdsOf(IdKinds.Cast)]
+    [JsonProperty("witnesses")]
+    public List<string> Witnesses { get; set; } = [];
+
+    /// <summary>One of <see cref="WitnessRules"/>: whether any or all of the witnesses must be there.</summary>
+    [OneOf(typeof(WitnessRules))]
+    [JsonProperty("witnessRule")]
+    public string WitnessRule { get; set; } = WitnessRules.Any;
+}
+
+public static class DeedOrders
+{
+    public const string Any = "any";
+    public const string Listed = "listed";
+
+    public static readonly IReadOnlyList<string> All = [Any, Listed];
+}
+
+public static class WitnessRules
+{
+    public const string Any = "any";
+    public const string All_ = "all";
+
+    public static readonly IReadOnlyList<string> All = [Any, All_];
 }
 
 public static class SolveDepths

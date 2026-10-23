@@ -154,6 +154,7 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
 
                 // Only a repeat of this step's schema can read the cache, so a first call does not pay to write it.
                 Cache = attempt > 0,
+                Ids = CaseIds.For(draft, Name),
             }, cancellationToken);
 
             if (!reply.Success)
@@ -343,6 +344,7 @@ public sealed class HumansStep(IMysteryModel model, ICoherenceValidator validato
         {
             ["handLine"] = PromptBuilder.HandLineForHumans(draft.Brief),
             ["hookGiverType"] = draft.Brief.HookGiverType,
+            ["usedNames"] = PromptBuilder.UsedNames(draft.World),
         });
 
     protected override List<CoherenceIssue> Apply(MysteryDraft draft, CasePacket packet, HumansOutput output)
@@ -362,6 +364,7 @@ public sealed class HumansStep(IMysteryModel model, ICoherenceValidator validato
                 ? draft.World?.Find(c.CharacterId)?.Identity ?? draft.Pack.FindCharacter(c.CharacterId)?.Identity
                 : null),
             HomePlaceId = string.IsNullOrWhiteSpace(c.HomePlaceId) ? null : c.HomePlaceId,
+            HomeAffordanceId = string.IsNullOrWhiteSpace(c.HomeAffordanceId) ? null : c.HomeAffordanceId,
             Wants = c.Wants,
             Secrets = c.Secrets,
             Routine = c.Routine,
@@ -372,7 +375,34 @@ public sealed class HumansStep(IMysteryModel model, ICoherenceValidator validato
             Lies = mind?.Lies ?? [],
         }).ToList();
         packet.Truth.PlotCentre.CharacterId = draft.Brief.HiddenHand ? output.HiddenHandCharacterId : null;
+        AddDwellings(draft, packet, output);
         return [];
+    }
+
+    /// <summary>
+    /// Builds a home for each significant person who asked for one (fixes 3, section 6), in their home place of the
+    /// draft's own copy of the level, and records it on the packet so the runtime builds it too.
+    /// </summary>
+    private static void AddDwellings(MysteryDraft draft, CasePacket packet, HumansOutput output)
+    {
+        packet.Level.AddedAffordances = [];
+        foreach (var asked in output.Cast.Where(c => c.NewDwelling && c.Importance == CastImportance.Significant))
+        {
+            var member = packet.FindCast(asked.CharacterId);
+            if (member?.HomePlaceId is null || draft.Level.FindPlace(member.HomePlaceId) is not { } place)
+            {
+                continue;
+            }
+
+            var home = Dwellings.For(place.Id, member.CharacterId, member.Name);
+            if (place.FindAffordance(home.Id) is null)
+            {
+                place.Affordances.Add(home);
+            }
+
+            packet.Level.AddedAffordances.Add(new AddedAffordance { PlaceId = place.Id, Affordance = home });
+            member.HomeAffordanceId = home.Id;
+        }
     }
 
     protected override CastStage Next(MysteryDraft draft) => new(draft);
@@ -517,6 +547,9 @@ public sealed class ArcStep(IMysteryModel model, ICoherenceValidator validator, 
         {
             ["climaxRule"] = PromptBuilder.ClimaxRule(draft.Vaesen),
             ["leverRule"] = PromptBuilder.LeverRule(draft.Brief, draft.Vaesen),
+            ["creatureMindRule"] = PromptBuilder.CreatureMindRule(draft.Vaesen),
+            ["mediumFrom"] = DesperationTiers.MediumFrom.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture),
+            ["highFrom"] = DesperationTiers.HighFrom.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture),
         });
 
     protected override List<CoherenceIssue> Apply(MysteryDraft draft, CasePacket packet, ArcOutput output)
@@ -524,6 +557,7 @@ public sealed class ArcStep(IMysteryModel model, ICoherenceValidator validator, 
         packet.Beats = output.Beats;
         packet.Climax = output.Climax;
         packet.ResolutionLevers = output.ResolutionLevers;
+        packet.CreatureMinds = output.CreatureMinds;
         // The weights depend on the hook and the channels too: they are set before each whole-case check.
         packet.Tension = new CaseTension();
         return [];

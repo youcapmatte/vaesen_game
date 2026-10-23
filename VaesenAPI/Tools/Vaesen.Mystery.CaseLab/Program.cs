@@ -145,7 +145,7 @@ int Validate()
 
     var pack = ContentLoaderFor();
     var p = stored.Packet;
-    var level = pack.FindLevel(p.Brief.LevelId);
+    var level = pack.FindLevel(p.Brief.LevelId)?.ForCase(p.Level);
     if (level is null)
     {
         Console.Error.WriteLine($"Level '{p.Brief.LevelId}' is not in the content pack.");

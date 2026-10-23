@@ -120,10 +120,20 @@ public sealed class FactGraph
         _ => $"channel:{channel.Id}",
     };
 
-    /// <summary>The independent sources of a fact: its channels' sources plus every beat that emits it.</summary>
+    /// <summary>
+    /// A testimony whose teller knows the fact only from bystanders' gossip (fixes 3, section 2): it may colour the
+    /// case, but never counts as one of a fact's independent ways in.
+    /// </summary>
+    public bool IsHearsay(CaseChannel channel) =>
+        channel.Kind is ChannelKinds.Testimony or ChannelKinds.Overheard
+        && _packet.FindCast(channel.SourceCharacterId) is { } person
+        && person.Knows.Where(k => k.FactId == channel.FactId).ToList() is { Count: > 0 } known
+        && known.TrueForAll(k => KnowledgeSources.IsHearsay(k.Source));
+
+    /// <summary>The independent sources of a fact: its channels' sources (hearsay aside) plus every beat that emits it.</summary>
     public HashSet<string> SourcesOf(string factId)
     {
-        var sources = _packet.Channels.Where(c => c.FactId == factId).Select(SourceKey).ToHashSet(StringComparer.Ordinal);
+        var sources = _packet.Channels.Where(c => c.FactId == factId && !IsHearsay(c)).Select(SourceKey).ToHashSet(StringComparer.Ordinal);
         foreach (var beat in _packet.Beats.Where(b => b.EmitsFactIds.Contains(factId)))
         {
             sources.Add($"beat:{beat.Id}");
