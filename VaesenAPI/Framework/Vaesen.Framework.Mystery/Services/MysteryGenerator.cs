@@ -498,6 +498,19 @@ public sealed class MysteryGenerator(
                 return ret.Fail($"The finished case still had problems after {o.MaxReworkRounds} reworks: " + string.Join(" ", errors.Take(5)), StepErrorCodes.StepFailed);
             }
 
+            // Too few ways in is fixed by a patch of minds and channels (a channel added, a teller who knows it first-hand),
+            // not by writing every mind and channel again.
+            if (errors.TrueForAll(e => e.Code is IssueCodes.Redundancy or IssueCodes.SinglePointOfFailure) && draft.Outputs.ContainsKey(MindsStep.StepName))
+            {
+                progress?.Report(new GenerationProgress(caseAttempt, CheckStepName, "Adding ways in."));
+                var patch = errors.SelectMany(e => WaysIn(draft.Packet, e)).ToList();
+                if ((await new MindsStep(model, validator, o).FixAsync(draft, patch, caseAttempt, light: false, ct)).Success)
+                {
+                    pending = [];
+                    continue;
+                }
+            }
+
             // Send each structural issue back to the sub-step it points at; new facts mean everything built on them is redone.
             pending = new SortedDictionary<int, IReadOnlyList<CoherenceIssue>>(errors
                 .GroupBy(ClueSubStep)
@@ -636,6 +649,31 @@ public sealed class MysteryGenerator(
         }
 
         logger.LogInformation("Applied {Count} warnings in the last round: {Codes}", applied.Count, string.Join(", ", applied.Select(a => a.Code)));
+    }
+
+    /// <summary>
+    /// A redundancy or single-point issue as a patch of minds and channels: a new channel, and the minds of the people
+    /// whose testimony is only hearsay, so one of them can be given the fact first-hand.
+    /// </summary>
+    private static IEnumerable<CoherenceIssue> WaysIn(CasePacket packet, CoherenceIssue issue)
+    {
+        yield return new CoherenceIssue
+        {
+            Code = issue.Code, Severity = IssueSeverities.Error, Location = Patch.NewItem + "channel", Explanation = issue.Explanation,
+            SuggestedFix = (issue.SuggestedFix ?? "") + " Add an independent channel (another person, or a trace or document at another spot), or give a teller first-hand knowledge.",
+        };
+
+        var factId = issue.Location.StartsWith("fact:", StringComparison.Ordinal) ? issue.Location[5..] : null;
+        var graph = new FactGraph(packet);
+        foreach (var teller in packet.Channels.Where(c => c.FactId == factId && graph.IsHearsay(c)).Select(c => c.SourceCharacterId).OfType<string>().Distinct())
+        {
+            yield return new CoherenceIssue
+            {
+                Code = issue.Code, Severity = IssueSeverities.Error, Location = $"cast:{teller}",
+                Explanation = $"Knows {factId} only from a bystander, so their testimony does not count toward its two ways in.",
+                SuggestedFix = $"If it fits, let them know {factId} first-hand (witnessed, self, lore, or told by a cast member who knows it).",
+            };
+        }
     }
 
     /// <summary>The packet and the steps' outputs, to go back to when fixes break a case that passed.</summary>

@@ -75,7 +75,7 @@ public static class Patch
     /// Replaces each item of <paramref name="original"/> that the patch answered, by id, and adds the ones with new ids
     /// (a problem asked for them). Others are left alone.
     /// </summary>
-    public static void Merge(IReadOnlyList<PatchList> original, IReadOnlyList<PatchList> patch, bool allowNew = true)
+    public static void Merge(IReadOnlyList<PatchList> original, IReadOnlyList<PatchList> patch, Func<string, bool>? allowNew = null)
     {
         foreach (var answered in patch)
         {
@@ -98,7 +98,7 @@ public static class Patch
                     }
                 }
 
-                if (!replaced && allowNew && !string.IsNullOrWhiteSpace(id))
+                if (!replaced && (allowNew?.Invoke(answered.Prefix) ?? true) && !string.IsNullOrWhiteSpace(id))
                 {
                     target.Items.Add(item);
                 }

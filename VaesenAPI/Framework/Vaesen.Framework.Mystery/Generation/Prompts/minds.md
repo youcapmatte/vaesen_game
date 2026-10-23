@@ -6,7 +6,7 @@ Minds
 - A person under a threat thinks why it is real (one of their thinks): "No one in the parish would take a stoker's word over the master of Östansjö, and the strap is the only proof."
 - For every cast member: what they know, as fact ids (f1, f2…) from the facts list given above, never a title or description, each with source and when. What they think (beliefs, true or false) and what they lie about and the story they tell.
 - Every testimony or overheard channel is backed by a knows entry of its source. Anyone who was told something was told by someone who knows it.
-- Knowledge may come from someone outside the cast only as told:bystander:<role> (told:bystander:carter, told:bystander:miner's wife). Use it for gossip. It never makes a load-bearing fact reachable on its own.
+- Knowledge may come from someone outside the cast only as told:bystander:<role> (told:bystander:carter, told:bystander:miner's wife). Use it for gossip. It never makes a load-bearing fact reachable on its own: a load-bearing fact needs two channels from people who know it first-hand (witnessed, self, lore, or told by a cast member who knows it) or from traces and documents.
 - when is a few words ("the night of the felling", "two days before arrival"), on the same calendar as the facts and the events.
 
 Channels

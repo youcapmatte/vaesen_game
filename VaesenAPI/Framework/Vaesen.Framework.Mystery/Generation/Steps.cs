@@ -188,7 +188,10 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
             var output = answer.Value;
             if (patching)
             {
-                Patch.Merge(PatchLists(last!), PatchLists(output), allowNew: patchErrors.Any(e => e.Location.StartsWith(Patch.NewItem, StringComparison.Ordinal)));
+                // New items are welcome (a decoy thread a fact points to, a channel asked for), but not new people:
+                // a person who comes back from a patch with another id is the same person renamed.
+                var asked = patchErrors.Select(e => e.Location).Where(l => l.StartsWith(Patch.NewItem, StringComparison.Ordinal)).ToHashSet(StringComparer.Ordinal);
+                Patch.Merge(PatchLists(last!), PatchLists(output), allowNew: prefix => prefix != "cast" || asked.Contains(Patch.NewItem + prefix));
                 output = last!;
             }
 
@@ -210,6 +213,7 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
                 Conflict = draft.Pack.FindConflict(packet.Brief.ConflictArchetypeId),
                 UnavailableCharacterIds = context.UnavailableCharacterIds,
                 SocietyCharacterIds = context.SocietyCharacterIds,
+                WorldNames = context.WorldNames,
             };
             var found = repairs.Concat(applyIssues).Concat(validator.Validate(packet, checkContext, Scope)).ToList();
             if (keptIds is not null)

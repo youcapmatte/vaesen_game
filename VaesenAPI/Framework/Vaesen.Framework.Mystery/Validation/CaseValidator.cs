@@ -1,3 +1,4 @@
+using System.Globalization;
 using Vaesen.Framework.Mystery.Models;
 
 namespace Vaesen.Framework.Mystery.Validation;
@@ -836,8 +837,8 @@ public sealed class CaseValidator : ICoherenceValidator
                 else if (!DesperationTiers.UnlockedAt(threshold).Contains(action.Desperation))
                 {
                     WarnOn([target], IssueCodes.Beats, target == "climax" ? "climax" : $"beat:{target}",
-                        $"{label} at {threshold:0.00} has {actor.Name} {action.Id}, a {action.Desperation}-desperation act; at that tension only {string.Join(" and ", DesperationTiers.UnlockedAt(threshold))} are open.",
-                        $"Move it to a threshold of at least {(action.Desperation == DesperationTiers.High ? DesperationTiers.HighFrom : DesperationTiers.MediumFrom):0.00}, or give {actor.Name} a milder act.");
+                        string.Create(CultureInfo.InvariantCulture, $"{label} at {threshold:0.00} has {actor.Name} {action.Id}, a {action.Desperation}-desperation act; at that tension only {string.Join(" and ", DesperationTiers.UnlockedAt(threshold))} are open."),
+                        string.Create(CultureInfo.InvariantCulture, $"Move it to a threshold of at least {(action.Desperation == DesperationTiers.High ? DesperationTiers.HighFrom : DesperationTiers.MediumFrom):0.00}, or give {actor.Name} a milder act."));
                 }
             }
         }
@@ -1104,9 +1105,16 @@ public sealed class CaseValidator : ICoherenceValidator
                 var sources = _graph.SourcesOf(fact.Id);
                 if (sources.Count < 2)
                 {
+                    // Say why channels that exist do not count: hearsay is the usual reason, and invisible without this.
+                    var hearsay = packet.Channels.Where(c => c.FactId == fact.Id && _graph.IsHearsay(c)).ToList();
+                    var why = hearsay.Count == 0
+                        ? ""
+                        : $" {string.Join(", ", hearsay.Select(c => $"{c.Id} ({packet.FindCast(c.SourceCharacterId)?.Name})"))} rest only on bystander gossip, which never counts.";
                     Error(IssueCodes.Redundancy, $"fact:{fact.Id}",
-                        $"Load-bearing fact '{fact.Statement}' has {sources.Count} independent channel(s); it needs at least two.",
-                        "Place it through another person or another spot: a trace, a document, an overheard remark.");
+                        $"Load-bearing fact '{fact.Statement}' has {sources.Count} independent channel(s); it needs at least two.{why}",
+                        hearsay.Count == 0
+                            ? "Place it through another person or another spot: a trace, a document, an overheard remark."
+                            : "Give a teller first-hand knowledge (witnessed, self, lore, or told by a cast member who knows it), or add a trace or a document.");
                 }
             }
         }
