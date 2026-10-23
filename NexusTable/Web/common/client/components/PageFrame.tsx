@@ -1,7 +1,7 @@
 "use client";
 
 import { Anchor, Avatar, Badge, Box, Button, Center, Group, Loader, Menu, Stack, Text, Title, UnstyledButton } from "@mantine/core";
-import { IconBuildingCastle, IconCandle, IconCards, IconChevronDown, IconLogout, IconScript, IconUserPlus, IconUsers } from "@tabler/icons-react";
+import { IconBuildingCastle, IconCandle, IconCards, IconChevronDown, IconDice5, IconLogout, IconScript, IconUserPlus, IconUsers } from "@tabler/icons-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -15,6 +15,7 @@ const NAV = [
   { href: "/table", label: "The Table", icon: IconCandle },
   { href: "/mysteries", label: "Case Files", icon: IconScript, hostOnly: true },
   { href: "/world", label: "World", icon: IconUsers, hostOnly: true },
+  { href: "/dice", label: "Dice", icon: IconDice5 },
 ];
 
 /** The frame of every signed-in page: header with navigation and the player menu. Sends signed-out visitors home. */
