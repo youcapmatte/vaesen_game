@@ -48,7 +48,9 @@ public sealed class AnthropicMysteryModel : IMysteryModel
             {
                 answer = await StreamAsync<T>(request, structured: true, cancellationToken);
             }
-            catch (AnthropicApiException ex) when (ex.Message.Contains("too complex", StringComparison.OrdinalIgnoreCase))
+            // The API words it either way: "Schema is too complex..." or "The compiled grammar is too large...".
+            catch (AnthropicApiException ex) when (ex.Message.Contains("too complex", StringComparison.OrdinalIgnoreCase)
+                || ex.Message.Contains("grammar is too large", StringComparison.OrdinalIgnoreCase))
             {
                 _logger.LogWarning("The {Step} schema is too complex for structured outputs; asking for JSON in the prompt instead", request.Step);
                 answer = await StreamAsync<T>(request, structured: false, cancellationToken);

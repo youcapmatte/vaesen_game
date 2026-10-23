@@ -100,10 +100,16 @@ public sealed class AssignmentTests
     [InlineData(typeof(VaesenDefinition))]
     [InlineData(typeof(ConflictArchetype))]
     [InlineData(typeof(CharacterDefinition))]
+    [InlineData(typeof(WorldSeedOutput))]
     public void Step_outputs_have_schemas_structured_outputs_accept(Type type)
     {
         var schema = StructuredSchema.For(type);
         var json = schema.ToJsonString();
+
+        // Structured outputs take references only into $defs, and every one must be defined there.
+        var references = System.Text.RegularExpressions.Regex.Matches(json, "\"\\$ref\":\"([^\"]*)\"").Select(m => m.Groups[1].Value).ToList();
+        Assert.All(references, r => Assert.StartsWith("#/$defs/", r, StringComparison.Ordinal));
+        Assert.All(references, r => Assert.NotNull(schema["$defs"]?[r["#/$defs/".Length..]]));
 
         Assert.Equal("object", schema["type"]!.GetValue<string>());
         Assert.DoesNotContain("\"type\":[", json, StringComparison.Ordinal);

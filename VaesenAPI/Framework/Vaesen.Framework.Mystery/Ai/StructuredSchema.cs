@@ -34,8 +34,151 @@ public static class StructuredSchema
     {
         var node = Options.GetJsonSchemaAsNode(type, new JsonSchemaExporterOptions { TreatNullObliviousAsNonNullable = true });
         var schema = node as JsonObject ?? throw new InvalidOperationException($"No object schema for {type.Name}.");
+        HoistReferences(schema);
         Normalize(schema);
         return schema;
+    }
+
+    /// <summary>
+    /// The exporter writes a type's second use as a $ref to its first, e.g. "#/properties/core/items". Structured outputs
+    /// only take references into $defs, so every referenced schema moves there: its first use and every reference then
+    /// point to "#/$defs/{name}". Done before <see cref="Normalize"/>, which moves nodes and would break the pointers.
+    /// </summary>
+    private static void HoistReferences(JsonObject schema)
+    {
+        var targets = new List<string>();
+        CollectReferences(schema, targets);
+        targets = targets.Where(t => t != "#" && !t.StartsWith("#/$defs/", StringComparison.Ordinal)).Distinct().ToList();
+        if (targets.Count == 0)
+        {
+            return;
+        }
+
+        var names = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var target in targets)
+        {
+            var name = DefinitionName(target);
+            for (var i = 2; names.ContainsValue(name); i++)
+            {
+                name = $"{DefinitionName(target)}{i}";
+            }
+
+            names[target] = name;
+        }
+
+        // Copy every target out of the untouched tree first; a target may sit inside another one.
+        var definitions = targets.ToDictionary(t => t, t => Resolve(schema, t)?.DeepClone() ?? throw new InvalidOperationException($"Unresolvable $ref {t}."));
+
+        var defs = schema["$defs"] as JsonObject ?? new JsonObject();
+        foreach (var (target, definition) in definitions)
+        {
+            defs[names[target]] = Rewrite(definition, target, names, isDefinitionRoot: true);
+        }
+
+        var root = (JsonObject)Rewrite(schema, "#", names, isDefinitionRoot: true)!;
+        schema.Clear();
+        foreach (var (key, value) in root.ToList())
+        {
+            root.Remove(key);
+            schema[key] = value;
+        }
+
+        schema["$defs"] = defs;
+    }
+
+    private static void CollectReferences(JsonNode? node, List<string> targets)
+    {
+        switch (node)
+        {
+            case JsonObject obj:
+                if (obj["$ref"] is JsonValue reference && reference.GetValueKind() == JsonValueKind.String)
+                {
+                    targets.Add(reference.GetValue<string>());
+                }
+
+                foreach (var child in obj.Select(p => p.Value))
+                {
+                    CollectReferences(child, targets);
+                }
+
+                break;
+            case JsonArray array:
+                foreach (var child in array)
+                {
+                    CollectReferences(child, targets);
+                }
+
+                break;
+        }
+    }
+
+    /// <summary>A copy of <paramref name="node"/> (found at <paramref name="pointer"/>) with referenced schemas and references pointing into $defs.</summary>
+    private static JsonNode? Rewrite(JsonNode? node, string pointer, Dictionary<string, string> names, bool isDefinitionRoot = false)
+    {
+        if (!isDefinitionRoot && names.TryGetValue(pointer, out var defined))
+        {
+            return new JsonObject { ["$ref"] = $"#/$defs/{defined}" };
+        }
+
+        switch (node)
+        {
+            case JsonObject obj:
+                var copy = new JsonObject();
+                foreach (var (key, value) in obj)
+                {
+                    if (key == "$ref" && value is JsonValue reference && reference.GetValueKind() == JsonValueKind.String
+                        && names.TryGetValue(reference.GetValue<string>(), out var name))
+                    {
+                        copy[key] = $"#/$defs/{name}";
+                    }
+                    else
+                    {
+                        copy[key] = Rewrite(value, $"{pointer}/{Escape(key)}", names);
+                    }
+                }
+
+                return copy;
+            case JsonArray array:
+                var items = new JsonArray();
+                for (var i = 0; i < array.Count; i++)
+                {
+                    items.Add(Rewrite(array[i], $"{pointer}/{i}", names));
+                }
+
+                return items;
+            default:
+                return node?.DeepClone();
+        }
+    }
+
+    private static JsonNode? Resolve(JsonNode root, string pointer)
+    {
+        JsonNode? node = root;
+        foreach (var segment in pointer.TrimStart('#').Split('/', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var key = segment.Replace("~1", "/", StringComparison.Ordinal).Replace("~0", "~", StringComparison.Ordinal);
+            node = node switch
+            {
+                JsonObject obj => obj[key],
+                JsonArray array when int.TryParse(key, out var index) && index < array.Count => array[index],
+                _ => null,
+            };
+        }
+
+        return node;
+    }
+
+    private static string Escape(string key) => key.Replace("~", "~0", StringComparison.Ordinal).Replace("/", "~1", StringComparison.Ordinal);
+
+    /// <summary>"#/properties/core/items" becomes "core_items".</summary>
+    private static string DefinitionName(string pointer)
+    {
+        var parts = pointer.TrimStart('#').Split('/', StringSplitOptions.RemoveEmptyEntries)
+            .Where(p => p is not ("properties" or "anyOf" or "oneOf" or "allOf") && !int.TryParse(p, out _))
+            .Select(p => new string(p.Where(char.IsLetterOrDigit).ToArray()))
+            .Where(p => p.Length > 0);
+        var name = string.Join("_", parts);
+        return name.Length > 0 ? name : "definition";
     }
 
     private static void Normalize(JsonNode? node)

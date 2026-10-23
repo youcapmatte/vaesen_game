@@ -66,11 +66,13 @@ public sealed class AnthropicModelTests
         Assert.Equal(ModelErrorCodes.Truncated, reply.ErrorCode);
     }
 
-    [Fact]
-    public async Task A_schema_too_complex_to_compile_is_asked_for_in_the_prompt_instead()
+    [Theory]
+    [InlineData("Schema is too complex for compilation.")]
+    [InlineData("The compiled grammar is too large, which would cause performance issues. Simplify your tool schemas or reduce the number of strict tools.")]
+    public async Task A_schema_too_complex_to_compile_is_asked_for_in_the_prompt_instead(string apiMessage)
     {
         var (model, api) = Build(
-            FakeApi.Error(400, "Schema is too complex for compilation."),
+            FakeApi.Error(400, apiMessage),
             FakeApi.Stream("Here it is:\n```json\n{\"events\":[]}\n```"));
 
         var reply = await model.GenerateAsync<EscalationOutput>(Request);
