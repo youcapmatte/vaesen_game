@@ -37,12 +37,12 @@ public static class WorldValidator
 
             if (!WorldTiers.All.Contains(c.Tier))
             {
-                issues.Add(CoherenceIssue.Error(IssueCodes.Schema, at, $"Unknown tier '{c.Tier}'."));
+                issues.Add(CoherenceIssue.Error(IssueCodes.Schema, at, $"Unknown tier '{c.Tier}'.{CoherenceIssue.Allowed(WorldTiers.All)}"));
             }
 
             if (!CharacterStatuses.All.Contains(c.Status))
             {
-                issues.Add(CoherenceIssue.Error(IssueCodes.Schema, at, $"Unknown status '{c.Status}'."));
+                issues.Add(CoherenceIssue.Error(IssueCodes.Schema, at, $"Unknown status '{c.Status}'.{CoherenceIssue.Allowed(CharacterStatuses.All)}"));
             }
 
             if (c.Attitude is < -3 or > 3)

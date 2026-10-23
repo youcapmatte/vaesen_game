@@ -665,10 +665,16 @@ public sealed class ResolutionLever
 
 public static class SolveDepths
 {
+    /// <summary>Simply defeats or destroys.</summary>
     public const string Crude = "crude";
+
+    /// <summary>Eases the grievance or drives the creature off without answering the cause.</summary>
+    public const string Partial = "partial";
+
+    /// <summary>Answers the grievance at its root.</summary>
     public const string Deep = "deep";
 
-    public static readonly IReadOnlyList<string> All = [Crude, Deep];
+    public static readonly IReadOnlyList<string> All = [Crude, Partial, Deep];
 }
 
 public sealed class LeverConsequences

@@ -38,6 +38,9 @@ public sealed class CoherenceIssue
     public static CoherenceIssue Warning(string code, string location, string explanation, string? fix = null) =>
         new() { Code = code, Severity = IssueSeverities.Warning, Location = location, Explanation = explanation, SuggestedFix = fix };
 
+    /// <summary>" Allowed: a, b, c." for an issue about a value outside a fixed list, so a retry knows what to pick.</summary>
+    public static string Allowed(IEnumerable<string> values) => $" Allowed: {string.Join(", ", values)}.";
+
     public override string ToString() => $"[{Severity}] {Code} at {Location}: {Explanation}";
 }
 

@@ -56,7 +56,7 @@ public static class ContentValidator
         {
             if (!AffordanceKinds.All.Contains(tag.Kind))
             {
-                issues.Add(CoherenceIssue.Error(IssueCodes.Vocabulary, $"vocabulary:{tag.Id}", $"Unknown tag kind '{tag.Kind}'."));
+                issues.Add(CoherenceIssue.Error(IssueCodes.Vocabulary, $"vocabulary:{tag.Id}", $"Unknown tag kind '{tag.Kind}'.{CoherenceIssue.Allowed(AffordanceKinds.All)}"));
             }
 
             foreach (var implied in tag.Implies.Where(i => !vocab.Contains(i)))
@@ -115,7 +115,7 @@ public static class ContentValidator
 
         foreach (var kind in v.ReasonKinds.Where(k => !ReasonKinds.All.Contains(k)))
         {
-            issues.Add(CoherenceIssue.Error(IssueCodes.Content, at, $"Unknown reason kind '{kind}'."));
+            issues.Add(CoherenceIssue.Error(IssueCodes.Content, at, $"Unknown reason kind '{kind}'.{CoherenceIssue.Allowed(ReasonKinds.All)}"));
         }
 
         if (v.ReasonKinds.Count == 0)
@@ -125,7 +125,7 @@ public static class ContentValidator
 
         if (!ResolutionShapes.All.Contains(v.ResolutionShape))
         {
-            issues.Add(CoherenceIssue.Error(IssueCodes.Content, at, $"Unknown resolution shape '{v.ResolutionShape}'."));
+            issues.Add(CoherenceIssue.Error(IssueCodes.Content, at, $"Unknown resolution shape '{v.ResolutionShape}'.{CoherenceIssue.Allowed(ResolutionShapes.All)}"));
         }
 
         if (v.ReasonKinds.Contains(ReasonKinds.Affliction) && v.OriginSet.Count == 0)
@@ -163,7 +163,7 @@ public static class ContentValidator
 
         foreach (var sign in v.AmbiguousSigns.Concat(v.GiveawayTells).Where(s => !SignRegisters.All.Contains(s.Register)))
         {
-            issues.Add(CoherenceIssue.Error(IssueCodes.Content, $"{at}:sign:{sign.Id}", $"Unknown register '{sign.Register}'."));
+            issues.Add(CoherenceIssue.Error(IssueCodes.Content, $"{at}:sign:{sign.Id}", $"Unknown register '{sign.Register}'.{CoherenceIssue.Allowed(SignRegisters.All)}"));
         }
 
         var loreIds = v.AllLore.Select(l => l.Id).Concat(v.AmbiguousSigns.Select(s => s.Id)).Concat(v.GiveawayTells.Select(s => s.Id)).ToList();
@@ -174,7 +174,7 @@ public static class ContentValidator
 
         if (!ConfrontationKinds.All.Contains(v.ConfrontationConditions.Kind))
         {
-            issues.Add(CoherenceIssue.Error(IssueCodes.Content, at, $"Unknown confrontation kind '{v.ConfrontationConditions.Kind}'."));
+            issues.Add(CoherenceIssue.Error(IssueCodes.Content, at, $"Unknown confrontation kind '{v.ConfrontationConditions.Kind}'.{CoherenceIssue.Allowed(ConfrontationKinds.All)}"));
         }
 
         foreach (var month in v.ExcludedMonths.Where(m => m is < 1 or > 12))
@@ -288,7 +288,7 @@ public static class ContentValidator
         CheckTags(c.ProvocationAffordances, vocab, at, issues);
         foreach (var kind in c.ReasonKinds.Where(k => !ReasonKinds.All.Contains(k)))
         {
-            issues.Add(CoherenceIssue.Error(IssueCodes.Content, at, $"Unknown reason kind '{kind}'."));
+            issues.Add(CoherenceIssue.Error(IssueCodes.Content, at, $"Unknown reason kind '{kind}'.{CoherenceIssue.Allowed(ReasonKinds.All)}"));
         }
 
         if (c.RoleSlots.Count == 0)

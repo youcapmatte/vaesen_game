@@ -44,6 +44,25 @@ public sealed class ValidatorTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void Every_issue_about_a_fixed_value_names_the_allowed_values()
+    {
+        var packet = SampleCase();
+        packet.Facts[0].Kind = "lore";
+        packet.Channels[0].Kind = "physical";
+        packet.ResolutionLevers[0].SolveDepth = "surface";
+        packet.Cast[0].Tier = "core";
+        packet.Cast[0].Wants.PermittedActions[0].Tier = "extreme";
+        packet.Truth.Escalation[0].Register = "smell";
+
+        var issues = Validate(packet).Where(i => i.Code == IssueCodes.Schema).ToList();
+
+        Assert.Equal(6, issues.Count);
+        Assert.All(issues, i => Assert.Contains("Allowed: ", i.Explanation, StringComparison.Ordinal));
+        Assert.Contains(issues, i => i.Explanation == "Unknown solve depth 'surface'. Allowed: crude, partial, deep.");
+        Assert.Contains(issues, i => i.Explanation.EndsWith("Allowed: symptom, cause, identity, alibi, motive, resolution, season, colour.", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void Players_reach_every_load_bearing_fact_and_the_beats()
     {
         var packet = SampleCase();

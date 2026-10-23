@@ -112,17 +112,17 @@ public sealed class CaseValidator : ICoherenceValidator
 
             if (!ReasonKinds.All.Contains(truth.ReasonKind))
             {
-                Error(IssueCodes.Schema, "truth.reasonKind", $"Unknown reason kind '{truth.ReasonKind}'.");
+                Error(IssueCodes.Schema, "truth.reasonKind", $"Unknown reason kind '{truth.ReasonKind}'.{CoherenceIssue.Allowed(ReasonKinds.All)}");
             }
 
             if (!CaseFocus.All.Contains(truth.Focus))
             {
-                Error(IssueCodes.Schema, "truth.focus", $"Unknown focus '{truth.Focus}'.");
+                Error(IssueCodes.Schema, "truth.focus", $"Unknown focus '{truth.Focus}'.{CoherenceIssue.Allowed(CaseFocus.All)}");
             }
 
             if (!PlotCentreKinds.All.Contains(truth.PlotCentre.Kind))
             {
-                Error(IssueCodes.Schema, "truth.plotCentre", $"Unknown plot centre kind '{truth.PlotCentre.Kind}'.");
+                Error(IssueCodes.Schema, "truth.plotCentre", $"Unknown plot centre kind '{truth.PlotCentre.Kind}'.{CoherenceIssue.Allowed(PlotCentreKinds.All)}");
             }
 
             if (string.IsNullOrWhiteSpace(truth.Provocation) || string.IsNullOrWhiteSpace(truth.Summary))
@@ -191,7 +191,7 @@ public sealed class CaseValidator : ICoherenceValidator
 
                 if (!SignRegisters.All.Contains(e.Register))
                 {
-                    Error(IssueCodes.Schema, $"event:{e.Id}", $"Unknown register '{e.Register}'.");
+                    Error(IssueCodes.Schema, $"event:{e.Id}", $"Unknown register '{e.Register}'.{CoherenceIssue.Allowed(SignRegisters.All)}");
                 }
             }
 
@@ -229,12 +229,12 @@ public sealed class CaseValidator : ICoherenceValidator
                 var at = $"cast:{member.CharacterId}";
                 if (!InstanceRefs.All.Contains(member.InstanceRef))
                 {
-                    Error(IssueCodes.Schema, at, $"Unknown instance ref '{member.InstanceRef}'.");
+                    Error(IssueCodes.Schema, at, $"Unknown instance ref '{member.InstanceRef}'.{CoherenceIssue.Allowed(InstanceRefs.All)}");
                 }
 
                 if (!CastTiers.All.Contains(member.Tier))
                 {
-                    Error(IssueCodes.Schema, at, $"Unknown tier '{member.Tier}'.");
+                    Error(IssueCodes.Schema, at, $"Unknown tier '{member.Tier}'.{CoherenceIssue.Allowed(CastTiers.All)}");
                 }
 
                 if (member.InstanceRef is InstanceRefs.Persistent or InstanceRefs.Promoted)
@@ -268,7 +268,7 @@ public sealed class CaseValidator : ICoherenceValidator
 
                 foreach (var action in member.Wants.PermittedActions.Where(a => !DesperationTiers.All.Contains(a.Tier)))
                 {
-                    Error(IssueCodes.Schema, at, $"Action '{action.Id}' has unknown tier '{action.Tier}'.");
+                    Error(IssueCodes.Schema, at, $"Action '{action.Id}' has unknown tier '{action.Tier}'.{CoherenceIssue.Allowed(DesperationTiers.All)}");
                 }
 
                 foreach (var rel in member.Relationships.Where(r => packet.FindCast(r.CharacterId) is null))
@@ -323,7 +323,7 @@ public sealed class CaseValidator : ICoherenceValidator
             {
                 if (!FactKinds.All.Contains(fact.Kind))
                 {
-                    Error(IssueCodes.Schema, $"fact:{fact.Id}", $"Unknown fact kind '{fact.Kind}'.");
+                    Error(IssueCodes.Schema, $"fact:{fact.Id}", $"Unknown fact kind '{fact.Kind}'.{CoherenceIssue.Allowed(FactKinds.All)}");
                 }
 
                 if (fact.PointsTo is not (FactPointsTo.TrueAnswer or FactPointsTo.Neutral) && !FactPointsTo.IsDecoy(fact.PointsTo))
@@ -336,12 +336,12 @@ public sealed class CaseValidator : ICoherenceValidator
             {
                 if (!ChannelKinds.All.Contains(channel.Kind))
                 {
-                    Error(IssueCodes.Schema, $"channel:{channel.Id}", $"Unknown channel kind '{channel.Kind}'.");
+                    Error(IssueCodes.Schema, $"channel:{channel.Id}", $"Unknown channel kind '{channel.Kind}'.{CoherenceIssue.Allowed(ChannelKinds.All)}");
                 }
 
                 foreach (var text in channel.Access.Requires.Where(r => AccessRequirement.Parse(r) is null))
                 {
-                    Error(IssueCodes.Schema, $"channel:{channel.Id}", $"Cannot read access requirement '{text}'.",
+                    Error(IssueCodes.Schema, $"channel:{channel.Id}", $"Cannot read access requirement '{text}'. Allowed: knowsFact:<factId>, trust>=<0-3>, roll:<skill>, time:<when>, place:<placeId>, item:<what>.",
                         "Use knowsFact:<factId>, trust>=<n>, roll:<skill>, time:<when>, place:<placeId> or item:<what>.");
                 }
 
@@ -576,7 +576,7 @@ public sealed class CaseValidator : ICoherenceValidator
                     }
                     else
                     {
-                        Error(IssueCodes.Provenance, at, $"Knows {k.FactId} from an unreadable source '{source}'.",
+                        Error(IssueCodes.Provenance, at, $"Knows {k.FactId} from an unreadable source '{source}'. Allowed: witnessed, self, lore, told:<characterId>, found:<channelId>.",
                             "Use witnessed, self, lore, told:<characterId> or found:<channelId>.");
                     }
                 }
@@ -818,7 +818,7 @@ public sealed class CaseValidator : ICoherenceValidator
 
             foreach (var lever in packet.ResolutionLevers.Where(l => !SolveDepths.All.Contains(l.SolveDepth)))
             {
-                Error(IssueCodes.Schema, $"lever:{lever.Id}", $"Unknown solve depth '{lever.SolveDepth}'.");
+                Error(IssueCodes.Schema, $"lever:{lever.Id}", $"Unknown solve depth '{lever.SolveDepth}'.{CoherenceIssue.Allowed(SolveDepths.All)}");
             }
 
             if (packet.ResolutionLevers.Count < 2)
