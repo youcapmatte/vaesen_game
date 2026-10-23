@@ -396,16 +396,17 @@ function ReviewTab({ stored }: { stored: StoredCase }) {
 
   return (
     <Stack gap="lg">
+      {/* First, so they are not buried under a long list of checks. */}
+      <Group justify="center">
+        <Button color="gold" variant="light" leftSection={<IconDownload size={16} />} onClick={download}>Download the report for Claude (Markdown)</Button>
+        <Button color="gold" variant="subtle" leftSection={<IconFileCode size={16} />} onClick={downloadAll}>Download everything (JSON)</Button>
+        <ErrorNote message={downloadError} />
+      </Group>
       <Sheet title="What the checks found">
         {issues.length === 0 && <Text fz="sm">Nothing: every structural check and the critic passed.</Text>}
         <Stack gap="xs">
           {issues.map((issue, i) => <IssueLine key={i} issue={issue} />)}
         </Stack>
-        <Group mt="md">
-          <Button variant="outline" color="umber" size="xs" leftSection={<IconDownload size={14} />} onClick={download}>Download the report (Markdown)</Button>
-          <Button variant="outline" color="umber" size="xs" leftSection={<IconFileCode size={14} />} onClick={downloadAll}>Download everything for review (JSON)</Button>
-          <ErrorNote message={downloadError} />
-        </Group>
       </Sheet>
       <Sheet title="How it was written">
         <Text fz="xs" c="var(--nx-ink-soft)" mb="xs">
