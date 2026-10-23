@@ -34,7 +34,7 @@ void UVaesenEquipmentComponent::GetLifetimeReplicatedProps(TArray<FLifetimePrope
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 	DOREPLIFETIME(UVaesenEquipmentComponent, Equipped);
 	DOREPLIFETIME(UVaesenEquipmentComponent, DrawState);
-	DOREPLIFETIME(UVaesenEquipmentComponent, bPrefersOneHand);
+	DOREPLIFETIME(UVaesenEquipmentComponent, bSwitchedGrip);
 }
 
 bool UVaesenEquipmentComponent::ReplicateSubobjects(UActorChannel* Channel, FOutBunch* Bunch, FReplicationFlags* RepFlags)
@@ -542,19 +542,19 @@ void UVaesenEquipmentComponent::RequestToggleGrip()
 	{
 		return;
 	}
-	const bool bOneHand = !bPrefersOneHand;
+	const bool bSwitched = !bSwitchedGrip;
 	if (!GetOwner()->HasAuthority())
 	{
 		// Seen at once here; the server agrees and tells everyone.
-		bPrefersOneHand = bOneHand;
+		bSwitchedGrip = bSwitched;
 		UpdateGrip();
 	}
-	ServerSetPrefersOneHand(bOneHand);
+	ServerSetSwitchedGrip(bSwitched);
 }
 
-void UVaesenEquipmentComponent::ServerSetPrefersOneHand_Implementation(bool bOneHand)
+void UVaesenEquipmentComponent::ServerSetSwitchedGrip_Implementation(bool bSwitched)
 {
-	bPrefersOneHand = bOneHand;
+	bSwitchedGrip = bSwitched;
 	UpdateGrip();
 }
 
@@ -563,8 +563,9 @@ void UVaesenEquipmentComponent::UpdateGrip()
 	UVaesenWeaponItem* MainHand = GetWeaponInSlot(EVaesenEquipmentSlot::MainHand);
 	if (MainHand)
 	{
-		// Both hands when it can be, the off hand is free and the player hasn't chosen one.
-		MainHand->SetHeldTwoHanded(!GetItemInSlot(EVaesenEquipmentSlot::OffHand) && !bPrefersOneHand);
+		// Its natural grip (both hands if its category has two-handed animations, else one), unless the player
+		// switched (V); a shield or anything else in the off hand always means one.
+		MainHand->SetHeldTwoHanded(!GetItemInSlot(EVaesenEquipmentSlot::OffHand) && MainHand->PrefersBothHands() != bSwitchedGrip);
 	}
 }
 

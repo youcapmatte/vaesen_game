@@ -205,15 +205,15 @@ public:
 	void RefreshDrawnLook() { ApplyDrawnLook(); }
 
 	/**
-	 * V: a weapon that can be held in both hands (a sword, an axe) switches between both hands and one. It's in both
-	 * whenever the off hand is free, unless the player chose one; a shield in the off hand always means one.
+	 * V: a weapon that can be held in both hands (a sword, an axe) switches between both hands and one. It starts in its
+	 * natural grip (both hands if its category has two-handed animations, else one); a shield in the off hand always means one.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Equipment|Weapons")
 	void RequestToggleGrip();
 
-	/** The player keeps one hand free even when the off hand is empty. */
+	/** The player switched (V) from the weapons' natural grip: one hand where it would be both, or both where it would be one. */
 	UFUNCTION(BlueprintPure, Category = "Equipment|Weapons")
-	bool PrefersOneHand() const { return bPrefersOneHand; }
+	bool HasSwitchedGrip() const { return bSwitchedGrip; }
 
 	/** A weapon was drawn or sheathed (at the grab moment, on every machine). */
 	UPROPERTY(BlueprintAssignable, Category = "Equipment|Weapons")
@@ -280,13 +280,13 @@ private:
 	void ServerSetWeaponDrawn(bool bDraw, EVaesenEquipmentSlot WeaponSlot);
 
 	UFUNCTION(Server, Reliable)
-	void ServerSetPrefersOneHand(bool bOneHand);
+	void ServerSetSwitchedGrip(bool bSwitched);
 
 	/** Holds the main-hand weapon in both hands or one, as the off hand and the player's choice say. */
 	void UpdateGrip();
 
 	UPROPERTY(Replicated)
-	bool bPrefersOneHand = false;
+	bool bSwitchedGrip = false;
 
 	UFUNCTION()
 	void OnRep_DrawState();

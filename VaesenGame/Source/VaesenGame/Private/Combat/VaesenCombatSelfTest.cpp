@@ -709,8 +709,9 @@ void UVaesenCombatSelfTest::BuildSteps()
 	{
 		const UVaesenWeaponItem* Sword = Equipment->GetDrawnWeapon();
 		Check(Sword && Sword->Category == EVaesenWeaponCategory::OneHandedSword, TEXT("sword drawn"));
-		// The off hand is free: the sword is held in both hands (it can be), and its swing costs what that grip's does.
-		Check(Sword && Sword->IsHeldTwoHanded(), TEXT("the sword is held in both hands (off hand free)"));
+		// The off hand is free, but the sword has only one-handed animations: one hand (V would take both). Its swing
+		// costs what that grip's does.
+		Check(Sword && Sword->IsHeldTwoHanded() == Sword->PrefersBothHands(), TEXT("the sword is held in its natural grip (one hand: no two-handed animations yet)"));
 		const float Before = ASC->GetNumericAttribute(UVaesenAttributeSet::GetStaminaAttribute());
 		Tap(Attack);
 		FVaesenMeleeAttack Light;
@@ -746,8 +747,6 @@ void UVaesenCombatSelfTest::BuildSteps()
 	Steps.Add({ TEXT("Sword moves"), [this]()
 	{
 		ResetAll();
-		// In one hand, as the pack holds it.
-		Fighter->GetEquipment()->RequestToggleGrip();
 		return 0.6f;
 	} });
 	Steps.Add({ FString(), [this]()
@@ -796,7 +795,6 @@ void UVaesenCombatSelfTest::BuildSteps()
 		const float Moved = FVector::Dist2D(*DodgeFrom, Fighter->GetActorLocation());
 		Check(Moved > 50.0f, FString::Printf(TEXT("the dodge carries the fighter (%.0f cm)"), Moved));
 		Fighter->SetActorLocation(*DodgeFrom);
-		Fighter->GetEquipment()->RequestToggleGrip();
 		if (APlayerController* Viewer = ShotCamera ? Fighter->GetWorld()->GetFirstPlayerController() : nullptr)
 		{
 			Viewer->SetViewTarget(Viewer->GetPawn());

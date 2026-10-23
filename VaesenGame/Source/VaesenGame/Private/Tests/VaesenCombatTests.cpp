@@ -1079,7 +1079,7 @@ bool FVaesenWeaponFitRigTest::RunTest(const FString& Parameters)
 }
 #endif
 
-// --- Versatile grip: a sword in both hands with the off hand free, in one with a shield or by choice (V) ---
+// --- Versatile grip: a sword in its natural grip with the off hand free, one hand with a shield, switched by V ---
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenVersatileGripTest, "Vaesen.Combat.Melee.VersatileGrip", CombatTestFlags)
 bool FVaesenVersatileGripTest::RunTest(const FString& Parameters)
@@ -1092,7 +1092,14 @@ bool FVaesenVersatileGripTest::RunTest(const FString& Parameters)
 	{
 		return false;
 	}
-	TestTrue(TEXT("Off hand free: held in both hands"), Sword->IsHeldTwoHanded());
+	// Its natural grip: both hands only when its category has two-handed animations; otherwise V takes both.
+	const bool bNatural = Sword->PrefersBothHands();
+	TestEqual(TEXT("Off hand free: held in its natural grip"), Sword->IsHeldTwoHanded(), bNatural);
+	if (!bNatural)
+	{
+		Equipment->RequestToggleGrip();
+	}
+	TestTrue(TEXT("Off hand free (and V if needed): held in both hands"), Sword->IsHeldTwoHanded());
 
 	// In both hands it hits harder (the category's two-handed scale) and costs more stamina.
 	const FVaesenTwoHandedGrip& TwoHanded = Sword->GetCategoryDefaults().TwoHanded;
@@ -1117,9 +1124,9 @@ bool FVaesenVersatileGripTest::RunTest(const FString& Parameters)
 	Equipment->UnequipToInventory(EVaesenEquipmentSlot::OffHand, Player->GetInventory());
 	TestTrue(TEXT("Shield off: both hands again"), Sword->IsHeldTwoHanded());
 
-	// V: one hand by choice, and back.
+	// V: one hand, and back.
 	Equipment->RequestToggleGrip();
-	TestTrue(TEXT("V: the player keeps a hand free"), Equipment->PrefersOneHand());
+	TestEqual(TEXT("V: the switch is back where it started (or now on)"), Equipment->HasSwitchedGrip(), bNatural);
 	TestFalse(TEXT("V: held in one hand"), Sword->IsHeldTwoHanded());
 	Equipment->RequestToggleGrip();
 	TestTrue(TEXT("V again: both hands"), Sword->IsHeldTwoHanded());

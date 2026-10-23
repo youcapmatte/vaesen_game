@@ -53,8 +53,9 @@ public:
 	bool bTwoHanded = false;
 
 	/**
-	 * Can also be held in both hands (a sword, an axe): it is while the off hand is free (no shield) and the player
-	 * hasn't switched to one hand (V). Uses the category's Two-Handed animations and attacks, and its LeftGrip socket.
+	 * Can also be held in both hands (a sword, an axe), while the off hand is free (no shield): from the start if its
+	 * category has two-handed animations (PrefersBothHands), else when the player switches (V). Uses the category's
+	 * Two-Handed animations and attacks, and its LeftGrip socket.
 	 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon", meta = (EditCondition = "!bTwoHanded"))
 	bool bCanBeTwoHanded = false;
@@ -65,6 +66,12 @@ public:
 
 	/** Held in both hands by choice (not always two-handed): its category's Two-Handed data applies. */
 	bool IsInTwoHandedGrip() const { return bHeldTwoHanded && !bTwoHanded; }
+
+	/**
+	 * Held in both hands unless the player switches (V): when its category has animations for that (a Two-Handed
+	 * stance). Without them it starts in one hand, the way its one-handed animations hold it.
+	 */
+	bool PrefersBothHands() const { return bCanBeTwoHanded && GetCategoryDefaults().TwoHanded.AnimLayer != nullptr; }
 
 	/** The equipment: holds it in both hands or one (only weapons that can be). */
 	void SetHeldTwoHanded(bool bInBothHands);

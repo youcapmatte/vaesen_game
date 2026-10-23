@@ -178,14 +178,14 @@ This replaces functional-test actors. The engine's FunctionalTesting module is d
 
 ### 0.7b One hand or two (swords, axes, clubs, warhammers)
 
-A weapon with **Can Be Held Two-Handed** (Weapon Blueprint → Weapon) is held in **both hands** whenever the off hand is free. A shield or anything else in the off hand means **one** hand. **V** keeps one hand free by choice (D-pad down on a gamepad), and V again goes back to two. The server decides; every player sees the same grip.
+A weapon with **Can Be Held Two-Handed** (Weapon Blueprint → Weapon) starts in its **natural grip** when the off hand is free: **both hands** if its category has two-handed animations (Two-Handed → Anim Layer), otherwise **one**, the way its one-handed animations hold it (the sword, for now). A shield or anything else in the off hand always means one hand. **V** switches away from the natural grip (D-pad down on a gamepad), and V again switches back. The server decides; every player sees the same grip.
 
 In both hands:
 - The left hand goes to the weapon's **`LeftGrip`** socket (grey-box places on the handle; tune them in the Weapon Fit rig).
 - The weapon uses its category's **Two-Handed** section (`DA_WeaponCategoryDefaults` → category → Two-Handed): its own stance layer, montages and attacks. Each empty entry falls back to the one-handed one.
 - Without its own attacks, the one-handed attacks hit harder (**Damage Scale 1.25**) and cost more stamina (**1.2**), with more knockback (**1.25**). A two-handed block profile is optional.
 
-The always-two-handed setting (rifles, bows) is separate and unchanged. Test: `Vaesen.Combat.Melee.VersatileGrip`. In the self-test, the old sword is held in both hands and its light swing costs 12 stamina, not 10.
+The always-two-handed setting (rifles, bows) is separate and unchanged. Test: `Vaesen.Combat.Melee.VersatileGrip`. In the self-test, the old sword is held in one hand (no two-handed animations yet) and its light swing costs 10 stamina.
 
 ### 0.7c Sword animations (One Hand Sword Attacks And Finishers)
 
