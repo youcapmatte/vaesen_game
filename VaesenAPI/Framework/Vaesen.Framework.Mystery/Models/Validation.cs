@@ -90,6 +90,9 @@ public static class IssueCodes
 
     /// <summary>A near miss in a fixed-value field was repaired in code (a warning; see EnumRepair).</summary>
     public const string Repaired = "repaired";
+
+    /// <summary>An item built on something a fix revised, sent to its step to agree with it.</summary>
+    public const string Consistency = "consistency";
 }
 
 /// <summary>A parsed channel access requirement (see <see cref="ChannelAccess"/>).</summary>

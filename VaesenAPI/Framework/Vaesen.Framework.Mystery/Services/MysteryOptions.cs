@@ -40,11 +40,14 @@ public sealed class MysteryOptions
 
     /// <summary>
     /// Effort (low, medium, high, xhigh or max) for the calls that decide the case: the conflict, and the first try of
-    /// the facts and of minds and channels.
+    /// the facts.
     /// </summary>
     public string CreativeEffort { get; set; } = "high";
 
-    /// <summary>Effort for the first try of the other steps: escalation, humans, the arc.</summary>
+    /// <summary>
+    /// Effort for the first try of the other steps: escalation, humans, minds and channels (bookkeeping the checks verify:
+    /// at high effort it spent more than half its output thinking), the arc. Also the critic's second look.
+    /// </summary>
     public string StandardEffort { get; set; } = "medium";
 
     /// <summary>Effort for retries after the first, and for the hook and scenes.</summary>

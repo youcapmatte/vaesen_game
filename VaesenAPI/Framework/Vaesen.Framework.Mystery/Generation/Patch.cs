@@ -1,5 +1,4 @@
 using System.Text;
-using Newtonsoft.Json;
 using Vaesen.Framework.Mystery.Models;
 
 namespace Vaesen.Framework.Mystery.Generation;
@@ -17,9 +16,12 @@ public static class Patch
         IssueCodes.CastCoherence, IssueCodes.Decoy,
     ];
 
+    /// <summary>The location of a problem that needs a new item in a list: "new:channel" (a fact no channel teaches yet).</summary>
+    public const string NewItem = "new:";
+
     /// <summary>
-    /// True when every error is field-level and sits on an item of one of <paramref name="lists"/>, and the items they
-    /// touch are at most <paramref name="share"/> of all the items.
+    /// True when every error is field-level and sits on an item of one of <paramref name="lists"/> (or asks for a new
+    /// item in one), and the items they touch are at most <paramref name="share"/> of all the items.
     /// </summary>
     /// <param name="anyCode">The critic's issues: any code counts as field-level when it names items.</param>
     public static bool Patchable(IReadOnlyList<PatchList> lists, IReadOnlyList<CoherenceIssue> errors, double share, bool anyCode = false)
@@ -32,6 +34,11 @@ public static class Patch
         var touched = new HashSet<string>(StringComparer.Ordinal);
         foreach (var error in errors)
         {
+            if (anyCode && error.Location.StartsWith(NewItem, StringComparison.Ordinal) && lists.Any(l => l.Prefix == error.Location[NewItem.Length..]))
+            {
+                continue;
+            }
+
             if ((!anyCode && !FieldLevel.Contains(error.Code)) || Find(lists, error.Location) is null)
             {
                 return false;
@@ -64,7 +71,10 @@ public static class Patch
         return items;
     }
 
-    /// <summary>Replaces each item of <paramref name="original"/> that the patch answered, by id. Others are left alone.</summary>
+    /// <summary>
+    /// Replaces each item of <paramref name="original"/> that the patch answered, by id, and adds the ones with new ids
+    /// (a problem asked for them). Others are left alone.
+    /// </summary>
     public static void Merge(IReadOnlyList<PatchList> original, IReadOnlyList<PatchList> patch)
     {
         foreach (var answered in patch)
@@ -78,13 +88,19 @@ public static class Patch
             foreach (var item in answered.Items)
             {
                 var id = answered.Id(item!);
-                for (var i = 0; i < target.Items.Count; i++)
+                var replaced = false;
+                for (var i = 0; i < target.Items.Count && !replaced; i++)
                 {
                     if (target.Id(target.Items[i]!) == id)
                     {
                         target.Items[i] = item;
-                        break;
+                        replaced = true;
                     }
+                }
+
+                if (!replaced && !string.IsNullOrWhiteSpace(id))
+                {
+                    target.Items.Add(item);
                 }
             }
         }
@@ -108,18 +124,28 @@ public static class Patch
         foreach (var (prefix, list) in items)
         {
             text.AppendLine($"{prefix}:");
-            text.AppendLine(JsonConvert.SerializeObject(list, Formatting.Indented));
+            text.AppendLine(PromptBuilder.Json(list));
         }
 
         text.AppendLine();
         text.AppendLine("## Problems");
-        foreach (var error in errors)
+
+        // A critic issue split over several items says the same thing for each: say it once, with all its items.
+        foreach (var group in errors.GroupBy(e => (e.Code, e.Explanation, e.SuggestedFix)))
         {
-            text.AppendLine($"- {error.Code} at {error.Location}: {error.Explanation}{(error.SuggestedFix is null ? "" : $" Fix: {error.SuggestedFix}")}");
+            var (code, explanation, fix) = group.Key;
+            text.AppendLine($"- {code} at {string.Join(", ", group.Select(e => e.Location).Distinct())}: {explanation}{(fix is null ? "" : $" Fix: {fix}")}");
         }
 
+        var added = errors.Select(e => e.Location).Where(l => l.StartsWith(NewItem, StringComparison.Ordinal)).Select(l => l[NewItem.Length..]).Distinct().ToList();
         text.AppendLine();
-        text.AppendLine("Answer with the same JSON shape as before, holding only the corrected versions of these items, with the same ids, in their lists. Leave every other list empty and every other field at its empty default. Fields with listed allowed values take exactly one of those values.");
+        if (added.Count > 0)
+        {
+            text.AppendLine($"Some problems need something that does not exist yet: add it as a new {string.Join(" or ", added)}, with the next free id after the ones listed below.");
+        }
+
+        text.AppendLine("Where a problem says which version to use (a date, a name, a detail), write only that version: do not keep the old one alongside it.");
+        text.AppendLine("Answer with the same JSON shape as before, holding only the corrected versions of these items, with the same ids, and any new items the problems ask for, in their lists. Leave every other list empty and every other field at its empty default. Fields with listed allowed values take exactly one of those values.");
         text.AppendLine();
         text.AppendLine("## The other items in your answer, unchanged (ids)");
         text.AppendLine(otherIds);

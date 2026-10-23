@@ -202,6 +202,35 @@ public sealed class ValidatorTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void A_revised_fact_sends_its_channels_and_knowers_after_it_and_a_patch_can_add_a_channel()
+    {
+        var before = SampleCase();
+        var after = SampleCase();
+        var fact = after.Facts.First(f => after.Channels.Exists(c => c.FactId == f.Id) && after.Cast.Exists(c => c.Knows.Exists(k => k.FactId == f.Id)));
+        fact.Statement = "In the week of 20 September " + fact.Statement;
+
+        var follow = Generation.CriticRouting.Dependents(before, after);
+
+        Assert.All(follow, f => Assert.Equal("minds", f.Step));
+        Assert.Equal(
+            after.Channels.Where(c => c.FactId == fact.Id).Select(c => $"channel:{c.Id}")
+                .Concat(after.Cast.Where(c => c.Knows.Exists(k => k.FactId == fact.Id)).Select(c => $"cast:{c.CharacterId}")),
+            follow.Select(f => f.Issue.Location));
+        Assert.Contains("week of 20 September", follow[0].Issue.Explanation, StringComparison.Ordinal);
+        Assert.Empty(Generation.CriticRouting.Dependents(before, SampleCase()));
+
+        // A fact no channel teaches: the critic targets channels, and the patch adds one.
+        Assert.Equal(("minds", "new:channel"), Generation.CriticRouting.Owner("channels"));
+        var channels = new List<CaseChannel> { new() { Id = "c1" } };
+        var lists = new[] { new Generation.PatchList("channel", channels, c => ((CaseChannel)c).Id) };
+        var ask = new[] { new CoherenceIssue { Code = "critic.fairClues", Location = "new:channel", Explanation = "Nothing teaches f15." } };
+        Assert.True(Generation.Patch.Patchable(lists, ask, 0.25, anyCode: true));
+        Assert.False(Generation.Patch.Patchable(lists, ask, 0.25));
+        Generation.Patch.Merge(lists, [new Generation.PatchList("channel", new List<CaseChannel> { new() { Id = "c2" } }, c => ((CaseChannel)c).Id)]);
+        Assert.Equal(["c1", "c2"], channels.Select(c => c.Id));
+    }
+
+    [Fact]
     public void Names_that_sound_alike_anywhere_in_the_case_are_flagged()
     {
         Assert.NotNull(NameRules.Clash("Per Ers", "Jon Persson"));

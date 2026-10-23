@@ -16,7 +16,9 @@ public static class PromptBuilder
     {
         NullValueHandling = NullValueHandling.Ignore,
         DefaultValueHandling = DefaultValueHandling.Include,
-        Formatting = Formatting.Indented,
+
+        // Indentation costs about a fifth of the tokens of every JSON block, and the model reads it as well without.
+        Formatting = Formatting.None,
     };
 
     public static string Template(string name)
@@ -124,21 +126,29 @@ public static class PromptBuilder
         if (For(ConflictStep.StepName, EscalationStep.StepName, HumansStep.StepName, MindsStep.StepName, ArcStep.StepName, HookStep.StepName))
         {
             text.AppendLine("# The level");
-            text.AppendLine(Json(draft.Level));
+            text.AppendLine(Json(LevelView(draft.Level, step)));
             text.AppendLine();
         }
 
         if (For(ConflictStep.StepName, EscalationStep.StepName, HumansStep.StepName, FactsStep.StepName, MindsStep.StepName, ArcStep.StepName))
         {
             text.AppendLine("# The creature");
-            text.AppendLine(Json(draft.Vaesen));
+            text.AppendLine(Json(CreatureView(draft.Vaesen, step)));
             text.AppendLine();
         }
 
-        if (For(ConflictStep.StepName, HumansStep.StepName))
+        // Humans need only the archetype the conflict chose; the conflict chooses from all of them.
+        var chosen = draft.Conflicts.Where(c => c.Id == draft.Packet.Brief.ConflictArchetypeId).ToList();
+        if (For(ConflictStep.StepName) || (step == HumansStep.StepName && chosen.Count == 0))
         {
             text.AppendLine("# Conflict archetypes on offer");
             text.AppendLine(Json(draft.Conflicts));
+            text.AppendLine();
+        }
+        else if (step == HumansStep.StepName)
+        {
+            text.AppendLine("# The conflict archetype chosen");
+            text.AppendLine(Json(chosen));
             text.AppendLine();
         }
 
@@ -173,6 +183,59 @@ public static class PromptBuilder
 
         return text.ToString();
     }
+
+    /// <summary>
+    /// The level as a step needs it. Only minds and channels place things in rooms and furniture, so only they (and the
+    /// critic) get the affordances, as one line each; the others get the places' names and descriptions.
+    /// </summary>
+    private static object LevelView(LevelDefinition level, string? step)
+    {
+        if (step is null or CriticStep.Name)
+        {
+            return level;
+        }
+
+        var withAffordances = step == MindsStep.StepName;
+        return new
+        {
+            level.Id,
+            level.Name,
+            level.Region,
+            level.SettlementType,
+            level.Terrain,
+            level.Description,
+            level.SeasonNotes,
+            level.Travel,
+            level.PublicFacts,
+            places = level.Places.Select(p => new
+            {
+                p.Id,
+                p.Name,
+                p.Description,
+                p.Tags,
+                affordances = withAffordances ? Affordances(p.Affordances).ToList() : null,
+            }),
+        };
+    }
+
+    /// <summary>"mill-attic (attic): Grain loft", nested ones after their container, "(lockable)" where it applies.</summary>
+    private static IEnumerable<string> Affordances(IEnumerable<LevelAffordance> affordances) => affordances.SelectMany(a =>
+        Affordances(a.Contains).Prepend($"{a.Id} ({a.Tag}): {a.Name}{(a.Lockable ? " (lockable)" : "")}"));
+
+    /// <summary>
+    /// The creature as a step needs it: the conflict, the facts and the critic see all of it; escalation the signs it
+    /// shows; humans what folk believe; minds and the arc the lore, weaknesses and how it is faced.
+    /// </summary>
+    private static object CreatureView(VaesenDefinition v, string? step) => step switch
+    {
+        EscalationStep.StepName => new { v.Id, v.Name, v.Summary, v.Domain, v.Seasonality, v.CommonKnowledge, v.GiveawayTells, v.AmbiguousSigns },
+        HumansStep.StepName => new { v.Id, v.Name, v.Summary, v.Domain, v.ReasonModel, v.Seasonality, v.CommonKnowledge },
+        MindsStep.StepName or ArcStep.StepName => new
+        {
+            v.Id, v.Name, v.Summary, v.Domain, v.ResolutionShape, v.Seasonality, v.CommonKnowledge, v.DeepLore, v.ConfrontationConditions, v.Weaknesses, v.Protections,
+        },
+        _ => v,
+    };
 
     /// <summary>How many persistent characters a case sees in full; the rest get one line each (fixes, section 10).</summary>
     public const int FullDetailCast = 8;
@@ -308,9 +371,10 @@ public static class PromptBuilder
         {
             text.AppendLine();
             text.AppendLine("# Your last answer to this step had these problems. Fix them and keep what worked.");
-            foreach (var issue in feedback)
+            foreach (var group in feedback.GroupBy(i => (i.Severity, i.Code, i.Explanation, i.SuggestedFix)))
             {
-                text.AppendLine($"- [{issue.Severity}] {issue.Code} at {issue.Location}: {issue.Explanation}{(issue.SuggestedFix is null ? "" : $" Fix: {issue.SuggestedFix}")}");
+                var (severity, code, explanation, fix) = group.Key;
+                text.AppendLine($"- [{severity}] {code} at {string.Join(", ", group.Select(i => i.Location).Distinct())}: {explanation}{(fix is null ? "" : $" Fix: {fix}")}");
             }
 
             if (previousJson is not null)

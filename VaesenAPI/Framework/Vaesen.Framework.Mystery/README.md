@@ -38,7 +38,9 @@ Services/      MysteryGenerator, WorldService (seeding, closing, write-back), Co
      - **arc**: beats, the climax and the resolution levers (crude, partial or deep). The engine computes the tension weights: the load-bearing facts, weighing twice the others, take the dial 15% past the climax.
      - **hook**: the hook and the scene descriptions.
 3. **Whole-case checks and the critic**: reachability, redundancy, fair play and the rest, then the judgement checks code cannot make. Each structural problem goes back only to the sub-step it points at (new facts redo everything built on them), up to `MaxReworkRounds`.
-   - The critic names the ids each issue touches (`targets`: f3, c7, r2, truth.hiddenHandMotive, npc-anna.knows...). Each issue is routed to the step that owns those ids (a motive to the conflict, a lever to the arc, a channel to minds and channels), split when it spans steps, and fixed in place in pipeline order: a patch of the items named, or a revised answer that changes only what the issue asks. Nothing downstream is regenerated.
+   - The critic names the ids each issue touches (`targets`: f3, c7, r2, truth.hiddenHandMotive, npc-anna.knows...). Each issue is routed to the step that owns those ids (a motive to the conflict, a lever to the arc, a channel to minds and channels), split when it spans steps, and fixed in place in pipeline order: a patch of the items named (and any new item it asks for, such as a channel for a fact nothing teaches: target `channels`), or a revised answer that changes only what the issue asks. Nothing downstream is regenerated.
+   - A fix that revises an event or a fact sends the items built on it after it: the event's facts, the fact's channels and the people who know it, each patched to agree. Otherwise a corrected date stays wrong in every channel that quotes it.
+   - The critic's second look gets its first look's list, at `StandardEffort`: it checks those fixes rather than reviewing from scratch and asking for new detail on a clue it already had fixed.
    - The critic may send the case back once (`MaxCriticReworks`). After that its objections are warnings on a case that passes, and those with concrete fixes are applied in one cheap last round on `LightModel`, kept only if the case still passes its checks. Applied warnings are marked in the report.
 4. **Repairs and retries**:
    - Near misses in fixed-value fields ("Surface", "half") are repaired in code before validation and logged as warnings.
@@ -48,7 +50,8 @@ Services/      MysteryGenerator, WorldService (seeding, closing, write-back), Co
 
 ### Inputs, caching and cost
 
-- Each step gets only what it works from: its part of the canon (the persistent cast only for humans, the archetypes only for the conflict and humans, no level for the facts, no creature for the hook) and its view of the case so far (`CaseView`). The critic and the structural checks see everything.
+- Each step gets only what it works from: its part of the canon (the persistent cast only for humans, all the archetypes only for the conflict and the chosen one for humans, no level for the facts, no creature for the hook) and its view of the case so far (`CaseView`). Only minds and channels get the level's rooms and furniture (one line each); the others get its places. The creature comes whole to the conflict and the facts, as its signs to escalation, as folk belief to humans, and as lore, weaknesses and confrontation to minds and the arc. The critic and the structural checks see everything.
+- JSON in prompts is unindented (indentation was about a fifth of every block), and an issue split over several items is stated once with all its items.
 - A different output schema invalidates the whole cached prefix (measured: the system prompt too), and every step has its own schema, so the cache cannot carry from one step to the next. First calls therefore do not cache (no write premium); retries, patches and the critic, which repeat the same schema, do. Every call logs a hash of its cached prefix.
 - The report shows each call's cache reads and writes and its cost at list prices (`ModelPrices`), and the total.
 
@@ -166,7 +169,7 @@ dotnet run --project VaesenAPI/Tools/Vaesen.Mystery.CaseLab -- validate cases/ca
 | Setting | Default | |
 |---|---|---|
 | `CreativeModel` | `claude-opus-5-5` | every creative step |
-| `CreativeEffort`, `StandardEffort`, `LightEffort` | `high`, `medium`, `low` | high: conflict and the first try of facts and minds; medium: other first tries; low: retries and the hook |
+| `CreativeEffort`, `StandardEffort`, `LightEffort` | `high`, `medium`, `low` | high: conflict and the first try of facts; medium: other first tries (minds included) and the critic's second look; low: retries and the hook |
 | `RetryModel`, `PatchModel`, `PatchEffort` | (creative model), (creative model), `low` | a smaller model may take retries and patches |
 | `PatchMaxOutputTokens`, `PatchShare` | 16000, 0.25 | a patch's output cap; the share of a step's items a patch may touch |
 | `MaxReworkRounds` | 2 | how often whole-case and critic issues send sub-steps back |

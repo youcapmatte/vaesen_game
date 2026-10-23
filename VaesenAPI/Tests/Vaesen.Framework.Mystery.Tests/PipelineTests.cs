@@ -73,6 +73,10 @@ public sealed class PipelineTests
         Assert.DoesNotContain("# The creature", model.Contexts[model.Calls.IndexOf("hook")], StringComparison.Ordinal);
         Assert.DoesNotContain("# Persistent characters", model.Contexts[model.Calls.IndexOf("minds")], StringComparison.Ordinal);
         Assert.Contains("# Persistent characters", model.Contexts[model.Calls.IndexOf("humans")], StringComparison.Ordinal);
+        Assert.Contains("# The conflict archetype chosen", model.Contexts[model.Calls.IndexOf("humans")], StringComparison.Ordinal);
+        Assert.DoesNotContain("\"affordances\"", model.Contexts[model.Calls.IndexOf("arc")], StringComparison.Ordinal);
+        Assert.Contains("\"affordances\":[\"", model.Contexts[model.Calls.IndexOf("minds")], StringComparison.Ordinal);
+        Assert.DoesNotContain("\n  ", model.Contexts[model.Calls.IndexOf("minds")], StringComparison.Ordinal);
         Assert.DoesNotContain("\"reveal\"", model.Instructions[model.Calls.IndexOf("hook")], StringComparison.Ordinal);
 
         // Order is fixed, and the critic's objection to the hook sent back only the hook sub-step.
@@ -227,6 +231,11 @@ public sealed class PipelineTests
         var afterReview = log.SkipWhile(e => e.Step != "critic").Skip(1).Where(e => e.Kind != LogEntryKinds.Check).ToList();
         Assert.Equal([LogEntryKinds.Fix, LogEntryKinds.Patch, LogEntryKinds.Patch], afterReview.Take(3).Select(e => e.Kind));
         Assert.Contains("# Revise: conflict", afterReview[0].Instruction, StringComparison.Ordinal);
+
+        // The second look gets the first look's list to check; the first does not.
+        var reviews = log.Where(e => e.Step == "critic").ToList();
+        Assert.DoesNotContain("# Your last review", reviews[0].Instruction, StringComparison.Ordinal);
+        Assert.Contains("# Your last review", reviews[1].Instruction, StringComparison.Ordinal);
         Assert.Equal(options.LightModel, model.Models[^1]);
         var packet = result.Result.Case.Packet;
         Assert.True(packet.Validation.Passed);

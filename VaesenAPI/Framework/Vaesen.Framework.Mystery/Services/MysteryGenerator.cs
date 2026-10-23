@@ -398,6 +398,7 @@ public sealed class MysteryGenerator(
         var o = Options;
         var pending = new SortedDictionary<int, IReadOnlyList<CoherenceIssue>> { [0] = feedback, [1] = [], [2] = [], [3] = [] };
         var criticReworks = 0;
+        List<CoherenceIssue>? sentBack = null;
         for (var round = 0; ; round++)
         {
             foreach (var (sub, issues) in pending)
@@ -422,7 +423,7 @@ public sealed class MysteryGenerator(
             if (errors.Count == 0 && o.UseCritic)
             {
                 progress?.Report(new GenerationProgress(caseAttempt, CriticStep.Name, "Reviewing the case."));
-                var review = await new CriticStep(model, o).RunAsync(draft, caseAttempt, ct);
+                var review = await new CriticStep(model, o).RunAsync(draft, caseAttempt, ct, sentBack);
                 if (!review.Success)
                 {
                     draft.FailedStep = CriticStep.Name;
@@ -437,6 +438,7 @@ public sealed class MysteryGenerator(
                     // are fixed in place, in pipeline order; then the whole case is checked and reviewed once more.
                     criticReworks++;
                     var toFix = critique.Where(i => i.IsError || Fixable(i)).ToList();
+                    sentBack = toFix;
                     progress?.Report(new GenerationProgress(caseAttempt, CheckStepName, "Fixing what the critic found, step by step."));
                     await FixRoundAsync(draft, toFix, caseAttempt, light: false, ct);
                     continue;
@@ -539,20 +541,37 @@ public sealed class MysteryGenerator(
         };
 
         var applied = new List<CoherenceIssue>();
-        foreach (var (step, parts) in CriticRouting.Route(issues))
+        var routed = CriticRouting.Route(issues).ToDictionary(r => r.Step, r => r.Issues, StringComparer.Ordinal);
+        foreach (var step in CriticRouting.PipelineOrder)
         {
-            var result = await steps[step].FixAsync(draft, parts.Select(p => p.Part).ToList(), caseAttempt, light, ct);
-            if (result.Success)
+            if (!routed.TryGetValue(step, out var parts))
             {
-                applied.AddRange(parts.Select(p => p.Original));
+                continue;
             }
-            else
+
+            var before = draft.Packet;
+            var result = await steps[step].FixAsync(draft, parts.Select(p => p.Part).ToList(), caseAttempt, light, ct);
+            if (!result.Success)
             {
                 logger.LogInformation("The fix for {Step} did not pass its checks and was not applied: {Error}", step, result.ErrorMessage);
+                continue;
+            }
+
+            applied.AddRange(parts.Select(p => p.Original));
+
+            // What this fix changed reaches the later steps whose items are built on it.
+            foreach (var (later, follow) in CriticRouting.Dependents(before, draft.Packet))
+            {
+                if (!routed.TryGetValue(later, out var list))
+                {
+                    routed[later] = list = [];
+                }
+
+                list.Add((follow, follow));
             }
         }
 
-        return applied.Distinct().ToList();
+        return applied.Where(i => i.Source == IssueSources.Critic).Distinct().ToList();
     }
 
     /// <summary>

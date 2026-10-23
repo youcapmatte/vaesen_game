@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Text;
 using Vaesen.Framework.Core.Models;
 using Vaesen.Framework.Mystery.Ai;
 using Vaesen.Framework.Mystery.Models;
@@ -113,7 +114,8 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
         var ret = new ResultBase();
         var fixing = mode is Mode.Fix or Mode.FixLight;
         var previous = last is null ? null : Newtonsoft.Json.JsonConvert.SerializeObject(last);
-        var patchErrors = last is not null && Patch.Patchable(PatchLists(last), issues, options.PatchShare, anyCode: fixing) ? issues : [];
+        // A fix names its items, so it is always a patch when it can be: answering a few dozen items beats rewriting all.
+        var patchErrors = last is not null && Patch.Patchable(PatchLists(last), issues, fixing ? 1.0 : options.PatchShare, anyCode: fixing) ? issues : [];
 
         for (var attempt = 0; attempt <= retries; attempt++)
         {
@@ -451,8 +453,6 @@ public sealed class MindsStep(IMysteryModel model, ICoherenceValidator validator
 
     protected override CheckScope Scope => CheckScope.Minds;
 
-    protected override string FirstTryEffort(MysteryOptions o) => o.CreativeEffort;
-
     protected override IReadOnlyList<PatchList> PatchLists(MindsOutput output) =>
     [
         new("cast", output.Minds, m => ((CastMind)m).CharacterId),
@@ -579,7 +579,8 @@ public sealed class CriticStep(IMysteryModel model, MysteryOptions options)
 {
     public const string Name = "critic";
 
-    public async Task<ResultBase<List<CoherenceIssue>>> RunAsync(MysteryDraft draft, int caseAttempt, CancellationToken cancellationToken)
+    /// <param name="earlier">The issues of the critic's last look, when the case was sent back for them.</param>
+    public async Task<ResultBase<List<CoherenceIssue>>> RunAsync(MysteryDraft draft, int caseAttempt, CancellationToken cancellationToken, IReadOnlyList<CoherenceIssue>? earlier = null)
     {
         var ret = new ResultBase<List<CoherenceIssue>>();
         var entry = new GenerationLogEntry { CaseAttempt = caseAttempt, Step = Name };
@@ -592,12 +593,14 @@ public sealed class CriticStep(IMysteryModel model, MysteryOptions options)
             ["solveRule"] = PromptBuilder.SolveRuleForCritic(draft.Brief),
         });
 
-        entry.Instruction = PromptBuilder.WithCaseAndFeedback(instruction, draft.Packet, [], null);
+        entry.Instruction = PromptBuilder.WithCaseAndFeedback(instruction, draft.Packet, [], null) + Earlier(earlier);
         var reply = await model.GenerateAsync<CriticOutput>(new ModelRequest
         {
             Step = Name,
             Model = options.CriticModel,
-            Effort = options.CriticEffort,
+
+            // The second look checks the fixes against its own list: it does not need to think as hard as the first.
+            Effort = earlier is null ? options.CriticEffort : options.StandardEffort,
             MaxTokens = Math.Min(options.MaxOutputTokens, 32000),
             System = draft.SystemPrompt,
             Context = draft.ContextFor(Name),
@@ -654,5 +657,28 @@ public sealed class CriticStep(IMysteryModel model, MysteryOptions options)
         entry.Passed = !issues.Exists(i => i.IsError);
         draft.Packet.Validation.Runs++;
         return ret.Ok(issues);
+    }
+
+    /// <summary>
+    /// The last look's issues, for the second look: without them it reviews from scratch and asks for a new detail on
+    /// a clue it already had fixed, and the same check comes back reworded.
+    /// </summary>
+    private static string Earlier(IReadOnlyList<CoherenceIssue>? earlier)
+    {
+        if (earlier is null || earlier.Count == 0)
+        {
+            return "";
+        }
+
+        var text = new StringBuilder();
+        text.AppendLine();
+        text.AppendLine("# Your last review");
+        text.AppendLine("You sent the case back for these, and the steps that own them have been revised. For each, check that it is fixed. Raise it again only if it still fails as you described it; do not ask for more on a point that is now adequate. Raise a new problem only if it would really fail at the table.");
+        foreach (var issue in earlier)
+        {
+            text.AppendLine($"- [{issue.Severity}] {issue.Code} at {string.Join(", ", issue.Targets ?? [])}: {issue.Explanation}{(issue.SuggestedFix is null ? "" : $" Fix: {issue.SuggestedFix}")}");
+        }
+
+        return text.ToString();
     }
 }

@@ -68,6 +68,11 @@ public static partial class CriticRouting
             return (FactsStep.StepName, t);
         }
 
+        if (t is "channels" or "channel")
+        {
+            return (MindsStep.StepName, Patch.NewItem + "channel");
+        }
+
         var item = ItemId().Match(t);
         if (item.Success)
         {
@@ -110,6 +115,44 @@ public static partial class CriticRouting
         Source = issue.Source,
         Targets = issue.Targets,
     };
+
+    /// <summary>
+    /// What a fix that passed changed upstream, as issues for the items built on it: a revised event for its facts, a
+    /// revised fact for the channels that reveal it and the people who know it. Without them a fixed date stays wrong
+    /// in every channel that quotes it, and the critic raises it again.
+    /// </summary>
+    public static List<(string Step, CoherenceIssue Issue)> Dependents(CasePacket before, CasePacket after)
+    {
+        var found = new List<(string Step, CoherenceIssue Issue)>();
+        CoherenceIssue Follow(string location, string what, string text) => new()
+        {
+            Code = IssueCodes.Consistency,
+            Severity = IssueSeverities.Warning,
+            Location = location,
+            Explanation = $"{what} was revised and now reads: \"{text}\". This item is built on it: make it agree (dates, names, details) and change nothing else.",
+            Source = IssueSources.Structural,
+        };
+
+        foreach (var e in after.Truth.Escalation)
+        {
+            var old = before.Truth.Escalation.Find(x => x.Id == e.Id);
+            if (old is not null && (old.Description != e.Description || old.When != e.When))
+            {
+                found.AddRange(e.FactIds.Select(f => (FactsStep.StepName, Follow($"fact:{f}", $"Event {e.Id}", $"{e.When}: {e.Description}"))));
+            }
+        }
+
+        foreach (var f in after.Facts)
+        {
+            if (before.Facts.Find(x => x.Id == f.Id) is { } old && old.Statement != f.Statement)
+            {
+                found.AddRange(after.Channels.Where(c => c.FactId == f.Id).Select(c => (MindsStep.StepName, Follow($"channel:{c.Id}", $"Fact {f.Id}", f.Statement))));
+                found.AddRange(after.Cast.Where(c => c.Knows.Exists(k => k.FactId == f.Id)).Select(c => (MindsStep.StepName, Follow($"cast:{c.CharacterId}", $"Fact {f.Id}", f.Statement))));
+            }
+        }
+
+        return found;
+    }
 
     [GeneratedRegex("^([efdcbr])\\d+$")]
     private static partial Regex ItemId();

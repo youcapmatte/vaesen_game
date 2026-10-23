@@ -6,7 +6,9 @@ For every check that does not pass, list in targets every id it touches, one per
 - a fact f3, a decoy thread d1, an escalation event e4, a channel c7, a beat b2, a lever r1, the climax, the hook, a scene as scene:<placeId>;
 - a truth field: truth.summary, truth.provocation, truth.hiddenHandMotive, truth.decoyReading;
 - a person with the part you mean: npc-anna-lind.identity, .wants, .secrets, .relationships (who they are), or .knows, .thinks, .lies (what they know and say).
-Give a concrete suggestedFix for every warning too: what to change, item by item. Leave targets empty only when the whole design of a step is wrong, not when items can be fixed.
+Give a concrete suggestedFix for every warning too: what to change, item by item. Leave targets empty only when the whole design of a step is wrong, not when items can be fixed. When the fix needs a new way in to a fact (no channel teaches it yet), add channels to targets as well as the fact.
+
+Keep explanation and suggestedFix to about 60 words each: the items and the change, nothing else. When a date or a detail disagrees, say which version every item should use.
 
 - deepLoreTrail: the solution trail rests on the creature's deep lore, not the obvious folklore answer.
 - nonTrivial: the case is genuinely hard along its focus ({{focus}}); it cannot be solved from the hook alone.
