@@ -6,6 +6,7 @@ using Nexus.Table.Api;
 using Nexus.Table.Models;
 using Nexus.Table.Services;
 using Vaesen.Framework.Mystery.Data;
+using Vaesen.Framework.Mystery.Generation;
 using Vaesen.Framework.Mystery.Models;
 
 namespace Nexus.Table.Tests;
@@ -64,6 +65,28 @@ public sealed class MysteryTableTests : IDisposable
         Assert.Equal(HttpStatusCode.OK, (await host.DeleteAsync("/api/mysteries/table")).StatusCode);
         Assert.Null((await NexusApiFactory.ResultAsync<SocietyView>(await ingrid.GetAsync("/api/society"))).Society.AtTable);
         Assert.Null((await NexusApiFactory.ResultAsync<GmTable>(await agent.GetAsync("/api/agent/table"))).Mystery);
+    }
+
+    [Fact]
+    public async Task Closing_a_case_takes_it_off_the_table_and_starts_writing_the_next()
+    {
+        var host = await _factory.ClientForAsync("mattias");
+        var pack = (await _factory.Services.GetRequiredService<IContentStore>().GetPackAsync("vaesen")).Result!;
+        await _factory.Services.GetRequiredService<IWorldStore>().SaveAsync(new SocietyWorld
+        {
+            SocietyId = SocietyId,
+            SeededAt = DateTime.UtcNow,
+            Characters = pack.Characters.Select(WorldSeeder.Instantiate).ToList(),
+        });
+        await SaveAsync(Case("mystery-played", SocietyId, "The Drowned Bells"));
+        await host.PostAsync("/api/mysteries/mystery-played/table", null);
+
+        var closed = await host.PostAsJsonAsync("/api/mysteries/mystery-played/close", new { outcome = "solved", notes = "" });
+
+        Assert.Equal(HttpStatusCode.OK, closed.StatusCode);
+        Assert.Null((await NexusApiFactory.ResultAsync<SocietyView>(await host.GetAsync("/api/society"))).Society.AtTable);
+        var next = await NexusApiFactory.ResultAsync<MysteryJob>(await host.GetAsync("/api/mysteries/jobs/current"));
+        Assert.Equal(MysteryJobKinds.Mystery, next.Kind);
     }
 
     [Fact]

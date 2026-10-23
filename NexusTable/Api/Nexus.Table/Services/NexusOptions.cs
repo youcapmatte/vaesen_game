@@ -20,4 +20,10 @@ public sealed class NexusOptions
 
     /// <summary>How many recent rolls the table log shows.</summary>
     public int RecentRolls { get; set; } = 50;
+
+    /// <summary>
+    /// Start writing the next mystery in the background as soon as one is closed, so a validated case is ready when the
+    /// Society next sits down (generation takes many minutes, too long to wait for at the table).
+    /// </summary>
+    public bool PreGenerateNextCase { get; set; } = true;
 }

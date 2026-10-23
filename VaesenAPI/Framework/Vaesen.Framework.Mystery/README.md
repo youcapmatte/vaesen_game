@@ -8,7 +8,7 @@ It is a framework library like the others here: Nexus Table registers it now (`A
 Models/        Canon (Setting, AffordanceVocabulary, VaesenDefinition, PlaceTemplate, LevelDefinition,
                ConflictArchetype, CharacterDefinition), the CasePacket (spec 8), AssignmentBrief, CoherenceIssue
 Content/       ContentLoader, ContentValidator, and the content packs themselves: Content/vaesen/
-Generation/    Assignment (deterministic), the typed steps (conflict -> escalation -> humans -> clues -> critic),
+Generation/    Assignment (deterministic), the typed steps (conflict -> escalation -> humans -> facts -> minds -> arc -> hook -> critic),
                the step output types, PromptBuilder and the prompt templates (Prompts/*.md)
 Validation/    FactGraph and CaseValidator: the structural checks in C#
 Ai/            IMysteryModel and the Anthropic implementation (streaming, structured outputs, caching, fallbacks)
@@ -32,9 +32,17 @@ Services/      MysteryGenerator, WorldService (seeding, closing, write-back), Co
    - **conflict**: the provocation, which must physically exist in a place of the level.
    - **escalation**: the symptoms.
    - **humans**: the cast and the residents.
-   - **clues**: facts, channels, minds, decoys, beats, the climax, resolution levers and the hook.
-3. **Critic**: the judgement checks that code cannot make. Its errors send the clue step round again.
-4. **Retries**: a failing step is re-rolled with its issues fed back (`MaxStepRetries`). If it still fails, the whole case is re-rolled with a new seed (`MaxCaseRetries`). If that fails too, generation fails visibly and hands back the last attempt with the full log. Every model call and validator run is logged with its tokens, cache hits and latency.
+   - **clues**, as four sub-steps, each small enough for the API to enforce its schema (so a fixed-value field cannot get an invented value):
+     - **facts**: every fact, the decoy threads, and which facts the events are. Whether a fact is deep lore or a giveaway tell is derived from its lore ids, not asked for.
+     - **minds**: what every person knows, thinks and lies about, and every channel into every fact.
+     - **arc**: beats, the climax and the resolution levers (crude, partial or deep). The engine computes the tension weights: the load-bearing facts, weighing twice the others, take the dial 15% past the climax.
+     - **hook**: the hook and the scene descriptions.
+3. **Whole-case checks and the critic**: reachability, redundancy, fair play and the rest, then the judgement checks code cannot make. Each problem goes back only to the sub-step it points at (new facts redo everything built on them), up to `MaxReworkRounds`.
+4. **Repairs and retries**:
+   - Near misses in fixed-value fields ("Surface", "half") are repaired in code before validation and logged as warnings.
+   - When a step's only errors are field-level ones on a quarter of its items or fewer, a **patch** call asks for just those items and merges them back. Otherwise the step retries in full with its issues fed back (`MaxStepRetries`); every issue about a fixed value lists the allowed values.
+   - A step that gives up starts again on its own; steps that passed are kept. An earlier step is re-run only when an issue points at it. The case is re-rolled from a new brief only when the conflict finds nothing plausible fits (`MaxCaseRetries`), and the focus alone is changed when it does not suit the creature (`supportedFoci`).
+   - A rejected case records the step that gave up; its report ends with that step's last attempt. Every model call and check is logged with its kind (full, fresh, patch, check), tokens, cache hits and latency.
 
 ## The Society's world (spec 9)
 
@@ -145,10 +153,14 @@ dotnet run --project VaesenAPI/Tools/Vaesen.Mystery.CaseLab -- validate cases/ca
 
 | Setting | Default | |
 |---|---|---|
-| `CreativeModel`, `CreativeEffort` | `claude-opus-5-5`, `high` | conflict, escalation, humans, clues |
+| `CreativeModel` | `claude-opus-5-5` | every creative step |
+| `CreativeEffort`, `StandardEffort`, `LightEffort` | `high`, `medium`, `low` | high: conflict and the first try of facts and minds; medium: other first tries; low: retries and the hook |
+| `RetryModel`, `PatchModel`, `PatchEffort` | (creative model), (creative model), `low` | a smaller model may take retries and patches |
+| `PatchMaxOutputTokens`, `PatchShare` | 16000, 0.25 | a patch's output cap; the share of a step's items a patch may touch |
+| `MaxReworkRounds` | 2 | how often whole-case and critic issues send sub-steps back |
 | `CriticModel`, `CriticEffort` | `claude-opus-5-5`, `high` | the critic |
 | `UseCritic` | `true` | |
-| `MaxOutputTokens` | 64000 | per call; steps stream |
+| `MaxOutputTokens` | 64000 | per full step call, thinking included; steps stream |
 | `MaxStepRetries`, `MaxCaseRetries` | 2, 1 | |
 | `VaesenCooldown` | 3 | recent mysteries a creature is kept out of |
 | `RedHerringDensity` | `low` | `low`, `medium` or `high` |

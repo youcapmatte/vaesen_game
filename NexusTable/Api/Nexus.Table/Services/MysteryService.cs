@@ -181,6 +181,7 @@ public sealed class MysteryService(
     IWorldService worlds,
     IContentStore content,
     Microsoft.Extensions.Options.IOptions<Vaesen.Framework.Mystery.MysteryOptions> options,
+    Microsoft.Extensions.Options.IOptions<NexusOptions> nexus,
     IHostApplicationLifetime lifetime,
     ILogger<MysteryService> logger) : IMysteryService
 {
@@ -471,6 +472,16 @@ public sealed class MysteryService(
         {
             // A closed case leaves the table; the next one is chosen fresh.
             await society.SetAtTableAsync(caller, null, cancellationToken).ConfigureAwait(false);
+        }
+
+        if (closed.Success && nexus.Value.PreGenerateNextCase)
+        {
+            // Write the next case now, in the background, so one is ready when the Society next sits down.
+            var next = await StartAsync(caller, CancellationToken.None).ConfigureAwait(false);
+            if (!next.Success)
+            {
+                logger.LogInformation("The next case was not started after closing {MysteryId}: {Error}", mysteryId, next.ErrorMessage);
+            }
         }
 
         return closed;

@@ -1,6 +1,6 @@
 "use client";
 
-import { Badge, Box, Button, Container, Group, Loader, SimpleGrid, Stack, Text, ThemeIcon, Title } from "@mantine/core";
+import { Anchor, Badge, Box, Button, Container, Group, Loader, SimpleGrid, Stack, Text, ThemeIcon, Title } from "@mantine/core";
 import { IconAlertTriangle, IconCandle, IconCheck, IconFeather, IconFlask, IconLock, IconScript } from "@tabler/icons-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -9,6 +9,7 @@ import { Http, useApi, useApiData } from "@/common/client/core/Api";
 import { useMe, useSociety } from "@/common/client/components/hooks";
 import { Corners, SightMark } from "@/common/client/components/Ornament";
 import { ErrorNote, FullPageLoader, PageFrame, PageTitle } from "@/common/client/components/PageFrame";
+import { TableButton } from "./TableButton";
 
 /** The host's case files: write a new mystery with the engine, and the cases written so far. Host only. */
 export function CaseFilesPage() {
@@ -62,6 +63,13 @@ function HostCaseFiles() {
         </Button>
       </Group>
 
+      {cases && (
+        <NextCase
+          atTableTitle={view?.society.atTable?.title}
+          ready={cases.filter((c) => c.passed && c.status === "generated" && c.mysteryId !== atTableId)}
+        />
+      )}
+
       <GeneratePanel onWritten={() => void refreshCases()} />
 
       <Text className="nx-kicker" ta="center" mt={48} mb="sm">
@@ -76,6 +84,33 @@ function HostCaseFiles() {
         {cases?.map((summary) => <CaseCard key={summary.mysteryId} summary={summary} atTable={summary.mysteryId === atTableId} />)}
       </SimpleGrid>
     </Container>
+  );
+}
+
+/**
+ * What the Society plays next: the case at the table, and the cases written and checked but not yet played. When a
+ * mystery is closed, the next one is written in the background, so one is usually ready.
+ */
+function NextCase({ atTableTitle, ready }: { atTableTitle?: string; ready: CaseSummary[] }) {
+  return (
+    <Box className="nx-panel" p="md" maw={760} mx="auto" mb="lg">
+      <Stack gap={6} align="center" ta="center">
+        {atTableTitle && <Text fz="sm">At the table: <b>{atTableTitle}</b>.</Text>}
+        {ready.length > 0 ? (
+          <>
+            <Text fz="sm">
+              Ready to play: {ready.length} case{ready.length === 1 ? "" : "s"}. Next:{" "}
+              <Anchor component={Link} href={`/mysteries/${ready[0].mysteryId}`} c="gold.4">{ready[0].title || "Untitled"}</Anchor>
+            </Text>
+            {!atTableTitle && <TableButton mysteryId={ready[0].mysteryId} playable />}
+          </>
+        ) : (
+          <Text fz="sm" c="var(--nx-sepia)">
+            No case is ready to play yet. Write one below; once a mystery is closed, the next one is written by itself.
+          </Text>
+        )}
+      </Stack>
+    </Box>
   );
 }
 
