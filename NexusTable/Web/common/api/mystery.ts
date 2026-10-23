@@ -102,12 +102,12 @@ export interface CastMember {
   name: string;
   instanceRef: string;
   plotRole: string;
-  tier: "significant" | "resident";
+  importance: "significant" | "resident";
   identity?: { age: number; gender: string; occupation: string; rank: string; home: string; appearance: string } | null;
   homePlaceId?: string | null;
   knows: { factId: string; source: string; when: string }[];
   thinks: { belief: string; true: boolean }[];
-  wants: { drives: string[]; fears: string[]; guilt?: string | null; exposureBelief: number; permittedActions: { id: string; tier: string; description: string }[] };
+  wants: { drives: string[]; fears: string[]; guilt?: string | null; exposureBelief: number; permittedActions: { id: string; desperation: string; description: string }[] };
   secrets: string[];
   lies: { about: string; story: string }[];
   routine: string;
@@ -144,7 +144,7 @@ export interface CasePacket {
   resolutionLevers: {
     id: string;
     description: string;
-    solveDepth: "crude" | "deep";
+    solveDepth: "crude" | "partial" | "deep";
     requiresFactIds: string[];
     consequences: {
       world: string[];

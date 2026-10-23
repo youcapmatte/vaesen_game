@@ -191,7 +191,7 @@ public static class WorldWriteBack
                 person.MysteryIds.Add(p.MysteryId);
             }
 
-            if (member.Tier == CastTiers.Significant && person.Importance < 3)
+            if (member.Importance == CastImportance.Significant && person.Importance < 3)
             {
                 person.Importance++;
             }
@@ -267,7 +267,7 @@ public static class WorldWriteBack
     /// <summary>A case's own person, now part of the Society's world: residents stay with their place, the rest join the background.</summary>
     private static CharacterInstance Promote(CastMember member, CasePacket p)
     {
-        var resident = member.Tier == CastTiers.Resident;
+        var resident = member.Importance == CastImportance.Resident;
         var pivotal = member.CharacterId == p.Hook.HookGiverId || member.CharacterId == p.Truth.PlotCentre.CharacterId;
         return new CharacterInstance
         {

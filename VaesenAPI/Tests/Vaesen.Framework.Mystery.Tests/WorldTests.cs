@@ -61,7 +61,7 @@ public sealed class WorldTests
         var packet = ValidatorTests.SampleCase();
         packet.Cast.Add(new CastMember
         {
-            CharacterId = "constable-hagg", Name = "Karl Edvard Hägg", InstanceRef = InstanceRefs.Persistent, PlotRole = "official", Tier = CastTiers.Significant,
+            CharacterId = "constable-hagg", Name = "Karl Edvard Hägg", InstanceRef = InstanceRefs.Persistent, PlotRole = "official", Importance = CastImportance.Significant,
         });
         var context = ValidatorTests.ContextFor(packet);
         var dead = new ValidationContext

@@ -230,7 +230,7 @@ public sealed class HumansStep(IMysteryModel model, ICoherenceValidator validato
             Name = c.Name,
             InstanceRef = c.InstanceRef,
             PlotRole = c.PlotRole,
-            Tier = c.Tier,
+            Importance = c.Importance,
             RoleSlotId = c.RoleSlotId,
             Identity = c.Identity ?? (c.InstanceRef is InstanceRefs.Persistent or InstanceRefs.Promoted
                 ? draft.World?.Find(c.CharacterId)?.Identity ?? draft.Pack.FindCharacter(c.CharacterId)?.Identity

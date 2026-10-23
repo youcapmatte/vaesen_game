@@ -232,9 +232,9 @@ public sealed class CaseValidator : ICoherenceValidator
                     Error(IssueCodes.Schema, at, $"Unknown instance ref '{member.InstanceRef}'.{CoherenceIssue.Allowed(InstanceRefs.All)}");
                 }
 
-                if (!CastTiers.All.Contains(member.Tier))
+                if (!CastImportance.All.Contains(member.Importance))
                 {
-                    Error(IssueCodes.Schema, at, $"Unknown tier '{member.Tier}'.{CoherenceIssue.Allowed(CastTiers.All)}");
+                    Error(IssueCodes.Schema, at, $"Unknown importance '{member.Importance}'.{CoherenceIssue.Allowed(CastImportance.All)}");
                 }
 
                 if (member.InstanceRef is InstanceRefs.Persistent or InstanceRefs.Promoted)
@@ -266,9 +266,9 @@ public sealed class CaseValidator : ICoherenceValidator
                     Error(IssueCodes.AffordanceFit, at, $"Home place '{member.HomePlaceId}' is not in the level.");
                 }
 
-                foreach (var action in member.Wants.PermittedActions.Where(a => !DesperationTiers.All.Contains(a.Tier)))
+                foreach (var action in member.Wants.PermittedActions.Where(a => !DesperationTiers.All.Contains(a.Desperation)))
                 {
-                    Error(IssueCodes.Schema, at, $"Action '{action.Id}' has unknown tier '{action.Tier}'.{CoherenceIssue.Allowed(DesperationTiers.All)}");
+                    Error(IssueCodes.Schema, at, $"Action '{action.Id}' has unknown desperation '{action.Desperation}'.{CoherenceIssue.Allowed(DesperationTiers.All)}");
                 }
 
                 foreach (var rel in member.Relationships.Where(r => packet.FindCast(r.CharacterId) is null))
@@ -284,13 +284,13 @@ public sealed class CaseValidator : ICoherenceValidator
                 {
                     Error(IssueCodes.CastCoherence, "truth.plotCentre", "The hidden hand is not in the cast.", "Cast the hidden hand and point plotCentre.characterId at them.");
                 }
-                else if (hand.Tier != CastTiers.Significant)
+                else if (hand.Importance != CastImportance.Significant)
                 {
                     Error(IssueCodes.CastCoherence, "truth.plotCentre", "The hidden hand must be a significant character.");
                 }
             }
 
-            if (packet.Cast.Count(c => c.Tier == CastTiers.Resident) < 2)
+            if (packet.Cast.Count(c => c.Importance == CastImportance.Resident) < 2)
             {
                 Warn(IssueCodes.CastCoherence, "cast", "Few location residents: add ordinary people unconnected to the case for colour.");
             }

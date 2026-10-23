@@ -100,9 +100,9 @@ public sealed class CastDraft
     [JsonProperty("plotRole")]
     public string PlotRole { get; set; } = "";
 
-    [OneOf(typeof(CastTiers))]
-    [JsonProperty("tier")]
-    public string Tier { get; set; } = CastTiers.Significant;
+    [OneOf(typeof(CastImportance))]
+    [JsonProperty("importance")]
+    public string Importance { get; set; } = CastImportance.Significant;
 
     [JsonProperty("roleSlotId")]
     public string? RoleSlotId { get; set; }

@@ -101,67 +101,67 @@
   ],
   "cast": [
     {
-      "characterId": "npc-anna-lind", "name": "Anna Lind", "instanceRef": "new", "plotRole": "hook-giver", "tier": "significant", "roleSlotId": "victim",
+      "characterId": "npc-anna-lind", "name": "Anna Lind", "instanceRef": "new", "plotRole": "hook-giver", "importance": "significant", "roleSlotId": "victim",
       "identity": { "age": 22, "gender": "female", "occupation": "maid at Storgården", "rank": "farmhand or maid", "home": "Forsby", "appearance": "Thin, red-handed, a black ribbon sewn on her sleeve." },
       "homePlaceId": "farm",
       "knows": [ { "factId": "f2", "source": "told:npc-erik-smed", "when": "the morning after" }, { "factId": "f3", "source": "witnessed", "when": "this month" }, { "factId": "f1", "source": "told:npc-brita-holm", "when": "last week" } ],
       "thinks": [ { "belief": "Lars the fiddler sold Johan to the falls for his music.", "true": false } ],
-      "wants": { "drives": [ "to have her brother buried", "to be believed" ], "fears": [ "losing her place for spreading stories" ], "guilt": "She quarrelled with Johan the day he died.", "exposureBelief": 0.1, "permittedActions": [ { "id": "anna-plead", "tier": "medium", "description": "Begs the Society to drag the pond.", "effects": [] } ] },
+      "wants": { "drives": [ "to have her brother buried", "to be believed" ], "fears": [ "losing her place for spreading stories" ], "guilt": "She quarrelled with Johan the day he died.", "exposureBelief": 0.1, "permittedActions": [ { "id": "anna-plead", "desperation": "medium", "description": "Begs the Society to drag the pond.", "effects": [] } ] },
       "secrets": [ "She quarrelled with Johan about his drinking the day he died." ], "lies": [],
       "routine": "Milking at five, the farm kitchen all day, church on Sunday.", "voiceNotes": "Quick, low, apologetic; says 'begging your pardon' often.", "relationships": [ { "characterId": "npc-lars-spelman", "nature": "suspects him", "sentiment": -2 } ]
     },
     {
-      "characterId": "npc-per-holm", "name": "Per Holm", "instanceRef": "new", "plotRole": "the one who neglected the custom", "tier": "significant", "roleSlotId": "go-between",
+      "characterId": "npc-per-holm", "name": "Per Holm", "instanceRef": "new", "plotRole": "the one who neglected the custom", "importance": "significant", "roleSlotId": "go-between",
       "identity": { "age": 51, "gender": "male", "occupation": "miller", "rank": "tenant farmer", "home": "Forsby Mill", "appearance": "Flour in the creases of his face, big shoulders gone soft, eyes red from no sleep." },
       "homePlaceId": "mill",
       "knows": [ { "factId": "f1", "source": "witnessed", "when": "every night" }, { "factId": "f5", "source": "witnessed", "when": "since August" }, { "factId": "f6", "source": "self", "when": "the start of the season" }, { "factId": "f14", "source": "witnessed", "when": "September" } ],
       "thinks": [ { "belief": "The river is punishing him for leaving nothing.", "true": true } ],
-      "wants": { "drives": [ "to keep the lease", "to have the wheel turn" ], "fears": [ "the company", "that Johan's death is on him" ], "guilt": "He thinks he killed Johan by leaving nothing.", "exposureBelief": 0.4, "permittedActions": [ { "id": "holm-deflect", "tier": "low", "description": "Blames the dam and nothing else.", "effects": [] }, { "id": "holm-confess", "tier": "high", "description": "Confesses the broken offering to the vicar.", "effects": [ "emits f6" ] } ] },
+      "wants": { "drives": [ "to keep the lease", "to have the wheel turn" ], "fears": [ "the company", "that Johan's death is on him" ], "guilt": "He thinks he killed Johan by leaving nothing.", "exposureBelief": 0.4, "permittedActions": [ { "id": "holm-deflect", "desperation": "low", "description": "Blames the dam and nothing else.", "effects": [] }, { "id": "holm-confess", "desperation": "high", "description": "Confesses the broken offering to the vicar.", "effects": [ "emits f6" ] } ] },
       "secrets": [ "He left nothing at the race this year." ], "lies": [ { "about": "f6", "story": "That he made the offering as always." } ],
       "routine": "At the mill from dawn; drinks alone in the counting house after dark.", "voiceNotes": "Slow, heavy, answers questions with questions.", "relationships": [ { "characterId": "npc-axel-wester", "nature": "his landlord's man", "sentiment": -2 }, { "characterId": "npc-brita-holm", "nature": "husband", "sentiment": 2 } ]
     },
     {
-      "characterId": "npc-brita-holm", "name": "Brita Holm", "instanceRef": "new", "plotRole": "witness", "tier": "significant", "roleSlotId": null,
+      "characterId": "npc-brita-holm", "name": "Brita Holm", "instanceRef": "new", "plotRole": "witness", "importance": "significant", "roleSlotId": null,
       "identity": { "age": 47, "gender": "female", "occupation": "miller's wife", "rank": "tenant farmer", "home": "Forsby Mill", "appearance": "Small, quick, a shawl crossed and knotted tight." },
       "homePlaceId": "mill",
       "knows": [ { "factId": "f1", "source": "witnessed", "when": "every night" }, { "factId": "f6", "source": "witnessed", "when": "the start of the season" }, { "factId": "f14", "source": "told:npc-per-holm", "when": "September" } ],
       "thinks": [ { "belief": "Wester is to blame for all of it.", "true": false } ],
-      "wants": { "drives": [ "to protect Per" ], "fears": [ "losing the mill" ], "guilt": null, "exposureBelief": 0.2, "permittedActions": [ { "id": "brita-plead", "tier": "medium", "description": "Pleads with the Society not to tell the company.", "effects": [] } ] },
+      "wants": { "drives": [ "to protect Per" ], "fears": [ "losing the mill" ], "guilt": null, "exposureBelief": 0.2, "permittedActions": [ { "id": "brita-plead", "desperation": "medium", "description": "Pleads with the Society not to tell the company.", "effects": [] } ] },
       "secrets": [], "lies": [],
       "routine": "Mill house kitchen; visits Kajsa at Granbacken on Thursdays.", "voiceNotes": "Sharp and fast, protective.", "relationships": [ { "characterId": "npc-kajsa-granback", "nature": "visits her", "sentiment": 2 } ]
     },
     {
-      "characterId": "npc-kajsa-granback", "name": "Kajsa at Granbacken", "instanceRef": "new", "plotRole": "the warner who knows the old ways", "tier": "significant", "roleSlotId": "warner",
+      "characterId": "npc-kajsa-granback", "name": "Kajsa at Granbacken", "instanceRef": "new", "plotRole": "the warner who knows the old ways", "importance": "significant", "roleSlotId": "warner",
       "identity": { "age": 78, "gender": "female", "occupation": "crofter's widow", "rank": "crofter", "home": "Granbacken", "appearance": "Bent nearly double, a clay pipe, very bright eyes." },
       "homePlaceId": "croft",
       "knows": [ { "factId": "f1", "source": "told:npc-brita-holm", "when": "a Thursday" }, { "factId": "f6", "source": "told:npc-brita-holm", "when": "a Thursday" }, { "factId": "f7", "source": "lore", "when": "always" }, { "factId": "f9", "source": "lore", "when": "always" } ],
       "thinks": [ { "belief": "The young people deserve what they get for laughing.", "true": false } ],
-      "wants": { "drives": [ "that the old ways be kept" ], "fears": [ "being called a witch again" ], "guilt": null, "exposureBelief": 0.0, "permittedActions": [ { "id": "kajsa-silence", "tier": "low", "description": "Pretends to be deaf to gentlefolk.", "effects": [] } ] },
+      "wants": { "drives": [ "that the old ways be kept" ], "fears": [ "being called a witch again" ], "guilt": null, "exposureBelief": 0.0, "permittedActions": [ { "id": "kajsa-silence", "desperation": "low", "description": "Pretends to be deaf to gentlefolk.", "effects": [] } ] },
       "secrets": [ "She was tried for witchcraft talk in 1838." ], "lies": [],
       "routine": "Sits at her door when it is dry; sees no one but Brita.", "voiceNotes": "Riddling, dialect-heavy, laughs at her own jokes.", "relationships": []
     },
     {
-      "characterId": "npc-axel-wester", "name": "Axel Wester", "instanceRef": "new", "plotRole": "the one who provoked", "tier": "significant", "roleSlotId": "provoker",
+      "characterId": "npc-axel-wester", "name": "Axel Wester", "instanceRef": "new", "plotRole": "the one who provoked", "importance": "significant", "roleSlotId": "provoker",
       "identity": { "age": 36, "gender": "male", "occupation": "sawmill manager", "rank": "burgher", "home": "the sawmill house", "appearance": "Clean-shaven, a watch chain, boots too good for the mud." },
       "homePlaceId": "sawmill",
       "knows": [ { "factId": "f5", "source": "self", "when": "August" }, { "factId": "f14", "source": "self", "when": "September" }, { "factId": "f1", "source": "told:npc-per-holm", "when": "this month" } ],
       "thinks": [ { "belief": "Holm stops his own wheel to get the rent lowered.", "true": false } ],
-      "wants": { "drives": [ "to make the saw pay", "to be seen as a modern man" ], "fears": [ "the company's directors" ], "guilt": null, "exposureBelief": 0.3, "permittedActions": [ { "id": "wester-hide", "tier": "medium", "description": "Has the dam papers taken from the office.", "effects": [ "closes c4", "emits f16" ] } ] },
+      "wants": { "drives": [ "to make the saw pay", "to be seen as a modern man" ], "fears": [ "the company's directors" ], "guilt": null, "exposureBelief": 0.3, "permittedActions": [ { "id": "wester-hide", "desperation": "medium", "description": "Has the dam papers taken from the office.", "effects": [ "closes c4", "emits f16" ] } ] },
       "secrets": [ "The dam was built without the county's permit." ], "lies": [],
       "routine": "The saw by day, the inn's best room in the evening.", "voiceNotes": "Brisk, superior, quotes newspapers.", "relationships": []
     },
     {
-      "characterId": "npc-lars-spelman", "name": "Lars Spelman", "instanceRef": "new", "plotRole": "suspect (decoy)", "tier": "significant", "roleSlotId": null,
+      "characterId": "npc-lars-spelman", "name": "Lars Spelman", "instanceRef": "new", "plotRole": "suspect (decoy)", "importance": "significant", "roleSlotId": null,
       "identity": { "age": 27, "gender": "male", "occupation": "fiddler and day labourer", "rank": "worker", "home": "the inn's back room", "appearance": "Long hands, a patched coat, a new fiddle case." },
       "homePlaceId": "inn",
       "knows": [ { "factId": "f12", "source": "self", "when": "the tenth" }, { "factId": "f13", "source": "self", "when": "the summer" } ],
       "thinks": [ { "belief": "The village wants someone to blame and he will do.", "true": true } ],
-      "wants": { "drives": [ "to be a real musician" ], "fears": [ "a mob" ], "guilt": null, "exposureBelief": 0.6, "permittedActions": [ { "id": "lars-flee", "tier": "high", "description": "Leaves for Uppsala by night.", "effects": [] } ] },
+      "wants": { "drives": [ "to be a real musician" ], "fears": [ "a mob" ], "guilt": null, "exposureBelief": 0.6, "permittedActions": [ { "id": "lars-flee", "desperation": "high", "description": "Leaves for Uppsala by night.", "effects": [] } ] },
       "secrets": [], "lies": [],
       "routine": "Labours at the saw by day and plays at the inn at night.", "voiceNotes": "Proud and touchy, then suddenly funny.", "relationships": [ { "characterId": "npc-anna-lind", "nature": "was courting her once", "sentiment": 1 } ]
     },
     {
-      "characterId": "npc-greta-forsberg", "name": "Greta Forsberg", "instanceRef": "new", "plotRole": "innkeeper", "tier": "resident", "roleSlotId": null,
+      "characterId": "npc-greta-forsberg", "name": "Greta Forsberg", "instanceRef": "new", "plotRole": "innkeeper", "importance": "resident", "roleSlotId": null,
       "identity": { "age": 44, "gender": "female", "occupation": "innkeeper", "rank": "burgher", "home": "Forsby Posting Inn", "appearance": "Broad, aproned, a ring of keys." },
       "homePlaceId": "inn",
       "knows": [ { "factId": "f4", "source": "witnessed", "when": "this month" }, { "factId": "f11", "source": "witnessed", "when": "this autumn" }, { "factId": "f12", "source": "witnessed", "when": "the tenth" } ],
@@ -169,7 +169,7 @@
       "secrets": [], "lies": [], "routine": "The taproom from noon.", "voiceNotes": "Loud and kind.", "relationships": []
     },
     {
-      "characterId": "npc-erik-smed", "name": "Erik the smith", "instanceRef": "new", "plotRole": "resident", "tier": "resident", "roleSlotId": null,
+      "characterId": "npc-erik-smed", "name": "Erik the smith", "instanceRef": "new", "plotRole": "resident", "importance": "resident", "roleSlotId": null,
       "identity": { "age": 39, "gender": "male", "occupation": "blacksmith", "rank": "worker", "home": "the smithy at the bridge", "appearance": "Scorched forearms, a missing front tooth." },
       "homePlaceId": "smithy",
       "knows": [ { "factId": "f2", "source": "witnessed", "when": "twelve days ago" }, { "factId": "f10", "source": "witnessed", "when": "often" }, { "factId": "f11", "source": "witnessed", "when": "this autumn" }, { "factId": "f15", "source": "witnessed", "when": "this autumn" } ],

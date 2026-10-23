@@ -273,7 +273,7 @@ function ChannelLine({ channel, via }: { channel: CaseChannel; via: string }) {
 }
 
 function PeopleTab({ p }: { p: CasePacket }) {
-  const order = (c: CastMember) => (c.tier === "significant" ? 0 : 1);
+  const order = (c: CastMember) => (c.importance === "significant" ? 0 : 1);
   return (
     <SimpleGrid cols={{ base: 1, md: 2 }} spacing="lg">
       {[...p.cast].sort((a, b) => order(a) - order(b)).map((c) => (
@@ -286,7 +286,7 @@ function PeopleTab({ p }: { p: CasePacket }) {
               </Text>
             </Box>
             <Group gap={4} justify="flex-end">
-              <Badge size="xs" color={c.tier === "significant" ? "blood" : "umber"}>{c.plotRole || c.tier}</Badge>
+              <Badge size="xs" color={c.importance === "significant" ? "blood" : "umber"}>{c.plotRole || c.importance}</Badge>
               {c.instanceRef !== "new" && <Badge size="xs" variant="outline" color="gold">{c.instanceRef}</Badge>}
             </Group>
           </Group>
@@ -331,7 +331,7 @@ function EndingsTab({ p }: { p: CasePacket }) {
         <Stack gap="md">
           {p.resolutionLevers.map((r) => (
             <Box key={r.id}>
-              <Group gap={6}><Badge size="xs" color={r.solveDepth === "deep" ? "moss" : "blood"}>{r.solveDepth} solve</Badge><Text fz="xs" c="var(--nx-ink-soft)">needs {r.requiresFactIds.join(", ") || "nothing"}</Text></Group>
+              <Group gap={6}><Badge size="xs" color={r.solveDepth === "deep" ? "moss" : r.solveDepth === "partial" ? "gold.8" : "blood"}>{r.solveDepth} solve</Badge><Text fz="xs" c="var(--nx-ink-soft)">needs {r.requiresFactIds.join(", ") || "nothing"}</Text></Group>
               <Text fz="sm" mt={2}>{r.description}</Text>
               {r.consequences.world.length > 0 && <Text fz="xs" c="var(--nx-ink-soft)" fs="italic">{r.consequences.world.join(" ")}</Text>}
               {r.consequences.attitudes?.map((a) => (
@@ -503,7 +503,7 @@ function CloseModal({ opened, onClose, stored, onClosed }: { opened: boolean; on
             label="How they ended it"
             value={leverId}
             onChange={setLeverId}
-            data={p.resolutionLevers.map((l) => ({ value: l.id, label: `${l.solveDepth === "deep" ? "Deep" : "Crude"}: ${l.description}` }))}
+            data={p.resolutionLevers.map((l) => ({ value: l.id, label: `${l.solveDepth.charAt(0).toUpperCase()}${l.solveDepth.slice(1)}: ${l.description}` }))}
             allowDeselect={false}
           />
         )}

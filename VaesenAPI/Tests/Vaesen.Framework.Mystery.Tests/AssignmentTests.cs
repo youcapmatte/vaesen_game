@@ -129,7 +129,7 @@ public sealed class AssignmentTests
         // A run invented "surface" and "shallow" for solve depths, "lore" for a fact kind and "core" for a cast tier.
         Assert.Contains($"\"enum\":[{string.Join(",", SolveDepths.All.Select(k => $"\"{k}\""))}]", clues, StringComparison.Ordinal);
         Assert.Contains($"\"enum\":[{string.Join(",", FactKinds.All.Select(k => $"\"{k}\""))}]", clues, StringComparison.Ordinal);
-        Assert.Contains($"\"enum\":[{string.Join(",", CastTiers.All.Select(k => $"\"{k}\""))}]", humans, StringComparison.Ordinal);
+        Assert.Contains($"\"enum\":[{string.Join(",", CastImportance.All.Select(k => $"\"{k}\""))}]", humans, StringComparison.Ordinal);
     }
 
     [Fact]

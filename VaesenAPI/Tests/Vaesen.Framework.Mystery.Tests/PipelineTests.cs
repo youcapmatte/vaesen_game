@@ -222,7 +222,7 @@ public sealed class PipelineTests
 
         private static CastDraft Draft(CastMember c) => new()
         {
-            CharacterId = c.CharacterId, Name = c.Name, InstanceRef = c.InstanceRef, PlotRole = c.PlotRole, Tier = c.Tier,
+            CharacterId = c.CharacterId, Name = c.Name, InstanceRef = c.InstanceRef, PlotRole = c.PlotRole, Importance = c.Importance,
             RoleSlotId = c.RoleSlotId, Identity = c.Identity, HomePlaceId = c.HomePlaceId, Wants = c.Wants, Secrets = c.Secrets,
             Routine = c.Routine, VoiceNotes = c.VoiceNotes, Relationships = c.Relationships,
         };

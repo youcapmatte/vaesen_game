@@ -393,10 +393,20 @@ public sealed class CastMember
     [JsonProperty("plotRole")]
     public string PlotRole { get; set; } = "";
 
-    /// <summary>One of <see cref="CastTiers"/>.</summary>
-    [OneOf(typeof(CastTiers))]
+    /// <summary>
+    /// One of <see cref="CastImportance"/>: how much they matter in this case. Not their tier in the Society's world
+    /// (<see cref="WorldTiers"/>), which is a different thing.
+    /// </summary>
+    [OneOf(typeof(CastImportance))]
+    [JsonProperty("importance")]
+    public string Importance { get; set; } = CastImportance.Significant;
+
+    /// <summary>Reads packets stored before "tier" was renamed "importance".</summary>
     [JsonProperty("tier")]
-    public string Tier { get; set; } = CastTiers.Significant;
+    private string? LegacyTier
+    {
+        set => Importance = value ?? Importance;
+    }
 
     /// <summary>The <see cref="RoleSlot"/> of the conflict archetype they fill, if any.</summary>
     [JsonProperty("roleSlotId")]
@@ -449,7 +459,8 @@ public static class InstanceRefs
     public static readonly IReadOnlyList<string> All = [Persistent, New, Promoted];
 }
 
-public static class CastTiers
+/// <summary>How much a cast member matters in one case.</summary>
+public static class CastImportance
 {
     public const string Significant = "significant";
     public const string Resident = "resident";
@@ -520,10 +531,17 @@ public sealed class CharacterAction
     [JsonProperty("id")]
     public string Id { get; set; } = "";
 
-    /// <summary>One of <see cref="DesperationTiers"/>.</summary>
+    /// <summary>One of <see cref="DesperationTiers"/>: how desperate they must be before they do it.</summary>
     [OneOf(typeof(DesperationTiers))]
+    [JsonProperty("desperation")]
+    public string Desperation { get; set; } = DesperationTiers.Low;
+
+    /// <summary>Reads packets stored before "tier" was renamed "desperation".</summary>
     [JsonProperty("tier")]
-    public string Tier { get; set; } = DesperationTiers.Low;
+    private string? LegacyTier
+    {
+        set => Desperation = value ?? Desperation;
+    }
 
     [JsonProperty("description")]
     public string Description { get; set; } = "";

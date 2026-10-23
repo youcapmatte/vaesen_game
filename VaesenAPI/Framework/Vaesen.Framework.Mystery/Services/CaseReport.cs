@@ -92,7 +92,7 @@ public static class CaseReport
         foreach (var c in p.Cast)
         {
             var who = c.Identity is null ? "" : $"{c.Identity.Age}, {c.Identity.Occupation}. ";
-            s.AppendLine(inv, $"- **{c.Name}** (`{c.CharacterId}`, {c.InstanceRef}, {c.Tier}, {c.PlotRole}): {who}Wants {string.Join("; ", c.Wants.Drives)}.{(c.Wants.Guilt is null ? "" : $" Guilt: {c.Wants.Guilt}")}");
+            s.AppendLine(inv, $"- **{c.Name}** (`{c.CharacterId}`, {c.InstanceRef}, {c.Importance}, {c.PlotRole}): {who}Wants {string.Join("; ", c.Wants.Drives)}.{(c.Wants.Guilt is null ? "" : $" Guilt: {c.Wants.Guilt}")}");
             if (c.Knows.Count > 0)
             {
                 s.AppendLine(inv, $"  - knows {string.Join(", ", c.Knows.Select(k => $"{k.FactId} ({k.Source})"))}");

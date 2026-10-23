@@ -50,8 +50,8 @@ public sealed class ValidatorTests(ITestOutputHelper output)
         packet.Facts[0].Kind = "lore";
         packet.Channels[0].Kind = "physical";
         packet.ResolutionLevers[0].SolveDepth = "surface";
-        packet.Cast[0].Tier = "core";
-        packet.Cast[0].Wants.PermittedActions[0].Tier = "extreme";
+        packet.Cast[0].Importance = "core";
+        packet.Cast[0].Wants.PermittedActions[0].Desperation = "extreme";
         packet.Truth.Escalation[0].Register = "smell";
 
         var issues = Validate(packet).Where(i => i.Code == IssueCodes.Schema).ToList();
@@ -60,6 +60,19 @@ public sealed class ValidatorTests(ITestOutputHelper output)
         Assert.All(issues, i => Assert.Contains("Allowed: ", i.Explanation, StringComparison.Ordinal));
         Assert.Contains(issues, i => i.Explanation == "Unknown solve depth 'surface'. Allowed: crude, partial, deep.");
         Assert.Contains(issues, i => i.Explanation.EndsWith("Allowed: symptom, cause, identity, alibi, motive, resolution, season, colour.", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void A_case_stored_before_the_renames_still_reads_its_importance_and_desperation()
+    {
+        var old = """{ "cast": [ { "characterId": "npc-a", "tier": "resident", "wants": { "permittedActions": [ { "id": "x", "tier": "high" } ] } } ] }""";
+
+        var packet = JsonConvert.DeserializeObject<CasePacket>(old)!;
+        var written = JsonConvert.SerializeObject(packet);
+
+        Assert.Equal(CastImportance.Resident, packet.Cast[0].Importance);
+        Assert.Equal(DesperationTiers.High, packet.Cast[0].Wants.PermittedActions[0].Desperation);
+        Assert.DoesNotContain("\"tier\"", written, StringComparison.Ordinal);
     }
 
     [Fact]
