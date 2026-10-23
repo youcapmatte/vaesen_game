@@ -48,9 +48,22 @@ public sealed class AnthropicMysteryModel : IMysteryModel
             {
                 answer = await StreamAsync<T>(request, structured: true, cancellationToken);
             }
-            // The API words it either way: "Schema is too complex..." or "The compiled grammar is too large...".
-            catch (AnthropicApiException ex) when (ex.Message.Contains("too complex", StringComparison.OrdinalIgnoreCase)
-                || ex.Message.Contains("grammar is too large", StringComparison.OrdinalIgnoreCase))
+            // The API words it either way: "Schema is too complex..." or "The compiled grammar is too large...". The case's
+            // ids as enums are what grow with the case, so the schema without them is tried before none at all.
+            catch (AnthropicApiException ex) when (TooComplex(ex) && request.Ids is not null)
+            {
+                _logger.LogWarning("The {Step} schema with the case's ids is too complex for structured outputs; trying it without them", request.Step);
+                try
+                {
+                    answer = await StreamAsync<T>(request with { Ids = null }, structured: true, cancellationToken);
+                }
+                catch (AnthropicApiException again) when (TooComplex(again))
+                {
+                    _logger.LogWarning("The {Step} schema is too complex for structured outputs; asking for JSON in the prompt instead", request.Step);
+                    answer = await StreamAsync<T>(request, structured: false, cancellationToken);
+                }
+            }
+            catch (AnthropicApiException ex) when (TooComplex(ex))
             {
                 _logger.LogWarning("The {Step} schema is too complex for structured outputs; asking for JSON in the prompt instead", request.Step);
                 answer = await StreamAsync<T>(request, structured: false, cancellationToken);
@@ -190,6 +203,9 @@ public sealed class AnthropicMysteryModel : IMysteryModel
     }
 
     /// <summary>The first 12 hex digits of a SHA-256 over what precedes the cache breakpoint.</summary>
+    private static bool TooComplex(AnthropicApiException ex) =>
+        ex.Message.Contains("too complex", StringComparison.OrdinalIgnoreCase) || ex.Message.Contains("grammar is too large", StringComparison.OrdinalIgnoreCase);
+
     private static string PrefixHash(ModelRequest request, string schema)
     {
         var bytes = System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(string.Join('\n', request.Model, schema, request.System, request.Context)));

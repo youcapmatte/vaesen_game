@@ -130,7 +130,7 @@ public static class PromptBuilder
             text.AppendLine();
         }
 
-        if (For(ConflictStep.StepName, EscalationStep.StepName, HumansStep.StepName, FactsStep.StepName, MindsStep.StepName, ArcStep.StepName))
+        if (For(ConflictStep.StepName, EscalationStep.StepName, HumansStep.StepName, FactsStep.StepName, MindsStep.StepName, ArcStep.StepName, CreatureStep.StepName))
         {
             text.AppendLine("# The creature");
             text.AppendLine(Json(CreatureView(draft.Vaesen, step)));

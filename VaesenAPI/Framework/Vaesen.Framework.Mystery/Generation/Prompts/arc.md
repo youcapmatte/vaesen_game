@@ -11,6 +11,5 @@ Beats and climax
 
 Resolution
 - Two to four resolution levers with different consequences for the world and the cast. {{leverRule}}
-- The creature's mind: {{creatureMindRule}}
 - For every resolution lever, list the deeds the players must carry out for it to take effect, besides knowing the facts (requiredDeeds): where (place, affordanceId), when (time: dawn, morning, midday, day, evening, dusk, night, sunday, weekday) and before whom (witnesses, with witnessRule any or all). A lever that only needs force has one deed (defeat or drive off the creature). A deep lever usually has two to four. Deed ids are the lever's id and a number: r3-d1, r3-d2. deedOrder is listed when the deeds must be done in order, otherwise any.
 - Each lever lists the facts the players need to see it (requiresFactIds). Its consequences persist in the Society's world: what changes in the world, how each affected person's attitude toward the Society moves (attitudes, with a delta from -3 to +3 and why), and who dies or leaves the district (fates: dead or departed).

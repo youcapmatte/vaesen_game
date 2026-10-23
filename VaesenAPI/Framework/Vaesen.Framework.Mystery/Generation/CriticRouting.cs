@@ -13,7 +13,7 @@ public static partial class CriticRouting
     /// <summary>The steps a fix can go to, in pipeline order: upstream fixes come first, since they can affect what follows.</summary>
     public static readonly IReadOnlyList<string> PipelineOrder =
     [
-        ConflictStep.StepName, EscalationStep.StepName, HumansStep.StepName, FactsStep.StepName, MindsStep.StepName, ArcStep.StepName, HookStep.StepName,
+        ConflictStep.StepName, EscalationStep.StepName, HumansStep.StepName, FactsStep.StepName, MindsStep.StepName, ArcStep.StepName, CreatureStep.StepName, HookStep.StepName,
     ];
 
     private static readonly HashSet<string> MindParts = new(StringComparer.OrdinalIgnoreCase) { "knows", "thinks", "lies" };
@@ -58,9 +58,14 @@ public static partial class CriticRouting
             return (HookStep.StepName, t);
         }
 
-        if (t is "climax" or "creatureMinds" or "creatureMind")
+        if (t is "climax")
         {
             return (ArcStep.StepName, t);
+        }
+
+        if (t is "creatureMinds" or "creatureMind")
+        {
+            return (CreatureStep.StepName, "creatureMinds");
         }
 
         // A lever's deed ("r3-d1") is the lever's.

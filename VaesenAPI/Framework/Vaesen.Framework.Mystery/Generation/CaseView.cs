@@ -32,6 +32,13 @@ public static class CaseView
             places = p.Channels.Select(c => c.PlaceId).OfType<string>().Distinct(),
             cast = Cast(p, withSecrets: false, withActions: true),
         },
+        CreatureStep.StepName => new
+        {
+            truth = new { p.Truth.Summary, p.Truth.Provocation, p.Truth.PlotCentre },
+            facts = p.Facts.Select(f => new { f.Id, f.Statement, f.Kind }),
+            climax = p.Climax,
+            resolutionLevers = p.ResolutionLevers.Select(l => new { l.Id, l.Description, l.SolveDepth, l.RequiredDeeds }),
+        },
         HookStep.StepName => new
         {
             truth = new { p.Truth.Summary, p.Truth.Focus },

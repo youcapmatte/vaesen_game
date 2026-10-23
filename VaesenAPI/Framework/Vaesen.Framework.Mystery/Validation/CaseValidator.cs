@@ -49,7 +49,10 @@ public enum CheckScope
     /// <summary>The checks on the finished case.</summary>
     Whole = 128,
 
-    Clues = Facts | Minds | Arc | Hook | Whole,
+    /// <summary>The creature's mind, for a creature that can be bargained with (between the arc and the hook).</summary>
+    Creature = 256,
+
+    Clues = Facts | Minds | Arc | Creature | Hook | Whole,
     Full = Conflict | Escalation | Cast | Clues,
 }
 
@@ -96,6 +99,11 @@ public sealed class CaseValidator : ICoherenceValidator
         if (scope.HasFlag(CheckScope.Arc))
         {
             run.CheckArc();
+        }
+
+        if (scope.HasFlag(CheckScope.Creature))
+        {
+            run.CheckCreatureMinds();
         }
 
         if (scope.HasFlag(CheckScope.Hook))
@@ -868,14 +876,13 @@ public sealed class CaseValidator : ICoherenceValidator
             }
 
             CheckDeeds();
-            CheckCreatureMinds();
         }
 
         /// <summary>
         /// A creature that can be bargained with has a mind, whose terms ask for the deep lever's deeds (fixes 3,
         /// section 10): otherwise the runtime has nothing to play it from, or its terms and the deep solve disagree.
         /// </summary>
-        private void CheckCreatureMinds()
+        public void CheckCreatureMinds()
         {
             foreach (var mind in packet.CreatureMinds)
             {

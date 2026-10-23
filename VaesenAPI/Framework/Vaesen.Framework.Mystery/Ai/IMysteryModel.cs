@@ -16,7 +16,7 @@ public interface IMysteryModel
 /// One structured call. The prompt is split by how stable it is, so prompt caching works: <see cref="System"/> is the
 /// same for every case, <see cref="Context"/> for every step of one case, <see cref="Instruction"/> changes per call.
 /// </summary>
-public sealed class ModelRequest
+public sealed record ModelRequest
 {
     /// <summary>Which step is asking (for logs): "conflict", "escalation", "humans", "facts", "minds", "arc", "hook", "critic".</summary>
     public required string Step { get; init; }

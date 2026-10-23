@@ -397,7 +397,7 @@ public sealed class MysteryGenerator(
     {
         var ret = new ResultBase();
         var o = Options;
-        var pending = new SortedDictionary<int, IReadOnlyList<CoherenceIssue>> { [0] = feedback, [1] = [], [2] = [], [3] = [] };
+        var pending = new SortedDictionary<int, IReadOnlyList<CoherenceIssue>> { [0] = feedback, [1] = [], [2] = [], [3] = [], [4] = [] };
         var criticReworks = 0;
         List<CoherenceIssue>? sentBack = null;
         for (var round = 0; ; round++)
@@ -409,6 +409,8 @@ public sealed class MysteryGenerator(
                     0 => await RunStepAsync(new FactsStep(model, validator, o), new CastStage(draft), issues, caseAttempt, "Deciding the facts.", progress, ct),
                     1 => await RunStepAsync(new MindsStep(model, validator, o), new FactsStage(draft), issues, caseAttempt, "Placing who knows what, and every way in.", progress, ct),
                     2 => await RunStepAsync(new ArcStep(model, validator, o), new MindsStage(draft), issues, caseAttempt, "Shaping the beats and the endings.", progress, ct),
+                    3 when !CreatureStep.Needed(draft) => new ResultBase().Ok(),
+                    3 => await RunStepAsync(new CreatureStep(model, validator, o), new ArcStage(draft), issues, caseAttempt, "Giving the creature a mind.", progress, ct),
                     _ => await RunStepAsync(new HookStep(model, validator, o), new ArcStage(draft), issues, caseAttempt, "Writing the hook and the scenes.", progress, ct),
                 };
                 if (!result.Success)
@@ -479,7 +481,7 @@ public sealed class MysteryGenerator(
                 .ToDictionary(g => g.Key, g => (IReadOnlyList<CoherenceIssue>)g.ToList()));
             if (pending.ContainsKey(0))
             {
-                foreach (var later in new[] { 1, 2, 3 })
+                foreach (var later in new[] { 1, 2, 3, 4 })
                 {
                     pending.TryAdd(later, []);
                 }
@@ -547,6 +549,7 @@ public sealed class MysteryGenerator(
             [FactsStep.StepName] = new FactsStep(model, validator, o),
             [MindsStep.StepName] = new MindsStep(model, validator, o),
             [ArcStep.StepName] = new ArcStep(model, validator, o),
+            [CreatureStep.StepName] = new CreatureStep(model, validator, o),
             [HookStep.StepName] = new HookStep(model, validator, o),
         };
 
@@ -624,16 +627,17 @@ public sealed class MysteryGenerator(
 
     public const string CheckStepName = "check";
 
-    private static readonly string[] ClueStepNames = [FactsStep.StepName, MindsStep.StepName, ArcStep.StepName, HookStep.StepName];
+    private static readonly string[] ClueStepNames = [FactsStep.StepName, MindsStep.StepName, ArcStep.StepName, CreatureStep.StepName, HookStep.StepName];
 
-    /// <summary>Which clue sub-step a whole-case or critic issue is for: 0 facts, 1 minds and channels, 2 arc, 3 hook.</summary>
+    /// <summary>Which clue sub-step a whole-case or critic issue is for: 0 facts, 1 minds and channels, 2 arc, 3 the creature's mind, 4 hook.</summary>
     internal static int ClueSubStep(CoherenceIssue issue) => issue.Code switch
     {
-        IssueCodes.Opening => 3,
-        "critic." + CriticChecks.Hook => 3,
+        IssueCodes.Opening => 4,
+        "critic." + CriticChecks.Hook => 4,
         "critic." + CriticChecks.Solves => 2,
         "critic." + CriticChecks.DeepLoreTrail => 0,
-        _ when issue.Location.StartsWith("hook", StringComparison.Ordinal) => 3,
+        _ when issue.Location.StartsWith("hook", StringComparison.Ordinal) => 4,
+        _ when issue.Location == "creatureMinds" => 3,
         _ when issue.Location == "facts" && issue.Code is IssueCodes.Schema or IssueCodes.Giveaway => 0,
         _ when issue.Location.StartsWith("beat", StringComparison.Ordinal) || issue.Location == "climax" => 2,
         _ => 1,

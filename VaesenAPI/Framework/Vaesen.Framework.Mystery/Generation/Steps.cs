@@ -547,7 +547,6 @@ public sealed class ArcStep(IMysteryModel model, ICoherenceValidator validator, 
         {
             ["climaxRule"] = PromptBuilder.ClimaxRule(draft.Vaesen),
             ["leverRule"] = PromptBuilder.LeverRule(draft.Brief, draft.Vaesen),
-            ["creatureMindRule"] = PromptBuilder.CreatureMindRule(draft.Vaesen),
             ["mediumFrom"] = DesperationTiers.MediumFrom.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture),
             ["highFrom"] = DesperationTiers.HighFrom.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture),
         });
@@ -557,9 +556,39 @@ public sealed class ArcStep(IMysteryModel model, ICoherenceValidator validator, 
         packet.Beats = output.Beats;
         packet.Climax = output.Climax;
         packet.ResolutionLevers = output.ResolutionLevers;
-        packet.CreatureMinds = output.CreatureMinds;
         // The weights depend on the hook and the channels too: they are set before each whole-case check.
         packet.Tension = new CaseTension();
+        return [];
+    }
+
+    protected override ArcStage Next(MysteryDraft draft) => new(draft);
+}
+
+/// <summary>
+/// The creature's mind (fixes 3, section 10), for a creature that can be bargained with: what it wants, its terms in
+/// the deep lever's deeds, its red lines, and how it answers each approach.
+/// </summary>
+public sealed class CreatureStep(IMysteryModel model, ICoherenceValidator validator, MysteryOptions options)
+    : ModelStep<ArcStage, ArcStage, CreatureOutput>(model, validator, options)
+{
+    public const string StepName = "creature";
+
+    public override string Name => StepName;
+
+    protected override CheckScope Scope => CheckScope.Creature;
+
+    /// <summary>Only a creature the players can bargain with gets a mind.</summary>
+    public static bool Needed(MysteryDraft draft) => draft.Vaesen.ResolutionShape == ResolutionShapes.Negotiable;
+
+    protected override string Instruction(MysteryDraft draft) =>
+        PromptBuilder.Fill(PromptBuilder.Template("creature"), new Dictionary<string, string>
+        {
+            ["creatureMindRule"] = PromptBuilder.CreatureMindRule(draft.Vaesen),
+        });
+
+    protected override List<CoherenceIssue> Apply(MysteryDraft draft, CasePacket packet, CreatureOutput output)
+    {
+        packet.CreatureMinds = output.CreatureMinds;
         return [];
     }
 

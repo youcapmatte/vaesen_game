@@ -785,6 +785,7 @@ public sealed class CreatureMind
     public List<string> Terms { get; set; } = [];
 
     /// <summary>The deep lever's deeds its terms ask for: how the runtime knows the terms are met.</summary>
+    [IdsOf(IdKinds.Deed)]
     [JsonProperty("termDeedIds")]
     public List<string> TermDeedIds { get; set; } = [];
 

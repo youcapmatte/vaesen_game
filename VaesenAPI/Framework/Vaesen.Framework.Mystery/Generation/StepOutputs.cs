@@ -245,7 +245,14 @@ public sealed class ArcOutput
 
     [JsonProperty("resolutionLevers")]
     public List<ResolutionLever> ResolutionLevers { get; set; } = [];
+}
 
+/// <summary>
+/// The creature's mind, a step of its own after the arc: with the arc's levers and deeds in one schema the grammar is
+/// too large for structured outputs.
+/// </summary>
+public sealed class CreatureOutput
+{
     [JsonProperty("creatureMinds")]
     public List<CreatureMind> CreatureMinds { get; set; } = [];
 }

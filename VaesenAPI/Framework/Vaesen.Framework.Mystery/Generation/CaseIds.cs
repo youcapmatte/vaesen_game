@@ -23,6 +23,12 @@ public static class CaseIds
             ids[IdKinds.Event] = packet.Truth.Escalation.Select(e => e.Id).ToList();
         }
 
+        if (step == CreatureStep.StepName)
+        {
+            ids[IdKinds.Fact] = packet.Facts.Select(f => f.Id).ToList();
+            ids[IdKinds.Deed] = packet.ResolutionLevers.Where(l => l.SolveDepth == SolveDepths.Deep).SelectMany(l => l.RequiredDeeds).Select(d => d.Id).ToList();
+        }
+
         if (step is MindsStep.StepName or ArcStep.StepName or HookStep.StepName)
         {
             var facts = packet.Facts.Select(f => f.Id).ToList();
