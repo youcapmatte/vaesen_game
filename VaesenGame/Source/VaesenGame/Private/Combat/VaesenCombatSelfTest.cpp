@@ -475,6 +475,16 @@ void UVaesenCombatSelfTest::BuildSteps()
 		EVaesenFireBlock Why;
 		const AVaesenRangedWeaponActor* RifleActor = Rifle ? Cast<AVaesenRangedWeaponActor>(Rifle->GetWeaponActor()) : nullptr;
 		Check(RifleActor && RifleActor->GetLastDryFire(DryTime, Why) && Why == EVaesenFireBlock::Empty, TEXT("fired empty: a dry click, the HUD told it was empty"));
+		// Its sounds (from the WeaponVerse1 pack, when it's installed: -run=VaesenSoundSetup).
+		if (Rifle && Rifle->SoundSet)
+		{
+			Check(Rifle->GetSound(EVaesenWeaponSound::Fire) && Rifle->GetSound(EVaesenWeaponSound::Cycle) && Rifle->GetSound(EVaesenWeaponSound::Flyby),
+				FString::Printf(TEXT("the Krag has its shot, bolt and bullet-crack sounds (%s)"), *GetNameSafe(Rifle->SoundSet)));
+		}
+		else
+		{
+			Say(TEXT("INFO  the Krag has no sound set yet (install WeaponVerse1, run -run=VaesenSoundSetup)"), FColor::Yellow);
+		}
 		// Aimed (hip fire spreads 5 degrees with a rifle and can miss at 4 m).
 		Press(AimOrBlock);
 		Check(ASC->HasMatchingGameplayTag(VaesenTags::State_Aiming), TEXT("right mouse aims the rifle"));

@@ -12,6 +12,14 @@ Each test lists its **setup**, **steps**, the **expected** result, and whether i
 
 Close the editor, then run the commandlet. It only creates what's missing, so running it again is safe.
 
+**Sounds:** install the Fab pack **Distance Gun Sounds: WeaponVerse1** into `Content/WeaponVerse1` (it's kept out of git; 2.8 GB). Then run `UnrealEditor-Cmd.exe VaesenGame.uproject -run=VaesenSoundSetup` with the editor closed, or add `-rebuild` to remake the cues. It builds the cues and sound sets in `Content/Vaesen/Audio/Weapons` and gives them to the Krag, the revolver and the rolling-block pistol:
+
+- Each shot is the gun recorded at 5, 25, 100 and 300 m, blended by how far you are from the shooter.
+- The Krag's bolt sound is timed to the hand working it.
+- Bullets crack as they pass.
+
+The muzzle-loader, bows, melee weapons and impacts still need other packs.
+
 ```
 UnrealEditor-Cmd.exe VaesenGame.uproject -run=VaesenCreateWidgets
 ```

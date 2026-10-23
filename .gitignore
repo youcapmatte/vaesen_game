@@ -43,3 +43,7 @@ Thumbs.db
 
 # Per-machine script settings (GameLift Anywhere fleet, compute name, ...)
 Scripts/Config.local.bat
+
+# ---- Fab asset packs installed locally (too big for Git LFS; reinstall from Fab) ----
+# Distance Gun Sounds: WeaponVerse1 (2.8 GB). The project's own cues and sound sets that use it are committed.
+VaesenGame/Content/WeaponVerse1/
