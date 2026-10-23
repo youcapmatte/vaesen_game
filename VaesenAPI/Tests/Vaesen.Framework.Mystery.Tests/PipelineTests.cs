@@ -175,6 +175,29 @@ public sealed class PipelineTests
         Assert.Equal([0], result.Result.Case.Log.Select(e => e.CaseAttempt).Distinct());
     }
 
+    [Fact]
+    public async Task The_critic_sends_the_case_back_once_then_its_objections_are_warnings()
+    {
+        var options = new MysteryOptions();
+        var model = ScriptedModel.FromSample(criticFailsFirst: false);
+        model.CriticAlwaysObjects = true;
+        var (generator, _, _) = Build(options, model);
+
+        var result = await generator.GenerateAsync(new GenerationRequest
+        {
+            History = History, Month = 10, Seed = MatchingSeed(options), VaesenId = "nack", LevelId = "level-forsby-october", Store = false,
+        });
+
+        // One rework of the clues, never back to the conflict although the critic names the truth; then the case passes.
+        Assert.True(result.Success, result.ErrorMessage);
+        Assert.Equal(["world", "conflict", "escalation", "humans", "facts", "minds", "arc", "hook", "critic", "minds", "critic"], model.Calls);
+        var packet = result.Result!.Case.Packet;
+        Assert.True(packet.Validation.Passed);
+        var kept = Assert.Single(packet.Validation.Issues, i => i.Code == "critic." + CriticChecks.WorldConsistency);
+        Assert.False(kept.IsError);
+        Assert.Equal(IssueSources.Critic, kept.Source);
+    }
+
     /// <summary>Answers each step from the sample case; can break the clue step to exercise retries.</summary>
     public sealed class ScriptedModel(CasePacket sample, bool criticFailsFirst) : IMysteryModel
     {
@@ -201,6 +224,9 @@ public sealed class PipelineTests
 
         /// <summary>The first conflict answer says the focus does not suit the creature.</summary>
         public bool FocusUnsuitableOnce { get; set; }
+
+        /// <summary>The critic always objects on world consistency, naming the truth among its locations.</summary>
+        public bool CriticAlwaysObjects { get; set; }
 
         public static ScriptedModel FromSample(bool criticFailsFirst) => new(ValidatorTests.SampleCase(), criticFailsFirst);
 
@@ -359,6 +385,22 @@ public sealed class PipelineTests
         private CriticOutput Critic()
         {
             _criticCalls++;
+            if (CriticAlwaysObjects)
+            {
+                return new CriticOutput
+                {
+                    Overall = "Close, but not there.",
+                    Checks = CriticChecks.All.Select(name => new CriticCheck
+                    {
+                        Check = name,
+                        Passed = name != CriticChecks.WorldConsistency,
+                        Severity = IssueSeverities.Error,
+                        Location = "truth.summary; npc-per-holm",
+                        Explanation = name == CriticChecks.WorldConsistency ? "The mill's age does not match the summary." : "",
+                    }).ToList(),
+                };
+            }
+
             var fail = criticFailsFirst && _criticCalls == 1;
             return new CriticOutput
             {

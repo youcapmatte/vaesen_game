@@ -397,6 +397,7 @@ public sealed class MysteryGenerator(
         var ret = new ResultBase();
         var o = Options;
         var pending = new SortedDictionary<int, IReadOnlyList<CoherenceIssue>> { [0] = feedback, [1] = [], [2] = [], [3] = [] };
+        var criticReworks = 0;
         for (var round = 0; ; round++)
         {
             foreach (var (sub, issues) in pending)
@@ -438,9 +439,22 @@ public sealed class MysteryGenerator(
                     return ret.Fail(review.ErrorMessage, review.ErrorCode);
                 }
 
+                // Past its reworks, the critic's objections are warnings on a case that passes.
+                var critique = review.Result!;
+                if (critique.Exists(i => i.IsError) && criticReworks >= o.MaxCriticReworks)
+                {
+                    logger.LogInformation("The critic still objects after {Reworks} rework(s); its objections are kept as warnings", criticReworks);
+                    critique = critique.Select(i => i.IsError ? CoherenceIssue.Warning(i.Code, i.Location, i.Explanation, i.SuggestedFix) : i).ToList();
+                    critique.ForEach(i => i.Source = IssueSources.Critic);
+                }
+
                 draft.Packet.Validation.Issues.RemoveAll(i => i.Source == IssueSources.Critic);
-                draft.Packet.Validation.Issues.AddRange(review.Result!);
-                errors = review.Result!.Where(i => i.IsError).ToList();
+                draft.Packet.Validation.Issues.AddRange(critique);
+                errors = critique.Where(i => i.IsError).ToList();
+                if (errors.Count > 0)
+                {
+                    criticReworks++;
+                }
             }
 
             if (errors.Count == 0)
@@ -455,14 +469,6 @@ public sealed class MysteryGenerator(
                 draft.FailedStep = CheckStepName;
                 draft.ReworkFeedback = errors;
                 return ret.Fail($"The finished case still had problems after {o.MaxReworkRounds} reworks: " + string.Join(" ", errors.Take(5)), StepErrorCodes.StepFailed);
-            }
-
-            // People who do not follow from the conflict are the humans step's to fix, not the clues'.
-            if (errors.Exists(i => i.Code == "critic." + CriticChecks.HumansFromConflict))
-            {
-                draft.FailedStep = CheckStepName;
-                draft.ReworkFeedback = errors.Where(i => i.Code == "critic." + CriticChecks.HumansFromConflict).ToList();
-                return ret.Fail("The critic found the people do not follow from the conflict.", StepErrorCodes.StepFailed);
             }
 
             // Send each issue back to the sub-step it points at; new facts mean everything built on them is redone.
@@ -499,10 +505,13 @@ public sealed class MysteryGenerator(
         _ => 1,
     };
 
-    /// <summary>The earlier stage an issue points at, or -1: the conflict's truth, an escalation event, or a missing person.</summary>
+    /// <summary>
+    /// The earlier stage a structural issue points at, or -1: the conflict's truth, an escalation event, or a missing
+    /// person. The critic's issues never send work back past the clues: a location it mentions is not a fault there.
+    /// </summary>
     private static int EarlierStage(CoherenceIssue issue) => issue switch
     {
-        { Code: "critic." + CriticChecks.HumansFromConflict } => 2,
+        { Source: not IssueSources.Structural } => -1,
         { Code: IssueCodes.UnknownReference } when issue.Explanation.StartsWith("Unknown cast member", StringComparison.Ordinal)
             || issue.Explanation.StartsWith("Mind for", StringComparison.Ordinal) => 2,
         { Code: IssueCodes.UnknownReference } when issue.Explanation.StartsWith("Unknown escalation event", StringComparison.Ordinal)

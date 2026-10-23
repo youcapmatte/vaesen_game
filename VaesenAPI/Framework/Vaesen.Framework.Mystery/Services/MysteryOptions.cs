@@ -87,6 +87,12 @@ public sealed class MysteryOptions
     /// <summary>How many times the finished case goes back to the sub-steps its whole-case or critic issues point at.</summary>
     public int MaxReworkRounds { get; set; } = 2;
 
+    /// <summary>
+    /// How many of those reworks the critic may cause. After that its objections are kept as warnings on a case that
+    /// passes: judgement is advice to the host, and each rejection costs a large rework.
+    /// </summary>
+    public int MaxCriticReworks { get; set; } = 1;
+
     /// <summary>How many recent mysteries a creature is kept out of.</summary>
     public int VaesenCooldown { get; set; } = 3;
 

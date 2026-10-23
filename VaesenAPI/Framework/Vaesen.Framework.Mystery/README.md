@@ -37,11 +37,11 @@ Services/      MysteryGenerator, WorldService (seeding, closing, write-back), Co
      - **minds**: what every person knows, thinks and lies about, and every channel into every fact.
      - **arc**: beats, the climax and the resolution levers (crude, partial or deep). The engine computes the tension weights: the load-bearing facts, weighing twice the others, take the dial 15% past the climax.
      - **hook**: the hook and the scene descriptions.
-3. **Whole-case checks and the critic**: reachability, redundancy, fair play and the rest, then the judgement checks code cannot make. Each problem goes back only to the sub-step it points at (new facts redo everything built on them), up to `MaxReworkRounds`.
+3. **Whole-case checks and the critic**: reachability, redundancy, fair play and the rest, then the judgement checks code cannot make. Each problem goes back only to the sub-step it points at (new facts redo everything built on them), up to `MaxReworkRounds`. The critic may send the case back once (`MaxCriticReworks`); after that its objections stay on the case as warnings and it passes.
 4. **Repairs and retries**:
    - Near misses in fixed-value fields ("Surface", "half") are repaired in code before validation and logged as warnings.
    - When a step's only errors are field-level ones on a quarter of its items or fewer, a **patch** call asks for just those items and merges them back. Otherwise the step retries in full with its issues fed back (`MaxStepRetries`); every issue about a fixed value lists the allowed values.
-   - A step that gives up starts again on its own; steps that passed are kept. An earlier step is re-run only when an issue points at it. The case is re-rolled from a new brief only when the conflict finds nothing plausible fits (`MaxCaseRetries`), and the focus alone is changed when it does not suit the creature (`supportedFoci`).
+   - A step that gives up starts again on its own; steps that passed are kept. An earlier step is re-run only when a structural issue points at it, never on a location the critic mentions. The case is re-rolled from a new brief only when the conflict finds nothing plausible fits (`MaxCaseRetries`), and the focus alone is changed when it does not suit the creature (`supportedFoci`).
    - A rejected case records the step that gave up; its report ends with that step's last attempt. Every model call and check is logged with its kind (full, fresh, patch, check), tokens, cache hits and latency.
 
 ## The Society's world (spec 9)
@@ -158,6 +158,7 @@ dotnet run --project VaesenAPI/Tools/Vaesen.Mystery.CaseLab -- validate cases/ca
 | `RetryModel`, `PatchModel`, `PatchEffort` | (creative model), (creative model), `low` | a smaller model may take retries and patches |
 | `PatchMaxOutputTokens`, `PatchShare` | 16000, 0.25 | a patch's output cap; the share of a step's items a patch may touch |
 | `MaxReworkRounds` | 2 | how often whole-case and critic issues send sub-steps back |
+| `MaxCriticReworks` | 1 | how many of those the critic may cause; then its objections are warnings |
 | `CriticModel`, `CriticEffort` | `claude-opus-5-5`, `high` | the critic |
 | `UseCritic` | `true` | |
 | `MaxOutputTokens` | 64000 | per full step call, thinking included; steps stream |
