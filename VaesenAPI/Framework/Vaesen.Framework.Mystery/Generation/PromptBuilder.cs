@@ -254,7 +254,7 @@ public static class PromptBuilder
             .ToList();
         return names.Count == 0
             ? ""
-            : $"- First names already used in the Society's world: {string.Join(", ", names)}. Do not give a new significant character a first name on this list, or one that sounds like it. Common names may still be used for residents and the dead.";
+            : $"- First names already used in the Society's world: {string.Join(", ", names)}. Do not give a new significant character a first name on this list, or one that begins with the same three letters. Common names may still be used for residents and the dead.";
     }
 
     /// <summary>How many persistent characters a case sees in full; the rest get one line each (fixes, section 10).</summary>

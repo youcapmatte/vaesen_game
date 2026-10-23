@@ -321,7 +321,7 @@ public sealed class CaseValidator : ICoherenceValidator
                             // An error at the humans step, fixed by a patch before any later step writes the name into prose.
                             Error(IssueCodes.CastCoherence, at,
                                 $"{member.Name} and {name}, already in the Society's world, have {why}.",
-                                $"Rename {member.Name}, keeping the id: a first name that does not sound like {NameRules.FirstName(name)} or any other on the list.");
+                                $"Rename {member.Name}, keeping the id. Avoid these first names and any that begins with the same three letters: {string.Join(", ", context.WorldNames.Select(w => NameRules.FirstName(w.Name)).Where(n => n.Length > 0).Distinct())}; and keep clear of the other names in this case.");
                             break;
                         }
                     }

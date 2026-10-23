@@ -350,7 +350,9 @@ public sealed class ValidatorTests(ITestOutputHelper output)
         // An error at the humans step, so it is patched before any later step writes the name into prose.
         Assert.True(Assert.Single(issues, i => i.Location == "cast:npc-per-holm" && i.Explanation.Contains("Society's world", StringComparison.Ordinal)).IsError);
         Assert.Null(NameRules.FirstNameClash("Anna Lind", "Anders Berg"));
-        Assert.NotNull(NameRules.FirstNameClash("Petter Lund", "Per Ers"));
+        Assert.Null(NameRules.FirstNameClash("Gunnar Ek", "Gustaf Roos"));
+        Assert.NotNull(NameRules.FirstNameClash("Henning Wahl", "Henrik Ekelund"));
+        Assert.NotNull(NameRules.FirstNameClash("Per Holm", "Per Ers"));
     }
 
     [Fact]

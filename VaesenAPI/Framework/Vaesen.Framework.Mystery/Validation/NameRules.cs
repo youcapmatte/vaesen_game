@@ -49,8 +49,8 @@ public static partial class NameRules
 
     /// <summary>
     /// Why a first name is too close to one already used in the Society's world, or null (fixes 3, section 7): the same
-    /// name, or the same opening syllable when that syllable is a real one ("Per" and "Petter", "Johan" and "Jonas"; not
-    /// "Anna" and "Anders", which share only a vowel).
+    /// name, or the same first three letters ("Henning" and "Henrik", "Britta" and "Brita"). Looser than the rule inside
+    /// one case: a world of thirty people shares an opening syllable with nearly every common name.
     /// </summary>
     public static string? FirstNameClash(string a, string b)
     {
@@ -66,9 +66,8 @@ public static partial class NameRules
             return "the same first name";
         }
 
-        var syllable = FirstSyllable(aFirst);
-        return syllable.Length >= 2 && string.Equals(syllable, FirstSyllable(bFirst), StringComparison.OrdinalIgnoreCase)
-            ? $"both begin '{syllable}'"
+        return aFirst.Length >= 3 && bFirst.Length >= 3 && string.Equals(aFirst[..3], bFirst[..3], StringComparison.OrdinalIgnoreCase)
+            ? $"both begin '{aFirst[..3]}'"
             : null;
     }
 
