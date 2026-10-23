@@ -56,6 +56,10 @@ public sealed class CasePacket
     [JsonProperty("decoys")]
     public List<DecoyThread> Decoys { get; set; } = [];
 
+    /// <summary>Named people who never appear (relatives, the dead, the far away), so everyone refers to them alike.</summary>
+    [JsonProperty("offstagePeople")]
+    public List<OffstagePerson> OffstagePeople { get; set; } = [];
+
     [JsonProperty("beats")]
     public List<CaseBeat> Beats { get; set; } = [];
 
@@ -508,6 +512,24 @@ public static class CastImportance
     public static readonly IReadOnlyList<string> All = [Significant, Resident];
 }
 
+/// <summary>A named person in the story who is not in the cast: a wife far away, the drowned man, a son in America.</summary>
+public sealed class OffstagePerson
+{
+    /// <summary>A short id for knowledge sources: told:offstage:&lt;id&gt;.</summary>
+    [JsonProperty("id")]
+    public string Id { get; set; } = "";
+
+    [JsonProperty("name")]
+    public string Name { get; set; } = "";
+
+    /// <summary>Who they are to the cast ("Bengt's wife", "the drowned sawyer").</summary>
+    [JsonProperty("relation")]
+    public string Relation { get; set; } = "";
+
+    [JsonProperty("note")]
+    public string Note { get; set; } = "";
+}
+
 /// <summary>A fact a character knows and how they came to know it.</summary>
 public sealed class CastKnowledge
 {
@@ -536,7 +558,11 @@ public static class KnowledgeSources
     /// <summary>Gossip from someone outside the cast ("told:bystander:carter"): hearsay, never a fact's own way in.</summary>
     public const string BystanderPrefix = "told:bystander:";
 
-    public static bool IsHearsay(string? source) => source?.StartsWith(BystanderPrefix, StringComparison.Ordinal) == true;
+    /// <summary>Told by a named person who never appears ("told:offstage:greta"): hearsay too, by the same rules.</summary>
+    public const string OffstagePrefix = "told:offstage:";
+
+    public static bool IsHearsay(string? source) =>
+        source?.StartsWith(BystanderPrefix, StringComparison.Ordinal) == true || source?.StartsWith(OffstagePrefix, StringComparison.Ordinal) == true;
     public const string FoundPrefix = "found:";
 
     public static string Told(string characterId) => ToldPrefix + characterId;
@@ -799,12 +825,26 @@ public sealed class CreatureMind
     [JsonProperty("thinks")]
     public List<CastBelief> Thinks { get; set; } = [];
 
+    /// <summary>Whom it holds responsible, and why (fixes 4, section 8): a reason, not a mistaken belief.</summary>
+    [JsonProperty("blames")]
+    public List<CreatureBlame> Blames { get; set; } = [];
+
     /// <summary>How it speaks, if at all.</summary>
     [JsonProperty("voice")]
     public string Voice { get; set; } = "";
 
     [JsonProperty("reactions")]
     public CreatureReactions Reactions { get; set; } = new();
+}
+
+public sealed class CreatureBlame
+{
+    [IdsOf(IdKinds.Cast)]
+    [JsonProperty("characterId")]
+    public string CharacterId { get; set; } = "";
+
+    [JsonProperty("why")]
+    public string Why { get; set; } = "";
 }
 
 /// <summary>How the creature answers each approach the players may take.</summary>
@@ -856,7 +896,11 @@ public sealed class LeverDeed
     [JsonProperty("time")]
     public string? Time { get; set; }
 
-    /// <summary>Cast members who must be present.</summary>
+    /// <summary>Who must do it (fixes 4, section 6): cast ids, or "players"; the deed is done only when they do it.</summary>
+    [JsonProperty("performedBy")]
+    public DeedPerformers PerformedBy { get; set; } = new();
+
+    /// <summary>Cast members who must be present, besides the performers.</summary>
     [IdsOf(IdKinds.Cast)]
     [JsonProperty("witnesses")]
     public List<string> Witnesses { get; set; } = [];
@@ -865,6 +909,20 @@ public sealed class LeverDeed
     [OneOf(typeof(WitnessRules))]
     [JsonProperty("witnessRule")]
     public string WitnessRule { get; set; } = WitnessRules.Any;
+}
+
+public sealed class DeedPerformers
+{
+    public const string Players = "players";
+
+    [IdsOf(IdKinds.Performer)]
+    [JsonProperty("who")]
+    public List<string> Who { get; set; } = [];
+
+    /// <summary>One of <see cref="WitnessRules"/>: whether any or all of them must act.</summary>
+    [OneOf(typeof(WitnessRules))]
+    [JsonProperty("rule")]
+    public string Rule { get; set; } = WitnessRules.All_;
 }
 
 public static class DeedOrders

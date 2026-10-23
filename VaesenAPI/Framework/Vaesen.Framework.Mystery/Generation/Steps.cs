@@ -83,6 +83,9 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
 
     protected abstract TOut Next(MysteryDraft draft);
 
+    /// <summary>The model of the first try: <see cref="MysteryOptions.CreativeModel"/> by default.</summary>
+    protected virtual string FirstTryModel(MysteryOptions o) => o.CreativeModel;
+
     /// <summary>How hard the first try thinks (fixes, section 9): <see cref="MysteryOptions.StandardEffort"/> by default.</summary>
     protected virtual string FirstTryEffort(MysteryOptions o) => o.StandardEffort;
 
@@ -142,7 +145,7 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
             {
                 (_, true, _) when mode == Mode.FixLight => (Or(options.LightModel, options.CreativeModel), options.LightEffort),
                 (true, _, _) or (_, true, _) => (Or(options.PatchModel, options.CreativeModel), options.PatchEffort),
-                (_, _, 0) => (options.CreativeModel, FirstTryEffort(options)),
+                (_, _, 0) => (Or(FirstTryModel(options), options.CreativeModel), FirstTryEffort(options)),
                 _ => (Or(options.RetryModel, options.CreativeModel), options.LightEffort),
             };
             var reply = await model.GenerateAsync<TOutput>(new ModelRequest
@@ -229,9 +232,11 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
             {
                 entry.Passed = true;
                 packet.Validation.Issues.AddRange(found);
+                var before = draft.Packet;
                 draft.Packet = packet;
                 draft.Completed |= Scope;
                 draft.Outputs[Name] = output;
+                OnPassed(draft, before, caseAttempt);
                 return ret.Ok();
             }
 
@@ -243,6 +248,11 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
 
         return ret.Fail($"The {Name} step still had problems after {retries + 1} attempts: "
             + string.Join(" ", issues.Take(5).Select(i => i.ToString())), StepErrorCodes.StepFailed);
+    }
+
+    /// <summary>After a passed answer is on the draft: <paramref name="before"/> is the packet as it was.</summary>
+    protected virtual void OnPassed(MysteryDraft draft, CasePacket before, int caseAttempt)
+    {
     }
 
     private static string Or(string value, string fallback) => string.IsNullOrWhiteSpace(value) ? fallback : value;
@@ -356,15 +366,31 @@ public sealed class HumansStep(IMysteryModel model, ICoherenceValidator validato
         PromptBuilder.Fill(PromptBuilder.Template("humans"), new Dictionary<string, string>
         {
             ["handLine"] = PromptBuilder.HandLineForHumans(draft.Brief),
-            ["hookGiverType"] = draft.Brief.HookGiverType,
+            ["hookGiverType"] = draft.Pack.Setting.FindHookGiverType(draft.Brief.HookGiverType) is { } giver ? $"{giver.Id}: {giver.Meaning}" : draft.Brief.HookGiverType,
             ["usedNames"] = PromptBuilder.UsedNames(draft.World),
         });
 
     protected override List<CoherenceIssue> Apply(MysteryDraft draft, CasePacket packet, HumansOutput output)
     {
         // A fix after minds and channels keeps what everyone knows, thinks and lies about.
+        // The residents step's people stay when the case's people are revised.
+        var residents = draft.Outputs.TryGetValue(ResidentsStep.StepName, out var kept) && kept is ResidentsOutput r
+            ? r.Residents.Select(c => c.CharacterId).ToHashSet(StringComparer.Ordinal)
+            : [];
+        packet.Cast = ToCast(draft, packet, output.Cast)
+            .Concat(packet.Cast.Where(c => residents.Contains(c.CharacterId) && !output.Cast.Exists(o => o.CharacterId == c.CharacterId)))
+            .ToList();
+        packet.Truth.PlotCentre.CharacterId = draft.Brief.HiddenHand ? output.HiddenHandCharacterId : null;
+        packet.OffstagePeople = output.OffstagePeople;
+        AddDwellings(draft, packet, output.Cast);
+        return [];
+    }
+
+    /// <summary>Cast drafts as cast members, keeping what minds and channels already gave anyone who was there before.</summary>
+    internal static List<CastMember> ToCast(MysteryDraft draft, CasePacket packet, List<CastDraft> drafts)
+    {
         var minds = packet.Cast.ToDictionary(c => c.CharacterId, StringComparer.Ordinal);
-        packet.Cast = output.Cast.Select(c => new CastMember
+        return drafts.Select(c => new CastMember
         {
             CharacterId = c.CharacterId,
             Name = c.Name,
@@ -387,19 +413,15 @@ public sealed class HumansStep(IMysteryModel model, ICoherenceValidator validato
             Thinks = mind?.Thinks ?? [],
             Lies = mind?.Lies ?? [],
         }).ToList();
-        packet.Truth.PlotCentre.CharacterId = draft.Brief.HiddenHand ? output.HiddenHandCharacterId : null;
-        AddDwellings(draft, packet, output);
-        return [];
     }
 
     /// <summary>
     /// Builds a home for each significant person who asked for one (fixes 3, section 6), in their home place of the
     /// draft's own copy of the level, and records it on the packet so the runtime builds it too.
     /// </summary>
-    private static void AddDwellings(MysteryDraft draft, CasePacket packet, HumansOutput output)
+    internal static void AddDwellings(MysteryDraft draft, CasePacket packet, List<CastDraft> cast)
     {
-        packet.Level.AddedAffordances = [];
-        foreach (var asked in output.Cast.Where(c => c.NewDwelling && c.Importance == CastImportance.Significant))
+        foreach (var asked in cast.Where(c => c.NewDwelling && c.Importance == CastImportance.Significant))
         {
             var member = packet.FindCast(asked.CharacterId);
             if (member?.HomePlaceId is null || draft.Level.FindPlace(member.HomePlaceId) is not { } place)
@@ -413,10 +435,63 @@ public sealed class HumansStep(IMysteryModel model, ICoherenceValidator validato
                 place.Affordances.Add(home);
             }
 
+            packet.Level.AddedAffordances.RemoveAll(a => a.Affordance.Id == home.Id);
             packet.Level.AddedAffordances.Add(new AddedAffordance { PlaceId = place.Id, Affordance = home });
             member.HomeAffordanceId = home.Id;
         }
     }
+
+    /// <summary>
+    /// A person renamed after names existed (a fix, a name clash) is renamed everywhere: in every other step's text and
+    /// in the outputs later fixes patch (fixes 4, section 4). Otherwise the case calls one person by two names.
+    /// </summary>
+    protected override void OnPassed(MysteryDraft draft, CasePacket before, int caseAttempt) => Renames.AfterPass(draft, before, caseAttempt, Name);
+
+    protected override CastStage Next(MysteryDraft draft) => new(draft);
+}
+
+/// <summary>
+/// The place's ordinary residents, after the case's people (fixes 4, section 10): short records on the small model at
+/// low effort, so the expensive humans call writes only the five to seven people the case turns on.
+/// </summary>
+public sealed class ResidentsStep(IMysteryModel model, ICoherenceValidator validator, MysteryOptions options)
+    : ModelStep<CastStage, CastStage, ResidentsOutput>(model, validator, options)
+{
+    public const string StepName = "residents";
+
+    public override string Name => StepName;
+
+    protected override CheckScope Scope => CheckScope.Cast;
+
+    protected override string FirstTryModel(MysteryOptions o) => o.LightModel;
+
+    protected override string FirstTryEffort(MysteryOptions o) => o.LightEffort;
+
+    protected override IReadOnlyList<PatchList> PatchLists(ResidentsOutput output) => [new("cast", output.Residents, c => ((CastDraft)c).CharacterId)];
+
+    protected override string Instruction(MysteryDraft draft) =>
+        PromptBuilder.Fill(PromptBuilder.Template("residents"), new Dictionary<string, string>
+        {
+            ["names"] = string.Join(", ", draft.Packet.Cast.Where(c => c.Importance == CastImportance.Significant).Select(c => c.Name)),
+            ["usedNames"] = PromptBuilder.UsedNames(draft.World),
+        });
+
+    protected override List<CoherenceIssue> Apply(MysteryDraft draft, CasePacket packet, ResidentsOutput output)
+    {
+        var previous = draft.Outputs.TryGetValue(StepName, out var kept) && kept is ResidentsOutput r
+            ? r.Residents.Select(c => c.CharacterId).ToHashSet(StringComparer.Ordinal)
+            : [];
+        foreach (var resident in output.Residents)
+        {
+            resident.Importance = CastImportance.Resident;
+        }
+
+        var residents = HumansStep.ToCast(draft, packet, output.Residents);
+        packet.Cast = packet.Cast.Where(c => !previous.Contains(c.CharacterId) && !residents.Exists(n => n.CharacterId == c.CharacterId)).Concat(residents).ToList();
+        return [];
+    }
+
+    protected override void OnPassed(MysteryDraft draft, CasePacket before, int caseAttempt) => Renames.AfterPass(draft, before, caseAttempt, Name);
 
     protected override CastStage Next(MysteryDraft draft) => new(draft);
 }
@@ -667,6 +742,7 @@ public sealed class CriticStep(IMysteryModel model, MysteryOptions options)
             ["focus"] = $"{draft.Brief.Focus}: {PromptBuilder.FocusMeaning(draft.Brief.Focus)}",
             ["focusRule"] = PromptBuilder.FocusRuleForCritic(draft.Brief.Focus),
             ["solveRule"] = PromptBuilder.SolveRuleForCritic(draft.Brief),
+            ["usedNames"] = PromptBuilder.UsedNames(draft.World) is { Length: > 0 } used ? " " + used.TrimStart('-', ' ') : "",
         });
 
         entry.Instruction = PromptBuilder.WithCaseAndFeedback(instruction, draft.Packet, [], null) + Earlier(earlier);

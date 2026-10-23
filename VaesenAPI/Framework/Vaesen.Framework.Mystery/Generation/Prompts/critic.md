@@ -8,6 +8,8 @@ For every check that does not pass, list in targets every id it touches, one per
 - a person with the part you mean: npc-anna-lind.identity, .wants, .secrets, .relationships (who they are), or .knows, .thinks, .lies (what they know and say).
 Give a concrete suggestedFix for every warning too: what to change, item by item. Leave targets empty only when the whole design of a step is wrong, not when items can be fixed. When the fix needs a new way in to a fact (no channel teaches it yet), add channels to targets as well as the fact.
 
+When a person is called by two names, the cast's name is the right one: target the items that use the other name, never the cast member's identity. Never suggest a name that breaks the name rules.{{usedNames}}
+
 Keep explanation and suggestedFix to about 60 words each: the items and the change, nothing else. When a date or a detail disagrees, say which version every item should use.
 
 - deepLoreTrail: the solution trail rests on the creature's deep lore, not the obvious folklore answer.
@@ -22,5 +24,7 @@ Keep explanation and suggestedFix to about 60 words each: the items and the chan
 - worldConsistency: nothing contradicts the world truths, the period, the level or the creature's lore. Trades, tools and work are described as the period would: what a smith, miller, stoker or sawyer actually does, and with what.
 - mechanisms: physical mechanisms in the case (sabotage, traps, accidents, wounds, evidence) behave as they would in the period, and their consequences are stated correctly. A tampering whose real result differs from what the person intends says so, and whether they know it.
 - actsToPlan: when a character acts against their own stated plan (the wrong time, the wrong target, a higher risk), the case states why: desperation, a changed plan or a mistake. Beats and the climax agree with the hidden hand's plan.
+- mindsAgree: no mind (a person's or the creature's) believes something that contradicts the facts it knows, unless the case explains why (denial, misreading, loyalty).
+- npcRecords: each person's permitted actions, secrets, lies and beliefs state nothing that contradicts a fact or the truth, and nothing specific that no fact supports (a date, a place, an object). The runtime speaks the people from these records. Target the person's part: npc-x.wants for actions, .secrets, .lies, .thinks.
 - leverage: every threat, blackmail or bargain states why the threatened party believes it; mutual exposure is addressed (who would be believed, and why).
 - timeline: the facts, what each person knows and when, their secrets and the channels' reveals agree on when things happened.

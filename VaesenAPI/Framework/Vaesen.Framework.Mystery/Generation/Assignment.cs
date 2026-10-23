@@ -183,10 +183,10 @@ public static class Assignment
         brief.HookChannelId = channels.Count == 0 ? "" : WeightedPick(channels, c => c.Weight, random).Id;
 
         var recentGivers = history.Mysteries.TakeLast(2).Select(m => m.HookGiverType).ToHashSet();
-        var givers = setting.HookGiverTypes.Where(g => !recentGivers.Contains(g)).ToList();
+        var givers = setting.HookGiverTypes.Select(g => g.Id).Where(g => !recentGivers.Contains(g)).ToList();
         if (givers.Count == 0)
         {
-            givers = setting.HookGiverTypes;
+            givers = setting.HookGiverTypes.Select(g => g.Id).ToList();
         }
 
         brief.HookGiverType = givers.Count == 0 ? "" : givers[random.Next(givers.Count)];

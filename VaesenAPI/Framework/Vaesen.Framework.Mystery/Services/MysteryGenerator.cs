@@ -373,7 +373,7 @@ public sealed class MysteryGenerator(
         {
             0 => await RunStepAsync(new ConflictStep(model, validator, o), new AssignedStage(draft), feedback, caseAttempt, "Building the conflict.", progress, ct),
             1 => await RunStepAsync(new EscalationStep(model, validator, o), new ConflictStage(draft), feedback, caseAttempt, "Writing what has happened.", progress, ct),
-            2 => await RunStepAsync(new HumansStep(model, validator, o), new EscalationStage(draft), feedback, caseAttempt, "Casting the people.", progress, ct),
+            2 => await RunPeopleAsync(draft, feedback, caseAttempt, progress, ct),
             _ => await RunCluesAsync(draft, feedback, caseAttempt, progress, ct),
         };
     }
@@ -408,6 +408,16 @@ public sealed class MysteryGenerator(
     }
 
     /// <summary>The clue sub-steps in order, then the whole-case checks and the critic, reworking what they point at.</summary>
+    /// <summary>The case's people, then the place's residents on the small model (fixes 4, section 10).</summary>
+    private async Task<ResultBase> RunPeopleAsync(MysteryDraft draft, IReadOnlyList<CoherenceIssue> feedback, int caseAttempt, IProgress<GenerationProgress>? progress, CancellationToken ct)
+    {
+        var o = Options;
+        var people = await RunStepAsync(new HumansStep(model, validator, o), new EscalationStage(draft), feedback, caseAttempt, "Casting the people.", progress, ct);
+        return people.Success
+            ? await RunStepAsync(new ResidentsStep(model, validator, o), new CastStage(draft), [], caseAttempt, "Adding the residents.", progress, ct)
+            : people;
+    }
+
     private async Task<ResultBase> RunCluesAsync(MysteryDraft draft, IReadOnlyList<CoherenceIssue> feedback, int caseAttempt, IProgress<GenerationProgress>? progress, CancellationToken ct)
     {
         var ret = new ResultBase();
@@ -582,6 +592,7 @@ public sealed class MysteryGenerator(
             [ConflictStep.StepName] = new ConflictStep(model, validator, o),
             [EscalationStep.StepName] = new EscalationStep(model, validator, o),
             [HumansStep.StepName] = new HumansStep(model, validator, o),
+            [ResidentsStep.StepName] = new ResidentsStep(model, validator, o),
             [FactsStep.StepName] = new FactsStep(model, validator, o),
             [MindsStep.StepName] = new MindsStep(model, validator, o),
             [ArcStep.StepName] = new ArcStep(model, validator, o),
@@ -590,7 +601,27 @@ public sealed class MysteryGenerator(
         };
 
         var applied = new List<CoherenceIssue>();
+
+        // An issue split over several steps is applied only if every part was: one failed part means it was not.
+        var failed = new HashSet<CoherenceIssue>();
         var routed = CriticRouting.Route(issues).ToDictionary(r => r.Step, r => r.Issues, StringComparer.Ordinal);
+
+        // A resident's record is the residents step's, not humans'.
+        if (draft.Outputs.TryGetValue(ResidentsStep.StepName, out var kept) && kept is ResidentsOutput residents
+            && routed.TryGetValue(HumansStep.StepName, out var people))
+        {
+            var theirs = residents.Residents.Select(c => $"cast:{c.CharacterId}").ToHashSet(StringComparer.Ordinal);
+            var moved = people.Where(p => theirs.Contains(p.Part.Location)).ToList();
+            if (moved.Count > 0)
+            {
+                people.RemoveAll(moved.Contains);
+                routed[ResidentsStep.StepName] = moved;
+                if (people.Count == 0)
+                {
+                    routed.Remove(HumansStep.StepName);
+                }
+            }
+        }
         foreach (var step in CriticRouting.PipelineOrder)
         {
             if (!routed.TryGetValue(step, out var parts))
@@ -602,7 +633,8 @@ public sealed class MysteryGenerator(
             var result = await steps[step].FixAsync(draft, parts.Select(p => p.Part).ToList(), caseAttempt, light, ct);
             if (!result.Success)
             {
-                logger.LogInformation("The fix for {Step} did not pass its checks and was not applied: {Error}", step, result.ErrorMessage);
+                failed.UnionWith(parts.Select(p => p.Original));
+                logger.LogWarning("The fix for {Step} did not pass its checks and was not applied: {Error}", step, result.ErrorMessage);
                 continue;
             }
 
@@ -620,7 +652,7 @@ public sealed class MysteryGenerator(
             }
         }
 
-        return applied.Where(i => i.Code != IssueCodes.Consistency).Distinct().ToList();
+        return applied.Where(i => i.Code != IssueCodes.Consistency && !failed.Contains(i)).Distinct().ToList();
     }
 
     /// <summary>

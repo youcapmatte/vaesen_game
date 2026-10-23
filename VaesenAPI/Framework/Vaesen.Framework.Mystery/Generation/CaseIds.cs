@@ -13,7 +13,7 @@ public static class CaseIds
         var packet = draft.Packet;
         var places = draft.Level.Places.Select(p => p.Id).ToList();
         var ids = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal) { [IdKinds.Place] = places };
-        if (step == HumansStep.StepName)
+        if (step is HumansStep.StepName or ResidentsStep.StepName)
         {
             ids[IdKinds.Affordance] = draft.Level.Places.SelectMany(p => p.AllAffordances()).Where(a => Dwellings.Tags.Contains(a.Tag)).Select(a => a.Id).ToList();
         }
@@ -27,6 +27,7 @@ public static class CaseIds
         {
             ids[IdKinds.Fact] = packet.Facts.Select(f => f.Id).ToList();
             ids[IdKinds.Deed] = packet.ResolutionLevers.Where(l => l.SolveDepth == SolveDepths.Deep).SelectMany(l => l.RequiredDeeds).Select(d => d.Id).ToList();
+            ids[IdKinds.Cast] = packet.Cast.Select(c => c.CharacterId).ToList();
         }
 
         if (step is MindsStep.StepName or ArcStep.StepName or HookStep.StepName)
@@ -36,7 +37,8 @@ public static class CaseIds
             ids[IdKinds.Event] = packet.Truth.Escalation.Select(e => e.Id).ToList();
             ids[IdKinds.Cast] = packet.Cast.Select(c => c.CharacterId).ToList();
             ids[IdKinds.Affordance] = draft.Level.Places.SelectMany(p => p.AllAffordances()).Select(a => a.Id).ToList();
-            ids[IdKinds.Requirement] = AccessRequirement.Allowed(facts, places);
+            ids[IdKinds.Requirement] = AccessRequirement.Allowed(facts, places, packet.Beats.Select(b => b.Id));
+            ids[IdKinds.Performer] = packet.Cast.Select(c => c.CharacterId).Append(DeedPerformers.Players).ToList();
         }
 
         return ids;

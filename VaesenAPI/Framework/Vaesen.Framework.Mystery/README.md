@@ -60,6 +60,17 @@ Services/      MysteryGenerator, WorldService (seeding, closing, write-back), Co
 
 The engine sets the fact weights. Colour and season facts, and what the group knows on arrival, weigh nothing, so the dial starts at its start; decoy facts weigh half, load-bearing ones double. The weights are scaled so the deep solve's path (its lever's facts and what gates them) ends 15% past the climax. A beat with a time fires when its threshold is reached and its time has come, whichever is later.
 
+### Fixes 4, part A
+
+- **Hearsay** (`told:bystander:<role>`, `told:offstage:<id>`) counts for reachability; it only does not count toward a load-bearing fact's two independent ways in, and the error says so. Named people who never appear are listed in `offstagePeople`.
+- **Names by role.** The conflict and the events speak of people by role; the humans step names them. A rename after names exist is carried into every text and kept output by code (`Renames`), and logged. The critic is told the name rules and that the cast's name is the right one.
+- **Beats do not solve the case:** at most half the deep lever's facts may come from the opening and the beats (an error, sent to the arc). Every fact a beat produces needs an aftermath channel (`afterBeat:<beatId>`).
+- **Deeds** name who must do them (`performedBy`: cast ids or `players`), apart from the witnesses.
+- **Minds:** the creature's `blames` (whom it holds responsible, and why) instead of false beliefs; the critic checks that minds agree with what they know and that people's records agree with the facts. Someone under a threat must believe something about it.
+- **Hook-giver types** carry their meaning and the words that recognise one; the hook-giver is checked against the type asked for.
+- **Residents** come from their own step on the small model at low effort, after the case's people.
+- **A split issue is applied only if every part was**, so the report never marks a failed fix as applied.
+
 ### Ids, deeds and minds
 
 - **Ids as enums.** Every field that refers to a fact, an event, a person, a place, an affordance or a channel requirement is marked `[IdsOf]`. Each call's schema carries the case's ids of that kind as an enum (`CaseIds`), so the model cannot write a fact's title where its id belongs. If a schema with the ids is ever too large to compile, the call retries without them, and only then with the schema in the prompt. A step that defines ids (the facts step its facts) leaves them open. Something the players must have in hand goes in a channel's free `item` field, so `requires` can be a closed list.

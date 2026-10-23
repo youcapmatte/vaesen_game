@@ -200,4 +200,7 @@ public static class LogEntryKinds
 
     /// <summary>A passed step's answer revised in place for the critic's issues (fixes 2, section 1).</summary>
     public const string Fix = "fix";
+
+    /// <summary>A person renamed after names existed; code replaced the old name everywhere (fixes 4, section 4).</summary>
+    public const string Rename = "rename";
 }

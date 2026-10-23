@@ -13,7 +13,7 @@ public static partial class CriticRouting
     /// <summary>The steps a fix can go to, in pipeline order: upstream fixes come first, since they can affect what follows.</summary>
     public static readonly IReadOnlyList<string> PipelineOrder =
     [
-        ConflictStep.StepName, EscalationStep.StepName, HumansStep.StepName, FactsStep.StepName, MindsStep.StepName, ArcStep.StepName, CreatureStep.StepName, HookStep.StepName,
+        ConflictStep.StepName, EscalationStep.StepName, HumansStep.StepName, ResidentsStep.StepName, FactsStep.StepName, MindsStep.StepName, ArcStep.StepName, CreatureStep.StepName, HookStep.StepName,
     ];
 
     private static readonly HashSet<string> MindParts = new(StringComparer.OrdinalIgnoreCase) { "knows", "thinks", "lies" };
@@ -114,6 +114,8 @@ public static partial class CriticRouting
         "critic." + CriticChecks.HonestRedHerrings => FactsStep.StepName,
         "critic." + CriticChecks.HumansFromConflict => HumansStep.StepName,
         "critic." + CriticChecks.Leverage => HumansStep.StepName,
+        "critic." + CriticChecks.NpcRecords => HumansStep.StepName,
+        "critic." + CriticChecks.MindsAgree => MindsStep.StepName,
         "critic." + CriticChecks.Mechanisms => EscalationStep.StepName,
         "critic." + CriticChecks.ActsToPlan => ArcStep.StepName,
         _ => MindsStep.StepName,

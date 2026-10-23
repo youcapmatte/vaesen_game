@@ -105,7 +105,10 @@ public sealed record AccessRequirement(string Kind, string Value, int? Threshold
     public const string Place = "place";
     public const string Item = "item";
 
-    public static readonly IReadOnlyList<string> Kinds = [KnowsFact, Trust, Roll, Time, Place, Item];
+    /// <summary>The channel is the aftermath of a beat and opens once it has fired ("afterBeat:b4").</summary>
+    public const string AfterBeat = "afterBeat";
+
+    public static readonly IReadOnlyList<string> Kinds = [KnowsFact, Trust, Roll, Time, Place, Item, AfterBeat];
 
     /// <summary>The skills a roll can use.</summary>
     public static readonly IReadOnlyList<string> Rolls =
@@ -115,8 +118,9 @@ public sealed record AccessRequirement(string Kind, string Value, int? Threshold
     public static readonly IReadOnlyList<string> Times = ["dawn", "morning", "midday", "day", "evening", "dusk", "night", "sunday", "weekday"];
 
     /// <summary>Every requirement a channel in a case with these facts and places can have: the closed list for its schema.</summary>
-    public static List<string> Allowed(IEnumerable<string> factIds, IEnumerable<string> placeIds) =>
+    public static List<string> Allowed(IEnumerable<string> factIds, IEnumerable<string> placeIds, IEnumerable<string>? beatIds = null) =>
         factIds.Select(f => $"{KnowsFact}:{f}")
+            .Concat((beatIds ?? []).Select(b => $"{AfterBeat}:{b}"))
             .Concat(Enumerable.Range(0, 4).Select(n => $"{Trust}>={n}"))
             .Concat(Rolls.Select(r => $"{Roll}:{r}"))
             .Concat(Times.Select(t => $"{Time}:{t}"))

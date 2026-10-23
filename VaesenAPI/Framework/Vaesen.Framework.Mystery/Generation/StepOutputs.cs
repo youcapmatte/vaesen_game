@@ -93,6 +93,17 @@ public sealed class HumansOutput
     /// <summary>For a hidden-hand case: the cast member behind it.</summary>
     [JsonProperty("hiddenHandCharacterId")]
     public string? HiddenHandCharacterId { get; set; }
+
+    /// <summary>Named people in the story who never appear: relatives, the dead, the far away.</summary>
+    [JsonProperty("offstagePeople")]
+    public List<OffstagePerson> OffstagePeople { get; set; } = [];
+}
+
+/// <summary>The residents step: ordinary people of the place, written short on the small model (fixes 4, section 10).</summary>
+public sealed class ResidentsOutput
+{
+    [JsonProperty("residents")]
+    public List<CastDraft> Residents { get; set; } = [];
 }
 
 public sealed class CastDraft
@@ -363,6 +374,12 @@ public static class CriticChecks
     /// <summary>Threats and bargains say why the threatened party believes them (fixes 3, section 5).</summary>
     public const string Leverage = "leverage";
 
+    /// <summary>No mind believes against what it knows without a reason (fixes 4, section 8).</summary>
+    public const string MindsAgree = "mindsAgree";
+
+    /// <summary>People's actions, secrets, lies and beliefs agree with the facts (the review of case 05).</summary>
+    public const string NpcRecords = "npcRecords";
+
     public static readonly IReadOnlyList<string> All =
-        [DeepLoreTrail, NonTrivial, KnowledgeGate, HumansFromConflict, DifficultyOnFocus, Hook, FairClues, HonestRedHerrings, Solves, WorldConsistency, Timeline, Mechanisms, ActsToPlan, Leverage];
+        [DeepLoreTrail, NonTrivial, KnowledgeGate, HumansFromConflict, DifficultyOnFocus, Hook, FairClues, HonestRedHerrings, Solves, WorldConsistency, Timeline, Mechanisms, ActsToPlan, Leverage, MindsAgree, NpcRecords];
 }

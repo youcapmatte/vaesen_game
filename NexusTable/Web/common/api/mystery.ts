@@ -161,7 +161,9 @@ export interface CasePacket {
     };
   }[];
   /** The minds of creatures the players can speak or bargain with. */
-  creatureMinds?: { vaesenId: string; wants: string[]; terms: string[]; termDeedIds: string[]; redLines: string[]; voice: string }[];
+  creatureMinds?: { vaesenId: string; wants: string[]; terms: string[]; termDeedIds: string[]; redLines: string[]; voice: string; blames?: { characterId: string; why: string }[] }[];
+  /** Named people in the story who never appear. */
+  offstagePeople?: { id: string; name: string; relation: string; note: string }[];
   tension: { start: number };
   validation: { passed: boolean; issues: CoherenceIssue[]; runs: number };
 }
@@ -170,7 +172,7 @@ export interface GenerationLogEntry {
   caseAttempt: number;
   step: string;
   /** full: the whole step; fresh: a restart after it gave up; patch: only the items with problems; check: the whole-case checks. */
-  kind: "full" | "fresh" | "patch" | "fix" | "check";
+  kind: "full" | "fresh" | "patch" | "fix" | "check" | "rename";
   /** The call's cost in USD at list prices. */
   costUsd?: number;
   attempt: number;
@@ -191,6 +193,8 @@ export interface LeverDeed {
   place?: string | null;
   affordanceId?: string | null;
   time?: string | null;
+  /** Who must do it: cast ids, or "players". */
+  performedBy?: { who: string[]; rule: "any" | "all" };
   witnesses: string[];
   witnessRule: "any" | "all";
 }
@@ -299,9 +303,11 @@ export const GenerationSteps = [
   { id: "conflict", label: "The conflict" },
   { id: "escalation", label: "What has happened" },
   { id: "humans", label: "The people" },
+  { id: "residents", label: "The residents" },
   { id: "facts", label: "The facts" },
   { id: "minds", label: "Who knows what, and every way in" },
   { id: "arc", label: "The beats and the endings" },
+  { id: "creature", label: "The creature's mind" },
   { id: "hook", label: "The hook and the scenes" },
   { id: "check", label: "Checking the whole case" },
   { id: "critic", label: "The critic's review" },

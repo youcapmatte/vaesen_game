@@ -27,11 +27,32 @@ public sealed class Setting : ContentRecord
     [JsonProperty("periodConventions")]
     public PeriodConventions PeriodConventions { get; set; } = new();
 
-    /// <summary>The kinds of hook-giver, for the per-Society cooldown (e.g. "official", "clergy", "relative").</summary>
+    /// <summary>The kinds of hook-giver, with what each means (fixes 4, section 9), for the per-Society cooldown.</summary>
     [JsonProperty("hookGiverTypes")]
-    public List<string> HookGiverTypes { get; set; } = [];
+    public List<HookGiverType> HookGiverTypes { get; set; } = [];
+
+    public HookGiverType? FindHookGiverType(string? id) => HookGiverTypes.Find(t => t.Id == id);
 
     public HookChannel? FindHookChannel(string? id) => HookChannels.Find(c => c.Id == id);
+}
+
+/// <summary>A kind of person who brings the trouble to the Society, and the words that recognise one.</summary>
+public sealed class HookGiverType
+{
+    [JsonProperty("id")]
+    public string Id { get; set; } = "";
+
+    /// <summary>One line: who counts ("a crown or parish official: sheriff, constable, clerk").</summary>
+    [JsonProperty("meaning")]
+    public string Meaning { get; set; } = "";
+
+    /// <summary>Words in an occupation or rank that fit the type ("sheriff", "länsman", "clerk").</summary>
+    [JsonProperty("matches")]
+    public List<string> Matches { get; set; } = [];
+
+    public bool Fits(CharacterIdentity? identity) =>
+        Matches.Count == 0 || (identity is not null && Matches.Exists(m =>
+            (identity.Occupation ?? "").Contains(m, StringComparison.OrdinalIgnoreCase) || (identity.Rank ?? "").Contains(m, StringComparison.OrdinalIgnoreCase)));
 }
 
 /// <summary>A way trouble reaches the Society: a letter, a newspaper item, a telegram, a visit.</summary>

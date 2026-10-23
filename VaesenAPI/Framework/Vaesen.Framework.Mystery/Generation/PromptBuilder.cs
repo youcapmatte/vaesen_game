@@ -123,7 +123,7 @@ public static class PromptBuilder
         text.AppendLine();
         // Each step gets only the canon it works from (fixes 2, section 5); the critic gets all of it.
         bool For(params string[] steps) => step is null or CriticStep.Name || steps.Contains(step);
-        if (For(ConflictStep.StepName, EscalationStep.StepName, HumansStep.StepName, MindsStep.StepName, ArcStep.StepName, HookStep.StepName))
+        if (For(ConflictStep.StepName, EscalationStep.StepName, HumansStep.StepName, ResidentsStep.StepName, MindsStep.StepName, ArcStep.StepName, HookStep.StepName))
         {
             text.AppendLine("# The level");
             text.AppendLine(Json(LevelView(draft.Level, step)));
@@ -196,7 +196,7 @@ public static class PromptBuilder
         }
 
         var withAffordances = step == MindsStep.StepName;
-        var dwellingsOnly = step == HumansStep.StepName;
+        var dwellingsOnly = step is HumansStep.StepName or ResidentsStep.StepName;
         return new
         {
             level.Id,

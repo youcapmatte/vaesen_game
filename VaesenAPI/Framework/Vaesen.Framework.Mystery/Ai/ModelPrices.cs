@@ -11,7 +11,9 @@ public static class ModelPrices
     private static readonly (string Prefix, Price Price)[] Prices =
     [
         ("claude-opus-5-5", new Price(4, 5, 0.20, 20)),
-        ("claude-sonnet-5-5", new Price(2, 2.50, 0.10, 10)),
+        ("claude-sonnet-5-5", new Price(2, 2.50, 0.20, 10)),
+
+        // Prompts up to 100K tokens; $0.50 / $2.50 beyond, which the light round never reaches.
         ("claude-haiku-5-5", new Price(0.10, 0.125, 0.01, 0.50)),
     ];
 

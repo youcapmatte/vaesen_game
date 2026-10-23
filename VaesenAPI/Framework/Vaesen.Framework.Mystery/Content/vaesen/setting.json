@@ -15,13 +15,25 @@
   ],
   "hookChannels": [
     { "id": "contact-letter", "name": "A letter through the Society's contacts", "description": "A letter from someone who knows of the Society, or who was told to write to it by a friend of a friend.", "scales": [ "private", "local", "regional" ], "weight": 3 },
-    { "id": "newspaper", "name": "A newspaper item", "description": "A short item in a provincial or Uppsala paper that reads wrong to anyone with the Sight.", "scales": [ "local", "regional", "national" ], "weight": 2 },
+    { "id": "newspaper", "name": "A newspaper item", "description": "A short item in a provincial paper, or in Uppsala's own Fyrisposten (edited by Blom), that reads wrong to anyone with the Sight.", "scales": [ "local", "regional", "national" ], "weight": 2 },
     { "id": "official-request", "name": "An official request", "description": "A discreet request from a parish, a county office or the police, who want the matter settled quietly.", "scales": [ "local", "regional", "national" ], "weight": 1 },
     { "id": "telegram", "name": "A telegram", "description": "A short, urgent telegram, often from someone the Society has helped before.", "scales": [ "private", "local", "regional" ], "weight": 1 },
     { "id": "in-person", "name": "An in-person plea", "description": "Someone arrives at the headquarters in person, having travelled far to ask for help.", "scales": [ "private", "local" ], "weight": 1.5 },
     { "id": "old-world-visit", "name": "A visit from the old world", "description": "A being of the old world, or a messenger it sends, comes to the Society. Rare.", "scales": [ "private", "local", "regional" ], "weight": 0.3 }
   ],
-  "hookGiverTypes": [ "relative", "official", "clergy", "landowner", "worker", "scholar", "physician", "merchant", "servant", "old-world" ],
+  "hookGiverTypes": [
+    {"id": "relative", "meaning": "a relative of someone in trouble: a mother, a brother, a widow", "matches": []},
+    {"id": "official", "meaning": "a crown or parish official: sheriff, constable, länsman, bailiff, clerk, customs or post officer", "matches": ["sheriff", "länsman", "constable", "bailiff", "clerk", "official", "officer", "postmaster", "stationmaster", "magistrate", "fogde"]},
+    {"id": "clergy", "meaning": "a vicar, curate, chaplain, comminister or sexton", "matches": ["vicar", "curate", "chaplain", "comminister", "priest", "pastor", "clergy", "sexton", "dean"]},
+    {"id": "landowner", "meaning": "the owner of a farm, manor or estate", "matches": ["owner", "landowner", "farmer", "bergsman", "squire", "baron", "count", "estate", "manor", "freeholder"]},
+    {"id": "worker", "meaning": "a miner, sawyer, farmhand, smith or other working person", "matches": ["miner", "sawyer", "farmhand", "smith", "worker", "labourer", "laborer", "maid", "hand", "teamster", "carter", "fisher", "stoker", "crofter"]},
+    {"id": "scholar", "meaning": "a teacher, student, scientist or learned person", "matches": ["teacher", "student", "docent", "professor", "scholar", "scientist", "librarian", "tutor"]},
+    {"id": "physician", "meaning": "a doctor, surgeon, midwife or apothecary", "matches": ["doctor", "physician", "surgeon", "midwife", "apothecary"]},
+    {"id": "merchant", "meaning": "a merchant, shopkeeper, innkeeper, agent or trader", "matches": ["merchant", "shopkeeper", "innkeeper", "agent", "trader", "dealer", "landlady", "landlord"]},
+    {"id": "servant", "meaning": "a servant, maid, groom or housekeeper in someone else's household", "matches": ["servant", "maid", "groom", "housekeeper", "valet", "cook", "coachman", "steward"]},
+    {"id": "press", "meaning": "a journalist or editor; in Uppsala, Fyrisposten and its editor Blom", "matches": ["journalist", "editor", "reporter", "newspaper", "printer"]},
+    {"id": "oldWays", "meaning": "a person who keeps the old ways: a wise woman, cunning man or old farmhand", "matches": ["wise", "cunning", "healer", "herbal", "klok"]}
+  ],
   "institutions": [
     { "id": "police", "name": "Police and county constables", "description": "Town police and rural constables (länsman) answering to the county governor." },
     { "id": "parish", "name": "The parish and the Church of Sweden", "description": "The vicar, the parish register, the household examinations and the church council." },

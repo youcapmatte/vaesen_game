@@ -39,6 +39,19 @@ public sealed class FactGraph
         return known;
     }
 
+    /// <summary>Beats that must have fired before a channel opens ("afterBeat:b4": the aftermath of a beat).</summary>
+    public IEnumerable<string> BeatGates(CaseChannel channel) =>
+        (_requirements.TryGetValue(channel.Id, out var reqs) ? reqs : [])
+            .Where(r => r?.Kind == AccessRequirement.AfterBeat)
+            .Select(r => r!.Value);
+
+    /// <summary>
+    /// True when anything puts the fact in front of the players: a channel of any kind (hearsay included) or a beat.
+    /// Hearsay counts for reachability; it only does not count toward a load-bearing fact's two ways in.
+    /// </summary>
+    public bool HasAnySource(string factId) =>
+        _packet.Channels.Exists(c => c.FactId == factId) || _packet.Beats.Exists(b => b.EmitsFactIds.Contains(factId));
+
     /// <summary>Facts a channel needs known before it opens ("knowsFact:f7").</summary>
     public IEnumerable<string> FactGates(CaseChannel channel) =>
         (_requirements.TryGetValue(channel.Id, out var reqs) ? reqs : [])
@@ -70,7 +83,7 @@ public sealed class FactGraph
                     continue;
                 }
 
-                if (FactGates(channel).All(f => known.Contains(f) && (gateFilter is null || gateFilter(f))))
+                if (FactGates(channel).All(f => known.Contains(f) && (gateFilter is null || gateFilter(f))) && BeatGates(channel).All(firedBeats.Contains))
                 {
                     usedChannels.Add(channel.Id);
                     if (known.Add(channel.FactId))

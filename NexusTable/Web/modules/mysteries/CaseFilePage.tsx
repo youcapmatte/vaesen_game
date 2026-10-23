@@ -342,6 +342,7 @@ function EndingsTab({ p }: { p: CasePacket }) {
                 <Text key={d.id} fz="xs" c="var(--nx-parchment-2)">
                   {d.id}: {d.description}
                   {[d.place, d.time].filter(Boolean).length > 0 && ` (${[d.place, d.time].filter(Boolean).join(", ")})`}
+                  {(d.performedBy?.who.length ?? 0) > 0 && `, by ${d.performedBy!.who.length > 1 ? `${d.performedBy!.rule} of ` : ""}${d.performedBy!.who.map((w) => (w === "players" ? "the players" : name(w))).join(", ")}`}
                   {d.witnesses.length > 0 && `, before ${d.witnesses.length > 1 ? `${d.witnessRule} of ` : ""}${d.witnesses.map(name).join(", ")}`}
                 </Text>
               ))}

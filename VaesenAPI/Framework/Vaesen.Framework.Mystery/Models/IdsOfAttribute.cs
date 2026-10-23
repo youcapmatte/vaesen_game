@@ -21,6 +21,9 @@ public static class IdKinds
     public const string Place = "place";
     public const string Affordance = "affordance";
 
+    /// <summary>Who carries out a deed: a cast member, or "players".</summary>
+    public const string Performer = "performer";
+
     /// <summary>A deed of a deep resolution lever ("r3-d1").</summary>
     public const string Deed = "deed";
 

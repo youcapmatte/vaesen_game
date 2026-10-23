@@ -15,6 +15,7 @@ public static class CaseView
         ConflictStep.StepName => null,
         EscalationStep.StepName => new { truth = Truth(p, withEscalation: false) },
         HumansStep.StepName => new { truth = Truth(p, withEscalation: true) },
+        ResidentsStep.StepName => new { truth = new { p.Truth.Summary }, cast = p.Cast.Select(c => new { c.CharacterId, c.Name, c.PlotRole, c.HomePlaceId }) },
         FactsStep.StepName => new { truth = Truth(p, withEscalation: true), cast = Cast(p, withSecrets: true) },
         MindsStep.StepName => new
         {
@@ -22,6 +23,7 @@ public static class CaseView
             escalation = Events(p),
             facts = p.Facts,
             decoys = p.Decoys,
+            offstagePeople = p.OffstagePeople,
             cast = Cast(p, withSecrets: true),
         },
         ArcStep.StepName => new

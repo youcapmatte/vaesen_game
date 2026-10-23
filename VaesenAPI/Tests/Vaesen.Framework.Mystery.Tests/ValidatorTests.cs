@@ -255,7 +255,7 @@ public sealed class ValidatorTests(ITestOutputHelper output)
         Assert.Contains(Enum(packet.Cast.Select(c => c.CharacterId)), minds, StringComparison.Ordinal);
         Assert.Contains(Enum(level.Places.Select(p => p.Id)), minds, StringComparison.Ordinal);
         Assert.Contains(Enum(level.Places.SelectMany(p => p.AllAffordances()).Select(a => a.Id)), minds, StringComparison.Ordinal);
-        Assert.Contains(Enum(AccessRequirement.Allowed(packet.Facts.Select(f => f.Id), level.Places.Select(p => p.Id))), minds, StringComparison.Ordinal);
+        Assert.Contains(Enum(AccessRequirement.Allowed(packet.Facts.Select(f => f.Id), level.Places.Select(p => p.Id), packet.Beats.Select(b => b.Id))), minds, StringComparison.Ordinal);
         Assert.DoesNotContain("x-ids", minds, StringComparison.Ordinal);
 
         // The facts step names its own facts: their ids stay open there, and events are fixed.
@@ -371,6 +371,74 @@ public sealed class ValidatorTests(ITestOutputHelper output)
 
         packet.CreatureMinds.Clear();
         Assert.Contains(Validate(packet), i => i.IsError && i.Location == "creatureMinds" && i.Explanation.Contains("has no mind", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void Hearsay_reaches_a_fact_and_offstage_people_are_sources()
+    {
+        var packet = SampleCase();
+        var colour = packet.Facts.First(f => !f.LoadBearing && packet.Channels.Count(c => c.FactId == f.Id && c.Kind == ChannelKinds.Testimony) == 1
+            && packet.Channels.Count(c => c.FactId == f.Id) == 1);
+        var channel = packet.Channels.First(c => c.FactId == colour.Id);
+        var teller = packet.FindCast(channel.SourceCharacterId)!;
+        packet.OffstagePeople.Add(new OffstagePerson { Id = "greta", Name = "Greta Holm", Relation = "Per's sister in Gävle" });
+        teller.Knows.RemoveAll(k => k.FactId == colour.Id);
+        teller.Knows.Add(new CastKnowledge { FactId = colour.Id, Source = "told:offstage:greta", When = "by letter" });
+
+        var issues = Validate(packet);
+
+        // Hearsay counts for reachability: no "never revealed" warning, and the offstage source validates.
+        Assert.DoesNotContain(issues, i => i.Code == IssueCodes.Unreachable && i.Location == $"fact:{colour.Id}");
+        Assert.DoesNotContain(issues, i => i.Code == IssueCodes.Provenance && i.Explanation.Contains("greta", StringComparison.Ordinal));
+
+        teller.Knows.Single(k => k.FactId == colour.Id).Source = "told:offstage:nobody";
+        AssertError(Validate(packet), IssueCodes.Provenance);
+    }
+
+    [Fact]
+    public void Beats_that_hand_over_the_deep_solve_send_the_arc_back()
+    {
+        var packet = SampleCase();
+        var deep = packet.ResolutionLevers.First(l => l.SolveDepth == SolveDepths.Deep);
+        packet.Beats[0].EmitsFactIds.AddRange(deep.RequiresFactIds);
+
+        AssertError(Validate(packet), IssueCodes.Beats, "climax");
+        Assert.Equal(2, Services.MysteryGenerator.ClueSubStep(Validate(packet).First(i => i.IsError && i.Location == "climax")));
+    }
+
+    [Fact]
+    public void A_rename_reaches_every_text_and_kept_output()
+    {
+        var packet = SampleCase();
+        var level = Pack.FindLevel(packet.Brief.LevelId)!;
+        var draft = new Generation.MysteryDraft
+        {
+            Brief = new AssignmentBrief(), Pack = Pack, History = new SocietyHistory(), Level = level, Vaesen = Pack.FindVaesen("nack")!, Conflicts = [], Packet = packet,
+        };
+        packet.Truth.Summary += " Per Holm owes the mill. Per knows it.";
+        draft.Outputs["minds"] = new Generation.MindsOutput { Channels = [new CaseChannel { Id = "c99", Reveal = "Per Holm says nothing." }] };
+
+        var places = Generation.Renames.Apply(draft, [("Per Holm", "Pål Holm")]);
+
+        Assert.True(places >= 3);
+        Assert.Contains("Pål Holm owes the mill. Pål knows it.", draft.Packet.Truth.Summary, StringComparison.Ordinal);
+        Assert.DoesNotContain("Per Holm", Newtonsoft.Json.JsonConvert.SerializeObject(draft.Packet), StringComparison.Ordinal);
+        Assert.Equal("Pål Holm says nothing.", ((Generation.MindsOutput)draft.Outputs["minds"]).Channels[0].Reveal);
+        Assert.Contains("npc-per-holm", draft.Packet.Cast.Select(c => c.CharacterId));
+    }
+
+    [Fact]
+    public void The_hook_giver_must_be_the_kind_of_person_asked_for()
+    {
+        var packet = SampleCase();
+        packet.Brief.HookGiverType = "official";
+        var giver = packet.FindCast(packet.Hook.HookGiverId)!;
+        giver.Identity = new CharacterIdentity { Occupation = "Vicar of Forsby", Rank = "clergy" };
+
+        Assert.Contains(Validate(packet), i => !i.IsError && i.Location == "hook" && i.Explanation.Contains("should be a crown or parish official", StringComparison.Ordinal));
+
+        giver.Identity = new CharacterIdentity { Occupation = "Kronolänsman of the district", Rank = "official" };
+        Assert.DoesNotContain(Validate(packet), i => i.Location == "hook" && i.Explanation.Contains("should be", StringComparison.Ordinal));
     }
 
     [Fact]

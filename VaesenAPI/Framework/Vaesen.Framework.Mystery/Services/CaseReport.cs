@@ -128,6 +128,15 @@ public static class CaseReport
             }
         }
 
+        if (p.OffstagePeople.Count > 0)
+        {
+            Section(s, "Offstage people");
+            foreach (var o in p.OffstagePeople)
+            {
+                s.AppendLine(inv, $"- **{o.Name}** (`{o.Id}`), {o.Relation}. {o.Note}");
+            }
+        }
+
         Section(s, "Beats and climax");
         foreach (var b in p.Beats.OrderBy(b => b.Threshold))
         {
@@ -147,8 +156,9 @@ public static class CaseReport
                 foreach (var d in r.RequiredDeeds)
                 {
                     var where = string.Join(", ", new[] { d.Place, d.AffordanceId, d.Time }.OfType<string>());
+                    var by = d.PerformedBy.Who.Count == 0 ? "" : $", by {(d.PerformedBy.Who.Count > 1 ? d.PerformedBy.Rule + " of " : "")}{string.Join(", ", d.PerformedBy.Who)}";
                     var before = d.Witnesses.Count == 0 ? "" : $", before {(d.Witnesses.Count > 1 ? d.WitnessRule + " of " : "")}{string.Join(", ", d.Witnesses)}";
-                    s.AppendLine(inv, $"    - {d.Id}: {d.Description}{(where.Length == 0 ? "" : $" [{where}]")}{before}");
+                    s.AppendLine(inv, $"    - {d.Id}: {d.Description}{(where.Length == 0 ? "" : $" [{where}]")}{by}{before}");
                 }
             }
         }
@@ -159,6 +169,10 @@ public static class CaseReport
             s.AppendLine(inv, $"- Wants: {string.Join("; ", m.Wants)}");
             s.AppendLine(inv, $"- Terms: {string.Join("; ", m.Terms)} (deeds {Ids(m.TermDeedIds)})");
             s.AppendLine(inv, $"- Red lines: {string.Join("; ", m.RedLines)}");
+            if (m.Blames.Count > 0)
+            {
+                s.AppendLine(inv, $"- Blames: {string.Join("; ", m.Blames.Select(b => $"{b.CharacterId}: {b.Why}"))}");
+            }
             s.AppendLine(inv, $"- Knows {Ids(m.Knows.Select(k => k.FactId))}; thinks: {string.Join("; ", m.Thinks.Select(t => $"{t.Belief} ({(t.True ? "true" : "false")})"))}");
             s.AppendLine(inv, $"- Voice: {m.Voice}");
             var r = m.Reactions;

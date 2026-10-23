@@ -116,6 +116,10 @@ public sealed class CaseValidator : ICoherenceValidator
         {
             run.CheckLevel();
             run.CheckReachability();
+            run.CheckAftermath();
+            run.CheckHookGiver();
+            run.CheckBeatsDoNotSolve();
+            run.CheckThreatsBelieved();
             run.CheckRedundancy();
             run.CheckOrderIndependence();
             run.CheckDecoysAndFairPlay();
@@ -402,7 +406,9 @@ public sealed class CaseValidator : ICoherenceValidator
         /// </summary>
         private void CheckNames()
         {
-            var people = packet.Cast.Select(c => (Name: c.Name, At: $"cast:{c.CharacterId}")).ToList();
+            var people = packet.Cast.Select(c => (Name: c.Name, At: $"cast:{c.CharacterId}"))
+                .Concat(packet.OffstagePeople.Select(o => (Name: o.Name, At: "offstagePeople")))
+                .ToList();
             var texts = new[] { packet.Truth.Summary, packet.Truth.Provocation, packet.Truth.HiddenHandMotive ?? "", packet.Truth.DecoyReading ?? "" }
                 .Concat(packet.Truth.Escalation.Select(e => e.Description));
             foreach (var mentioned in texts.SelectMany(NameRules.Mentioned).Distinct(StringComparer.Ordinal))
@@ -636,7 +642,16 @@ public sealed class CaseValidator : ICoherenceValidator
                         continue;
                     }
 
-                    if (KnowledgeSources.IsHearsay(source))
+                    if (source.StartsWith(KnowledgeSources.OffstagePrefix, StringComparison.Ordinal))
+                    {
+                        var who = source[KnowledgeSources.OffstagePrefix.Length..];
+                        if (!packet.OffstagePeople.Exists(o => o.Id == who || string.Equals(o.Name, who, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            Error(IssueCodes.Provenance, at, $"Knows {k.FactId}, told by '{who}', who is not among the offstage people.",
+                                "Use told:offstage:<id> with an id from offstagePeople, or told:bystander:<role> for anonymous gossip.");
+                        }
+                    }
+                    else if (KnowledgeSources.IsHearsay(source))
                     {
                         if (source.Length == KnowledgeSources.BystanderPrefix.Length)
                         {
@@ -667,8 +682,8 @@ public sealed class CaseValidator : ICoherenceValidator
                     }
                     else
                     {
-                        Error(IssueCodes.Provenance, at, $"Knows {k.FactId} from an unreadable source '{source}'. Allowed: witnessed, self, lore, told:<characterId>, told:bystander:<role>, found:<channelId>.",
-                            "Use witnessed, self, lore, told:<characterId>, told:bystander:<role> or found:<channelId>.");
+                        Error(IssueCodes.Provenance, at, $"Knows {k.FactId} from an unreadable source '{source}'. Allowed: witnessed, self, lore, told:<characterId>, told:offstage:<id>, told:bystander:<role>, found:<channelId>.",
+                            "Use witnessed, self, lore, told:<characterId>, told:offstage:<id>, told:bystander:<role> or found:<channelId>.");
                     }
                 }
             }
@@ -763,6 +778,77 @@ public sealed class CaseValidator : ICoherenceValidator
             }
 
             return Find(place.Affordances, null);
+        }
+
+        /// <summary>
+        /// The beats and the opening must not hand over the deep solve (fixes 4, section 2): at most half the deep
+        /// lever's facts may come from them; the rest must be sought out through channels. An error, sent to the arc.
+        /// </summary>
+        public void CheckBeatsDoNotSolve()
+        {
+            var given = _graph.OpeningKnowledge();
+            given.UnionWith(packet.Beats.SelectMany(b => b.EmitsFactIds));
+            foreach (var lever in packet.ResolutionLevers.Where(l => l.SolveDepth == SolveDepths.Deep && l.RequiresFactIds.Count > 0))
+            {
+                var free = lever.RequiresFactIds.Where(given.Contains).ToList();
+                if (free.Count * 2 > lever.RequiresFactIds.Count)
+                {
+                    Error(IssueCodes.Beats, "climax",
+                        $"The deep solve {lever.Id} needs {string.Join(", ", lever.RequiresFactIds)}; {string.Join(", ", free)} come from the opening or the beats alone, so the case solves itself.",
+                        "Let beats and the climax show pressure, not answers: take those facts out of the beats' emitsFactIds, so the players must find most of them through channels.");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Someone who lives under a threat believes something about it (fixes 4, section 7): why it is real, and why
+        /// the threatener's own exposure does not stop it. A warning, sent to minds and channels.
+        /// </summary>
+        public void CheckThreatsBelieved()
+        {
+            string[] words = ["threat", "blackmail", "threaten", "hold over", "expose", "denounce", "inform on"];
+            foreach (var member in packet.Cast.Where(m => m.Importance == CastImportance.Significant && m.Thinks.Count == 0))
+            {
+                var text = string.Join(" ", member.Wants.Drives.Concat(member.Wants.Fears).Concat(member.Secrets)).ToLowerInvariant();
+                if (words.Any(text.Contains))
+                {
+                    WarnOn([$"{member.CharacterId}.thinks"], IssueCodes.CastCoherence, $"cast:{member.CharacterId}",
+                        $"{member.Name} lives under a threat but believes nothing about it.",
+                        $"Give {member.Name} a belief saying why the threat is real, and, if the threatener would be exposed too, why that does not stop it.");
+                }
+            }
+        }
+
+        /// <summary>
+        /// A fact a beat puts into the world needs a channel players can find afterwards (fixes 4, section 3): gossip, a
+        /// trace left behind, a witness, gated afterBeat:&lt;beatId&gt;. Otherwise a group not there when it fired never learns it.
+        /// </summary>
+        /// <summary>The hook-giver is the kind of person the assignment asked for (fixes 4, section 9). A warning, sent to the hook.</summary>
+        public void CheckHookGiver()
+        {
+            if (context.Pack.Setting.FindHookGiverType(packet.Brief.HookGiverType) is not { } type || packet.FindCast(packet.Hook.HookGiverId) is not { } giver)
+            {
+                return;
+            }
+
+            if (!type.Fits(giver.Identity ?? context.Pack.FindCharacter(giver.CharacterId)?.Identity))
+            {
+                WarnOn(["hook"], IssueCodes.Opening, "hook", $"The hook-giver should be {type.Meaning}, but {giver.Name} is {giver.Identity?.Occupation ?? "not one"}.",
+                    $"Give the hook to a cast member who is {type.Meaning}.");
+            }
+        }
+
+        public void CheckAftermath()
+        {
+            foreach (var beat in packet.Beats)
+            {
+                foreach (var factId in beat.EmitsFactIds.Where(f => !packet.Channels.Exists(c => c.FactId == f)).Distinct())
+                {
+                    WarnOn(["channels"], IssueCodes.Beats, $"fact:{factId}",
+                        $"{factId} comes only from beat {beat.Id}: a group that was not there never learns it.",
+                        $"Add a channel for {factId} gated afterBeat:{beat.Id}: next-day gossip, a trace left behind, or a witness.");
+                }
+            }
         }
 
         // ---- Sub-step 6c: the arc -----------------------------------------------------------------------------
@@ -957,6 +1043,16 @@ public sealed class CaseValidator : ICoherenceValidator
 
                 foreach (var deed in lever.RequiredDeeds)
                 {
+                    if (deed.PerformedBy.Who.Count == 0)
+                    {
+                        Error(IssueCodes.Resolution, at, $"Deed {deed.Id} says nobody does it: name who must (performedBy: cast ids, or players).");
+                    }
+
+                    foreach (var performer in deed.PerformedBy.Who.Where(w => w != DeedPerformers.Players))
+                    {
+                        Person(performer, at);
+                    }
+
                     var place = deed.Place is null ? null : context.Level.FindPlace(deed.Place);
                     if (deed.Place is not null && place is null)
                     {
@@ -1072,7 +1168,7 @@ public sealed class CaseValidator : ICoherenceValidator
                 Warn(IssueCodes.AffordanceFit, $"channel:{c.Id}", $"Place '{c.PlaceId}' holds a clue but is not in placesUsed.");
             }
 
-            foreach (var fact in packet.Facts.Where(f => !f.LoadBearing && !_graph.SourcesOf(f.Id).Any() && !_graph.OpeningKnowledge().Contains(f.Id)))
+            foreach (var fact in packet.Facts.Where(f => !f.LoadBearing && !_graph.HasAnySource(f.Id) && !_graph.OpeningKnowledge().Contains(f.Id)))
             {
                 Warn(IssueCodes.Unreachable, $"fact:{fact.Id}", "This fact has no channel and is never revealed.");
             }
@@ -1116,9 +1212,11 @@ public sealed class CaseValidator : ICoherenceValidator
                     var hearsay = packet.Channels.Where(c => c.FactId == fact.Id && _graph.IsHearsay(c)).ToList();
                     var why = hearsay.Count == 0
                         ? ""
-                        : $" {string.Join(", ", hearsay.Select(c => $"{c.Id} ({packet.FindCast(c.SourceCharacterId)?.Name})"))} rest only on bystander gossip, which never counts.";
+                        : $" {string.Join(", ", hearsay.Select(c => $"{c.Id} ({packet.FindCast(c.SourceCharacterId)?.Name})"))} rest only on hearsay (a bystander or someone offstage), which does not count here.";
                     Error(IssueCodes.Redundancy, $"fact:{fact.Id}",
-                        $"Load-bearing fact '{fact.Statement}' has {sources.Count} independent channel(s); it needs at least two.{why}",
+                        sources.Count == 0 && hearsay.Count > 0
+                            ? $"Load-bearing fact '{fact.Statement}' has only hearsay channels; it needs a direct one, and two independent channels in all.{why}"
+                            : $"Load-bearing fact '{fact.Statement}' has {sources.Count} independent channel(s); it needs at least two.{why}",
                         hearsay.Count == 0
                             ? "Place it through another person or another spot: a trace, a document, an overheard remark."
                             : "Give a teller first-hand knowledge (witnessed, self, lore, or told by a cast member who knows it), or add a trace or a document.");
