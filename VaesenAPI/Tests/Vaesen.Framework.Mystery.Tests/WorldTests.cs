@@ -34,7 +34,7 @@ public sealed class WorldTests
         Assert.Equal(-2, world.Find("constable-hagg")!.Attitude);
 
         // Cases are offered the world's people, with their attitudes.
-        var caseContext = model.Contexts.Last(c => c.Contains("# The creature", StringComparison.Ordinal));
+        var caseContext = model.Contexts.Last(c => c.Contains("# Persistent characters", StringComparison.Ordinal));
         Assert.Contains("npc-sara-lindqvist", caseContext, StringComparison.Ordinal);
         Assert.Contains("constable-hagg", caseContext, StringComparison.Ordinal);
     }
@@ -147,7 +147,7 @@ public sealed class WorldTests
 
         await generator.GenerateAsync(Request(store: false));
 
-        var context = model.Contexts.Last(c => c.Contains("# The creature", StringComparison.Ordinal));
+        var context = model.Contexts.Last(c => c.Contains("# Persistent characters", StringComparison.Ordinal));
         var offered = context[context.IndexOf("# Persistent characters", StringComparison.Ordinal)..];
         Assert.Contains("npc-anna-lind", offered, StringComparison.Ordinal);
         Assert.Contains("# Dead or gone", offered, StringComparison.Ordinal);

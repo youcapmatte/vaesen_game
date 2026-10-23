@@ -346,6 +346,49 @@ public sealed class CaseValidator : ICoherenceValidator
                     Warn(IssueCodes.CastCoherence, $"conflict:{conflict.Id}", $"Nobody fills the required role '{slot.Name}' ({slot.Id}).");
                 }
             }
+
+            var ranks = context.Pack.Setting.PeriodConventions.SocialRanks;
+            foreach (var member in packet.Cast.Where(c => c.Identity is { Rank.Length: > 0 } && ranks.Count > 0))
+            {
+                if (!ranks.Contains(member.Identity!.Rank, StringComparer.OrdinalIgnoreCase))
+                {
+                    Warn(IssueCodes.CastCoherence, $"cast:{member.CharacterId}", $"{member.Name}'s rank '{member.Identity.Rank}' is not one of the setting's.{CoherenceIssue.Allowed(ranks)}");
+                }
+            }
+
+            CheckNames();
+        }
+
+        /// <summary>
+        /// Names heard by voice must not be confused (fixes 2, section 6): every named person, the cast and the people
+        /// the truth and the events mention, against every other. No shared first name or first syllable, and no surname
+        /// that contains another's first name ("Per Ers" against "Jon Persson").
+        /// </summary>
+        private void CheckNames()
+        {
+            var people = packet.Cast.Select(c => (Name: c.Name, At: $"cast:{c.CharacterId}")).ToList();
+            var texts = new[] { packet.Truth.Summary, packet.Truth.Provocation, packet.Truth.HiddenHandMotive ?? "", packet.Truth.DecoyReading ?? "" }
+                .Concat(packet.Truth.Escalation.Select(e => e.Description));
+            foreach (var mentioned in texts.SelectMany(NameRules.Mentioned).Distinct(StringComparer.Ordinal))
+            {
+                if (!people.Exists(p => p.Name.Contains(mentioned, StringComparison.Ordinal)))
+                {
+                    people.Add((mentioned, "truth"));
+                }
+            }
+
+            for (var i = 0; i < people.Count; i++)
+            {
+                for (var j = i + 1; j < people.Count; j++)
+                {
+                    if (NameRules.Clash(people[i].Name, people[j].Name) is { } why)
+                    {
+                        var at = people[i].At.StartsWith("cast:", StringComparison.Ordinal) ? people[i].At : people[j].At;
+                        Warn(IssueCodes.CastCoherence, at, $"'{people[i].Name}' and '{people[j].Name}' sound alike ({why}); players will mix them up.",
+                            "Rename one so no two people share a first name or first syllable, and no surname holds another's first name.");
+                    }
+                }
+            }
         }
 
         // ---- Sub-step 6a: facts -------------------------------------------------------------------------------
@@ -574,6 +617,19 @@ public sealed class CaseValidator : ICoherenceValidator
                     {
                         Error(IssueCodes.Provenance, at, $"Knows {k.FactId} from an unreadable source '{source}'. Allowed: witnessed, self, lore, told:<characterId>, found:<channelId>.",
                             "Use witnessed, self, lore, told:<characterId> or found:<channelId>.");
+                    }
+                }
+            }
+
+            // A lie that tells the fact is no lie (fixes 2, section 7).
+            foreach (var member in packet.Cast)
+            {
+                foreach (var lie in member.Lies)
+                {
+                    if (packet.FindFact(lie.About) is { } fact && NameRules.SaysTheSame(lie.Story, fact.Statement))
+                    {
+                        Warn(IssueCodes.Provenance, $"cast:{member.CharacterId}", $"{member.Name}'s lie about {fact.Id} says what the fact says, so it is not a lie.",
+                            $"Give {member.Name} a story that hides or bends {fact.Id}, or drop the lie.");
                     }
                 }
             }

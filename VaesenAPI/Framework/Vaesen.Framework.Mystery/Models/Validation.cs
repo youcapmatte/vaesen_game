@@ -28,6 +28,14 @@ public sealed class CoherenceIssue
     [JsonProperty("source")]
     public string Source { get; set; } = IssueSources.Structural;
 
+    /// <summary>The critic's issues: the ids they touch ("r3", "truth.hiddenHandMotive", "npc-anna-lind.knows"), for routing.</summary>
+    [JsonProperty("targets", NullValueHandling = NullValueHandling.Ignore)]
+    public List<string>? Targets { get; set; }
+
+    /// <summary>A critic warning whose suggested fix was applied in the last round.</summary>
+    [JsonProperty("applied", DefaultValueHandling = DefaultValueHandling.Ignore)]
+    public bool Applied { get; set; }
+
     [JsonIgnore]
     [System.Text.Json.Serialization.JsonIgnore]
     public bool IsError => Severity == IssueSeverities.Error;

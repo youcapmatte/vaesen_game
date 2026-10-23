@@ -178,6 +178,60 @@ public sealed class ValidatorTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void Critic_targets_go_to_the_step_that_owns_them()
+    {
+        Assert.Equal(("conflict", "truth.hiddenHandMotive"), Generation.CriticRouting.Owner("truth.hiddenHandMotive"));
+        Assert.Equal(("escalation", "event:e4"), Generation.CriticRouting.Owner("e4"));
+        Assert.Equal(("humans", "cast:npc-per-ers"), Generation.CriticRouting.Owner("npc-per-ers.identity"));
+        Assert.Equal(("minds", "cast:npc-per-ers"), Generation.CriticRouting.Owner("npc-per-ers.knows"));
+        Assert.Equal(("facts", "fact:f19"), Generation.CriticRouting.Owner("f19"));
+        Assert.Equal(("facts", "decoy:d1"), Generation.CriticRouting.Owner("d1"));
+        Assert.Equal(("minds", "channel:c43"), Generation.CriticRouting.Owner("c43"));
+        Assert.Equal(("arc", "lever:r3"), Generation.CriticRouting.Owner("r3"));
+        Assert.Equal(("arc", "climax"), Generation.CriticRouting.Owner("climax"));
+        Assert.Equal(("hook", "scene:mill"), Generation.CriticRouting.Owner("scene:mill"));
+
+        var routed = Generation.CriticRouting.Route([new CoherenceIssue
+        {
+            Code = "critic.solves", Location = "r3; motive", Explanation = "Add f24 to r3 and state the motive.", Source = IssueSources.Critic,
+            Targets = ["r3", "truth.hiddenHandMotive"],
+        }]);
+
+        Assert.Equal(["conflict", "arc"], routed.Select(r => r.Step));
+        Assert.Equal("lever:r3", Assert.Single(routed[1].Issues).Part.Location);
+    }
+
+    [Fact]
+    public void Names_that_sound_alike_anywhere_in_the_case_are_flagged()
+    {
+        Assert.NotNull(NameRules.Clash("Per Ers", "Jon Persson"));
+        Assert.NotNull(NameRules.Clash("Johan Berg", "Jonas Lund"));
+        Assert.Null(NameRules.Clash("Anna Lind", "Karl Hagg"));
+        Assert.Equal(["Jon Persson"], NameRules.Mentioned("The sawyer Jon Persson drowned below the falls."));
+
+        var packet = SampleCase();
+        packet.Cast[1].Name = "Per Ers";
+        packet.Truth.Summary += " Years ago the sawyer Jon Persson drowned there.";
+
+        Assert.Contains(Validate(packet), i => !i.IsError && i.Explanation.Contains("'Per Ers' and 'Jon Persson' sound alike", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void A_lie_that_tells_the_fact_and_a_rank_off_the_list_are_warned()
+    {
+        var packet = SampleCase();
+        var fact = packet.Facts[0];
+        packet.Cast[0].Lies = [new CastLie { About = fact.Id, Story = fact.Statement }];
+        packet.Cast[0].Knows.Add(new CastKnowledge { FactId = fact.Id, Source = KnowledgeSources.Witnessed });
+        packet.Cast[0].Identity!.Rank = "duke of nowhere";
+
+        var issues = Validate(packet);
+
+        Assert.Contains(issues, i => !i.IsError && i.Location == $"cast:{packet.Cast[0].CharacterId}" && i.Explanation.Contains("is not a lie", StringComparison.Ordinal));
+        Assert.Contains(issues, i => !i.IsError && i.Explanation.Contains("rank 'duke of nowhere'", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void Giveaway_and_deep_lore_are_derived_from_the_lore_ids()
     {
         var packet = SampleCase();
@@ -203,9 +257,16 @@ public sealed class ValidatorTests(ITestOutputHelper output)
         var adjusted = Generation.Derived.Tension(packet);
         var walk = new FactGraph(packet).Walk();
 
-        var loadBearing = packet.Facts.Where(f => f.LoadBearing).Sum(f => packet.Tension.FactWeights[f.Id]);
-        Assert.Equal(packet.Climax.Threshold * 1.15, packet.Tension.Start + loadBearing, 3);
-        Assert.Equal(2 * packet.Tension.FactWeights["f10"], packet.Tension.FactWeights["f7"], 3);
+        // Nothing known on arrival or of colour weighs anything; decoys half, load-bearing facts double.
+        Assert.Equal(packet.Tension.Start, packet.Tension.Arrival, 3);
+        Assert.All(new[] { "f1", "f2", "f3", "f10", "f16" }, id => Assert.Equal(0, packet.Tension.FactWeights[id]));
+        Assert.Equal(2 * packet.Tension.FactWeights["f15"], packet.Tension.FactWeights["f7"], 3);
+        Assert.Equal(0.5 * packet.Tension.FactWeights["f15"], packet.Tension.FactWeights["f11"], 3);
+
+        // The deep solve (r2: f5, f6, f9 and what gates them) ends 15% past the climax.
+        Assert.Contains("f5", packet.Tension.DeepPath);
+        Assert.Contains("f9", packet.Tension.DeepPath);
+        Assert.Equal(packet.Climax.Threshold * 1.15, packet.Tension.DeepPathTotal, 2);
         Assert.All(packet.Beats, b => Assert.InRange(b.Threshold, packet.Tension.Start, packet.Climax.Threshold));
         Assert.Contains(adjusted, i => i.Code == IssueCodes.Beats && !i.IsError);
         Assert.True(walk.FinalTension >= packet.Climax.Threshold);

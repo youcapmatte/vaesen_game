@@ -37,12 +37,24 @@ Services/      MysteryGenerator, WorldService (seeding, closing, write-back), Co
      - **minds**: what every person knows, thinks and lies about, and every channel into every fact.
      - **arc**: beats, the climax and the resolution levers (crude, partial or deep). The engine computes the tension weights: the load-bearing facts, weighing twice the others, take the dial 15% past the climax.
      - **hook**: the hook and the scene descriptions.
-3. **Whole-case checks and the critic**: reachability, redundancy, fair play and the rest, then the judgement checks code cannot make. Each problem goes back only to the sub-step it points at (new facts redo everything built on them), up to `MaxReworkRounds`. The critic may send the case back once (`MaxCriticReworks`); after that its objections stay on the case as warnings and it passes.
+3. **Whole-case checks and the critic**: reachability, redundancy, fair play and the rest, then the judgement checks code cannot make. Each structural problem goes back only to the sub-step it points at (new facts redo everything built on them), up to `MaxReworkRounds`.
+   - The critic names the ids each issue touches (`targets`: f3, c7, r2, truth.hiddenHandMotive, npc-anna.knows...). Each issue is routed to the step that owns those ids (a motive to the conflict, a lever to the arc, a channel to minds and channels), split when it spans steps, and fixed in place in pipeline order: a patch of the items named, or a revised answer that changes only what the issue asks. Nothing downstream is regenerated.
+   - The critic may send the case back once (`MaxCriticReworks`). After that its objections are warnings on a case that passes, and those with concrete fixes are applied in one cheap last round on `LightModel`, kept only if the case still passes its checks. Applied warnings are marked in the report.
 4. **Repairs and retries**:
    - Near misses in fixed-value fields ("Surface", "half") are repaired in code before validation and logged as warnings.
    - When a step's only errors are field-level ones on a quarter of its items or fewer, a **patch** call asks for just those items and merges them back. Otherwise the step retries in full with its issues fed back (`MaxStepRetries`); every issue about a fixed value lists the allowed values.
    - A step that gives up starts again on its own; steps that passed are kept. An earlier step is re-run only when a structural issue points at it, never on a location the critic mentions. The case is re-rolled from a new brief only when the conflict finds nothing plausible fits (`MaxCaseRetries`), and the focus alone is changed when it does not suit the creature (`supportedFoci`).
    - A rejected case records the step that gave up; its report ends with that step's last attempt. Every model call and check is logged with its kind (full, fresh, patch, check), tokens, cache hits and latency.
+
+### Inputs, caching and cost
+
+- Each step gets only what it works from: its part of the canon (the persistent cast only for humans, the archetypes only for the conflict and humans, no level for the facts, no creature for the hook) and its view of the case so far (`CaseView`). The critic and the structural checks see everything.
+- A different output schema invalidates the whole cached prefix (measured: the system prompt too), and every step has its own schema, so the cache cannot carry from one step to the next. First calls therefore do not cache (no write premium); retries, patches and the critic, which repeat the same schema, do. Every call logs a hash of its cached prefix.
+- The report shows each call's cache reads and writes and its cost at list prices (`ModelPrices`), and the total.
+
+### Tension
+
+The engine sets the fact weights. Colour and season facts, and what the group knows on arrival, weigh nothing, so the dial starts at its start; decoy facts weigh half, load-bearing ones double. The weights are scaled so the deep solve's path (its lever's facts and what gates them) ends 15% past the climax. A beat with a time fires when its threshold is reached and its time has come, whichever is later.
 
 ## The Society's world (spec 9)
 
@@ -159,6 +171,7 @@ dotnet run --project VaesenAPI/Tools/Vaesen.Mystery.CaseLab -- validate cases/ca
 | `PatchMaxOutputTokens`, `PatchShare` | 16000, 0.25 | a patch's output cap; the share of a step's items a patch may touch |
 | `MaxReworkRounds` | 2 | how often whole-case and critic issues send sub-steps back |
 | `MaxCriticReworks` | 1 | how many of those the critic may cause; then its objections are warnings |
+| `LightModel` | `claude-haiku-5-5` | the last round that applies the critic's remaining warnings |
 | `CriticModel`, `CriticEffort` | `claude-opus-5-5`, `high` | the critic |
 | `UseCritic` | `true` | |
 | `MaxOutputTokens` | 64000 | per full step call, thinking included; steps stream |

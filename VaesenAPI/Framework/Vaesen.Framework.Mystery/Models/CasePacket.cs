@@ -758,6 +758,18 @@ public sealed class CaseTension
     /// <summary>How much uncovering each fact raises the dial.</summary>
     [JsonProperty("factWeights")]
     public Dictionary<string, double> FactWeights { get; set; } = [];
+
+    /// <summary>The dial when the Society arrives: the start, since what the hook tells weighs nothing.</summary>
+    [JsonProperty("arrival")]
+    public double Arrival { get; set; }
+
+    /// <summary>The facts on the way to the deep solve: its lever's facts and those needed to reach them.</summary>
+    [JsonProperty("deepPath")]
+    public List<string> DeepPath { get; set; } = [];
+
+    /// <summary>Where the dial ends along the deep path: about 1.15 times the climax threshold.</summary>
+    [JsonProperty("deepPathTotal")]
+    public double DeepPathTotal { get; set; }
 }
 
 public sealed class CaseValidation

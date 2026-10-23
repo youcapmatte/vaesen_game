@@ -21,7 +21,8 @@ public static class Patch
     /// True when every error is field-level and sits on an item of one of <paramref name="lists"/>, and the items they
     /// touch are at most <paramref name="share"/> of all the items.
     /// </summary>
-    public static bool Patchable(IReadOnlyList<PatchList> lists, IReadOnlyList<CoherenceIssue> errors, double share)
+    /// <param name="anyCode">The critic's issues: any code counts as field-level when it names items.</param>
+    public static bool Patchable(IReadOnlyList<PatchList> lists, IReadOnlyList<CoherenceIssue> errors, double share, bool anyCode = false)
     {
         if (lists.Count == 0 || errors.Count == 0)
         {
@@ -31,7 +32,7 @@ public static class Patch
         var touched = new HashSet<string>(StringComparer.Ordinal);
         foreach (var error in errors)
         {
-            if (!FieldLevel.Contains(error.Code) || Find(lists, error.Location) is null)
+            if ((!anyCode && !FieldLevel.Contains(error.Code)) || Find(lists, error.Location) is null)
             {
                 return false;
             }
@@ -89,8 +90,15 @@ public static class Patch
         }
     }
 
-    /// <summary>The patch call's instruction: the items, their problems, and the whole last answer for reference.</summary>
-    public static string Instruction(string step, Dictionary<string, List<object>> items, IReadOnlyList<CoherenceIssue> errors, string previousJson)
+    /// <summary>The ids of the items not being patched, so the model knows what else exists without resending it all.</summary>
+    public static string OtherIds(IReadOnlyList<PatchList> lists, IReadOnlyList<CoherenceIssue> errors)
+    {
+        var touched = errors.Select(e => e.Location).ToHashSet(StringComparer.Ordinal);
+        return string.Join("; ", lists.Select(l => $"{l.Prefix}: " + string.Join(", ", l.Items.OfType<object>().Select(l.Id).Where(id => !touched.Contains($"{l.Prefix}:{id}")))));
+    }
+
+    /// <summary>The patch call's instruction: the items, their problems, and the ids of everything else in the answer.</summary>
+    public static string Instruction(string step, Dictionary<string, List<object>> items, IReadOnlyList<CoherenceIssue> errors, string otherIds)
     {
         var text = new StringBuilder();
         text.AppendLine("# Patch");
@@ -113,8 +121,8 @@ public static class Patch
         text.AppendLine();
         text.AppendLine("Answer with the same JSON shape as before, holding only the corrected versions of these items, with the same ids, in their lists. Leave every other list empty and every other field at its empty default. Fields with listed allowed values take exactly one of those values.");
         text.AppendLine();
-        text.AppendLine("## Your whole last answer, for reference");
-        text.AppendLine(previousJson);
+        text.AppendLine("## The other items in your answer, unchanged (ids)");
+        text.AppendLine(otherIds);
         return text.ToString();
     }
 

@@ -68,6 +68,13 @@ public sealed class PipelineTests
         Assert.Equal(17, packet.Facts.Count);
         Assert.Equal(result.Result.Case.Brief.HookChannelId, packet.Hook.Channel);
 
+        // Each step sees only the canon it works from.
+        Assert.DoesNotContain("# The level", model.Contexts[model.Calls.IndexOf("facts")], StringComparison.Ordinal);
+        Assert.DoesNotContain("# The creature", model.Contexts[model.Calls.IndexOf("hook")], StringComparison.Ordinal);
+        Assert.DoesNotContain("# Persistent characters", model.Contexts[model.Calls.IndexOf("minds")], StringComparison.Ordinal);
+        Assert.Contains("# Persistent characters", model.Contexts[model.Calls.IndexOf("humans")], StringComparison.Ordinal);
+        Assert.DoesNotContain("\"reveal\"", model.Instructions[model.Calls.IndexOf("hook")], StringComparison.Ordinal);
+
         // Order is fixed, and the critic's objection to the hook sent back only the hook sub-step.
         Assert.Equal(["world", "conflict", "escalation", "humans", "facts", "minds", "arc", "hook", "critic", "hook", "critic"], model.Calls);
         Assert.Contains(result.Result.Case.Log, e => e.Step == "critic" && !e.Passed);
@@ -198,6 +205,34 @@ public sealed class PipelineTests
         Assert.Equal(IssueSources.Critic, kept.Source);
     }
 
+    [Fact]
+    public async Task Critic_issues_are_fixed_in_the_steps_that_own_them_and_warnings_in_a_light_last_round()
+    {
+        var options = new MysteryOptions();
+        var model = ScriptedModel.FromSample(criticFailsFirst: false);
+        model.TargetedCritic = true;
+        var (generator, _, _) = Build(options, model);
+
+        var result = await generator.GenerateAsync(new GenerationRequest
+        {
+            History = History, Month = 10, Seed = MatchingSeed(options), VaesenId = "nack", LevelId = "level-forsby-october", Store = false,
+        });
+
+        Assert.True(result.Success, result.ErrorMessage);
+
+        // The objection is split: the motive to the conflict, the channel to minds and channels, the warning on r1 to the
+        // arc, in pipeline order. Nothing downstream is regenerated. The second review's warning goes to the arc, light.
+        Assert.Equal(["world", "conflict", "escalation", "humans", "facts", "minds", "arc", "hook", "critic", "conflict", "minds", "arc", "critic", "arc"], model.Calls);
+        var log = result.Result!.Case.Log;
+        var afterReview = log.SkipWhile(e => e.Step != "critic").Skip(1).Where(e => e.Kind != LogEntryKinds.Check).ToList();
+        Assert.Equal([LogEntryKinds.Fix, LogEntryKinds.Patch, LogEntryKinds.Patch], afterReview.Take(3).Select(e => e.Kind));
+        Assert.Contains("# Revise: conflict", afterReview[0].Instruction, StringComparison.Ordinal);
+        Assert.Equal(options.LightModel, model.Models[^1]);
+        var packet = result.Result.Case.Packet;
+        Assert.True(packet.Validation.Passed);
+        Assert.True(Assert.Single(packet.Validation.Issues, i => i.Code == "critic." + CriticChecks.Solves).Applied);
+    }
+
     /// <summary>Answers each step from the sample case; can break the clue step to exercise retries.</summary>
     public sealed class ScriptedModel(CasePacket sample, bool criticFailsFirst) : IMysteryModel
     {
@@ -209,6 +244,11 @@ public sealed class PipelineTests
         public List<string> Instructions { get; } = [];
 
         public List<string> Contexts { get; } = [];
+
+        public List<string> Models { get; } = [];
+
+        /// <summary>The first critic objects with targets in two steps and a warning; the second leaves one warning to apply.</summary>
+        public bool TargetedCritic { get; set; }
 
         /// <summary>Answers the seeding step with this instead of <see cref="Seed"/>, once.</summary>
         public WorldSeedOutput? FirstSeed { get; set; }
@@ -233,12 +273,13 @@ public sealed class PipelineTests
         public Task<ResultBase<ModelReply<T>>> GenerateAsync<T>(ModelRequest request, CancellationToken cancellationToken = default) where T : class
         {
             Calls.Add(request.Step);
+            Models.Add(request.Model);
             Instructions.Add(request.Instruction);
             Contexts.Add(request.Context);
             Assert.False(string.IsNullOrWhiteSpace(request.System));
             if (request.Step != WorldSeeder.StepName)
             {
-                Assert.Contains("# The creature", request.Context, StringComparison.Ordinal);
+                Assert.Contains("# The assignment", request.Context, StringComparison.Ordinal);
             }
 
             object value = request.Step switch
@@ -385,6 +426,27 @@ public sealed class PipelineTests
         private CriticOutput Critic()
         {
             _criticCalls++;
+            if (TargetedCritic)
+            {
+                CriticCheck Check(string name, bool passed, string severity, List<string> targets) => new()
+                {
+                    Check = name, Passed = passed, Severity = severity, Location = string.Join(", ", targets), Targets = targets,
+                    Explanation = passed ? "" : "Needs a change.", SuggestedFix = passed ? null : "Change it as described.",
+                };
+                var first = _criticCalls == 1;
+                return new CriticOutput
+                {
+                    Overall = "Nearly there.",
+                    Checks = CriticChecks.All.Select(name => name switch
+                    {
+                        CriticChecks.FairClues when first => Check(name, false, IssueSeverities.Error, ["c10", "truth.hiddenHandMotive"]),
+                        CriticChecks.WorldConsistency when first => Check(name, false, IssueSeverities.Warning, ["r1"]),
+                        CriticChecks.Solves when !first => Check(name, false, IssueSeverities.Warning, ["r2"]),
+                        _ => Check(name, true, IssueSeverities.Error, []),
+                    }).ToList(),
+                };
+            }
+
             if (CriticAlwaysObjects)
             {
                 return new CriticOutput

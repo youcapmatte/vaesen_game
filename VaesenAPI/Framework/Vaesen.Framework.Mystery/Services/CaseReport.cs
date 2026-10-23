@@ -134,7 +134,7 @@ public static class CaseReport
         }
 
         s.AppendLine(inv, $"- **Climax** at {p.Climax.Threshold:0.00} ({p.Climax.Conditions.Place ?? "anywhere"}, {p.Climax.Conditions.Time ?? "any time"}): {p.Climax.Description}");
-        s.AppendLine(inv, $"- Tension starts at {p.Tension.Start:0.00} and players can reach {walk.FinalTension:0.00}.");
+        s.AppendLine(inv, $"- Tension starts at {p.Tension.Start:0.00} and is {p.Tension.Arrival:0.00} on arrival. The deep solve's path ({Ids(p.Tension.DeepPath)}) ends at {p.Tension.DeepPathTotal:0.00}, {(p.Climax.Threshold > 0 ? p.Tension.DeepPathTotal / p.Climax.Threshold : 0):0.00} times the climax threshold; everything reachable adds up to {walk.FinalTension:0.00}.");
 
         Section(s, "Resolution levers");
         foreach (var r in p.ResolutionLevers)
@@ -159,21 +159,21 @@ public static class CaseReport
 
         foreach (var i in p.Validation.Issues.OrderBy(i => i.IsError ? 0 : 1))
         {
-            s.AppendLine(inv, $"- {(i.IsError ? "**error**" : "warning")} `{i.Code}` at {i.Location} ({i.Source}): {i.Explanation}{(i.SuggestedFix is null ? "" : $" *Fix:* {i.SuggestedFix}")}");
+            s.AppendLine(inv, $"- {(i.IsError ? "**error**" : "warning")}{(i.Applied ? " (fix applied)" : "")} `{i.Code}` at {i.Location} ({i.Source}): {i.Explanation}{(i.SuggestedFix is null ? "" : $" *Fix:* {i.SuggestedFix}")}");
         }
 
         if (log is { Count: > 0 })
         {
             Section(s, "Generation log");
-            s.AppendLine("| case | step | try | kind | passed | in | cached | out | ms | issues |");
-            s.AppendLine("|---|---|---|---|---|---|---|---|---|---|");
+            s.AppendLine("| case | step | try | kind | passed | in | cache read | cache written | out | ms | USD | issues |");
+            s.AppendLine("|---|---|---|---|---|---|---|---|---|---|---|---|");
             foreach (var e in log)
             {
-                s.AppendLine(inv, $"| {e.CaseAttempt} | {e.Step} | {e.Attempt} | {e.Kind} | {(e.Passed ? "yes" : "no")} | {e.InputTokens} | {e.CacheReadTokens} | {e.OutputTokens} | {e.LatencyMs} | {(e.Error ?? string.Join("; ", e.Issues.Where(i => i.IsError).Select(i => i.Code).Distinct()))} |");
+                s.AppendLine(inv, $"| {e.CaseAttempt} | {e.Step} | {e.Attempt} | {e.Kind} | {(e.Passed ? "yes" : "no")} | {e.InputTokens} | {e.CacheReadTokens} | {e.CacheWriteTokens} | {e.OutputTokens} | {e.LatencyMs} | {e.CostUsd:0.000} | {(e.Error ?? string.Join("; ", e.Issues.Where(i => i.IsError).Select(i => i.Code).Distinct()))} |");
             }
 
             s.AppendLine();
-            s.AppendLine(inv, $"Total: {log.Count(e => e.Kind != LogEntryKinds.Check)} calls ({log.Count(e => e.Kind == LogEntryKinds.Patch)} patches), {log.Sum(e => e.InputTokens)} input ({log.Sum(e => e.CacheReadTokens)} cached), {log.Sum(e => e.OutputTokens)} output tokens, {log.Sum(e => e.LatencyMs) / 1000.0:0.0} s.");
+            s.AppendLine(inv, $"Total: {log.Count(e => e.Kind != LogEntryKinds.Check)} calls ({log.Count(e => e.Kind == LogEntryKinds.Patch)} patches, {log.Count(e => e.Kind == LogEntryKinds.Fix)} fixes), {log.Sum(e => e.InputTokens)} input, {log.Sum(e => e.CacheReadTokens)} read from the cache and {log.Sum(e => e.CacheWriteTokens)} written to it, {log.Sum(e => e.OutputTokens)} output tokens, {log.Sum(e => e.LatencyMs) / 1000.0:0.0} s, about ${log.Sum(e => e.CostUsd):0.00} at list prices.");
 
             // A rejected case: the failed step's last attempt, with its problems and its answer as it came back.
             var lastTry = failedStep is null ? null : log.LastOrDefault(e => e.Step == failedStep);

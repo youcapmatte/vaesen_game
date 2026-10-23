@@ -63,6 +63,10 @@ export interface CoherenceIssue {
   explanation: string;
   suggestedFix?: string | null;
   source: "structural" | "critic";
+  /** The critic's issues: the ids they touch, for routing to the step that owns them. */
+  targets?: string[] | null;
+  /** A critic warning whose suggested fix was applied in the last round. */
+  applied?: boolean;
 }
 
 export interface EscalationEvent {
@@ -162,7 +166,9 @@ export interface GenerationLogEntry {
   caseAttempt: number;
   step: string;
   /** full: the whole step; fresh: a restart after it gave up; patch: only the items with problems; check: the whole-case checks. */
-  kind: "full" | "fresh" | "patch" | "check";
+  kind: "full" | "fresh" | "patch" | "fix" | "check";
+  /** The call's cost in USD at list prices. */
+  costUsd?: number;
   attempt: number;
   model?: string | null;
   inputTokens: number;

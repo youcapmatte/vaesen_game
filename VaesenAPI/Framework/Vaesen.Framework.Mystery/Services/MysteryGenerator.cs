@@ -415,18 +415,8 @@ public sealed class MysteryGenerator(
                 }
             }
 
-            progress?.Report(new GenerationProgress(caseAttempt, CheckStepName, "Checking the whole case."));
-            var whole = validator.Validate(draft.Packet, draft.ValidationContext, CheckScope.Whole);
-            draft.Log.Add(new GenerationLogEntry
-            {
-                CaseAttempt = caseAttempt,
-                Step = CheckStepName,
-                Attempt = round,
-                Kind = LogEntryKinds.Check,
-                Passed = !whole.Exists(i => i.IsError),
-                Issues = whole,
-            });
-            draft.Packet.Validation.Runs++;
+            pending = [];
+            var whole = CheckWhole(draft, caseAttempt, round, progress);
             var errors = whole.Where(i => i.IsError).ToList();
 
             if (errors.Count == 0 && o.UseCritic)
@@ -439,22 +429,31 @@ public sealed class MysteryGenerator(
                     return ret.Fail(review.ErrorMessage, review.ErrorCode);
                 }
 
-                // Past its reworks, the critic's objections are warnings on a case that passes.
                 var critique = review.Result!;
-                if (critique.Exists(i => i.IsError) && criticReworks >= o.MaxCriticReworks)
+                draft.Packet.Validation.Issues.RemoveAll(i => i.Source == IssueSources.Critic);
+                if (critique.Exists(i => i.IsError) && criticReworks < o.MaxCriticReworks)
                 {
-                    logger.LogInformation("The critic still objects after {Reworks} rework(s); its objections are kept as warnings", criticReworks);
-                    critique = critique.Select(i => i.IsError ? CoherenceIssue.Warning(i.Code, i.Location, i.Explanation, i.SuggestedFix) : i).ToList();
-                    critique.ForEach(i => i.Source = IssueSources.Critic);
+                    // The critic's objections, and its warnings with concrete fixes, go to the steps that own them and
+                    // are fixed in place, in pipeline order; then the whole case is checked and reviewed once more.
+                    criticReworks++;
+                    var toFix = critique.Where(i => i.IsError || Fixable(i)).ToList();
+                    progress?.Report(new GenerationProgress(caseAttempt, CheckStepName, "Fixing what the critic found, step by step."));
+                    await FixRoundAsync(draft, toFix, caseAttempt, light: false, ct);
+                    continue;
                 }
 
-                draft.Packet.Validation.Issues.RemoveAll(i => i.Source == IssueSources.Critic);
+                // Past its rework, the critic's objections are warnings on a case that passes. Those with concrete
+                // fixes are applied in one cheap round, kept only if the case still passes its checks.
+                critique = critique.Select(i => i.IsError ? AsWarning(i) : i).ToList();
                 draft.Packet.Validation.Issues.AddRange(critique);
-                errors = critique.Where(i => i.IsError).ToList();
-                if (errors.Count > 0)
+                var last = critique.Where(Fixable).ToList();
+                if (last.Count > 0)
                 {
-                    criticReworks++;
+                    progress?.Report(new GenerationProgress(caseAttempt, CheckStepName, "Applying the critic's last suggestions."));
+                    await ApplyWarningsAsync(draft, last, caseAttempt, ct);
                 }
+
+                errors = [];
             }
 
             if (errors.Count == 0)
@@ -471,7 +470,7 @@ public sealed class MysteryGenerator(
                 return ret.Fail($"The finished case still had problems after {o.MaxReworkRounds} reworks: " + string.Join(" ", errors.Take(5)), StepErrorCodes.StepFailed);
             }
 
-            // Send each issue back to the sub-step it points at; new facts mean everything built on them is redone.
+            // Send each structural issue back to the sub-step it points at; new facts mean everything built on them is redone.
             pending = new SortedDictionary<int, IReadOnlyList<CoherenceIssue>>(errors
                 .GroupBy(ClueSubStep)
                 .ToDictionary(g => g.Key, g => (IReadOnlyList<CoherenceIssue>)g.ToList()));
@@ -486,6 +485,112 @@ public sealed class MysteryGenerator(
             progress?.Report(new GenerationProgress(caseAttempt, CheckStepName,
                 $"Reworking {string.Join(", ", pending.Keys.Select(k => ClueStepNames[k]))}."));
         }
+    }
+
+    /// <summary>The tension weights (they depend on the whole case), then the whole-case checks, logged as a check entry.</summary>
+    private List<CoherenceIssue> CheckWhole(MysteryDraft draft, int caseAttempt, int round, IProgress<GenerationProgress>? progress)
+    {
+        progress?.Report(new GenerationProgress(caseAttempt, CheckStepName, "Checking the whole case."));
+        var whole = Derived.Tension(draft.Packet);
+        whole.AddRange(validator.Validate(draft.Packet, draft.ValidationContext, CheckScope.Whole));
+        draft.Log.Add(new GenerationLogEntry
+        {
+            CaseAttempt = caseAttempt,
+            Step = CheckStepName,
+            Attempt = round,
+            Kind = LogEntryKinds.Check,
+            Passed = !whole.Exists(i => i.IsError),
+            Issues = whole,
+        });
+        draft.Packet.Validation.Runs++;
+        return whole;
+    }
+
+    /// <summary>A critic issue that names its items and says how to fix them.</summary>
+    private static bool Fixable(CoherenceIssue issue) => issue.Targets is { Count: > 0 } && !string.IsNullOrWhiteSpace(issue.SuggestedFix);
+
+    private static CoherenceIssue AsWarning(CoherenceIssue issue) => new()
+    {
+        Code = issue.Code,
+        Severity = IssueSeverities.Warning,
+        Location = issue.Location,
+        Explanation = issue.Explanation,
+        SuggestedFix = issue.SuggestedFix,
+        Source = issue.Source,
+        Targets = issue.Targets,
+    };
+
+    /// <summary>
+    /// Routes the issues to their owning steps (fixes 2, section 1) and fixes each step in place, in pipeline order:
+    /// a patch of the items named, or a revised answer. Returns the issues whose step was fixed.
+    /// </summary>
+    private async Task<List<CoherenceIssue>> FixRoundAsync(MysteryDraft draft, IReadOnlyList<CoherenceIssue> issues, int caseAttempt, bool light, CancellationToken ct)
+    {
+        var o = Options;
+        var steps = new Dictionary<string, IFixableStep>(StringComparer.Ordinal)
+        {
+            [ConflictStep.StepName] = new ConflictStep(model, validator, o),
+            [EscalationStep.StepName] = new EscalationStep(model, validator, o),
+            [HumansStep.StepName] = new HumansStep(model, validator, o),
+            [FactsStep.StepName] = new FactsStep(model, validator, o),
+            [MindsStep.StepName] = new MindsStep(model, validator, o),
+            [ArcStep.StepName] = new ArcStep(model, validator, o),
+            [HookStep.StepName] = new HookStep(model, validator, o),
+        };
+
+        var applied = new List<CoherenceIssue>();
+        foreach (var (step, parts) in CriticRouting.Route(issues))
+        {
+            var result = await steps[step].FixAsync(draft, parts.Select(p => p.Part).ToList(), caseAttempt, light, ct);
+            if (result.Success)
+            {
+                applied.AddRange(parts.Select(p => p.Original));
+            }
+            else
+            {
+                logger.LogInformation("The fix for {Step} did not pass its checks and was not applied: {Error}", step, result.ErrorMessage);
+            }
+        }
+
+        return applied.Distinct().ToList();
+    }
+
+    /// <summary>
+    /// The last round (fixes 2, section 2): the critic's remaining warnings with concrete fixes, applied with the light
+    /// model, then the structural checks again. No third critic. If the case no longer passes, it goes back to how it was.
+    /// </summary>
+    private async Task ApplyWarningsAsync(MysteryDraft draft, IReadOnlyList<CoherenceIssue> warnings, int caseAttempt, CancellationToken ct)
+    {
+        var packet = draft.ClonePacket();
+        var outputs = draft.Outputs.ToDictionary(p => p.Key, p => p.Value, StringComparer.Ordinal);
+        var applied = await FixRoundAsync(draft, warnings, caseAttempt, light: true, ct);
+        if (applied.Count == 0)
+        {
+            return;
+        }
+
+        var check = Derived.Tension(draft.Packet);
+        check.AddRange(validator.Validate(draft.Packet, draft.ValidationContext, CheckScope.Full));
+        draft.Log.Add(new GenerationLogEntry { CaseAttempt = caseAttempt, Step = CheckStepName, Kind = LogEntryKinds.Check, Passed = !check.Exists(i => i.IsError), Issues = check });
+        if (check.Exists(i => i.IsError))
+        {
+            logger.LogInformation("Applying the critic's warnings broke the case's checks; keeping it as it was");
+            draft.Packet = packet;
+            draft.Outputs.Clear();
+            foreach (var (step, output) in outputs)
+            {
+                draft.Outputs[step] = output;
+            }
+
+            return;
+        }
+
+        foreach (var issue in draft.Packet.Validation.Issues.Where(i => i.Source == IssueSources.Critic))
+        {
+            issue.Applied = applied.Exists(a => a.Code == issue.Code && a.Explanation == issue.Explanation);
+        }
+
+        logger.LogInformation("Applied {Count} of the critic's warnings: {Codes}", applied.Count, string.Join(", ", applied.Select(a => a.Code)));
     }
 
     public const string CheckStepName = "check";

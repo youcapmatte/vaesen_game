@@ -63,7 +63,8 @@ public static class PromptBuilder
     }
 
     /// <summary>Everything the case is made from: the brief, the level, the creature, the conflicts and the people on offer.</summary>
-    public static string CaseContext(MysteryDraft draft)
+    /// <param name="step">The step it is for; null (or the critic) gets everything.</param>
+    public static string CaseContext(MysteryDraft draft, string? step = null)
     {
         var brief = draft.Brief;
         var hook = draft.Pack.Setting.FindHookChannel(brief.HookChannelId);
@@ -118,31 +119,49 @@ public static class PromptBuilder
         text.AppendLine($"- Hook channel: {hook?.Name ?? brief.HookChannelId} ({brief.HookChannelId}). Hook-giver type: {brief.HookGiverType}.");
         text.AppendLine($"- Red herring density: {brief.RedHerringDensity}.");
         text.AppendLine();
-        text.AppendLine("# The level");
-        text.AppendLine(Json(draft.Level));
-        text.AppendLine();
-        text.AppendLine("# The creature");
-        text.AppendLine(Json(draft.Vaesen));
-        text.AppendLine();
-        text.AppendLine("# Conflict archetypes on offer");
-        text.AppendLine(Json(draft.Conflicts));
-        text.AppendLine();
-        text.AppendLine("# Persistent characters who may be drawn in (the Society's world, most relevant to this place first)");
-        text.AppendLine(Json(roster));
-        if (others.Count > 0)
+        // Each step gets only the canon it works from (fixes 2, section 5); the critic gets all of it.
+        bool For(params string[] steps) => step is null or CriticStep.Name || steps.Contains(step);
+        if (For(ConflictStep.StepName, EscalationStep.StepName, HumansStep.StepName, MindsStep.StepName, ArcStep.StepName, HookStep.StepName))
         {
+            text.AppendLine("# The level");
+            text.AppendLine(Json(draft.Level));
             text.AppendLine();
-            text.AppendLine("# Others in the Society's world (one line each; they may still be drawn in by id)");
-            text.AppendLine(string.Join("\n", others));
-        }
-        if (gone.Count > 0)
-        {
-            text.AppendLine();
-            text.AppendLine("# Dead or gone (must not appear; may be remembered)");
-            text.AppendLine(string.Join("; ", gone.Select(c => $"{c.Name} ({c.Id}): {c.Status}")));
         }
 
-        if (overlay.Count > 0)
+        if (For(ConflictStep.StepName, EscalationStep.StepName, HumansStep.StepName, FactsStep.StepName, MindsStep.StepName, ArcStep.StepName))
+        {
+            text.AppendLine("# The creature");
+            text.AppendLine(Json(draft.Vaesen));
+            text.AppendLine();
+        }
+
+        if (For(ConflictStep.StepName, HumansStep.StepName))
+        {
+            text.AppendLine("# Conflict archetypes on offer");
+            text.AppendLine(Json(draft.Conflicts));
+            text.AppendLine();
+        }
+
+        if (For(HumansStep.StepName))
+        {
+            text.AppendLine("# Persistent characters who may be drawn in (the Society's world, most relevant to this place first)");
+            text.AppendLine(Json(roster));
+            if (others.Count > 0)
+            {
+                text.AppendLine();
+                text.AppendLine("# Others in the Society's world (one line each; they may still be drawn in by id)");
+                text.AppendLine(string.Join("\n", others));
+            }
+
+            if (gone.Count > 0)
+            {
+                text.AppendLine();
+                text.AppendLine("# Dead or gone (must not appear; may be remembered)");
+                text.AppendLine(string.Join("; ", gone.Select(c => $"{c.Name} ({c.Id}): {c.Status}")));
+            }
+        }
+
+        if (overlay.Count > 0 && For(ConflictStep.StepName, HumansStep.StepName))
         {
             text.AppendLine();
             text.AppendLine("# What the Society's past mysteries have changed in the world (true for this Society only)");
@@ -270,13 +289,15 @@ public static class PromptBuilder
         : "the resolution levers are distinct, plausible and have different consequences for the world and the cast.";
 
     /// <summary>The case so far, then the instruction (a patch call has its own problems and answer in it).</summary>
-    public static string WithCase(string instruction, CasePacket soFar) => $"# The case so far\n{Json(soFar)}\n\n{instruction}";
+    public static string WithCase(string instruction, object? soFar) => soFar is null ? instruction : $"# The case so far\n{Json(soFar)}\n\n{instruction}";
 
-    /// <summary>The case so far, and on a retry the issues to fix and the previous answer.</summary>
-    public static string WithCaseAndFeedback(string instruction, CasePacket soFar, IReadOnlyList<CoherenceIssue> feedback, string? previousJson)
-    {
-        return WithFeedback($"# The case so far\n{Json(soFar)}\n\n{instruction}", feedback, previousJson);
-    }
+    /// <summary>The case so far (the step's view of it), and on a retry the issues to fix and the previous answer.</summary>
+    public static string WithCaseAndFeedback(string instruction, object? soFar, IReadOnlyList<CoherenceIssue> feedback, string? previousJson) =>
+        WithFeedback(WithCase(instruction, soFar), feedback, previousJson);
+
+    /// <summary>The instruction of a fix call: the step's last answer, changed only where the issues ask.</summary>
+    public static string Revise(string step) =>
+        $"# Revise: {step}\nYour answer to the {step} step passed, but a review found the problems below. Answer again with the same JSON, changed only where the problems ask: keep every other item, id and word exactly as it was.";
 
     /// <summary>The instruction, and on a retry the issues to fix and the previous answer.</summary>
     public static string WithFeedback(string instruction, IReadOnlyList<CoherenceIssue> feedback, string? previousJson)

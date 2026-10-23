@@ -32,7 +32,14 @@ public sealed class MysteryDraft
 
     public string SystemPrompt { get; set; } = "";
 
+    /// <summary>The whole case context (what the critic sees); each step gets its own part, <see cref="ContextFor"/>.</summary>
     public string CaseContext { get; set; } = "";
+
+    /// <summary>Each step's last passed output by step name, so a fix can patch or revise it in place.</summary>
+    public Dictionary<string, object> Outputs { get; } = new(StringComparer.Ordinal);
+
+    /// <summary>The canon <paramref name="step"/> works from: the assignment and only the sections it needs.</summary>
+    public string ContextFor(string step) => PromptBuilder.CaseContext(this, step);
 
     /// <summary>The checks the case has passed so far, step by step; the final run checks only these.</summary>
     public CheckScope Completed { get; set; }
@@ -150,6 +157,14 @@ public sealed class GenerationLogEntry
     [JsonProperty("latencyMs")]
     public long LatencyMs { get; set; }
 
+    /// <summary>The call's cost in USD at list prices (<see cref="Ai.ModelPrices"/>).</summary>
+    [JsonProperty("costUsd")]
+    public double CostUsd { get; set; }
+
+    /// <summary>A hash of the cached prefix; equal hashes on consecutive calls should mean cache reads.</summary>
+    [JsonProperty("prefixHash", NullValueHandling = NullValueHandling.Ignore)]
+    public string? PrefixHash { get; set; }
+
     [JsonProperty("passed")]
     public bool Passed { get; set; }
 
@@ -181,4 +196,7 @@ public static class LogEntryKinds
 
     /// <summary>A validator run on the whole case, with no model call.</summary>
     public const string Check = "check";
+
+    /// <summary>A passed step's answer revised in place for the critic's issues (fixes 2, section 1).</summary>
+    public const string Fix = "fix";
 }

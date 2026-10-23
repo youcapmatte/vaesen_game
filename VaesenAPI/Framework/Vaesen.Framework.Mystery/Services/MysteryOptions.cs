@@ -58,6 +58,9 @@ public sealed class MysteryOptions
 
     public string PatchEffort { get; set; } = "low";
 
+    /// <summary>The small model for the cheap last round that applies the critic's remaining warnings.</summary>
+    public string LightModel { get; set; } = "claude-haiku-5-5";
+
     /// <summary>Output cap (thinking included) of a patch call.</summary>
     public int PatchMaxOutputTokens { get; set; } = 16000;
 

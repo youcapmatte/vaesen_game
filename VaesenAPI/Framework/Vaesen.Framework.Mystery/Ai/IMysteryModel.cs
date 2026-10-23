@@ -32,6 +32,13 @@ public sealed class ModelRequest
     public string Context { get; init; } = "";
 
     public required string Instruction { get; init; }
+
+    /// <summary>
+    /// Mark the system prompt and context for the prompt cache. A different output schema invalidates the whole
+    /// cached prefix, so the cache only pays for a call that repeats one with the same schema: a retry, a patch, the
+    /// critic's second look. A first call leaves it off and saves the write premium.
+    /// </summary>
+    public bool Cache { get; init; } = true;
 }
 
 public sealed class ModelReply<T>
@@ -54,4 +61,7 @@ public sealed class ModelReply<T>
     public long CacheWriteTokens { get; init; }
 
     public long LatencyMs { get; init; }
+
+    /// <summary>A hash of what precedes the cache breakpoint (model, schema, system, context), to see why a cache missed.</summary>
+    public string PrefixHash { get; init; } = "";
 }

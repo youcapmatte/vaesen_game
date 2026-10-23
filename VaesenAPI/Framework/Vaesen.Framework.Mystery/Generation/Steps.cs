@@ -35,18 +35,41 @@ public static class StepErrorCodes
 /// </summary>
 public sealed record PatchList(string Prefix, IList Items, Func<object, string> Id);
 
+/// <summary>A step whose passed output can be corrected in place: the critic's fixes go to the step that owns them.</summary>
+public interface IFixableStep
+{
+    string Name { get; }
+
+    /// <summary>
+    /// Corrects this step's passed output for <paramref name="issues"/>: a patch of the items they name, or a revised
+    /// answer that changes only what they ask. Nothing downstream is regenerated. Fails, leaving the draft as it was,
+    /// if the corrected output does not pass the step's checks.
+    /// </summary>
+    /// <param name="light">The cheap round for the critic's last warnings: the light model at low effort.</param>
+    Task<ResultBase> FixAsync(MysteryDraft draft, IReadOnlyList<CoherenceIssue> issues, int caseAttempt, bool light, CancellationToken cancellationToken);
+}
+
 /// <summary>
 /// A creative step: ask the model for <typeparamref name="TOutput"/>, repair near-miss values, fold it into a copy of
 /// the packet, run the structural checks for what exists so far, and try again until clean or out of retries. When
 /// the only errors are field-level ones on a few items, only those items are asked for again (a patch) and merged
-/// back; anything structural gets a full retry with the issues fed back.
+/// back; anything structural gets a full retry with the issues fed back. A passed output is kept on the draft, so the
+/// critic's fixes can later patch or revise it in place (<see cref="FixAsync"/>).
 /// </summary>
 public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICoherenceValidator validator, MysteryOptions options)
-    : IMysteryGenerationStep<TIn, TOut>
+    : IMysteryGenerationStep<TIn, TOut>, IFixableStep
     where TIn : DraftStage
     where TOut : DraftStage
     where TOutput : class
 {
+    private enum Mode
+    {
+        Full,
+        Fresh,
+        Fix,
+        FixLight,
+    }
+
     public abstract string Name { get; }
 
     /// <summary>What the validator checks after this step.</summary>
@@ -68,13 +91,31 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
     public async Task<ResultBase<TOut>> RunAsync(TIn input, IReadOnlyList<CoherenceIssue> feedback, int caseAttempt, CancellationToken cancellationToken, bool fresh = false)
     {
         var ret = new ResultBase<TOut>();
-        var draft = input.Draft;
-        var issues = feedback.ToList();
-        string? previous = null;
-        TOutput? last = null;
-        List<CoherenceIssue> patchErrors = [];
+        var result = await LoopAsync(input.Draft, feedback.ToList(), null, caseAttempt, fresh ? Mode.Fresh : Mode.Full, options.MaxStepRetries, cancellationToken);
+        return result.Success ? ret.Ok(Next(input.Draft)) : ret.Fail(result.ErrorMessage, result.ErrorCode);
+    }
 
-        for (var attempt = 0; attempt <= options.MaxStepRetries; attempt++)
+    public async Task<ResultBase> FixAsync(MysteryDraft draft, IReadOnlyList<CoherenceIssue> issues, int caseAttempt, bool light, CancellationToken cancellationToken)
+    {
+        if (!draft.Outputs.TryGetValue(Name, out var kept) || kept is not TOutput passed)
+        {
+            return new ResultBase().Ok();
+        }
+
+        // Work on a copy: a fix that does not pass leaves the passed output untouched.
+        var copy = Newtonsoft.Json.JsonConvert.DeserializeObject<TOutput>(Newtonsoft.Json.JsonConvert.SerializeObject(passed))!;
+        return await LoopAsync(draft, issues.ToList(), copy, caseAttempt, light ? Mode.FixLight : Mode.Fix, 1, cancellationToken);
+    }
+
+    private async Task<ResultBase> LoopAsync(
+        MysteryDraft draft, List<CoherenceIssue> issues, TOutput? last, int caseAttempt, Mode mode, int retries, CancellationToken cancellationToken)
+    {
+        var ret = new ResultBase();
+        var fixing = mode is Mode.Fix or Mode.FixLight;
+        var previous = last is null ? null : Newtonsoft.Json.JsonConvert.SerializeObject(last);
+        var patchErrors = last is not null && Patch.Patchable(PatchLists(last), issues, options.PatchShare, anyCode: fixing) ? issues : [];
+
+        for (var attempt = 0; attempt <= retries; attempt++)
         {
             var patching = last is not null && patchErrors.Count > 0;
             var entry = new GenerationLogEntry
@@ -82,22 +123,35 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
                 CaseAttempt = caseAttempt,
                 Step = Name,
                 Attempt = attempt,
-                Kind = patching ? LogEntryKinds.Patch : fresh && attempt == 0 ? LogEntryKinds.Fresh : LogEntryKinds.Full,
+                Kind = patching ? LogEntryKinds.Patch : fixing ? LogEntryKinds.Fix : mode == Mode.Fresh && attempt == 0 ? LogEntryKinds.Fresh : LogEntryKinds.Full,
             };
             draft.Log.Add(entry);
 
+            var view = CaseView.For(Name, draft.Packet);
             entry.Instruction = patching
-                ? PromptBuilder.WithCase(Patch.Instruction(Name, Patch.Items(PatchLists(last!), patchErrors), patchErrors, previous!), draft.Packet)
-                : PromptBuilder.WithCaseAndFeedback(Instruction(draft), draft.Packet, issues, previous);
+                ? PromptBuilder.WithCase(Patch.Instruction(Name, Patch.Items(PatchLists(last!), patchErrors), patchErrors, Patch.OtherIds(PatchLists(last!), patchErrors)), view)
+                : fixing && attempt == 0
+                    ? PromptBuilder.WithCaseAndFeedback(PromptBuilder.Revise(Name), view, issues, previous)
+                    : PromptBuilder.WithCaseAndFeedback(Instruction(draft), view, issues, previous);
+            var (modelName, effort) = (patching, fixing, attempt) switch
+            {
+                (_, true, _) when mode == Mode.FixLight => (Or(options.LightModel, options.CreativeModel), options.LightEffort),
+                (true, _, _) or (_, true, _) => (Or(options.PatchModel, options.CreativeModel), options.PatchEffort),
+                (_, _, 0) => (options.CreativeModel, FirstTryEffort(options)),
+                _ => (Or(options.RetryModel, options.CreativeModel), options.LightEffort),
+            };
             var reply = await model.GenerateAsync<TOutput>(new ModelRequest
             {
                 Step = Name,
-                Model = patching ? Or(options.PatchModel, options.CreativeModel) : attempt == 0 ? options.CreativeModel : Or(options.RetryModel, options.CreativeModel),
-                Effort = patching ? options.PatchEffort : attempt == 0 ? FirstTryEffort(options) : options.LightEffort,
+                Model = modelName,
+                Effort = effort,
                 MaxTokens = patching ? options.PatchMaxOutputTokens : options.MaxOutputTokens,
                 System = draft.SystemPrompt,
-                Context = draft.CaseContext,
+                Context = draft.ContextFor(Name),
                 Instruction = entry.Instruction,
+
+                // Only a repeat of this step's schema can read the cache, so a first call does not pay to write it.
+                Cache = attempt > 0,
             }, cancellationToken);
 
             if (!reply.Success)
@@ -106,8 +160,6 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
                 if (reply.ErrorCode is ModelErrorCodes.BadOutput or ModelErrorCodes.Truncated)
                 {
                     issues = [CoherenceIssue.Error(IssueCodes.Schema, Name, reply.ErrorMessage, "Answer with complete JSON that fits the schema; be more concise if needed.")];
-                    previous = null;
-                    last = null;
                     patchErrors = [];
                     continue;
                 }
@@ -122,6 +174,8 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
             entry.CacheReadTokens = answer.CacheReadTokens;
             entry.CacheWriteTokens = answer.CacheWriteTokens;
             entry.LatencyMs = answer.LatencyMs;
+            entry.PrefixHash = answer.PrefixHash;
+            entry.CostUsd = ModelPrices.Cost(answer.Model, answer.InputTokens, answer.CacheWriteTokens, answer.CacheReadTokens, answer.OutputTokens);
             entry.Output = answer.RawJson;
 
             // A patch answers only the corrected items: merge them into the last full answer.
@@ -138,7 +192,7 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
             if (applyIssues.Find(i => i.Code is StepErrorCodes.Reroll or StepErrorCodes.RerollFocus) is { } reroll)
             {
                 entry.Issues = applyIssues;
-                return ret.Fail(reroll.Explanation, reroll.Code);
+                return fixing ? ret.Fail(reroll.Explanation, StepErrorCodes.StepFailed) : ret.Fail(reroll.Explanation, reroll.Code);
             }
 
             var context = draft.ValidationContext;
@@ -161,7 +215,8 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
                 packet.Validation.Issues.AddRange(found);
                 draft.Packet = packet;
                 draft.Completed |= Scope;
-                return ret.Ok(Next(draft));
+                draft.Outputs[Name] = output;
+                return ret.Ok();
             }
 
             issues = found.Where(i => i.IsError).ToList();
@@ -170,7 +225,7 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
             patchErrors = Patch.Patchable(PatchLists(output), issues, options.PatchShare) ? issues : [];
         }
 
-        return ret.Fail($"The {Name} step still had problems after {options.MaxStepRetries + 1} attempts: "
+        return ret.Fail($"The {Name} step still had problems after {retries + 1} attempts: "
             + string.Join(" ", issues.Take(5).Select(i => i.ToString())), StepErrorCodes.StepFailed);
     }
 
@@ -251,6 +306,8 @@ public sealed class EscalationStep(IMysteryModel model, ICoherenceValidator vali
 
     protected override List<CoherenceIssue> Apply(MysteryDraft draft, CasePacket packet, EscalationOutput output)
     {
+        // A fix after the facts step keeps which facts each event is.
+        var factIds = packet.Truth.Escalation.ToDictionary(e => e.Id, e => e.FactIds, StringComparer.Ordinal);
         packet.Truth.Escalation = output.Events.Select(e => new EscalationEvent
         {
             Id = e.Id,
@@ -259,6 +316,7 @@ public sealed class EscalationStep(IMysteryModel model, ICoherenceValidator vali
             PlaceId = string.IsNullOrWhiteSpace(e.PlaceId) ? null : e.PlaceId,
             Register = e.Register,
             Opening = e.Opening,
+            FactIds = factIds.TryGetValue(e.Id, out var ids) ? ids : [],
         }).ToList();
         return [];
     }
@@ -287,6 +345,8 @@ public sealed class HumansStep(IMysteryModel model, ICoherenceValidator validato
 
     protected override List<CoherenceIssue> Apply(MysteryDraft draft, CasePacket packet, HumansOutput output)
     {
+        // A fix after minds and channels keeps what everyone knows, thinks and lies about.
+        var minds = packet.Cast.ToDictionary(c => c.CharacterId, StringComparer.Ordinal);
         packet.Cast = output.Cast.Select(c => new CastMember
         {
             CharacterId = c.CharacterId,
@@ -305,6 +365,9 @@ public sealed class HumansStep(IMysteryModel model, ICoherenceValidator validato
             Routine = c.Routine,
             VoiceNotes = c.VoiceNotes,
             Relationships = c.Relationships,
+            Knows = minds.TryGetValue(c.CharacterId, out var mind) ? mind.Knows : [],
+            Thinks = mind?.Thinks ?? [],
+            Lies = mind?.Lies ?? [],
         }).ToList();
         packet.Truth.PlotCentre.CharacterId = draft.Brief.HiddenHand ? output.HiddenHandCharacterId : null;
         return [];
@@ -461,8 +524,9 @@ public sealed class ArcStep(IMysteryModel model, ICoherenceValidator validator, 
         packet.Beats = output.Beats;
         packet.Climax = output.Climax;
         packet.ResolutionLevers = output.ResolutionLevers;
+        // The weights depend on the hook and the channels too: they are set before each whole-case check.
         packet.Tension = new CaseTension();
-        return Derived.Tension(packet);
+        return [];
     }
 
     protected override ArcStage Next(MysteryDraft draft) => new(draft);
@@ -536,8 +600,11 @@ public sealed class CriticStep(IMysteryModel model, MysteryOptions options)
             Effort = options.CriticEffort,
             MaxTokens = Math.Min(options.MaxOutputTokens, 32000),
             System = draft.SystemPrompt,
-            Context = draft.CaseContext,
+            Context = draft.ContextFor(Name),
             Instruction = entry.Instruction,
+
+            // The critic usually looks twice with the same schema and context: the second look reads the cache.
+            Cache = true,
         }, cancellationToken);
 
         if (!reply.Success)
@@ -553,6 +620,8 @@ public sealed class CriticStep(IMysteryModel model, MysteryOptions options)
         entry.CacheReadTokens = answer.CacheReadTokens;
         entry.CacheWriteTokens = answer.CacheWriteTokens;
         entry.LatencyMs = answer.LatencyMs;
+        entry.PrefixHash = answer.PrefixHash;
+        entry.CostUsd = ModelPrices.Cost(answer.Model, answer.InputTokens, answer.CacheWriteTokens, answer.CacheReadTokens, answer.OutputTokens);
         entry.Output = answer.RawJson;
 
         var issues = answer.Value.Checks
@@ -565,6 +634,7 @@ public sealed class CriticStep(IMysteryModel model, MysteryOptions options)
                 Explanation = c.Explanation,
                 SuggestedFix = c.SuggestedFix,
                 Source = IssueSources.Critic,
+                Targets = c.Targets.Where(t => !string.IsNullOrWhiteSpace(t)).Select(t => t.Trim()).ToList(),
             })
             .ToList();
 

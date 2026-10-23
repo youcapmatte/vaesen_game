@@ -11,4 +11,5 @@ Facts
 
 Misdirection ({{redHerringDensity}} density)
 - {{decoyRule}} Every decoy thread is cleared by true facts (clearedByFactIds), and its own facts point to it (decoy:<threadId>).
+- A decoy must survive the first hour of play. Give its suspect at least one true but damning fact that physically places them near the provocation or the harm (seen at the place at the wrong hour, holding something connected to it), not only motive and rumour. The fact must be cleared later by a true fact that explains it innocently.
 - {{seasonRule}}

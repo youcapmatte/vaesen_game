@@ -84,6 +84,7 @@ public sealed class AnthropicMysteryModel : IMysteryModel
                 CacheReadTokens = answer.CacheRead,
                 CacheWriteTokens = answer.CacheWrite,
                 LatencyMs = answer.LatencyMs,
+                PrefixHash = answer.PrefixHash,
             });
         }
         catch (JsonException ex)
@@ -122,7 +123,9 @@ public sealed class AnthropicMysteryModel : IMysteryModel
         var content = new List<BetaContentBlockParam>();
         if (!string.IsNullOrWhiteSpace(request.Context))
         {
-            content.Add(new BetaTextBlockParam { Text = request.Context, CacheControl = new BetaCacheControlEphemeral() });
+            content.Add(request.Cache
+                ? new BetaTextBlockParam { Text = request.Context, CacheControl = new BetaCacheControlEphemeral() }
+                : new BetaTextBlockParam { Text = request.Context });
         }
 
         var instruction = structured
@@ -149,14 +152,14 @@ public sealed class AnthropicMysteryModel : IMysteryModel
             Fallbacks = new Default(),
             System = new List<BetaTextBlockParam>
             {
-                new() { Text = request.System, CacheControl = new BetaCacheControlEphemeral() },
+                request.Cache ? new() { Text = request.System, CacheControl = new BetaCacheControlEphemeral() } : new() { Text = request.System },
             },
             OutputConfig = output,
             Messages = [new BetaUserMessageParam { Content = content }],
         };
 
         var text = new StringBuilder();
-        var answer = new Answer { Model = request.Model };
+        var answer = new Answer { Model = request.Model, PrefixHash = PrefixHash(request, structured ? schema.ToJsonString() : "") };
         await foreach (var streamEvent in _client.Beta.Messages.CreateStreaming(parameters, cancellationToken))
         {
             if (streamEvent.TryPickStart(out var start))
@@ -181,9 +184,16 @@ public sealed class AnthropicMysteryModel : IMysteryModel
         answer.LatencyMs = stopwatch.ElapsedMilliseconds;
         answer.Json = structured ? text.ToString() : OutermostObject(text.ToString());
         _logger.LogInformation(
-            "Mystery step {Step} on {Model}: {Input} in ({CacheRead} cached, {CacheWrite} written), {Output} out, {Ms} ms, stop {Stop}",
-            request.Step, answer.Model, answer.Input, answer.CacheRead, answer.CacheWrite, answer.Output, answer.LatencyMs, answer.StopReason);
+            "Mystery step {Step} on {Model}: {Input} in ({CacheRead} cached, {CacheWrite} written), {Output} out, {Ms} ms, stop {Stop}, prefix {Prefix}",
+            request.Step, answer.Model, answer.Input, answer.CacheRead, answer.CacheWrite, answer.Output, answer.LatencyMs, answer.StopReason, answer.PrefixHash);
         return answer;
+    }
+
+    /// <summary>The first 12 hex digits of a SHA-256 over what precedes the cache breakpoint.</summary>
+    private static string PrefixHash(ModelRequest request, string schema)
+    {
+        var bytes = System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(string.Join('\n', request.Model, schema, request.System, request.Context)));
+        return Convert.ToHexString(bytes)[..12].ToLowerInvariant();
     }
 
     /// <summary>Without structured outputs the model may wrap the JSON in prose or a code fence; keep the object.</summary>
@@ -211,6 +221,8 @@ public sealed class AnthropicMysteryModel : IMysteryModel
         public long CacheWrite { get; set; }
 
         public long LatencyMs { get; set; }
+
+        public string PrefixHash { get; set; } = "";
     }
 }
 

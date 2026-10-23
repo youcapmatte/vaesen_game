@@ -302,6 +302,10 @@ public sealed class CriticCheck
 
     [JsonProperty("suggestedFix")]
     public string? SuggestedFix { get; set; }
+
+    /// <summary>Every id the issue touches, so it is routed to the step that owns each (see the critic prompt).</summary>
+    [JsonProperty("targets")]
+    public List<string> Targets { get; set; } = [];
 }
 
 /// <summary>The judgement checks the critic answers, one each.</summary>
@@ -318,6 +322,9 @@ public static class CriticChecks
     public const string Solves = "solves";
     public const string WorldConsistency = "worldConsistency";
 
+    /// <summary>Facts, what people know and when, their secrets and the reveals agree on when things happened.</summary>
+    public const string Timeline = "timeline";
+
     public static readonly IReadOnlyList<string> All =
-        [DeepLoreTrail, NonTrivial, KnowledgeGate, HumansFromConflict, DifficultyOnFocus, Hook, FairClues, HonestRedHerrings, Solves, WorldConsistency];
+        [DeepLoreTrail, NonTrivial, KnowledgeGate, HumansFromConflict, DifficultyOnFocus, Hook, FairClues, HonestRedHerrings, Solves, WorldConsistency, Timeline];
 }
