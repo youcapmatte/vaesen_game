@@ -30,7 +30,7 @@ int Help()
 
           assign    [--count 5] [--month 10] [--seed N] [--vaesen id] [--level id]
                     Show what the assignment stage would choose (no model calls).
-          generate  [--count 1] [--month 10] [--seed N] [--vaesen id] [--level id] [--out dir]
+          generate  [--count 1] [--month 10] [--seed N] [--vaesen id] [--level id] [--origin id] [--out dir]
                     [--no-critic] [--approved-only] [--density low|medium|high] [--verbose]
                     Generate cases with the Anthropic API (needs ANTHROPIC_API_KEY) and write
                     {id}.json and {id}.md (report and generation log) to --out (default ./cases).
@@ -64,6 +64,7 @@ GenerationRequest Request(int index, bool store) => new()
     Month = args2.GetInt("month"),
     Seed = args2.GetInt("seed") is { } seed ? seed + index : null,
     VaesenId = args2.Get("vaesen"),
+    OriginId = args2.Get("origin"),
     LevelId = args2.Get("level"),
     Store = store,
 };

@@ -27,6 +27,9 @@ public sealed class GenerationRequest
     /// <summary>Force a creature (CaseLab), instead of letting the assignment choose.</summary>
     public string? VaesenId { get; init; }
 
+    /// <summary>Pin the creature's origin (an affliction's), to regenerate a case from the same brief.</summary>
+    public string? OriginId { get; init; }
+
     /// <summary>Store the case when it passes (off for dry runs).</summary>
     public bool Store { get; init; } = true;
 }
@@ -208,6 +211,18 @@ public sealed class MysteryGenerator(
         if (request.LevelId is not null)
         {
             pack.Levels = pack.Levels.Where(l => l.Id == request.LevelId).ToList();
+        }
+
+        if (request.OriginId is not null)
+        {
+            // A copy of each creature that has the origin, narrowed to it: the reason is then an affliction from it.
+            pack.Vaesen = pack.Vaesen.Where(v => v.OriginSet.Exists(o => o.Id == request.OriginId)).Select(v =>
+            {
+                var copy = Newtonsoft.Json.JsonConvert.DeserializeObject<VaesenDefinition>(Newtonsoft.Json.JsonConvert.SerializeObject(v))!;
+                copy.OriginSet = copy.OriginSet.Where(o => o.Id == request.OriginId).ToList();
+                copy.ReasonKinds = [ReasonKinds.Affliction];
+                return copy;
+            }).ToList();
         }
 
         if (pack.Vaesen.Count == 0 || pack.Levels.Count == 0)
