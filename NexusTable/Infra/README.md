@@ -5,11 +5,11 @@ An AWS CDK app (C#) that runs the Nexus Table at **https://nexus.norse.games**, 
 | Stack | What it holds |
 |---|---|
 | `NexusTableDns` | The Route 53 hosted zone `nexus.norse.games`. `norse.games` stays at Namecheap, which delegates this subdomain with four NS records. |
-| `NexusTable` | The DynamoDB table `nexus-table-prod` (kept if the stack is deleted), a VPC with public subnets (no NAT gateway), the HTTPS certificate, one load balancer, the ECS cluster `nexus-table` with three Fargate services, and the two DNS records. |
+| `NexusTable` | The DynamoDB table `nexus-table-prod` (kept if the stack is deleted), a VPC with public subnets (no NAT gateway), the HTTPS certificate, one load balancer, the ECS cluster `nexus-table` with three Fargate services, an EFS file system for the mystery engine's files (kept if the stack is deleted), and the two DNS records. |
 
 | Service | Image | Size | Reached at |
 |---|---|---|---|
-| `nexus-table-api` | `NexusTable/Api/Dockerfile` | 0.25 vCPU, 512 MB | `api.nexus.norse.games` (health check `/health`) |
+| `nexus-table-api` | `NexusTable/Api/Dockerfile` | 0.5 vCPU, 1 GB | `api.nexus.norse.games` (health check `/health`); case files and worlds on EFS at `/data` |
 | `nexus-table-web` | `NexusTable/Web/Dockerfile` | 0.25 vCPU, 512 MB | `nexus.norse.games` |
 | `nexus-gm` | `NexusTable/GmAgent/Dockerfile` | 0.5 vCPU, 1 GB | nothing: it only connects out |
 
@@ -65,5 +65,6 @@ Roughly $80 a month while all three services run (approximate, eu-central-1, not
 
 ## What isn't covered
 
-- Local data (the JSON files in `.data`) isn't copied: production starts with an empty table.
+- Local data (the JSON files in `.data`, including case files and worlds) isn't copied: production starts empty.
+- Production generates mysteries from the draft content (`Mystery__UseDraftContent=true`), since none is approved yet. Turn it off in `AppStack.cs` once content is reviewed.
 - One task per service. More API tasks need sticky sessions on the load balancer for SignalR first.

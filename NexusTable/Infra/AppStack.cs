@@ -3,6 +3,7 @@ using Amazon.CDK.AWS.CertificateManager;
 using Amazon.CDK.AWS.DynamoDB;
 using Amazon.CDK.AWS.EC2;
 using Amazon.CDK.AWS.ECS;
+using Amazon.CDK.AWS.EFS;
 using Amazon.CDK.AWS.ElasticLoadBalancingV2;
 using Amazon.CDK.AWS.Logs;
 using Amazon.CDK.AWS.Route53;
@@ -12,6 +13,7 @@ using Constructs;
 using DynamoAttribute = Amazon.CDK.AWS.DynamoDB.Attribute;
 using DynamoTable = Amazon.CDK.AWS.DynamoDB.Table;
 using EcsSecret = Amazon.CDK.AWS.ECS.Secret;
+using EfsFileSystem = Amazon.CDK.AWS.EFS.FileSystem;
 using TargetHealthCheck = Amazon.CDK.AWS.ElasticLoadBalancingV2.HealthCheck;
 
 namespace Nexus.Table.Infra;
@@ -23,6 +25,7 @@ namespace Nexus.Table.Infra;
 ///   <item>a VPC with public subnets only, so no NAT gateway to pay for; tasks get public IPs for their outbound calls</item>
 ///   <item>one HTTPS load balancer: api.{domain} goes to the API, everything else to the web app</item>
 ///   <item>three Fargate services built from the Dockerfiles: the API, the web app, and the Gamemaster agent (outbound only)</item>
+///   <item>an EFS file system mounted in the API at /data, for the mystery engine's case files and Society worlds (kept if the stack is deleted)</item>
 /// </list>
 /// </summary>
 public sealed class AppStack : Stack
@@ -102,7 +105,7 @@ public sealed class AppStack : Stack
         var apiImage = ContainerImage.FromAsset(repositoryRoot, new AssetImageProps
         {
             File = "NexusTable/Api/Dockerfile",
-            // The context is the repository root (the API references VaesenAPI/Framework); send only the three projects.
+            // The context is the repository root (the API references VaesenAPI/Framework); send only the projects it builds.
             IgnoreMode = IgnoreMode.DOCKER,
             Exclude =
             [
@@ -111,6 +114,7 @@ public sealed class AppStack : Stack
                 "!NexusTable/Api/Nexus.Table/",
                 "!NexusTable/Api/Nexus.Table.Api/",
                 "!VaesenAPI/Framework/Vaesen.Framework.Core/",
+                "!VaesenAPI/Framework/Vaesen.Framework.Mystery/",
                 "**/bin/",
                 "**/obj/",
                 "**/.data/",
@@ -125,20 +129,54 @@ public sealed class AppStack : Stack
             ["Auth0__Domain"] = settings.Auth0Domain,
             ["Auth0__Audience"] = settings.Auth0Audience,
             ["Cors__Origins__0"] = settings.WebUrl,
+            // The mystery engine keeps case files and worlds as files; /data is the EFS mount below.
+            ["Mystery__CasePacketPath"] = "/data/cases",
+            ["Mystery__WorldPath"] = "/data/worlds",
+            // No content is approved yet; generation needs the drafts until it is.
+            ["Mystery__UseDraftContent"] = "true",
         };
         for (var i = 0; i < settings.HostSubjects.Length; i++)
         {
             apiEnvironment[$"Nexus__HostSubjects__{i}"] = settings.HostSubjects[i];
         }
 
-        var api = AddService("Api", "nexus-table-api", cpu: 256, memoryMiB: 512, apiImage, port: 8080, apiEnvironment, new Dictionary<string, EcsSecret>
+        var api = AddService("Api", "nexus-table-api", cpu: 512, memoryMiB: 1024, apiImage, port: 8080, apiEnvironment, new Dictionary<string, EcsSecret>
         {
             ["LiveKit__Url"] = EcsSecret.FromSecretsManager(keys, "LIVEKIT_URL"),
             ["LiveKit__ApiKey"] = EcsSecret.FromSecretsManager(keys, "LIVEKIT_API_KEY"),
             ["LiveKit__ApiSecret"] = EcsSecret.FromSecretsManager(keys, "LIVEKIT_API_SECRET"),
             ["LiveKit__AgentKey"] = EcsSecret.FromSecretsManager(keys, "NEXUS_AGENT_KEY"),
+            ["Mystery__AnthropicApiKey"] = EcsSecret.FromSecretsManager(keys, "ANTHROPIC_API_KEY"),
         });
         table.GrantReadWriteData(api.TaskDefinition.TaskRole);
+
+        // Case files and worlds outlive the task: EFS, written as the image's non-root "app" user (uid 1654).
+        var files = new EfsFileSystem(this, "Files", new FileSystemProps
+        {
+            Vpc = vpc,
+            VpcSubnets = new SubnetSelection { SubnetType = SubnetType.PUBLIC },
+            Encrypted = true,
+            RemovalPolicy = RemovalPolicy.RETAIN,
+        });
+        var apiData = files.AddAccessPoint("ApiData", new AccessPointOptions
+        {
+            Path = "/nexus-table-api",
+            PosixUser = new PosixUser { Uid = "1654", Gid = "1654" },
+            CreateAcl = new Acl { OwnerUid = "1654", OwnerGid = "1654", Permissions = "750" },
+        });
+        api.TaskDefinition.AddVolume(new Amazon.CDK.AWS.ECS.Volume
+        {
+            Name = "data",
+            EfsVolumeConfiguration = new EfsVolumeConfiguration
+            {
+                FileSystemId = files.FileSystemId,
+                TransitEncryption = "ENABLED",
+                AuthorizationConfig = new AuthorizationConfig { AccessPointId = apiData.AccessPointId, Iam = "ENABLED" },
+            },
+        });
+        api.TaskDefinition.DefaultContainer!.AddMountPoints(new MountPoint { SourceVolume = "data", ContainerPath = "/data", ReadOnly = false });
+        files.Connections.AllowDefaultPortFrom(api);
+        files.GrantReadWrite(api.TaskDefinition.TaskRole);
 
         https.AddTargets("Api", new AddApplicationTargetsProps
         {

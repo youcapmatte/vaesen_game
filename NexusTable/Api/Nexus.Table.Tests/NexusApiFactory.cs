@@ -41,6 +41,13 @@ public sealed class NexusApiFactory : WebApplicationFactory<Program>
             builder.UseSetting("LiveKit:ApiSecret", "a-livekit-api-secret-that-is-long-enough-for-hs256");
             builder.UseSetting("LiveKit:AgentKey", AgentKey);
         }
+        else
+        {
+            // Blank them explicitly, so a developer's own LiveKit user-secrets don't count as settings here.
+            builder.UseSetting("LiveKit:Url", "");
+            builder.UseSetting("LiveKit:ApiKey", "");
+            builder.UseSetting("LiveKit:ApiSecret", "");
+        }
 
         builder.ConfigureServices(services =>
         {
