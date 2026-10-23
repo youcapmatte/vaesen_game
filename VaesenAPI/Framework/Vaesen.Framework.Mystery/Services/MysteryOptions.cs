@@ -54,8 +54,14 @@ public sealed class MysteryOptions
     /// <summary>How many times a failing step is re-rolled with its issues fed back.</summary>
     public int MaxStepRetries { get; set; } = 2;
 
-    /// <summary>How many times the whole case is re-rolled after a step gives up.</summary>
+    /// <summary>
+    /// How many times a case is re-rolled from a new brief, when the conflict step finds nothing plausible fits. A step
+    /// that gives up does not re-roll the case: it starts again on its own (fixes, section 2.3).
+    /// </summary>
     public int MaxCaseRetries { get; set; } = 1;
+
+    /// <summary>How many times the finished case goes back to the sub-steps its whole-case or critic issues point at.</summary>
+    public int MaxReworkRounds { get; set; } = 2;
 
     /// <summary>How many recent mysteries a creature is kept out of.</summary>
     public int VaesenCooldown { get; set; } = 3;

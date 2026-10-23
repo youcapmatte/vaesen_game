@@ -138,12 +138,38 @@ public sealed class ValidatorTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public void A_fact_resting_on_a_giveaway_tell_must_be_marked_giveaway()
+    public void Giveaway_and_deep_lore_are_derived_from_the_lore_ids()
     {
         var packet = SampleCase();
-        packet.FindFact("f8")!.Giveaway = false;
+        foreach (var fact in packet.Facts)
+        {
+            (fact.Giveaway, fact.DeepLore) = (!fact.Giveaway, !fact.DeepLore);
+        }
 
-        AssertError(Validate(packet), IssueCodes.Giveaway, "fact:f8");
+        Generation.Derived.LoreFlags(packet.Facts, Pack.FindVaesen("nack")!);
+
+        // Back to what the fixture says, from the lore ids alone.
+        var sample = SampleCase();
+        Assert.All(packet.Facts, f => Assert.Equal((sample.FindFact(f.Id)!.Giveaway, sample.FindFact(f.Id)!.DeepLore), (f.Giveaway, f.DeepLore)));
+        Assert.True(packet.FindFact("f8")!.Giveaway);
+    }
+
+    [Fact]
+    public void The_engine_weights_facts_so_a_full_solution_passes_the_climax_and_scales_stray_beats()
+    {
+        var packet = SampleCase();
+        packet.Beats[0].Threshold = 0.95;
+
+        var adjusted = Generation.Derived.Tension(packet);
+        var walk = new FactGraph(packet).Walk();
+
+        var loadBearing = packet.Facts.Where(f => f.LoadBearing).Sum(f => packet.Tension.FactWeights[f.Id]);
+        Assert.Equal(packet.Climax.Threshold * 1.15, packet.Tension.Start + loadBearing, 3);
+        Assert.Equal(2 * packet.Tension.FactWeights["f10"], packet.Tension.FactWeights["f7"], 3);
+        Assert.All(packet.Beats, b => Assert.InRange(b.Threshold, packet.Tension.Start, packet.Climax.Threshold));
+        Assert.Contains(adjusted, i => i.Code == IssueCodes.Beats && !i.IsError);
+        Assert.True(walk.FinalTension >= packet.Climax.Threshold);
+        Assert.All(packet.Beats, b => Assert.Contains(b.Id, walk.FiredBeats));
     }
 
     [Fact]

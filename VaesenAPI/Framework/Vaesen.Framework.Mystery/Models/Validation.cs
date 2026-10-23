@@ -76,6 +76,9 @@ public static class IssueCodes
     public const string Resolution = "resolution";
     public const string Beats = "beats";
     public const string Content = "content";
+
+    /// <summary>A step gave up, so everything after it is missing (reported once, not as every check on blank data).</summary>
+    public const string Incomplete = "incomplete";
 }
 
 /// <summary>A parsed channel access requirement (see <see cref="ChannelAccess"/>).</summary>

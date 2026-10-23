@@ -34,6 +34,15 @@ public sealed class MysteryDraft
 
     public string CaseContext { get; set; } = "";
 
+    /// <summary>The checks the case has passed so far, step by step; the final run checks only these.</summary>
+    public CheckScope Completed { get; set; }
+
+    /// <summary>The step that gave up, when the case failed.</summary>
+    public string? FailedStep { get; set; }
+
+    /// <summary>Issues a later step attributed to an earlier one, which is re-run with them (fixes, section 2.3).</summary>
+    public List<CoherenceIssue> ReworkFeedback { get; set; } = [];
+
     public ValidationContext ValidationContext => new()
     {
         Pack = Pack,
@@ -52,7 +61,8 @@ public sealed class MysteryDraft
 }
 
 // The stages a case passes through. Each step takes the stage before it and produces the next, and stages can only be
-// made by the pipeline, so the order level -> creature -> conflict -> escalation -> humans -> clues is enforced by types.
+// made by the pipeline, so the order level -> creature -> conflict -> escalation -> humans -> facts -> minds -> arc ->
+// hook is enforced by types.
 
 public abstract class DraftStage
 {
@@ -82,6 +92,22 @@ public sealed class CastStage : DraftStage
     internal CastStage(MysteryDraft draft) : base(draft) { }
 }
 
+public sealed class FactsStage : DraftStage
+{
+    internal FactsStage(MysteryDraft draft) : base(draft) { }
+}
+
+public sealed class MindsStage : DraftStage
+{
+    internal MindsStage(MysteryDraft draft) : base(draft) { }
+}
+
+public sealed class ArcStage : DraftStage
+{
+    internal ArcStage(MysteryDraft draft) : base(draft) { }
+}
+
+/// <summary>Every step done: the hook is written and the case can be checked whole.</summary>
 public sealed class CluesStage : DraftStage
 {
     internal CluesStage(MysteryDraft draft) : base(draft) { }
@@ -98,6 +124,10 @@ public sealed class GenerationLogEntry
 
     [JsonProperty("step")]
     public string Step { get; set; } = "";
+
+    /// <summary>One of <see cref="LogEntryKinds"/>: a full answer, a fresh restart, a patch of a few items, or a check.</summary>
+    [JsonProperty("kind")]
+    public string Kind { get; set; } = LogEntryKinds.Full;
 
     [JsonProperty("attempt")]
     public int Attempt { get; set; }
@@ -136,4 +166,19 @@ public sealed class GenerationLogEntry
     /// <summary>The model's raw answer, kept so a failing step can be inspected.</summary>
     [JsonProperty("output")]
     public string? Output { get; set; }
+}
+
+public static class LogEntryKinds
+{
+    /// <summary>The whole step answered (a first try or a retry with its issues).</summary>
+    public const string Full = "full";
+
+    /// <summary>The step started again from nothing after giving up (fixes, section 2.3).</summary>
+    public const string Fresh = "fresh";
+
+    /// <summary>Only the items with problems were asked for again and merged back (fixes, section 2.2).</summary>
+    public const string Patch = "patch";
+
+    /// <summary>A validator run on the whole case, with no model call.</summary>
+    public const string Check = "check";
 }

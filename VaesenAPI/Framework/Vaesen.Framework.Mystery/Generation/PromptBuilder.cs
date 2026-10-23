@@ -165,9 +165,13 @@ public static class PromptBuilder
         ? "Identity is the puzzle: no opening event may be one of the creature's giveaway tells or close to one. Many quiet oddities beat one loud event."
         : "Identity is not the puzzle here, so the creature's giveaway signs may appear from the start.";
 
-    public static string GiveawayRuleForClues(AssignmentBrief brief) => brief.Focus == CaseFocus.What
-        ? "Identity is the puzzle: every channel to a giveaway fact is gated on other discoveries (knowsFact), and no giveaway is in the hook or the opening."
+    public static string GiveawayRuleForChannels(AssignmentBrief brief) => brief.Focus == CaseFocus.What
+        ? "Identity is the puzzle: every channel to a giveaway fact is gated on other discoveries (knowsFact)."
         : "Identity is not the puzzle here; giveaway facts may be found early.";
+
+    public static string GiveawayRuleForHook(AssignmentBrief brief) => brief.Focus == CaseFocus.What
+        ? "Identity is the puzzle: the hook states no giveaway fact and reports no event that is one."
+        : "Identity is not the puzzle here; the hook may already hint at what the creature is.";
 
     public static string DecoyRule(string density) => density switch
     {
@@ -190,10 +194,10 @@ public static class PromptBuilder
     }
 
     public static string LeverRule(AssignmentBrief brief, VaesenDefinition vaesen) => brief.HiddenHand
-        ? "There is a hidden hand, so include a crude solve that is always available (deal with the creature by force) and a deep solve (expose the hand, lift the curse, save the victim), the better outcome, which must be discoverable."
+        ? "solveDepth is exactly one of: crude, partial, deep. There is a hidden hand, so include a crude solve that is always available (deal with the creature by force) and a deep solve (expose the hand, lift the curse, save the victim), the better outcome, which must be discoverable."
         : vaesen.ResolutionShape == ResolutionShapes.Negotiable
-            ? "The creature's grievance can be answered: include a lever that answers it, alongside a cruder one."
-            : "The creature cannot be bargained with: the levers are about driving it off, ending the provocation or protecting its victims.";
+            ? "The creature's grievance can be answered. solveDepth is exactly one of: crude, partial, deep. The lever that answers the grievance at its root is deep. A lever that eases it or drives the creature off without answering the cause is partial. One that simply defeats or destroys is crude. Include at least one deep lever and at least one cruder one."
+            : "solveDepth is exactly one of: crude, partial, deep. The creature cannot be bargained with: the levers are about driving it off, ending the provocation or protecting its victims.";
 
     public static string SeasonRule(AssignmentBrief brief) => brief.SeasonThreads.Count == 0
         ? "There is no season thread yet: leave seasonThreads empty."

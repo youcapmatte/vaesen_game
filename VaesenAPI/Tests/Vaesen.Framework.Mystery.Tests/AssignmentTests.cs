@@ -95,7 +95,10 @@ public sealed class AssignmentTests
     [InlineData(typeof(ConflictOutput))]
     [InlineData(typeof(EscalationOutput))]
     [InlineData(typeof(HumansOutput))]
-    [InlineData(typeof(CluesOutput))]
+    [InlineData(typeof(FactsOutput))]
+    [InlineData(typeof(MindsOutput))]
+    [InlineData(typeof(ArcOutput))]
+    [InlineData(typeof(HookOutput))]
     [InlineData(typeof(CriticOutput))]
     [InlineData(typeof(VaesenDefinition))]
     [InlineData(typeof(ConflictArchetype))]
@@ -123,12 +126,13 @@ public sealed class AssignmentTests
     [Fact]
     public void Fixed_value_fields_offer_the_model_only_their_allowed_values()
     {
-        var clues = StructuredSchema.For(typeof(CluesOutput)).ToJsonString();
+        var facts = StructuredSchema.For(typeof(FactsOutput)).ToJsonString();
+        var arc = StructuredSchema.For(typeof(ArcOutput)).ToJsonString();
         var humans = StructuredSchema.For(typeof(HumansOutput)).ToJsonString();
 
         // A run invented "surface" and "shallow" for solve depths, "lore" for a fact kind and "core" for a cast tier.
-        Assert.Contains($"\"enum\":[{string.Join(",", SolveDepths.All.Select(k => $"\"{k}\""))}]", clues, StringComparison.Ordinal);
-        Assert.Contains($"\"enum\":[{string.Join(",", FactKinds.All.Select(k => $"\"{k}\""))}]", clues, StringComparison.Ordinal);
+        Assert.Contains($"\"enum\":[{string.Join(",", SolveDepths.All.Select(k => $"\"{k}\""))}]", arc, StringComparison.Ordinal);
+        Assert.Contains($"\"enum\":[{string.Join(",", FactKinds.All.Select(k => $"\"{k}\""))}]", facts, StringComparison.Ordinal);
         Assert.Contains($"\"enum\":[{string.Join(",", CastImportance.All.Select(k => $"\"{k}\""))}]", humans, StringComparison.Ordinal);
     }
 
@@ -148,7 +152,7 @@ public sealed class AssignmentTests
     [Fact]
     public void Every_prompt_template_is_embedded_and_filled()
     {
-        foreach (var name in new[] { "system", "conflict", "escalation", "humans", "clues", "critic" })
+        foreach (var name in new[] { "system", "conflict", "escalation", "humans", "facts", "minds", "arc", "hook", "critic" })
         {
             Assert.False(string.IsNullOrWhiteSpace(PromptBuilder.Template(name)));
         }

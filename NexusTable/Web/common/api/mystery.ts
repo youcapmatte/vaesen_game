@@ -269,7 +269,11 @@ export const GenerationSteps = [
   { id: "conflict", label: "The conflict" },
   { id: "escalation", label: "What has happened" },
   { id: "humans", label: "The people" },
-  { id: "clues", label: "The clues and the hook" },
+  { id: "facts", label: "The facts" },
+  { id: "minds", label: "Who knows what, and every way in" },
+  { id: "arc", label: "The beats and the endings" },
+  { id: "hook", label: "The hook and the scenes" },
+  { id: "check", label: "Checking the whole case" },
   { id: "critic", label: "The critic's review" },
 ] as const;
 

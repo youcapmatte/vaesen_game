@@ -20,14 +20,33 @@ public sealed class ValidationContext
     public HashSet<string> SocietyCharacterIds { get; init; } = [];
 }
 
-/// <summary>How much of the case exists yet: each generation step is checked on what it has produced so far.</summary>
+/// <summary>
+/// How much of the case exists yet: each generation step is checked on what it has produced so far, and the checks
+/// that need the whole case (reachability, redundancy, fair play) run once the hook is written.
+/// </summary>
 [Flags]
 public enum CheckScope
 {
     Conflict = 1,
     Escalation = 2,
     Cast = 4,
-    Clues = 8,
+
+    /// <summary>Sub-step 6a: the facts, decoy threads and which facts the events are.</summary>
+    Facts = 8,
+
+    /// <summary>Sub-step 6b: what each mind holds, and the channels.</summary>
+    Minds = 16,
+
+    /// <summary>Sub-step 6c: beats, climax and resolution levers.</summary>
+    Arc = 32,
+
+    /// <summary>Sub-step 6d: the hook and the places used.</summary>
+    Hook = 64,
+
+    /// <summary>The checks on the finished case.</summary>
+    Whole = 128,
+
+    Clues = Facts | Minds | Arc | Hook | Whole,
     Full = Conflict | Escalation | Cast | Clues,
 }
 
@@ -59,18 +78,35 @@ public sealed class CaseValidator : ICoherenceValidator
             run.CheckCast();
         }
 
-        if (scope.HasFlag(CheckScope.Clues))
+        if (scope.HasFlag(CheckScope.Facts))
         {
-            run.CheckSchema();
-            run.CheckReferences();
-            run.CheckAffordances();
+            run.CheckFacts();
+        }
+
+        if (scope.HasFlag(CheckScope.Minds))
+        {
+            run.CheckChannels();
             run.CheckProvenance();
+        }
+
+        if (scope.HasFlag(CheckScope.Arc))
+        {
+            run.CheckArc();
+        }
+
+        if (scope.HasFlag(CheckScope.Hook))
+        {
+            run.CheckHook();
+        }
+
+        if (scope.HasFlag(CheckScope.Whole))
+        {
+            run.CheckLevel();
             run.CheckReachability();
             run.CheckRedundancy();
             run.CheckOrderIndependence();
             run.CheckDecoysAndFairPlay();
-            run.CheckOpeningAndGiveaways();
-            run.CheckResolution();
+            run.CheckDiscoverableSolves();
             run.CheckBeatsAndTension();
         }
 
@@ -305,18 +341,13 @@ public sealed class CaseValidator : ICoherenceValidator
             }
         }
 
-        // ---- Clues step and the whole case --------------------------------------------------------------------
+        // ---- Sub-step 6a: facts -------------------------------------------------------------------------------
 
-        public void CheckSchema()
+        public void CheckFacts()
         {
             foreach (var duplicate in packet.Facts.GroupBy(f => f.Id).Where(g => g.Count() > 1))
             {
                 Error(IssueCodes.Schema, $"fact:{duplicate.Key}", "Fact id is used twice.");
-            }
-
-            foreach (var duplicate in packet.Channels.GroupBy(c => c.Id).Where(g => g.Count() > 1))
-            {
-                Error(IssueCodes.Schema, $"channel:{duplicate.Key}", "Channel id is used twice.");
             }
 
             foreach (var fact in packet.Facts)
@@ -332,63 +363,24 @@ public sealed class CaseValidator : ICoherenceValidator
                 }
             }
 
-            foreach (var channel in packet.Channels)
-            {
-                if (!ChannelKinds.All.Contains(channel.Kind))
-                {
-                    Error(IssueCodes.Schema, $"channel:{channel.Id}", $"Unknown channel kind '{channel.Kind}'.{CoherenceIssue.Allowed(ChannelKinds.All)}");
-                }
-
-                foreach (var text in channel.Access.Requires.Where(r => AccessRequirement.Parse(r) is null))
-                {
-                    Error(IssueCodes.Schema, $"channel:{channel.Id}", $"Cannot read access requirement '{text}'. Allowed: knowsFact:<factId>, trust>=<0-3>, roll:<skill>, time:<when>, place:<placeId>, item:<what>.",
-                        "Use knowsFact:<factId>, trust>=<n>, roll:<skill>, time:<when>, place:<placeId> or item:<what>.");
-                }
-
-                if (string.IsNullOrWhiteSpace(channel.Reveal))
-                {
-                    Error(IssueCodes.Schema, $"channel:{channel.Id}", "A channel needs a reveal: what the players perceive.");
-                }
-            }
-
             if (!LoadBearing.Any(f => f.Kind == FactKinds.Identity && f.PointsTo == FactPointsTo.TrueAnswer))
             {
                 Error(IssueCodes.Schema, "facts", "No load-bearing identity fact points to the true answer, so the truth cannot be assembled.");
             }
-        }
 
-        public void CheckReferences()
-        {
-            void Fact(string? id, string at)
+            if (!LoadBearing.Any(f => f.DeepLore && f.PointsTo == FactPointsTo.TrueAnswer))
             {
-                if (id is not null && packet.FindFact(id) is null)
+                Error(IssueCodes.Giveaway, "facts", "No load-bearing fact of the solution rests on deep lore; the trail is the obvious answer.",
+                    "Build the solution trail from the creature's deep lore (list its deep lore ids in loreIds) and use common knowledge as misdirection.");
+            }
+
+            var knownLore = context.Vaesen.SelectMany(v => v.AllLore.Select(l => l.Id).Concat(v.AmbiguousSigns.Select(s => s.Id)).Concat(v.GiveawayTells.Select(s => s.Id))).ToHashSet();
+            foreach (var fact in packet.Facts)
+            {
+                foreach (var loreId in fact.LoreIds.Where(id => !knownLore.Contains(id)))
                 {
-                    Error(IssueCodes.UnknownReference, at, $"Unknown fact '{id}'.");
+                    Warn(IssueCodes.UnknownReference, $"fact:{fact.Id}", $"Lore id '{loreId}' is not in the creature's lore.");
                 }
-            }
-
-            void Person(string? id, string at)
-            {
-                if (!string.IsNullOrEmpty(id) && packet.FindCast(id) is null)
-                {
-                    Error(IssueCodes.UnknownReference, at, $"Unknown cast member '{id}'.");
-                }
-            }
-
-            foreach (var id in packet.Hook.AssertedFactIds)
-            {
-                Fact(id, "hook");
-            }
-
-            foreach (var id in packet.Hook.OpeningEventIds.Where(id => !packet.Truth.Escalation.Exists(e => e.Id == id)))
-            {
-                Error(IssueCodes.UnknownReference, "hook", $"Unknown opening event '{id}'.");
-            }
-
-            Person(packet.Hook.HookGiverId, "hook");
-            if (string.IsNullOrEmpty(packet.Hook.HookGiverId))
-            {
-                Error(IssueCodes.CastCoherence, "hook", "The hook needs a hook-giver from the cast.");
             }
 
             foreach (var e in packet.Truth.Escalation)
@@ -399,13 +391,109 @@ public sealed class CaseValidator : ICoherenceValidator
                 }
             }
 
-            foreach (var c in packet.Channels)
+            foreach (var thread in packet.SeasonThreads)
             {
-                Fact(c.FactId, $"channel:{c.Id}");
-                Person(c.SourceCharacterId, $"channel:{c.Id}");
-                foreach (var gate in _graph.FactGates(c))
+                foreach (var id in thread.FactIds)
                 {
-                    Fact(gate, $"channel:{c.Id}");
+                    Fact(id, $"seasonThread:{thread.ThreadId}");
+                }
+            }
+
+            var threadIds = packet.Decoys.Select(d => d.ThreadId).ToHashSet(StringComparer.Ordinal);
+            foreach (var fact in packet.Facts.Where(f => FactPointsTo.IsDecoy(f.PointsTo) && !threadIds.Contains(FactPointsTo.DecoyThreadId(f.PointsTo)!)))
+            {
+                Error(IssueCodes.Decoy, $"fact:{fact.Id}", $"Points to decoy thread '{FactPointsTo.DecoyThreadId(fact.PointsTo)}', which does not exist.");
+            }
+
+            foreach (var decoy in packet.Decoys)
+            {
+                var at = $"decoy:{decoy.ThreadId}";
+                foreach (var id in decoy.FactIds.Concat(decoy.ClearedByFactIds))
+                {
+                    Fact(id, at);
+                }
+
+                if (decoy.FactIds.Count == 0)
+                {
+                    Error(IssueCodes.Decoy, at, "A decoy thread needs facts that point down it.");
+                }
+
+                foreach (var fact in decoy.FactIds.Select(packet.FindFact).OfType<CaseFact>().Where(f => f.PointsTo != FactPointsTo.Decoy(decoy.ThreadId)))
+                {
+                    Error(IssueCodes.Decoy, at, $"Fact {fact.Id} is listed in the thread but points to '{fact.PointsTo}'.");
+                }
+
+                if (decoy.ClearedByFactIds.Count == 0)
+                {
+                    Error(IssueCodes.Decoy, at, "A decoy must be cleared by a true fact.", "Add a fact that is true from every angle and clears this trail.");
+                }
+
+                foreach (var fact in decoy.ClearedByFactIds.Select(packet.FindFact).OfType<CaseFact>().Where(f => FactPointsTo.IsDecoy(f.PointsTo)))
+                {
+                    Error(IssueCodes.Decoy, at, $"Fact {fact.Id} clears the decoy but is itself decoy evidence.");
+                }
+
+                if (decoy.VaesenId is not null && context.Pack.FindVaesen(decoy.VaesenId) is null)
+                {
+                    Error(IssueCodes.UnknownReference, at, $"Decoy creature '{decoy.VaesenId}' is not in the catalogue.");
+                }
+            }
+        }
+
+        // ---- Sub-step 6b: minds and channels ------------------------------------------------------------------
+
+        public void CheckChannels()
+        {
+            foreach (var duplicate in packet.Channels.GroupBy(c => c.Id).Where(g => g.Count() > 1))
+            {
+                Error(IssueCodes.Schema, $"channel:{duplicate.Key}", "Channel id is used twice.");
+            }
+
+            foreach (var channel in packet.Channels)
+            {
+                var at = $"channel:{channel.Id}";
+                if (!ChannelKinds.All.Contains(channel.Kind))
+                {
+                    Error(IssueCodes.Schema, at, $"Unknown channel kind '{channel.Kind}'.{CoherenceIssue.Allowed(ChannelKinds.All)}");
+                }
+
+                foreach (var text in channel.Access.Requires.Where(r => AccessRequirement.Parse(r) is null))
+                {
+                    Error(IssueCodes.Schema, at, $"Cannot read access requirement '{text}'. Allowed: knowsFact:<factId>, trust>=<0-3>, roll:<skill>, time:<when>, place:<placeId>, item:<what>.",
+                        "Use knowsFact:<factId>, trust>=<n>, roll:<skill>, time:<when>, place:<placeId> or item:<what>.");
+                }
+
+                if (string.IsNullOrWhiteSpace(channel.Reveal))
+                {
+                    Error(IssueCodes.Schema, at, "A channel needs a reveal: what the players perceive.");
+                }
+
+                Fact(channel.FactId, at);
+                Person(channel.SourceCharacterId, at);
+                foreach (var gate in _graph.FactGates(channel))
+                {
+                    Fact(gate, at);
+                }
+
+                if (channel.Kind is ChannelKinds.Trace or ChannelKinds.Document && string.IsNullOrEmpty(channel.PlaceId))
+                {
+                    Error(IssueCodes.AffordanceFit, at, "A trace or document must be somewhere: give it a placeId.");
+                }
+
+                if (channel.PlaceId is null)
+                {
+                    continue;
+                }
+
+                var place = context.Level.FindPlace(channel.PlaceId);
+                if (place is null)
+                {
+                    Error(IssueCodes.AffordanceFit, at, $"Place '{channel.PlaceId}' is not in the level.");
+                }
+                else if (channel.AffordanceId is not null && place.FindAffordance(channel.AffordanceId) is null)
+                {
+                    Error(IssueCodes.AffordanceFit, at, $"'{channel.AffordanceId}' is not an affordance of {place.Name}.",
+                        $"Use one of: {string.Join(", ", place.AllAffordances().Select(a => a.Id))}.");
                 }
             }
 
@@ -422,120 +510,21 @@ public sealed class CaseValidator : ICoherenceValidator
                 }
             }
 
-            foreach (var d in packet.Decoys)
+            if (!packet.Channels.Exists(c => c.Kind == ChannelKinds.KnowledgeGated))
             {
-                foreach (var id in d.FactIds.Concat(d.ClearedByFactIds))
-                {
-                    Fact(id, $"decoy:{d.ThreadId}");
-                }
+                Error(IssueCodes.Giveaway, "channels", "There is no knowledge-gated step.",
+                    "Add a sign that only resolves once the group understands the creature, or finds someone who knows the old ways.");
             }
 
-            foreach (var b in packet.Beats)
+            if (packet.Truth.Focus == CaseFocus.What)
             {
-                foreach (var id in b.EmitsFactIds)
+                foreach (var fact in packet.Facts.Where(f => f.Giveaway))
                 {
-                    Fact(id, $"beat:{b.Id}");
-                }
-
-                Person(b.ActorId, $"beat:{b.Id}");
-            }
-
-            foreach (var lever in packet.ResolutionLevers)
-            {
-                foreach (var id in lever.RequiresFactIds)
-                {
-                    Fact(id, $"lever:{lever.Id}");
-                }
-
-                foreach (var change in lever.Consequences.Attitudes)
-                {
-                    Person(change.CharacterId, $"lever:{lever.Id}");
-                }
-            }
-
-            foreach (var thread in packet.SeasonThreads)
-            {
-                foreach (var id in thread.FactIds)
-                {
-                    Fact(id, $"seasonThread:{thread.ThreadId}");
-                }
-            }
-
-            foreach (var id in packet.Tension.FactWeights.Keys)
-            {
-                Fact(id, "tension.factWeights");
-            }
-
-            foreach (var fact in packet.Facts.Where(f => !f.LoadBearing && !_graph.SourcesOf(f.Id).Any() && !_graph.OpeningKnowledge().Contains(f.Id)))
-            {
-                Warn(IssueCodes.Unreachable, $"fact:{fact.Id}", "This fact has no channel and is never revealed.");
-            }
-        }
-
-        public void CheckAffordances()
-        {
-            var level = context.Level;
-            if (packet.Level.LevelId != level.Id)
-            {
-                Error(IssueCodes.AffordanceFit, "level", $"The case names level '{packet.Level.LevelId}' but was assigned '{level.Id}'.");
-            }
-
-            foreach (var id in packet.Level.PlacesUsed.Where(id => level.FindPlace(id) is null))
-            {
-                Error(IssueCodes.AffordanceFit, "level.placesUsed", $"Place '{id}' is not in the level.");
-            }
-
-            foreach (var id in packet.Level.SceneDescriptions.Keys.Where(id => level.FindPlace(id) is null))
-            {
-                Error(IssueCodes.AffordanceFit, "level.sceneDescriptions", $"Scene for place '{id}', which is not in the level.");
-            }
-
-            var offered = context.Pack.Vocabulary.ExpandAll(level.AllTags());
-            foreach (var creature in context.Vaesen)
-            {
-                foreach (var tag in creature.RequiredAffordances.Where(t => !offered.Contains(t)))
-                {
-                    Error(IssueCodes.AffordanceFit, $"vaesen:{creature.Id}", $"{creature.Name} needs '{tag}', which the level does not offer.");
-                }
-            }
-
-            foreach (var c in packet.Channels)
-            {
-                var at = $"channel:{c.Id}";
-                if (c.Kind is ChannelKinds.Trace or ChannelKinds.Document && string.IsNullOrEmpty(c.PlaceId))
-                {
-                    Error(IssueCodes.AffordanceFit, at, "A trace or document must be somewhere: give it a placeId.");
-                }
-
-                if (c.PlaceId is null)
-                {
-                    continue;
-                }
-
-                var place = level.FindPlace(c.PlaceId);
-                if (place is null)
-                {
-                    Error(IssueCodes.AffordanceFit, at, $"Place '{c.PlaceId}' is not in the level.");
-                    continue;
-                }
-
-                if (!packet.Level.PlacesUsed.Contains(c.PlaceId))
-                {
-                    Warn(IssueCodes.AffordanceFit, at, $"Place '{c.PlaceId}' holds a clue but is not in placesUsed.");
-                }
-
-                if (c.AffordanceId is not null && place.FindAffordance(c.AffordanceId) is null)
-                {
-                    Error(IssueCodes.AffordanceFit, at, $"'{c.AffordanceId}' is not an affordance of {place.Name}.",
-                        $"Use one of: {string.Join(", ", place.AllAffordances().Select(a => a.Id))}.");
-                }
-            }
-
-            foreach (var placeId in packet.Beats.Select(b => b.Requires.Place).Append(packet.Climax.Conditions.Place).OfType<string>())
-            {
-                if (level.FindPlace(placeId) is null)
-                {
-                    Error(IssueCodes.AffordanceFit, "beats", $"Beat or climax place '{placeId}' is not in the level.");
+                    foreach (var channel in packet.Channels.Where(c => c.FactId == fact.Id && !_graph.FactGates(c).Any()))
+                    {
+                        Error(IssueCodes.Giveaway, $"channel:{channel.Id}",
+                            "A giveaway tell can be found straight away in an identity case; gate it behind other discoveries.");
+                    }
                 }
             }
         }
@@ -591,6 +580,197 @@ public sealed class CaseValidator : ICoherenceValidator
                     Error(IssueCodes.Provenance, $"channel:{c.Id}", $"{person.Name} is a source of {c.FactId} but does not know it.",
                         $"Add {c.FactId} to {person.Name}'s knows, with how they learned it.");
                 }
+            }
+        }
+
+        // ---- Sub-step 6c: the arc -----------------------------------------------------------------------------
+
+        public void CheckArc()
+        {
+            foreach (var b in packet.Beats)
+            {
+                foreach (var id in b.EmitsFactIds)
+                {
+                    Fact(id, $"beat:{b.Id}");
+                }
+
+                Person(b.ActorId, $"beat:{b.Id}");
+            }
+
+            foreach (var placeId in packet.Beats.Select(b => b.Requires.Place).Append(packet.Climax.Conditions.Place).OfType<string>())
+            {
+                if (context.Level.FindPlace(placeId) is null)
+                {
+                    Error(IssueCodes.AffordanceFit, "beats", $"Beat or climax place '{placeId}' is not in the level.");
+                }
+            }
+
+            foreach (var lever in packet.ResolutionLevers)
+            {
+                foreach (var id in lever.RequiresFactIds)
+                {
+                    Fact(id, $"lever:{lever.Id}");
+                }
+
+                foreach (var change in lever.Consequences.Attitudes)
+                {
+                    Person(change.CharacterId, $"lever:{lever.Id}");
+                }
+            }
+
+            CheckResolution();
+
+            var conditions = Creature?.ConfrontationConditions;
+            if (conditions is not null)
+            {
+                if (conditions.Kind is ConfrontationKinds.Time or ConfrontationKinds.Both && string.IsNullOrWhiteSpace(packet.Climax.Conditions.Time))
+                {
+                    Error(IssueCodes.Beats, "climax", $"{Creature!.Name} can only be confronted at a certain time ({conditions.Time}); the climax must say when.");
+                }
+
+                if (conditions.Kind is ConfrontationKinds.Place or ConfrontationKinds.Both && string.IsNullOrWhiteSpace(packet.Climax.Conditions.Place))
+                {
+                    Error(IssueCodes.Beats, "climax", $"{Creature!.Name} can only be confronted at certain places; the climax must say where.");
+                }
+            }
+        }
+
+        private void CheckResolution()
+        {
+            if (packet.ResolutionLevers.Count == 0)
+            {
+                Error(IssueCodes.Resolution, "resolutionLevers", "The case has no way to end.");
+                return;
+            }
+
+            foreach (var lever in packet.ResolutionLevers.Where(l => !SolveDepths.All.Contains(l.SolveDepth)))
+            {
+                Error(IssueCodes.Schema, $"lever:{lever.Id}", $"Unknown solve depth '{lever.SolveDepth}'.{CoherenceIssue.Allowed(SolveDepths.All)}");
+            }
+
+            if (packet.ResolutionLevers.Count < 2)
+            {
+                Warn(IssueCodes.Resolution, "resolutionLevers", "Only one resolution lever; offer several with different consequences.");
+            }
+
+            if (packet.Truth.PlotCentre.Kind == PlotCentreKinds.HiddenHand)
+            {
+                if (!packet.ResolutionLevers.Exists(l => l.SolveDepth == SolveDepths.Crude))
+                {
+                    Error(IssueCodes.Resolution, "resolutionLevers", "A hidden-hand case needs a crude solve that is always available.");
+                }
+
+                if (!packet.ResolutionLevers.Exists(l => l.SolveDepth == SolveDepths.Deep))
+                {
+                    Error(IssueCodes.Resolution, "resolutionLevers", "A hidden-hand case needs a deep solve (expose the hand, lift the curse, save the victim).");
+                }
+            }
+
+            foreach (var lever in packet.ResolutionLevers.Where(l => l.SolveDepth == SolveDepths.Deep && l.RequiresFactIds.Count == 0))
+            {
+                Warn(IssueCodes.Resolution, $"lever:{lever.Id}", "A deep solve should name the facts it takes to see it.");
+            }
+        }
+
+        // ---- Sub-step 6d: the hook and the scenes -------------------------------------------------------------
+
+        public void CheckHook()
+        {
+            foreach (var id in packet.Hook.AssertedFactIds)
+            {
+                Fact(id, "hook");
+            }
+
+            foreach (var id in packet.Hook.OpeningEventIds.Where(id => !packet.Truth.Escalation.Exists(e => e.Id == id)))
+            {
+                Error(IssueCodes.UnknownReference, "hook", $"Unknown opening event '{id}'.");
+            }
+
+            Person(packet.Hook.HookGiverId, "hook");
+            if (string.IsNullOrEmpty(packet.Hook.HookGiverId))
+            {
+                Error(IssueCodes.CastCoherence, "hook", "The hook needs a hook-giver from the cast.");
+            }
+
+            if (packet.Hook.OpeningEventIds.Count == 0)
+            {
+                Error(IssueCodes.Opening, "hook", "The hook mentions none of the opening events.");
+            }
+
+            if (!string.IsNullOrEmpty(packet.Brief.HookChannelId) && packet.Hook.Channel != packet.Brief.HookChannelId)
+            {
+                Warn(IssueCodes.Opening, "hook", $"The hook uses channel '{packet.Hook.Channel}', not the assigned '{packet.Brief.HookChannelId}'.");
+            }
+
+            foreach (var fact in packet.Hook.AssertedFactIds.Select(packet.FindFact).OfType<CaseFact>().Where(f => f.Kind == FactKinds.Cause))
+            {
+                Error(IssueCodes.Opening, "hook", $"The hook states the cause ({fact.Id}); the true conflict is never a clue at the start.");
+            }
+
+            if (packet.Truth.Focus == CaseFocus.What)
+            {
+                var openingFacts = _graph.OpeningKnowledge();
+                foreach (var fact in packet.Facts.Where(f => f.Giveaway && openingFacts.Contains(f.Id)))
+                {
+                    Error(IssueCodes.Giveaway, $"fact:{fact.Id}", "A giveaway tell is in the opening of a case whose puzzle is the creature's identity.",
+                        "Open on ambiguous signs only; let the giveaway surface late as confirmation.");
+                }
+            }
+
+            foreach (var id in packet.Level.PlacesUsed.Where(id => context.Level.FindPlace(id) is null))
+            {
+                Error(IssueCodes.AffordanceFit, "level.placesUsed", $"Place '{id}' is not in the level.");
+            }
+
+            foreach (var id in packet.Level.SceneDescriptions.Keys.Where(id => context.Level.FindPlace(id) is null))
+            {
+                Error(IssueCodes.AffordanceFit, "level.sceneDescriptions", $"Scene for place '{id}', which is not in the level.");
+            }
+        }
+
+        // ---- The whole case ----------------------------------------------------------------------------------
+
+        public void CheckLevel()
+        {
+            var level = context.Level;
+            if (packet.Level.LevelId != level.Id)
+            {
+                Error(IssueCodes.AffordanceFit, "level", $"The case names level '{packet.Level.LevelId}' but was assigned '{level.Id}'.");
+            }
+
+            var offered = context.Pack.Vocabulary.ExpandAll(level.AllTags());
+            foreach (var creature in context.Vaesen)
+            {
+                foreach (var tag in creature.RequiredAffordances.Where(t => !offered.Contains(t)))
+                {
+                    Error(IssueCodes.AffordanceFit, $"vaesen:{creature.Id}", $"{creature.Name} needs '{tag}', which the level does not offer.");
+                }
+            }
+
+            foreach (var c in packet.Channels.Where(c => c.PlaceId is not null && level.FindPlace(c.PlaceId) is not null && !packet.Level.PlacesUsed.Contains(c.PlaceId)))
+            {
+                Warn(IssueCodes.AffordanceFit, $"channel:{c.Id}", $"Place '{c.PlaceId}' holds a clue but is not in placesUsed.");
+            }
+
+            foreach (var fact in packet.Facts.Where(f => !f.LoadBearing && !_graph.SourcesOf(f.Id).Any() && !_graph.OpeningKnowledge().Contains(f.Id)))
+            {
+                Warn(IssueCodes.Unreachable, $"fact:{fact.Id}", "This fact has no channel and is never revealed.");
+            }
+        }
+
+        private void Fact(string? id, string at)
+        {
+            if (id is not null && packet.FindFact(id) is null)
+            {
+                Error(IssueCodes.UnknownReference, at, $"Unknown fact '{id}'.");
+            }
+        }
+
+        private void Person(string? id, string at)
+        {
+            if (!string.IsNullOrEmpty(id) && packet.FindCast(id) is null)
+            {
+                Error(IssueCodes.UnknownReference, at, $"Unknown cast member '{id}'.");
             }
         }
 
@@ -663,43 +843,9 @@ public sealed class CaseValidator : ICoherenceValidator
 
         public void CheckDecoysAndFairPlay()
         {
-            var threadIds = packet.Decoys.Select(d => d.ThreadId).ToHashSet(StringComparer.Ordinal);
-            foreach (var fact in packet.Facts.Where(f => FactPointsTo.IsDecoy(f.PointsTo) && !threadIds.Contains(FactPointsTo.DecoyThreadId(f.PointsTo)!)))
+            foreach (var decoy in packet.Decoys.Where(d => d.ClearedByFactIds.Count > 0 && !d.ClearedByFactIds.Any(FullWalk.Known.Contains)))
             {
-                Error(IssueCodes.Decoy, $"fact:{fact.Id}", $"Points to decoy thread '{FactPointsTo.DecoyThreadId(fact.PointsTo)}', which does not exist.");
-            }
-
-            foreach (var decoy in packet.Decoys)
-            {
-                var at = $"decoy:{decoy.ThreadId}";
-                if (decoy.FactIds.Count == 0)
-                {
-                    Error(IssueCodes.Decoy, at, "A decoy thread needs facts that point down it.");
-                }
-
-                foreach (var fact in decoy.FactIds.Select(packet.FindFact).OfType<CaseFact>().Where(f => f.PointsTo != FactPointsTo.Decoy(decoy.ThreadId)))
-                {
-                    Error(IssueCodes.Decoy, at, $"Fact {fact.Id} is listed in the thread but points to '{fact.PointsTo}'.");
-                }
-
-                if (decoy.ClearedByFactIds.Count == 0)
-                {
-                    Error(IssueCodes.Decoy, at, "A decoy must be cleared by a true fact.", "Add a fact that is true from every angle and clears this trail.");
-                }
-                else if (!decoy.ClearedByFactIds.Any(FullWalk.Known.Contains))
-                {
-                    Error(IssueCodes.Decoy, at, "None of the facts that clear this decoy can be reached, so it can never be resolved.");
-                }
-
-                foreach (var fact in decoy.ClearedByFactIds.Select(packet.FindFact).OfType<CaseFact>().Where(f => FactPointsTo.IsDecoy(f.PointsTo)))
-                {
-                    Error(IssueCodes.Decoy, at, $"Fact {fact.Id} clears the decoy but is itself decoy evidence.");
-                }
-
-                if (decoy.VaesenId is not null && context.Pack.FindVaesen(decoy.VaesenId) is null)
-                {
-                    Error(IssueCodes.UnknownReference, at, $"Decoy creature '{decoy.VaesenId}' is not in the catalogue.");
-                }
+                Error(IssueCodes.Decoy, $"decoy:{decoy.ThreadId}", "None of the facts that clear this decoy can be reached, so it can never be resolved.");
             }
 
             // Fair play: an honest clue to the true answer, reachable early and without resolving any decoy.
@@ -735,167 +881,50 @@ public sealed class CaseValidator : ICoherenceValidator
             }
         }
 
-        public void CheckOpeningAndGiveaways()
+        public void CheckDiscoverableSolves()
         {
-            var focus = packet.Truth.Focus;
-            var creature = Creature;
-            var openingFacts = _graph.OpeningKnowledge();
-
-            if (packet.Hook.OpeningEventIds.Count == 0)
+            foreach (var lever in packet.ResolutionLevers.Where(l => l.SolveDepth == SolveDepths.Deep && l.RequiresFactIds.Count > 0))
             {
-                Error(IssueCodes.Opening, "hook", "The hook mentions none of the opening events.");
-            }
-
-            if (!string.IsNullOrEmpty(packet.Brief.HookChannelId) && packet.Hook.Channel != packet.Brief.HookChannelId)
-            {
-                Warn(IssueCodes.Opening, "hook", $"The hook uses channel '{packet.Hook.Channel}', not the assigned '{packet.Brief.HookChannelId}'.");
-            }
-
-            foreach (var fact in packet.Hook.AssertedFactIds.Select(packet.FindFact).OfType<CaseFact>().Where(f => f.Kind == FactKinds.Cause))
-            {
-                Error(IssueCodes.Opening, "hook", $"The hook states the cause ({fact.Id}); the true conflict is never a clue at the start.");
-            }
-
-            var giveawayIds = creature?.GiveawayTells.Select(g => g.Id).ToHashSet() ?? [];
-            var deepIds = creature?.DeepLore.Select(l => l.Id).ToHashSet() ?? [];
-            var knownLore = context.Vaesen.SelectMany(v => v.AllLore.Select(l => l.Id).Concat(v.AmbiguousSigns.Select(s => s.Id)).Concat(v.GiveawayTells.Select(s => s.Id))).ToHashSet();
-            foreach (var fact in packet.Facts)
-            {
-                if (fact.LoreIds.Any(giveawayIds.Contains) && !fact.Giveaway)
-                {
-                    Error(IssueCodes.Giveaway, $"fact:{fact.Id}", "This fact rests on a giveaway tell but is not marked giveaway.");
-                }
-
-                if (fact.LoreIds.Any(deepIds.Contains) && !fact.DeepLore)
-                {
-                    Warn(IssueCodes.Giveaway, $"fact:{fact.Id}", "This fact rests on deep lore but is not marked deepLore.");
-                }
-
-                foreach (var loreId in fact.LoreIds.Where(id => !knownLore.Contains(id)))
-                {
-                    Warn(IssueCodes.UnknownReference, $"fact:{fact.Id}", $"Lore id '{loreId}' is not in the creature's lore.");
-                }
-            }
-
-            if (focus == CaseFocus.What)
-            {
-                foreach (var fact in packet.Facts.Where(f => f.Giveaway))
-                {
-                    if (openingFacts.Contains(fact.Id))
-                    {
-                        Error(IssueCodes.Giveaway, $"fact:{fact.Id}", "A giveaway tell is in the opening of a case whose puzzle is the creature's identity.",
-                            "Open on ambiguous signs only; let the giveaway surface late as confirmation.");
-                    }
-
-                    foreach (var channel in packet.Channels.Where(c => c.FactId == fact.Id && !_graph.FactGates(c).Any()))
-                    {
-                        Error(IssueCodes.Giveaway, $"channel:{channel.Id}",
-                            "A giveaway tell can be found straight away in an identity case; gate it behind other discoveries.");
-                    }
-                }
-            }
-
-            if (!LoadBearing.Any(f => f.DeepLore && f.PointsTo == FactPointsTo.TrueAnswer))
-            {
-                Error(IssueCodes.Giveaway, "facts", "No load-bearing fact of the solution rests on deep lore; the trail is the obvious answer.",
-                    "Build the solution trail from the creature's deep lore and use common knowledge as misdirection.");
-            }
-
-            if (!packet.Channels.Exists(c => c.Kind == ChannelKinds.KnowledgeGated))
-            {
-                Error(IssueCodes.Giveaway, "channels", "There is no knowledge-gated step.",
-                    "Add a sign that only resolves once the group understands the creature, or finds someone who knows the old ways.");
-            }
-        }
-
-        public void CheckResolution()
-        {
-            if (packet.ResolutionLevers.Count == 0)
-            {
-                Error(IssueCodes.Resolution, "resolutionLevers", "The case has no way to end.");
-                return;
-            }
-
-            foreach (var lever in packet.ResolutionLevers.Where(l => !SolveDepths.All.Contains(l.SolveDepth)))
-            {
-                Error(IssueCodes.Schema, $"lever:{lever.Id}", $"Unknown solve depth '{lever.SolveDepth}'.{CoherenceIssue.Allowed(SolveDepths.All)}");
-            }
-
-            if (packet.ResolutionLevers.Count < 2)
-            {
-                Warn(IssueCodes.Resolution, "resolutionLevers", "Only one resolution lever; offer several with different consequences.");
-            }
-
-            if (packet.Truth.PlotCentre.Kind == PlotCentreKinds.HiddenHand)
-            {
-                if (!packet.ResolutionLevers.Exists(l => l.SolveDepth == SolveDepths.Crude))
-                {
-                    Error(IssueCodes.Resolution, "resolutionLevers", "A hidden-hand case needs a crude solve that is always available.");
-                }
-
-                if (!packet.ResolutionLevers.Exists(l => l.SolveDepth == SolveDepths.Deep))
-                {
-                    Error(IssueCodes.Resolution, "resolutionLevers", "A hidden-hand case needs a deep solve (expose the hand, lift the curse, save the victim).");
-                }
-            }
-
-            foreach (var lever in packet.ResolutionLevers.Where(l => l.SolveDepth == SolveDepths.Deep))
-            {
-                if (lever.RequiresFactIds.Count == 0)
-                {
-                    Warn(IssueCodes.Resolution, $"lever:{lever.Id}", "A deep solve should name the facts it takes to see it.");
-                }
-                else if (!lever.RequiresFactIds.All(FullWalk.Known.Contains))
+                if (!lever.RequiresFactIds.All(FullWalk.Known.Contains))
                 {
                     Error(IssueCodes.Resolution, $"lever:{lever.Id}", "The deep solve needs facts that cannot be reached, so it is not discoverable.");
                 }
             }
         }
 
+        /// <summary>
+        /// The engine computes the fact weights (<see cref="Generation.Derived.Tension"/>), so a threshold players
+        /// cannot reach is the engine's fault, not the model's: reported as a warning for review, never fed back.
+        /// </summary>
         public void CheckBeatsAndTension()
         {
             var tension = packet.Tension;
             if (tension.Start is < 0 or > 1)
             {
-                Error(IssueCodes.Beats, "tension.start", "The tension dial starts outside 0-1.");
+                Warn(IssueCodes.Beats, "tension.start", "The tension dial starts outside 0-1.");
             }
 
             foreach (var beat in packet.Beats.Where(b => b.Threshold is < 0 or > 1))
             {
-                Error(IssueCodes.Beats, $"beat:{beat.Id}", "Beat threshold is outside 0-1.");
+                Warn(IssueCodes.Beats, $"beat:{beat.Id}", "Beat threshold is outside 0-1.");
             }
 
-            foreach (var beat in packet.Beats.Where(b => b.Threshold > packet.Climax.Threshold))
+            if (LoadBearing.Any(f => !FullWalk.Known.Contains(f.Id)))
             {
-                Warn(IssueCodes.Beats, $"beat:{beat.Id}", "This beat fires after the climax threshold.");
+                // Reachability already says what is missing; the dial cannot be judged until it is fixed.
+                return;
             }
 
             foreach (var beat in packet.Beats.Where(b => !FullWalk.FiredBeats.Contains(b.Id)))
             {
-                Error(IssueCodes.Beats, $"beat:{beat.Id}",
-                    $"The tension players can reach ({FullWalk.FinalTension:0.00}) never gets to this beat's threshold ({beat.Threshold:0.00}).",
-                    "Lower the threshold or raise the fact weights.");
+                Warn(IssueCodes.Beats, $"beat:{beat.Id}",
+                    $"Internal: the computed weights reach {FullWalk.FinalTension:0.00}, short of this beat's threshold ({beat.Threshold:0.00}).");
             }
 
             if (FullWalk.FinalTension < packet.Climax.Threshold)
             {
-                Error(IssueCodes.Beats, "climax",
-                    $"The tension players can reach ({FullWalk.FinalTension:0.00}) never gets to the climax threshold ({packet.Climax.Threshold:0.00}).",
-                    "Lower the climax threshold or raise the fact weights.");
-            }
-
-            var conditions = Creature?.ConfrontationConditions;
-            if (conditions is not null)
-            {
-                if (conditions.Kind is ConfrontationKinds.Time or ConfrontationKinds.Both && string.IsNullOrWhiteSpace(packet.Climax.Conditions.Time))
-                {
-                    Error(IssueCodes.Beats, "climax", $"{Creature!.Name} can only be confronted at a certain time ({conditions.Time}); the climax must say when.");
-                }
-
-                if (conditions.Kind is ConfrontationKinds.Place or ConfrontationKinds.Both && string.IsNullOrWhiteSpace(packet.Climax.Conditions.Place))
-                {
-                    Error(IssueCodes.Beats, "climax", $"{Creature!.Name} can only be confronted at certain places; the climax must say where.");
-                }
+                Warn(IssueCodes.Beats, "climax",
+                    $"Internal: the computed weights reach {FullWalk.FinalTension:0.00}, short of the climax threshold ({packet.Climax.Threshold:0.00}).");
             }
         }
     }

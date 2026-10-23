@@ -129,52 +129,49 @@ public sealed class CastDraft
     public List<CastRelationship> Relationships { get; set; } = [];
 }
 
-/// <summary>Step 6, clues: the facts, their channels, what each mind holds, decoys, beats, resolution and the hook.</summary>
-public sealed class CluesOutput
+// Step 6, clues, runs as four sub-steps, each small enough for the API to enforce its schema: facts (6a), minds and
+// channels (6b), the arc (6c), and the hook and scenes (6d). Values the engine can work out itself (whether a fact
+// is deep lore or a giveaway, how much each fact raises the tension) are not asked for.
+
+/// <summary>Sub-step 6a, facts: every fact of the case, the decoy threads, and which facts each escalation event is.</summary>
+public sealed class FactsOutput
 {
     [JsonProperty("facts")]
-    public List<CaseFact> Facts { get; set; } = [];
+    public List<FactDraft> Facts { get; set; } = [];
 
-    [JsonProperty("channels")]
-    public List<CaseChannel> Channels { get; set; } = [];
+    [JsonProperty("decoys")]
+    public List<DecoyThread> Decoys { get; set; } = [];
 
     /// <summary>Which facts each escalation event is.</summary>
     [JsonProperty("eventFacts")]
     public List<EventFacts> EventFacts { get; set; } = [];
 
-    /// <summary>What each cast member knows, thinks and lies about.</summary>
-    [JsonProperty("minds")]
-    public List<CastMind> Minds { get; set; } = [];
-
-    [JsonProperty("decoys")]
-    public List<DecoyThread> Decoys { get; set; } = [];
-
-    [JsonProperty("beats")]
-    public List<CaseBeat> Beats { get; set; } = [];
-
-    [JsonProperty("climax")]
-    public CaseClimax Climax { get; set; } = new();
-
-    [JsonProperty("resolutionLevers")]
-    public List<ResolutionLever> ResolutionLevers { get; set; } = [];
-
-    [JsonProperty("hook")]
-    public HookDraft Hook { get; set; } = new();
-
-    [JsonProperty("placesUsed")]
-    public List<string> PlacesUsed { get; set; } = [];
-
-    [JsonProperty("sceneDescriptions")]
-    public List<SceneDescription> SceneDescriptions { get; set; } = [];
-
     [JsonProperty("seasonThreads")]
     public List<SeasonThreadLink> SeasonThreads { get; set; } = [];
+}
 
-    [JsonProperty("tensionStart")]
-    public double TensionStart { get; set; } = 0.1;
+/// <summary>A fact as the model writes it; deepLore and giveaway are derived from its lore ids.</summary>
+public sealed class FactDraft
+{
+    [JsonProperty("id")]
+    public string Id { get; set; } = "";
 
-    [JsonProperty("factWeights")]
-    public List<FactWeight> FactWeights { get; set; } = [];
+    [JsonProperty("statement")]
+    public string Statement { get; set; } = "";
+
+    [JsonProperty("loadBearing")]
+    public bool LoadBearing { get; set; }
+
+    [OneOf(typeof(FactKinds))]
+    [JsonProperty("kind")]
+    public string Kind { get; set; } = FactKinds.Symptom;
+
+    /// <summary>"trueAnswer", "neutral" or "decoy:{threadId}".</summary>
+    [JsonProperty("pointsTo")]
+    public string PointsTo { get; set; } = FactPointsTo.Neutral;
+
+    [JsonProperty("loreIds")]
+    public List<string> LoreIds { get; set; } = [];
 }
 
 public sealed class EventFacts
@@ -184,6 +181,17 @@ public sealed class EventFacts
 
     [JsonProperty("factIds")]
     public List<string> FactIds { get; set; } = [];
+}
+
+/// <summary>Sub-step 6b, minds and channels: who knows what, and every way into each fact.</summary>
+public sealed class MindsOutput
+{
+    /// <summary>What each cast member knows, thinks and lies about.</summary>
+    [JsonProperty("minds")]
+    public List<CastMind> Minds { get; set; } = [];
+
+    [JsonProperty("channels")]
+    public List<CaseChannel> Channels { get; set; } = [];
 }
 
 public sealed class CastMind
@@ -199,6 +207,32 @@ public sealed class CastMind
 
     [JsonProperty("lies")]
     public List<CastLie> Lies { get; set; } = [];
+}
+
+/// <summary>Sub-step 6c, the arc: beats, the climax and the resolution levers. The engine sets the fact weights.</summary>
+public sealed class ArcOutput
+{
+    [JsonProperty("beats")]
+    public List<CaseBeat> Beats { get; set; } = [];
+
+    [JsonProperty("climax")]
+    public CaseClimax Climax { get; set; } = new();
+
+    [JsonProperty("resolutionLevers")]
+    public List<ResolutionLever> ResolutionLevers { get; set; } = [];
+}
+
+/// <summary>Sub-step 6d, the hook and the scenes.</summary>
+public sealed class HookOutput
+{
+    [JsonProperty("hook")]
+    public HookDraft Hook { get; set; } = new();
+
+    [JsonProperty("placesUsed")]
+    public List<string> PlacesUsed { get; set; } = [];
+
+    [JsonProperty("sceneDescriptions")]
+    public List<SceneDescription> SceneDescriptions { get; set; } = [];
 }
 
 public sealed class HookDraft
@@ -223,15 +257,6 @@ public sealed class SceneDescription
 
     [JsonProperty("text")]
     public string Text { get; set; } = "";
-}
-
-public sealed class FactWeight
-{
-    [JsonProperty("factId")]
-    public string FactId { get; set; } = "";
-
-    [JsonProperty("weight")]
-    public double Weight { get; set; }
 }
 
 /// <summary>The critic's judgement on the finished case (spec 7.10, judgement checks).</summary>

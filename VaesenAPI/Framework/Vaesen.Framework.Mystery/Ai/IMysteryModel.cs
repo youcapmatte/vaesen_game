@@ -18,7 +18,7 @@ public interface IMysteryModel
 /// </summary>
 public sealed class ModelRequest
 {
-    /// <summary>Which step is asking (for logs): "conflict", "escalation", "humans", "clues", "critic".</summary>
+    /// <summary>Which step is asking (for logs): "conflict", "escalation", "humans", "facts", "minds", "arc", "hook", "critic".</summary>
     public required string Step { get; init; }
 
     public required string Model { get; init; }

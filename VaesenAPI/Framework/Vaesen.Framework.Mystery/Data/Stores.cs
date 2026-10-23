@@ -71,6 +71,10 @@ public sealed class StoredCase
     /// <summary>How it ended, once the host closed it.</summary>
     [JsonProperty("closing")]
     public CaseClosing? Closing { get; set; }
+
+    /// <summary>For a rejected case: the step that gave up. Its last attempt is the last log entry of that step.</summary>
+    [JsonProperty("failedStep", NullValueHandling = NullValueHandling.Ignore)]
+    public string? FailedStep { get; set; }
 }
 
 public sealed class CasePrompts

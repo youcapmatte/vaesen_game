@@ -12,7 +12,8 @@ public interface IMysteryGenerationStep<in TIn, TOut>
 {
     string Name { get; }
 
-    Task<ResultBase<TOut>> RunAsync(TIn input, IReadOnlyList<CoherenceIssue> feedback, int caseAttempt, CancellationToken cancellationToken);
+    /// <param name="fresh">A restart after the step gave up: logged as such (fixes, section 2.3).</param>
+    Task<ResultBase<TOut>> RunAsync(TIn input, IReadOnlyList<CoherenceIssue> feedback, int caseAttempt, CancellationToken cancellationToken, bool fresh = false);
 }
 
 public static class StepErrorCodes
@@ -46,7 +47,7 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
 
     protected abstract TOut Next(MysteryDraft draft);
 
-    public async Task<ResultBase<TOut>> RunAsync(TIn input, IReadOnlyList<CoherenceIssue> feedback, int caseAttempt, CancellationToken cancellationToken)
+    public async Task<ResultBase<TOut>> RunAsync(TIn input, IReadOnlyList<CoherenceIssue> feedback, int caseAttempt, CancellationToken cancellationToken, bool fresh = false)
     {
         var ret = new ResultBase<TOut>();
         var draft = input.Draft;
@@ -55,7 +56,13 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
 
         for (var attempt = 0; attempt <= options.MaxStepRetries; attempt++)
         {
-            var entry = new GenerationLogEntry { CaseAttempt = caseAttempt, Step = Name, Attempt = attempt };
+            var entry = new GenerationLogEntry
+            {
+                CaseAttempt = caseAttempt,
+                Step = Name,
+                Attempt = attempt,
+                Kind = fresh && attempt == 0 ? LogEntryKinds.Fresh : LogEntryKinds.Full,
+            };
             draft.Log.Add(entry);
 
             entry.Instruction = PromptBuilder.WithCaseAndFeedback(Instruction(draft), draft.Packet, issues, previous);
@@ -119,6 +126,7 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
                 entry.Passed = true;
                 packet.Validation.Issues.AddRange(found);
                 draft.Packet = packet;
+                draft.Completed |= Scope;
                 return ret.Ok(Next(draft));
             }
 
@@ -135,7 +143,9 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
 public sealed class ConflictStep(IMysteryModel model, ICoherenceValidator validator, MysteryOptions options)
     : ModelStep<AssignedStage, ConflictStage, ConflictOutput>(model, validator, options)
 {
-    public override string Name => "conflict";
+    public const string StepName = "conflict";
+
+    public override string Name => StepName;
 
     protected override CheckScope Scope => CheckScope.Conflict;
 
@@ -179,7 +189,9 @@ public sealed class ConflictStep(IMysteryModel model, ICoherenceValidator valida
 public sealed class EscalationStep(IMysteryModel model, ICoherenceValidator validator, MysteryOptions options)
     : ModelStep<ConflictStage, EscalationStage, EscalationOutput>(model, validator, options)
 {
-    public override string Name => "escalation";
+    public const string StepName = "escalation";
+
+    public override string Name => StepName;
 
     protected override CheckScope Scope => CheckScope.Escalation;
 
@@ -211,7 +223,9 @@ public sealed class EscalationStep(IMysteryModel model, ICoherenceValidator vali
 public sealed class HumansStep(IMysteryModel model, ICoherenceValidator validator, MysteryOptions options)
     : ModelStep<EscalationStage, CastStage, HumansOutput>(model, validator, options)
 {
-    public override string Name => "humans";
+    public const string StepName = "humans";
+
+    public override string Name => StepName;
 
     protected override CheckScope Scope => CheckScope.Cast;
 
@@ -249,34 +263,43 @@ public sealed class HumansStep(IMysteryModel model, ICoherenceValidator validato
     protected override CastStage Next(MysteryDraft draft) => new(draft);
 }
 
-/// <summary>Step 6: facts, channels, minds, decoys, beats, resolution and the hook.</summary>
-public sealed class CluesStep(IMysteryModel model, ICoherenceValidator validator, MysteryOptions options)
-    : ModelStep<CastStage, CluesStage, CluesOutput>(model, validator, options)
+/// <summary>Sub-step 6a: every fact, the decoy threads, and which facts each event is. deepLore and giveaway are derived.</summary>
+public sealed class FactsStep(IMysteryModel model, ICoherenceValidator validator, MysteryOptions options)
+    : ModelStep<CastStage, FactsStage, FactsOutput>(model, validator, options)
 {
-    public override string Name => "clues";
+    public const string StepName = "facts";
 
-    protected override CheckScope Scope => CheckScope.Full;
+    public override string Name => StepName;
 
-    protected override string Instruction(MysteryDraft draft)
-    {
-        var hook = draft.Pack.Setting.FindHookChannel(draft.Brief.HookChannelId);
-        return PromptBuilder.Fill(PromptBuilder.Template("clues"), new Dictionary<string, string>
+    protected override CheckScope Scope => CheckScope.Facts;
+
+    protected override string Instruction(MysteryDraft draft) =>
+        PromptBuilder.Fill(PromptBuilder.Template("facts"), new Dictionary<string, string>
         {
-            ["giveawayRule"] = PromptBuilder.GiveawayRuleForClues(draft.Brief),
             ["redHerringDensity"] = draft.Brief.RedHerringDensity,
             ["decoyRule"] = PromptBuilder.DecoyRule(draft.Brief.RedHerringDensity),
-            ["climaxRule"] = PromptBuilder.ClimaxRule(draft.Vaesen),
-            ["leverRule"] = PromptBuilder.LeverRule(draft.Brief, draft.Vaesen),
-            ["hookChannel"] = hook is null ? draft.Brief.HookChannelId : $"{hook.Name.ToLowerInvariant()} ({hook.Description})",
             ["seasonRule"] = PromptBuilder.SeasonRule(draft.Brief),
         });
-    }
 
-    protected override List<CoherenceIssue> Apply(MysteryDraft draft, CasePacket packet, CluesOutput output)
+    protected override List<CoherenceIssue> Apply(MysteryDraft draft, CasePacket packet, FactsOutput output)
     {
         var issues = new List<CoherenceIssue>();
-        packet.Facts = output.Facts;
-        packet.Channels = output.Channels;
+        packet.Facts = output.Facts.Select(f => new CaseFact
+        {
+            Id = f.Id,
+            Statement = f.Statement,
+            LoadBearing = f.LoadBearing,
+            Kind = f.Kind,
+            PointsTo = f.PointsTo,
+            LoreIds = f.LoreIds,
+        }).ToList();
+        Derived.LoreFlags(packet.Facts, draft.Vaesen);
+
+        foreach (var e in packet.Truth.Escalation)
+        {
+            e.FactIds = [];
+        }
+
         foreach (var mapping in output.EventFacts)
         {
             var e = packet.Truth.Escalation.Find(x => x.Id == mapping.EventId);
@@ -287,6 +310,40 @@ public sealed class CluesStep(IMysteryModel model, ICoherenceValidator validator
             }
 
             e.FactIds = mapping.FactIds;
+        }
+
+        packet.Decoys = output.Decoys;
+        packet.SeasonThreads = output.SeasonThreads;
+        return issues;
+    }
+
+    protected override FactsStage Next(MysteryDraft draft) => new(draft);
+}
+
+/// <summary>Sub-step 6b: what every mind holds, and every channel into every fact. Checked against each other.</summary>
+public sealed class MindsStep(IMysteryModel model, ICoherenceValidator validator, MysteryOptions options)
+    : ModelStep<FactsStage, MindsStage, MindsOutput>(model, validator, options)
+{
+    public const string StepName = "minds";
+
+    public override string Name => StepName;
+
+    protected override CheckScope Scope => CheckScope.Minds;
+
+    protected override string Instruction(MysteryDraft draft) =>
+        PromptBuilder.Fill(PromptBuilder.Template("minds"), new Dictionary<string, string>
+        {
+            ["giveawayRule"] = PromptBuilder.GiveawayRuleForChannels(draft.Brief),
+        });
+
+    protected override List<CoherenceIssue> Apply(MysteryDraft draft, CasePacket packet, MindsOutput output)
+    {
+        var issues = new List<CoherenceIssue>();
+        foreach (var member in packet.Cast)
+        {
+            member.Knows = [];
+            member.Thinks = [];
+            member.Lies = [];
         }
 
         foreach (var mind in output.Minds)
@@ -303,10 +360,64 @@ public sealed class CluesStep(IMysteryModel model, ICoherenceValidator validator
             member.Lies = mind.Lies;
         }
 
-        packet.Decoys = output.Decoys;
+        packet.Channels = output.Channels;
+        return issues;
+    }
+
+    protected override MindsStage Next(MysteryDraft draft) => new(draft);
+}
+
+/// <summary>Sub-step 6c: beats, the climax and the resolution levers. The engine sets the tension weights.</summary>
+public sealed class ArcStep(IMysteryModel model, ICoherenceValidator validator, MysteryOptions options)
+    : ModelStep<MindsStage, ArcStage, ArcOutput>(model, validator, options)
+{
+    public const string StepName = "arc";
+
+    public override string Name => StepName;
+
+    protected override CheckScope Scope => CheckScope.Arc;
+
+    protected override string Instruction(MysteryDraft draft) =>
+        PromptBuilder.Fill(PromptBuilder.Template("arc"), new Dictionary<string, string>
+        {
+            ["climaxRule"] = PromptBuilder.ClimaxRule(draft.Vaesen),
+            ["leverRule"] = PromptBuilder.LeverRule(draft.Brief, draft.Vaesen),
+        });
+
+    protected override List<CoherenceIssue> Apply(MysteryDraft draft, CasePacket packet, ArcOutput output)
+    {
         packet.Beats = output.Beats;
         packet.Climax = output.Climax;
         packet.ResolutionLevers = output.ResolutionLevers;
+        packet.Tension = new CaseTension();
+        return Derived.Tension(packet);
+    }
+
+    protected override ArcStage Next(MysteryDraft draft) => new(draft);
+}
+
+/// <summary>Sub-step 6d: the hook and the scenes. After it, the whole case is checked.</summary>
+public sealed class HookStep(IMysteryModel model, ICoherenceValidator validator, MysteryOptions options)
+    : ModelStep<ArcStage, CluesStage, HookOutput>(model, validator, options)
+{
+    public const string StepName = "hook";
+
+    public override string Name => StepName;
+
+    protected override CheckScope Scope => CheckScope.Hook;
+
+    protected override string Instruction(MysteryDraft draft)
+    {
+        var hook = draft.Pack.Setting.FindHookChannel(draft.Brief.HookChannelId);
+        return PromptBuilder.Fill(PromptBuilder.Template("hook"), new Dictionary<string, string>
+        {
+            ["hookChannel"] = hook is null ? draft.Brief.HookChannelId : $"{hook.Name.ToLowerInvariant()} ({hook.Description})",
+            ["giveawayRule"] = PromptBuilder.GiveawayRuleForHook(draft.Brief),
+        });
+    }
+
+    protected override List<CoherenceIssue> Apply(MysteryDraft draft, CasePacket packet, HookOutput output)
+    {
         packet.Hook = new CaseHook
         {
             Channel = draft.Brief.HookChannelId,
@@ -319,13 +430,7 @@ public sealed class CluesStep(IMysteryModel model, ICoherenceValidator validator
         packet.Level.SceneDescriptions = output.SceneDescriptions
             .GroupBy(s => s.PlaceId)
             .ToDictionary(g => g.Key, g => g.First().Text);
-        packet.SeasonThreads = output.SeasonThreads;
-        packet.Tension = new CaseTension
-        {
-            Start = output.TensionStart,
-            FactWeights = output.FactWeights.GroupBy(w => w.FactId).ToDictionary(g => g.Key, g => g.First().Weight),
-        };
-        return issues;
+        return [];
     }
 
     protected override CluesStage Next(MysteryDraft draft) => new(draft);

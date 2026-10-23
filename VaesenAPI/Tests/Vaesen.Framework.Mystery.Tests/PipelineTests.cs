@@ -68,9 +68,12 @@ public sealed class PipelineTests
         Assert.Equal(17, packet.Facts.Count);
         Assert.Equal(result.Result.Case.Brief.HookChannelId, packet.Hook.Channel);
 
-        // Order is fixed, and the critic's first objection sent the clues back for one more round.
-        Assert.Equal(["world", "conflict", "escalation", "humans", "clues", "critic", "clues", "critic"], model.Calls);
+        // Order is fixed, and the critic's objection to the hook sent back only the hook sub-step.
+        Assert.Equal(["world", "conflict", "escalation", "humans", "facts", "minds", "arc", "hook", "critic", "hook", "critic"], model.Calls);
         Assert.Contains(result.Result.Case.Log, e => e.Step == "critic" && !e.Passed);
+        Assert.Contains(packet.Facts, f => f.Giveaway && f.Id == "f8");
+        Assert.Contains(packet.Facts, f => f.DeepLore && f.Id == "f7");
+        Assert.Equal(packet.Facts.Count, packet.Tension.FactWeights.Count);
 
         var stored = await store.GetAsync("society-test", packet.MysteryId);
         Assert.True(stored.Success);
@@ -93,9 +96,12 @@ public sealed class PipelineTests
         });
 
         Assert.True(result.Success, result.ErrorMessage);
-        Assert.Equal(["world", "conflict", "escalation", "humans", "clues", "clues"], model.Calls);
+
+        // The whole-case check found the missing channel and sent back only minds and channels.
+        Assert.Equal(["world", "conflict", "escalation", "humans", "facts", "minds", "arc", "hook", "minds"], model.Calls);
         Assert.Contains("redundancy", model.Instructions[^1], StringComparison.Ordinal);
-        var failed = result.Result!.Case.Log.Single(e => e.Step == "clues" && !e.Passed);
+        var failed = result.Result!.Case.Log.Single(e => e.Step == MysteryGenerator.CheckStepName && !e.Passed);
+        Assert.Equal(LogEntryKinds.Check, failed.Kind);
         Assert.Contains(failed.Issues, i => i.Code == IssueCodes.Redundancy);
     }
 
@@ -116,15 +122,21 @@ public sealed class PipelineTests
         Assert.Equal(MysteryGenerator.GenerationFailed, result.ErrorCode);
         Assert.NotNull(result.Result);
         var log = result.Result!.Case.Log;
-        Assert.Equal(2, log.Count(e => e.CaseAttempt == 0 && e.Step == "clues"));
-        Assert.Equal([0, 1], log.Select(e => e.CaseAttempt).Distinct());
+
+        // Minds and channels was sent back twice; the steps that passed were never redone, and the case was not re-rolled.
+        Assert.Equal(3, log.Count(e => e.Step == "minds"));
+        Assert.Equal(3, log.Count(e => e.Step == MysteryGenerator.CheckStepName));
+        Assert.Equal(1, log.Count(e => e.Step == "facts"));
+        Assert.Equal([0], log.Select(e => e.CaseAttempt).Distinct());
+        Assert.Equal(MysteryGenerator.CheckStepName, result.Result.Case.FailedStep);
+        Assert.Contains(result.Result.Case.Packet.Validation.Issues, i => i.Code == IssueCodes.Redundancy);
     }
 
     /// <summary>Answers each step from the sample case; can break the clue step to exercise retries.</summary>
     public sealed class ScriptedModel(CasePacket sample, bool criticFailsFirst) : IMysteryModel
     {
         private int _criticCalls;
-        private int _clueCalls;
+        private int _mindsCalls;
 
         public List<string> Calls { get; } = [];
 
@@ -135,8 +147,10 @@ public sealed class PipelineTests
         /// <summary>Answers the seeding step with this instead of <see cref="Seed"/>, once.</summary>
         public WorldSeedOutput? FirstSeed { get; set; }
 
+        /// <summary>Leaves out channel c10 in the first minds-and-channels answer.</summary>
         public bool BreakFirstClues { get; set; }
 
+        /// <summary>Leaves out channel c10 in every minds-and-channels answer.</summary>
         public bool AlwaysBreakClues { get; set; }
 
         public static ScriptedModel FromSample(bool criticFailsFirst) => new(ValidatorTests.SampleCase(), criticFailsFirst);
@@ -164,7 +178,19 @@ public sealed class PipelineTests
                     }).ToList(),
                 },
                 "humans" => new HumansOutput { Cast = sample.Cast.Select(Draft).ToList() },
-                "clues" => Clues(),
+                "facts" => Facts(),
+                "minds" => Minds(),
+                "arc" => new ArcOutput { Beats = sample.Beats, Climax = sample.Climax, ResolutionLevers = sample.ResolutionLevers },
+                "hook" => new HookOutput
+                {
+                    Hook = new HookDraft
+                    {
+                        HookGiverId = sample.Hook.HookGiverId, Text = sample.Hook.Text,
+                        AssertedFactIds = sample.Hook.AssertedFactIds, OpeningEventIds = sample.Hook.OpeningEventIds,
+                    },
+                    PlacesUsed = sample.Level.PlacesUsed,
+                    SceneDescriptions = sample.Level.SceneDescriptions.Select(p => new SceneDescription { PlaceId = p.Key, Text = p.Value }).ToList(),
+                },
                 "critic" => Critic(),
                 _ => throw new InvalidOperationException(request.Step),
             };
@@ -227,33 +253,28 @@ public sealed class PipelineTests
             Routine = c.Routine, VoiceNotes = c.VoiceNotes, Relationships = c.Relationships,
         };
 
-        private CluesOutput Clues()
+        private FactsOutput Facts() => new()
         {
-            _clueCalls++;
-            var output = new CluesOutput
+            Facts = sample.Facts.Select(f => new FactDraft
             {
-                Facts = sample.Facts,
-                Channels = sample.Channels,
-                EventFacts = sample.Truth.Escalation.Select(e => new EventFacts { EventId = e.Id, FactIds = e.FactIds }).ToList(),
+                Id = f.Id, Statement = f.Statement, LoadBearing = f.LoadBearing, Kind = f.Kind, PointsTo = f.PointsTo, LoreIds = f.LoreIds,
+            }).ToList(),
+            Decoys = sample.Decoys,
+            EventFacts = sample.Truth.Escalation.Select(e => new EventFacts { EventId = e.Id, FactIds = e.FactIds }).ToList(),
+            SeasonThreads = sample.SeasonThreads,
+        };
+
+        private MindsOutput Minds()
+        {
+            _mindsCalls++;
+            var output = new MindsOutput
+            {
                 Minds = sample.Cast.Select(c => new CastMind { CharacterId = c.CharacterId, Knows = c.Knows, Thinks = c.Thinks, Lies = c.Lies }).ToList(),
-                Decoys = sample.Decoys,
-                Beats = sample.Beats,
-                Climax = sample.Climax,
-                ResolutionLevers = sample.ResolutionLevers,
-                Hook = new HookDraft
-                {
-                    HookGiverId = sample.Hook.HookGiverId, Text = sample.Hook.Text,
-                    AssertedFactIds = sample.Hook.AssertedFactIds, OpeningEventIds = sample.Hook.OpeningEventIds,
-                },
-                PlacesUsed = sample.Level.PlacesUsed,
-                SceneDescriptions = sample.Level.SceneDescriptions.Select(p => new SceneDescription { PlaceId = p.Key, Text = p.Value }).ToList(),
-                TensionStart = sample.Tension.Start,
-                FactWeights = sample.Tension.FactWeights.Select(p => new FactWeight { FactId = p.Key, Weight = p.Value }).ToList(),
+                Channels = sample.Channels.ToList(),
             };
 
-            if (AlwaysBreakClues || (BreakFirstClues && _clueCalls == 1))
+            if (AlwaysBreakClues || (BreakFirstClues && _mindsCalls == 1))
             {
-                output = JsonConvert.DeserializeObject<CluesOutput>(JsonConvert.SerializeObject(output))!;
                 output.Channels.RemoveAll(c => c.Id == "c10");
             }
 

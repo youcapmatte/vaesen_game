@@ -166,7 +166,7 @@ public sealed class WorldTests
 
         Assert.Contains("Principles every case must keep", stored.Prompts.System, StringComparison.Ordinal);
         Assert.Contains("# The creature", stored.Prompts.Context, StringComparison.Ordinal);
-        Assert.All(stored.Log, e => Assert.False(string.IsNullOrWhiteSpace(e.Instruction)));
-        Assert.Contains(stored.Log, e => e.Step == "clues" && e.Instruction!.Contains("# Step: clues", StringComparison.Ordinal));
+        Assert.All(stored.Log.Where(e => e.Kind != LogEntryKinds.Check), e => Assert.False(string.IsNullOrWhiteSpace(e.Instruction)));
+        Assert.Contains(stored.Log, e => e.Step == "facts" && e.Instruction!.Contains("# Step: facts", StringComparison.Ordinal));
     }
 }
