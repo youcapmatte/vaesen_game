@@ -181,6 +181,10 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Locomotion")
 	bool bStrafing = false;
 
+	/** Running freely: turned by its movement (not strafing), faster than a slow walk. */
+	UPROPERTY(BlueprintReadOnly, Category = "Locomotion")
+	bool bFreeRunning = false;
+
 	/** The drawn category's locomotion database for motion matching (null = the default locomotion). */
 	UPROPERTY(BlueprintReadOnly, Category = "Locomotion")
 	TObjectPtr<UObject> LocomotionDatabase;

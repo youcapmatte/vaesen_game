@@ -534,7 +534,7 @@ void UVaesenCombatSelfTest::BuildSteps()
 	} });
 
 	// --- Krag: magazine reload, projectile, automatic bolt cycle ---
-	Steps.Add({ TEXT("Krag-JÃ¸rgensen"), [this, Equipment, Inventory, Holster, Tap]()
+	Steps.Add({ TEXT("Krag-JÃƒÂ¸rgensen"), [this, Equipment, Inventory, Holster, Tap]()
 	{
 		ResetAll();
 		Check(GiveAndEquip(*Path(Weapons, TEXT("BP_Weapon_KragRifle"))), TEXT("rifle equipped (main hand)"));
@@ -738,15 +738,17 @@ void UVaesenCombatSelfTest::BuildSteps()
 	// --- The sword's moves: a combo, a stab, the guard, a dodge (photographed with vaesen.combat.selftest.shots 1) ---
 	const uint8 Dodge = static_cast<uint8>(EVaesenAbilityInput::Dodge);
 	const TSharedRef<FVector> DodgeFrom = MakeShared<FVector>();
+	const TSharedRef<FTransform> StandAt = MakeShared<FTransform>();
 	const auto PlayingMontage = [this]()
 	{
 		const UAnimInstance* Anim = Fighter->GetMesh()->GetAnimInstance();
 		const UAnimMontage* Montage = Anim ? Anim->GetCurrentActiveMontage() : nullptr;
 		return Montage ? Montage->GetName() : FString(TEXT("none"));
 	};
-	Steps.Add({ TEXT("Sword moves"), [this]()
+	Steps.Add({ TEXT("Sword moves"), [this, StandAt]()
 	{
 		ResetAll();
+		*StandAt = Fighter->GetActorTransform();
 		return 0.6f;
 	} });
 	Steps.Add({ FString(), [this]()
@@ -759,6 +761,7 @@ void UVaesenCombatSelfTest::BuildSteps()
 	{
 		Shot(TEXT("2_Slash01"), TEXT("/Game/1HM_Sword_Attacks_Finishers/Animations/1HM_Slash/1HM_Slash01.1HM_Slash01"), 0.32f);
 		Check(PlayingMontage().Contains(TEXT("Slash01")), FString::Printf(TEXT("the first swing is the first slash (%s)"), *PlayingMontage()));
+		Check(Fighter->HasAnyRootMotion(), TEXT("the swing moves the body by its animation (root motion), not by the input"));
 		return 0.45f;
 	} });
 	Steps.Add({ FString(), [Tap, Attack]() { Tap(Attack); return 0.3f; } });
@@ -790,11 +793,13 @@ void UVaesenCombatSelfTest::BuildSteps()
 		return 0.35f;
 	} });
 	Steps.Add({ FString(), [this]() { Shot(TEXT("6_DodgeBack"), TEXT("/Game/1HM_Sword_Attacks_Finishers/Animations/1HM_Evade/1HM_Evade_Back.1HM_Evade_Back"), 0.35f); return 1.0f; } });
-	Steps.Add({ FString(), [this, DodgeFrom]()
+	Steps.Add({ FString(), [this, DodgeFrom, StandAt]()
 	{
 		const float Moved = FVector::Dist2D(*DodgeFrom, Fighter->GetActorLocation());
 		Check(Moved > 50.0f, FString::Printf(TEXT("the dodge carries the fighter (%.0f cm)"), Moved));
-		Fighter->SetActorLocation(*DodgeFrom);
+		Say(FString::Printf(TEXT("INFO  the swings carried the fighter %.0f cm (root motion)"), FVector::Dist2D(StandAt->GetLocation(), *DodgeFrom)), FColor::Yellow);
+		// Back where he stood, facing as he did.
+		Fighter->SetActorTransform(*StandAt);
 		if (APlayerController* Viewer = ShotCamera ? Fighter->GetWorld()->GetFirstPlayerController() : nullptr)
 		{
 			Viewer->SetViewTarget(Viewer->GetPawn());

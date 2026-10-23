@@ -126,6 +126,15 @@ void UVaesenGA_MeleeAttack::ActivateAbility(const FGameplayAbilitySpecHandle Han
 		return;
 	}
 	bWindowOpen = false;
+	// The swing goes where the player steers as it starts: its root motion moves the body from then on, not the input.
+	if (AVaesenBaseCharacter* Swinger = GetVaesenCharacter(ActorInfo); Swinger && !Swinger->WantsToFaceAim())
+	{
+		const FVector Steer = Swinger->GetCharacterMovement()->GetCurrentAcceleration().GetSafeNormal2D();
+		if (!Steer.IsNearlyZero())
+		{
+			Swinger->SetActorRotation(FRotator(0.0, Steer.Rotation().Yaw, 0.0));
+		}
+	}
 	// The swing after this one (round to the first again after the last).
 	ComboStep = (Step + 1) % (Attack.ComboSteps.Num() + 1);
 	ComboWindow = Attack.ComboWindow;

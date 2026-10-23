@@ -121,10 +121,6 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Combat", meta = (ClampMin = "0", ClampMax = "1"))
 	float StaggeredSpeedScale = 0.2f;
 
-	/** Speed while swinging a melee weapon (its attacks are whole-body animations), as a share of normal. */
-	UPROPERTY(EditDefaultsOnly, Category = "Combat", meta = (ClampMin = "0", ClampMax = "1"))
-	float SwingingSpeedScale = 0.35f;
-
 	/** Grunt on heavy attacks and throws. Empty = silent. */
 	UPROPERTY(EditDefaultsOnly, Category = "Combat|Voice")
 	TObjectPtr<USoundBase> EffortSound;

@@ -1679,7 +1679,35 @@ namespace VaesenAnimSetup
 		{
 			Node->Node.SetSequence(JumpLoop);
 		});
-		UEdGraphNode* Moving = ByBool(Builder, -1250, 100, TEXT("bFalling"), Air, Walking, 0.15f);
+		UEdGraphNode* Stance = ByBool(Builder, -1250, 100, TEXT("bFalling"), Air, Walking, 0.15f);
+
+		// Running freely (not strafing): the plain run (ABP_Manny), the right arm carrying the sword as the pack's
+		// sprint does. The pack's footwork is a fencer's, for standing, strafing and guarding.
+		UClass* Plain = LoadObject<UClass>(nullptr, UnarmedGraphPath);
+		UAnimGraphNode_LinkedAnimGraph* Running = Builder.Add<UAnimGraphNode_LinkedAnimGraph>(-1600, -350, [Plain](UAnimGraphNode_LinkedAnimGraph* Node)
+		{
+			Node->Node.InstanceClass = Plain;
+		});
+		UAnimSequence* Sprint = SwordAnim(TEXT("1HM_Run_SprintForward"));
+		UAnimGraphNode_SequencePlayer* SwordArm = Builder.Add<UAnimGraphNode_SequencePlayer>(-1600, -200, [Sprint](UAnimGraphNode_SequencePlayer* Node)
+		{
+			Node->Node.SetSequence(Sprint);
+		});
+		UAnimGraphNode_LayeredBoneBlend* Carried = Builder.Add<UAnimGraphNode_LayeredBoneBlend>(-1250, -300, [](UAnimGraphNode_LayeredBoneBlend* Node)
+		{
+			Node->Node.bMeshSpaceRotationBlend = true;
+			if (Node->Node.LayerSetup.Num() == 0)
+			{
+				Node->Node.LayerSetup.AddDefaulted();
+			}
+			FBranchFilter Filter;
+			Filter.BoneName = TEXT("clavicle_r");
+			Filter.BlendDepth = 0;
+			Node->Node.LayerSetup[0].BranchFilters = { Filter };
+		});
+		Builder.Pose(Running, Carried, TEXT("BasePose"));
+		Builder.Pose(SwordArm, Carried, TEXT("BlendPoses_0"));
+		UEdGraphNode* Moving = ByBool(Builder, -1100, 0, TEXT("bFreeRunning"), Carried, Stance, 0.3f);
 		UAnimGraphNode_SaveCachedPose* Cache = Builder.Add<UAnimGraphNode_SaveCachedPose>(-1000, 100, [](UAnimGraphNode_SaveCachedPose* Node)
 		{
 			Node->CacheName = TEXT("SwordLocomotion");
@@ -1731,6 +1759,22 @@ namespace VaesenAnimSetup
 			return;
 		}
 		const FString Folder = SwordFolder;
+
+		// Swings play with root motion: the animation moves the body (they stand their ground), not the input, so
+		// nobody glides across the floor mid-swing.
+		for (const TCHAR* Name : { TEXT("1HM_Slash01"), TEXT("1HM_Slash02"), TEXT("1HM_Slash03"), TEXT("1HM_Slash04"), TEXT("1HM_Slash01_Blocked"),
+				 TEXT("1HM_Slash02_Blocked"), TEXT("1HM_Slash03_Blocked"), TEXT("1HM_Slash04_Blocked"), TEXT("1HM_Stab01"), TEXT("1HM_Stab02"), TEXT("1HM_Stab03") })
+		{
+			UAnimSequence* Anim = SwordAnim(Name);
+			if (Anim && (!Anim->bEnableRootMotion || Anim->bForceRootLock))
+			{
+				Anim->bEnableRootMotion = true;
+				Anim->RootMotionRootLock = ERootMotionRootLock::RefPose;
+				Anim->bForceRootLock = false;
+				Anim->PostEditChange();
+				Save(Anim);
+			}
+		}
 
 		// Attacks: light = the four slashes in turn, heavy = the three stabs in turn.
 		struct FSwing { const TCHAR* Anim; const TCHAR* Blocked; };

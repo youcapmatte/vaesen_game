@@ -134,7 +134,7 @@ void AVaesenBaseCharacter::BeginPlay()
 
 	AbilitySystem->InitAbilityActorInfo(this, this);
 	for (const FGameplayTag& Tag : TArray<FGameplayTag>{ VaesenTags::State_Blocking, VaesenTags::State_Aiming, VaesenTags::State_DrawingBow,
-		VaesenTags::State_Throwing, VaesenTags::State_Staggered, VaesenTags::State_Attacking })
+		VaesenTags::State_Throwing, VaesenTags::State_Staggered })
 	{
 		AbilitySystem->RegisterGameplayTagEvent(Tag, EGameplayTagEventType::NewOrRemoved).AddUObject(this, &AVaesenBaseCharacter::OnCombatStateChanged);
 	}
@@ -203,12 +203,6 @@ void AVaesenBaseCharacter::OnCombatStateChanged(const FGameplayTag Tag, int32 Ne
 		|| AbilitySystem->HasMatchingGameplayTag(VaesenTags::State_Throwing))
 	{
 		Scale = FMath::Min(Scale, AimingSpeedScale);
-	}
-	// Swinging a melee weapon (the attack animations step with the whole body; firing a gun doesn't slow).
-	const UVaesenWeaponItem* Drawn = Equipment ? Equipment->GetDrawnWeapon() : nullptr;
-	if (AbilitySystem->HasMatchingGameplayTag(VaesenTags::State_Attacking) && !(Drawn && Drawn->IsRanged()))
-	{
-		Scale = FMath::Min(Scale, SwingingSpeedScale);
 	}
 	if (AbilitySystem->HasMatchingGameplayTag(VaesenTags::State_Staggered))
 	{

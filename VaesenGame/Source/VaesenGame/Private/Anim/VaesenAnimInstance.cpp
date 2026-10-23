@@ -73,6 +73,8 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		const FVector Velocity = Character->GetVelocity();
 		Speed = Velocity.Size2D();
 		Direction = Speed > 1.0f ? UKismetAnimationLibrary::CalculateDirection(Velocity, Character->GetActorRotation()) : 0.0f;
+		// Running where it's going (not strafing): weapon stances use the plain run then (a little hysteresis, so it doesn't flicker).
+		bFreeRunning = !bStrafing && Speed > (bFreeRunning ? 60.0f : 120.0f);
 		bStrafing = !Character->GetCharacterMovement()->bOrientRotationToMovement;
 		bCrouching = Character->bIsCrouched;
 		bFalling = Character->GetCharacterMovement()->IsFalling();
@@ -102,6 +104,7 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		Speed = Rig->Speed;
 		Direction = Rig->Direction;
 		bStrafing = true;
+		bFreeRunning = false;
 		bCrouching = Rig->IsCrouchPose();
 		bAiming = bShouldering = Rig->IsAimPose();
 		bFalling = bBlocking = bReloading = bStaggered = false;
