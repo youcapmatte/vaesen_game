@@ -34,7 +34,7 @@ It creates:
 | Physical materials Flesh, Wood, Stone, Metal, Earth, Water, Cloth | `/Game/Vaesen/Combat/PhysicalMaterials/PM_*` |
 | `DA_WeaponCategoryDefaults`, `DA_ImpactEffects`, `DA_WeaponSounds_Default` | `/Game/Vaesen/Combat` |
 | `GE_Damage`, `GE_StaminaCost`, `GE_Stagger`, `GE_StaminaRegen` | `/Game/Vaesen/Combat/Effects` |
-| `GA_FireWeapon`, `GA_Reload`, `GA_CycleAction`, `GA_Aim`, `GA_DrawBow`, `GA_MeleeLight`, `GA_MeleeHeavy`, `GA_Block`, `GA_Throw`, `GA_Holster`, `GA_SwapWeapon` (granted by `BP_VaesenPlayerCharacter`) | `/Game/Vaesen/Combat/Abilities` |
+| `GA_FireWeapon`, `GA_Reload`, `GA_CycleAction`, `GA_Aim`, `GA_DrawBow`, `GA_MeleeLight`, `GA_MeleeHeavy`, `GA_Block`, `GA_Throw`, `GA_Holster`, `GA_SwapWeapon`, `GA_Dodge` (granted by `BP_VaesenPlayerCharacter`) | `/Game/Vaesen/Combat/Abilities` |
 | Input actions `IA_Attack`, `IA_HeavyAttack` (+ `IA_HeavyModifier`), `IA_TriggerAttack`, `IA_AimBlock`, `IA_Reload`, `IA_Throw`, `IA_Holster`, `IA_SwapWeapon`, mapped in `IMC_Default` | `/Game/Vaesen/Input` |
 | Test weapons | `/Game/Vaesen/Blueprints/Items/Weapons` |
 | Ammo and the cartridge box | `/Game/Vaesen/Blueprints/Items/Ammo` |
@@ -108,6 +108,7 @@ Dummy protections: `BP_TrainingDummy` has none. `BP_TrainingDummy_Armored` has S
 | Draw the other carried weapon (sidearm ↔ main hand) | Q | — |
 | Crouch (toggle) | C | B / Circle |
 | Sword, axe, club or warhammer in both hands or one (off hand free) | V | D-pad down |
+| Dodge (with a sword drawn: the way you move, back when standing still) | Left Alt | Right stick click |
 
 ### 0.5 Debug tools
 
@@ -130,7 +131,7 @@ Session Frontend > Automation, filter **`Vaesen.Combat`** (24 tests), or headles
 UnrealEditor-Cmd.exe VaesenGame.uproject -ExecCmds="Automation RunTests Vaesen.Combat; Quit" -unattended -nullrhi
 ```
 
-All 24 passed when this plan was written.
+All 26 passed when this plan was written.
 
 | Test | Covers |
 | --- | --- |
@@ -169,7 +170,7 @@ In a running game (PIE with a dedicated server is fine), open the console and ty
 
 It first checks that the interaction trace finds every pickup in the map and picks up a rifle through its interaction. It then runs the test Blueprints: revolver (draw, reload, fire, armored target), Krag (left hand on LeftGrip from the hip and aimed, shouldered, the bolt worked by hand at the shoulder, the case out as the bolt comes back), punch, sword (stamina, block, parry, wear), stone throw, and bow.
 
-Every check prints PASS or FAIL on screen and in the log, and everything it spawned is removed at the end. In `L_CombatTest` it reported **51 passed, 0 failed**.
+Every check prints PASS or FAIL on screen and in the log, and everything it spawned is removed at the end. In `L_CombatTest` it reported **57 passed, 0 failed** (with the sword animations: the swing hits, the combo, the stab and the dodge).
 
 It checks what the C++ tests can't: the generated assets, the Blueprints and the map's collision together. Both clients should see the fighter do everything. The sword swing is reported as INFO until an attack montage exists, because without one the blade stays where the hand hangs.
 
@@ -185,6 +186,34 @@ In both hands:
 - Without its own attacks, the one-handed attacks hit harder (**Damage Scale 1.25**) and cost more stamina (**1.2**), with more knockback (**1.25**). A two-handed block profile is optional.
 
 The always-two-handed setting (rifles, bows) is separate and unchanged. Test: `Vaesen.Combat.Melee.VersatileGrip`. In the self-test, the old sword is held in both hands and its light swing costs 12 stamina, not 10.
+
+### 0.7c Sword animations (One Hand Sword Attacks And Finishers)
+
+The Fab pack **One Hand Sword Attacks And Finishers** (RamsterZ) is in `Content/1HM_Sword_Attacks_Finishers`. `-run=VaesenAnimSetup` retargets its right-handed animations onto Manny, into `/Game/Vaesen/Animations/Sword`. It then gives them to the **OneHandedSword** category in `DA_WeaponCategoryDefaults`, so every sword uses them. The mirrored left-handed copies and the paired finishers stay unused for now.
+
+| What | From the pack | Notes |
+| --- | --- | --- |
+| Stance (`ABP_SwordLocomotion`) | Idle, walk and run in 8 directions, jump loop | `BS_1HM_Locomotion`, each animation at its own speed. In place: the capsule moves you. No crouch animation (crouching shows the standing stance). |
+| Light attack (left mouse) | Slash 01 → 02 → 03 → 04 | A combo: attacking again within 0.6 s of a swing ending plays the next one, and after the fourth it starts over. Full body: the legs step into it, so you're slowed while swinging. |
+| Heavy attack (Shift + left mouse) | Stab 01 → 02 → 03 | A combo the same way. Effort grunt. |
+| Hit window | — | Worked out from each animation: where the sword hand moves fastest, plus a little either side (`ANS_MeleeHitWindow` in each `AM_1HM_*`). Slash 01 is live 0.24–0.43 s. The whoosh plays as it opens. A swing is over (the next can start) 0.2 s after its window closes; the follow-through plays out unless you cut it short. |
+| Blocked swing | Slash 0X Blocked | Your swing meets a block: it stops (server) and bounces off (everyone sees it). Stabs just stop. |
+| Guard (right mouse) | Block Right | Raised, then held where it settles (0.54 s) over the upper body while you walk. |
+| Hit on the guard | Block Left, Right, Left Low, Right Low | One at random beats the blow aside (blocked or parried). |
+| Parried | Hit React 02 | The stagger. |
+| Hit | Hit React 01, 02; Hit React Behind 01 | Unless swinging, guarding or dodging. From behind gets its own. |
+| Dodge (Left Alt) | Evade Forward, Back, Left, Right | Root motion carries you, about 1.3–1.6 m. The way you're steering, relative to where you face; back when standing still. 15 stamina. Drops a block. |
+| Draw / sheathe from the left hip | Idle Equip / Unequip | `Sheath_HipLeft` (every weapon carried there). The hand takes the hilt at 0.93 s, at 1.4× speed. |
+
+How the sword sits in the hand comes from the pack's own `1HMBladeMan`. The pack's `WeaponSocket` doesn't match its animations: a sword there points out sideways in every pose. The result is the category's **In Hand** (`DA_WeaponCategoryDefaults` → OneHandedSword → In Hand). Our swords' meshes keep the usual convention (blade along X, edges along Z, held by `Grip`). A weapon's own `Hold.InHand` still fine-tunes it on top.
+
+To check the poses against the pack, run the self-test with screenshots:
+
+```
+UnrealEditor.exe VaesenGame.uproject /Game/Vaesen/Maps/L_CombatTest -game -windowed -ResX=1280 -ResY=720 -ExecCmds="vaesen.combat.selftest.shots 1, vaesen.combat.selftest"
+```
+
+It photographs the fighter side-on (idle, two slashes, a stab, the guard, a dodge) into `Saved/Screenshots/SelfTest`, with the pack's swordsman behind him in the same pose. It also logs both blades' directions: they match.
 
 ### 0.8 How weapons are held (sockets), and the Weapon Fit rig
 

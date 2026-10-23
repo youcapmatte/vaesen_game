@@ -167,7 +167,8 @@ bool AVaesenWeaponActor::ResolveAttachment(bool bToHand, FName& OutSocket, FTran
 	if (bToHand)
 	{
 		OutSocket = WeaponItem->IsHeldInOffHand() ? Defaults->OffHandSocket : Defaults->MainHandSocket;
-		OutOffset = Hold.InHand;
+		// The weapon's own fit, in the way its category is held (the animation pack's grip).
+		OutOffset = Hold.InHand * WeaponItem->GetCategoryDefaults().InHand;
 		// The right hand's weapon rides on the weapon bone (ik_hand_gun follows the palm; the anim holds it there while
 		// shouldered or working the bolt).
 		if (!WeaponItem->IsHeldInOffHand() && Body->DoesSocketExist(AVaesenWeaponActor::WeaponHeldSocket))

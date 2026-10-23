@@ -1,6 +1,16 @@
 #include "Combat/VaesenCombatSelfTest.h"
 
 #include "AIController.h"
+#include "Animation/AnimInstance.h"
+#include "Animation/AnimMontage.h"
+#include "Camera/CameraActor.h"
+#include "Animation/AnimSequence.h"
+#include "Components/SkeletalMeshComponent.h"
+#include "Components/StaticMeshComponent.h"
+#include "UI/Combat/VaesenCombatHUDWidget.h"
+#include "UObject/UObjectIterator.h"
+#include "Misc/Paths.h"
+#include "UnrealClient.h"
 #include "Characters/VaesenPlayerCharacter.h"
 #include "Combat/VaesenAbilitySystemComponent.h"
 #include "Combat/VaesenAttributeSet.h"
@@ -63,6 +73,9 @@ namespace VaesenSelfTest
 		}
 		return nullptr;
 	}
+
+	TAutoConsoleVariable<int32> CVarShots(TEXT("vaesen.combat.selftest.shots"), 0,
+		TEXT("1: the self-test also takes side-on screenshots of the sword's poses (Saved/Screenshots/SelfTest)."));
 
 	FAutoConsoleCommand Command(
 		TEXT("vaesen.combat.selftest"),
@@ -305,6 +318,80 @@ void UVaesenCombatSelfTest::ResetAll()
 	}
 	Fighter->GetVaesenAbilitySystem()->ResetVitals();
 	Controller->SetControlRotation(FRotator::ZeroRotator);
+}
+
+void UVaesenCombatSelfTest::Shot(const TCHAR* Name, const TCHAR* PackAnim, float PackTime)
+{
+	UWorld* Here = Fighter ? Fighter->GetWorld() : nullptr;
+	APlayerController* Viewer = Here ? Here->GetFirstPlayerController() : nullptr;
+	if (VaesenSelfTest::CVarShots.GetValueOnGameThread() <= 0 || !Viewer)
+	{
+		return;
+	}
+	if (!ShotCamera)
+	{
+		ShotCamera = Here->SpawnActor<ACameraActor>();
+		Spawned.Add(ShotCamera);
+		// The HUD (crosshair, notices) would sit over the fighter.
+		for (TObjectIterator<UVaesenCombatHUDWidget> Widget; Widget; ++Widget)
+		{
+			if (Widget->GetWorld() == Here)
+			{
+				Widget->SetVisibility(ESlateVisibility::Collapsed);
+			}
+		}
+	}
+	// From the fighter's left, at chest height: him in front, the pack's swordsman behind him.
+	const FVector Forward = Fighter->GetActorForwardVector();
+	const FVector Body = Fighter->GetActorLocation() - Forward * 90.0 + FVector(0.0, 0.0, 20.0);
+	const FVector Eye = Body - Fighter->GetActorRightVector() * 420.0 + FVector(0.0, 0.0, 20.0);
+	ShotCamera->SetActorLocationAndRotation(Eye, (Body - Eye).Rotation());
+	Viewer->SetViewTarget(ShotCamera);
+
+	if (!ShotReference)
+	{
+		if (UClass* BladeMan = LoadObject<UClass>(nullptr, TEXT("/Game/1HM_Sword_Attacks_Finishers/Mannequin/Character/Mesh/1HMBladeMan.1HMBladeMan_C")))
+		{
+			FActorSpawnParameters Parameters;
+			Parameters.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+			ShotReference = Here->SpawnActor<AActor>(BladeMan, FTransform::Identity, Parameters);
+			Spawned.Add(ShotReference);
+		}
+	}
+	USkeletalMeshComponent* ReferenceMesh = ShotReference ? ShotReference->FindComponentByClass<USkeletalMeshComponent>() : nullptr;
+	UAnimSequence* Pose = PackAnim ? LoadObject<UAnimSequence>(nullptr, PackAnim) : nullptr;
+	if (ReferenceMesh)
+	{
+		ShotReference->SetActorHiddenInGame(!Pose);
+		if (Pose)
+		{
+			// Where the fighter's mesh is, 180 cm behind him (the pack's mannequin faces +Y, as Manny does).
+			const FTransform At = Fighter->GetMesh()->GetComponentTransform();
+			ShotReference->SetActorLocationAndRotation(At.GetLocation() - Forward * 180.0, At.GetRotation());
+			ReferenceMesh->SetAnimationMode(EAnimationMode::AnimationSingleNode);
+			ReferenceMesh->PlayAnimation(Pose, false);
+			ReferenceMesh->SetPosition(PackTime, false);
+			ReferenceMesh->SetPlayRate(0.0f);
+			ReferenceMesh->TickAnimation(0.0f, false);
+			ReferenceMesh->RefreshBoneTransforms();
+			ReferenceMesh->UpdateChildTransforms();
+
+			// Both blades, in each body's own frame (the pack's sword is its mesh's Z, ours the weapon's X).
+			const UStaticMeshComponent* PackSword = ShotReference->FindComponentByClass<UStaticMeshComponent>();
+			const UVaesenWeaponItem* Weapon = Fighter->GetEquipment()->GetDrawnWeapon();
+			const AVaesenWeaponActor* Held = Weapon ? Weapon->GetWeaponActor() : nullptr;
+			if (PackSword && Held)
+			{
+				const FVector Theirs = ReferenceMesh->GetComponentQuat().UnrotateVector(PackSword->GetComponentQuat().GetAxisZ());
+				const FVector Ours = Fighter->GetMesh()->GetComponentQuat().UnrotateVector(Held->GetActorQuat().GetAxisX());
+				const FVector TheirHand = ReferenceMesh->GetComponentTransform().InverseTransformPosition(ReferenceMesh->GetBoneLocation(TEXT("hand_r")));
+				const FVector OurHand = Fighter->GetMesh()->GetComponentTransform().InverseTransformPosition(Fighter->GetMesh()->GetBoneLocation(TEXT("hand_r")));
+				Say(FString::Printf(TEXT("INFO  %s: pack blade %s hand %s | ours blade %s hand %s (mesh frame; +Y ahead, -X his right)"), Name,
+					*Theirs.ToCompactString(), *TheirHand.ToCompactString(), *Ours.ToCompactString(), *OurHand.ToCompactString()), FColor::Yellow);
+			}
+		}
+	}
+	FScreenshotRequest::RequestScreenshot(FPaths::ProjectSavedDir() / TEXT("Screenshots/SelfTest") / (FString(Name) + TEXT(".png")), false, false);
 }
 
 void UVaesenCombatSelfTest::BuildSteps()
@@ -615,7 +702,8 @@ void UVaesenCombatSelfTest::BuildSteps()
 		ResetAll();
 		Check(GiveAndEquip(*Path(Weapons, TEXT("BP_Weapon_OldSword"))), TEXT("sword equipped (replaces the rifle)"));
 		Tap(Holster);
-		return 1.2f;
+		// The draw from the hip takes its montage's time.
+		return 1.8f;
 	} });
 	Steps.Add({ FString(), [this, Equipment, ASC, Tap, Attack]()
 	{
@@ -646,6 +734,76 @@ void UVaesenCombatSelfTest::BuildSteps()
 		}
 		return 0.1f;
 	} });
+	// --- The sword's moves: a combo, a stab, the guard, a dodge (photographed with vaesen.combat.selftest.shots 1) ---
+	const uint8 Dodge = static_cast<uint8>(EVaesenAbilityInput::Dodge);
+	const TSharedRef<FVector> DodgeFrom = MakeShared<FVector>();
+	const auto PlayingMontage = [this]()
+	{
+		const UAnimInstance* Anim = Fighter->GetMesh()->GetAnimInstance();
+		const UAnimMontage* Montage = Anim ? Anim->GetCurrentActiveMontage() : nullptr;
+		return Montage ? Montage->GetName() : FString(TEXT("none"));
+	};
+	Steps.Add({ TEXT("Sword moves"), [this]()
+	{
+		ResetAll();
+		// In one hand, as the pack holds it.
+		Fighter->GetEquipment()->RequestToggleGrip();
+		return 0.6f;
+	} });
+	Steps.Add({ FString(), [this]()
+	{
+		Shot(TEXT("1_SwordIdle"), TEXT("/Game/1HM_Sword_Attacks_Finishers/Animations/1HM_Idle/1HM_Idle_Standing.1HM_Idle_Standing"), 0.0f);
+		return 0.3f;
+	} });
+	Steps.Add({ FString(), [Tap, Attack]() { Tap(Attack); return 0.32f; } });
+	Steps.Add({ FString(), [this, PlayingMontage]()
+	{
+		Shot(TEXT("2_Slash01"), TEXT("/Game/1HM_Sword_Attacks_Finishers/Animations/1HM_Slash/1HM_Slash01.1HM_Slash01"), 0.32f);
+		Check(PlayingMontage().Contains(TEXT("Slash01")), FString::Printf(TEXT("the first swing is the first slash (%s)"), *PlayingMontage()));
+		return 0.45f;
+	} });
+	Steps.Add({ FString(), [Tap, Attack]() { Tap(Attack); return 0.3f; } });
+	Steps.Add({ FString(), [this, PlayingMontage]()
+	{
+		Shot(TEXT("3_Slash02"), TEXT("/Game/1HM_Sword_Attacks_Finishers/Animations/1HM_Slash/1HM_Slash02.1HM_Slash02"), 0.3f);
+		Check(PlayingMontage().Contains(TEXT("Slash02")), FString::Printf(TEXT("attacking again soon after swings the next slash of the combo (%s)"), *PlayingMontage()));
+		return 1.4f;
+	} });
+	Steps.Add({ FString(), [Tap, Heavy]() { Tap(Heavy); return 0.3f; } });
+	Steps.Add({ FString(), [this, PlayingMontage]()
+	{
+		Shot(TEXT("4_Stab01"), TEXT("/Game/1HM_Sword_Attacks_Finishers/Animations/1HM_Stab/1HM_Stab01.1HM_Stab01"), 0.3f);
+		Check(PlayingMontage().Contains(TEXT("Stab01")), FString::Printf(TEXT("the heavy attack stabs (%s)"), *PlayingMontage()));
+		return 1.4f;
+	} });
+	Steps.Add({ FString(), [this, AimOrBlock]() { Press(AimOrBlock); return 0.6f; } });
+	Steps.Add({ FString(), [this, AimOrBlock]()
+	{
+		Shot(TEXT("5_Guard"), TEXT("/Game/1HM_Sword_Attacks_Finishers/Animations/1HM_Block/1HM_BlockRight.1HM_BlockRight"), 0.54f);
+		Release(AimOrBlock);
+		return 0.5f;
+	} });
+	Steps.Add({ FString(), [this, Tap, Dodge, DodgeFrom]()
+	{
+		*DodgeFrom = Fighter->GetActorLocation();
+		Tap(Dodge);
+		Check(Fighter->GetVaesenAbilitySystem()->HasMatchingGameplayTag(VaesenTags::State_Dodging), TEXT("Left Alt dodges with a sword"));
+		return 0.35f;
+	} });
+	Steps.Add({ FString(), [this]() { Shot(TEXT("6_DodgeBack"), TEXT("/Game/1HM_Sword_Attacks_Finishers/Animations/1HM_Evade/1HM_Evade_Back.1HM_Evade_Back"), 0.35f); return 1.0f; } });
+	Steps.Add({ FString(), [this, DodgeFrom]()
+	{
+		const float Moved = FVector::Dist2D(*DodgeFrom, Fighter->GetActorLocation());
+		Check(Moved > 50.0f, FString::Printf(TEXT("the dodge carries the fighter (%.0f cm)"), Moved));
+		Fighter->SetActorLocation(*DodgeFrom);
+		Fighter->GetEquipment()->RequestToggleGrip();
+		if (APlayerController* Viewer = ShotCamera ? Fighter->GetWorld()->GetFirstPlayerController() : nullptr)
+		{
+			Viewer->SetViewTarget(Viewer->GetPawn());
+		}
+		return 0.3f;
+	} });
+
 	Steps.Add({ TEXT("Block and parry"), [this, ASC, Tap, AimOrBlock]()
 	{
 		ResetAll();
@@ -677,7 +835,7 @@ void UVaesenCombatSelfTest::BuildSteps()
 		Check(Sword && Sword->GetDurability() < DurabilityBefore, TEXT("blocking wore the sword"));
 		Release(AimOrBlock);
 		Equipment->RequestSheathe();
-		return 1.0f;
+		return 2.0f;
 	} });
 
 	// --- Throwing a stone ---

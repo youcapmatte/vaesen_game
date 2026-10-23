@@ -14,6 +14,7 @@ namespace VaesenTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Blocking, "State.Blocking", "Holding block");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_ParryWindow, "State.ParryWindow", "Just pressed block: a hit now is parried");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Staggered, "State.Staggered", "Briefly can't act (parried)");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Dodging, "State.Dodging", "Dodging (root motion carries the character)");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Aiming, "State.Aiming", "Aiming a ranged weapon");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Reloading, "State.Reloading", "Reloading");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(State_Cycling, "State.Cycling", "Working a bolt or lever");
@@ -33,6 +34,7 @@ namespace VaesenTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Throw, "Ability.Throw", "Throwing");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Aim, "Ability.Aim", "Aiming");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Holster, "Ability.Holster", "Drawing and sheathing");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Dodge, "Ability.Dodge", "Dodging out of the way");
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Data_StaminaCost, "Data.StaminaCost", "SetByCaller: stamina an ability costs");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Data_Unblockable, "Data.Unblockable", "SetByCaller: 1 = can't be blocked");

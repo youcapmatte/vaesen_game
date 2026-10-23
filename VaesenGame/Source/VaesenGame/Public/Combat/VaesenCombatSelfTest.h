@@ -6,6 +6,7 @@
 #include "VaesenCombatSelfTest.generated.h"
 
 class AAIController;
+class ACameraActor;
 class AVaesenPlayerCharacter;
 class AVaesenTrainingDummy;
 class UVaesenAbilitySystemComponent;
@@ -89,6 +90,17 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<AVaesenTrainingDummy> Attacker;
+
+	/** With vaesen.combat.selftest.shots 1: the side-on camera the sword's poses are photographed from. */
+	UPROPERTY()
+	TObjectPtr<ACameraActor> ShotCamera;
+
+	/** Side-on screenshot of the fighter (Saved/Screenshots/SelfTest/Name.png), when vaesen.combat.selftest.shots is on; with the pack's own swordsman in PackAnim at PackTime behind him. */
+	void Shot(const TCHAR* Name, const TCHAR* PackAnim = nullptr, float PackTime = 0.0f);
+
+	/** Beside the fighter in the shots: the sword pack's own 1HMBladeMan, posed as the pack has it (to compare). */
+	UPROPERTY()
+	TObjectPtr<AActor> ShotReference;
 
 	UPROPERTY()
 	TArray<TObjectPtr<AActor>> Spawned;

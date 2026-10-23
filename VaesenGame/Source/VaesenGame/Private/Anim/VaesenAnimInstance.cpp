@@ -195,7 +195,7 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	const USkeletalMeshSocket* PalmSocket = Body->GetSocketByName(UVaesenWeaponCategoryDefaults::Get()->MainHandSocket);
 	In.PalmOnHand = PalmSocket ? PalmSocket->GetSocketLocalTransform() : FTransform::Identity;
 	In.bHeld = bInHand && Held.IsValid() && Weapon && !Weapon->IsHeldInOffHand();
-	In.GripOnWeaponBone = In.bHeld ? Held.Hold->InHand : FTransform::Identity;
+	In.GripOnWeaponBone = In.bHeld ? Held.Hold->InHand * Weapon->GetCategoryDefaults().InHand : FTransform::Identity;
 	In.bShoulder = bShoulderAim || (In.bShoulder && AimIKAlpha > 0.0f);
 	In.bLeftHand = bLeftHolds;
 	In.bLeftHandTurns = bLeftGrip;

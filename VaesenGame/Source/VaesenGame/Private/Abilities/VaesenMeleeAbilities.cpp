@@ -7,6 +7,7 @@
 #include "Combat/VaesenGameplayTags.h"
 #include "DrawDebugHelpers.h"
 #include "Engine/World.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Inventory/VaesenEquipmentComponent.h"
 #include "Items/VaesenMeleeWeaponItem.h"
 #include "TimerManager.h"
@@ -84,7 +85,23 @@ bool UVaesenGA_MeleeAttack::ResolveAttack(const FGameplayAbilityActorInfo* Actor
 	{
 		OutAttack.Montage = Weapon->GetMontage(&FVaesenWeaponMontages::Attack);
 	}
+
+	// Further into a combo: that swing's montage instead.
+	const int32 Step = GetNextComboStep();
+	if (Step > 0 && OutAttack.ComboSteps.IsValidIndex(Step - 1) && OutAttack.ComboSteps[Step - 1].Montage)
+	{
+		OutAttack.Montage = OutAttack.ComboSteps[Step - 1].Montage;
+		OutAttack.BlockedMontage = OutAttack.ComboSteps[Step - 1].BlockedMontage;
+		OutAttack.MontageSection = NAME_None;
+	}
 	return true;
+}
+
+int32 UVaesenGA_MeleeAttack::GetNextComboStep() const
+{
+	const UWorld* World = GetWorld();
+	const bool bInWindow = World && LastSwingOverTime >= 0.0 && World->GetTimeSeconds() - LastSwingOverTime <= ComboWindow;
+	return bInWindow ? ComboStep : 0;
 }
 
 float UVaesenGA_MeleeAttack::GetStaminaCost(const FGameplayAbilityActorInfo* ActorInfo) const
@@ -102,12 +119,17 @@ bool UVaesenGA_MeleeAttack::CanActivateAbility(const FGameplayAbilitySpecHandle 
 
 void UVaesenGA_MeleeAttack::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
+	const int32 Step = GetNextComboStep();
 	if (!ResolveAttack(ActorInfo, Attack) || !CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
 	bWindowOpen = false;
+	// The swing after this one (round to the first again after the last).
+	ComboStep = (Step + 1) % (Attack.ComboSteps.Num() + 1);
+	ComboWindow = Attack.ComboWindow;
+	LastSwingOverTime = -1.0;
 
 	UAnimMontage* Montage = Attack.Montage;
 	float Length = PlayAbilityMontage(Montage, 1.0f, Attack.MontageSection);
@@ -145,7 +167,9 @@ void UVaesenGA_MeleeAttack::ActivateAbility(const FGameplayAbilitySpecHandle Han
 		}
 	}
 
-	const float Duration = (Length > 0.0f ? Length : Attack.Duration) + Attack.Cooldown;
+	// Over at its recovery time (the follow-through plays out, or the next swing cuts it short), else at the end.
+	const float SwingLength = Length > 0.0f && Attack.RecoveryTime > 0.0f ? FMath::Min(Length, Attack.RecoveryTime) : Length;
+	const float Duration = (SwingLength > 0.0f ? SwingLength : Attack.Duration) + Attack.Cooldown;
 	GetTimers().SetTimer(StepTimer, this, &UVaesenGA_MeleeAttack::FinishAttack, FMath::Max(Duration, 0.05f), false);
 }
 
@@ -238,8 +262,14 @@ void UVaesenGA_MeleeAttack::EndAbility(const FGameplayAbilitySpecHandle Handle, 
 	HitWindowHandle.Reset();
 	if (bWasCancelled)
 	{
-		// Staggered or sheathed mid-swing: the swing stops.
+		// Staggered, blocked or sheathed mid-swing: the swing stops, and so does the combo.
 		StopAbilityMontage();
+		ComboStep = 0;
+		LastSwingOverTime = -1.0;
+	}
+	else if (const UWorld* World = GetWorld())
+	{
+		LastSwingOverTime = World->GetTimeSeconds();
 	}
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
@@ -334,4 +364,69 @@ void UVaesenGA_Block::EndAbility(const FGameplayAbilitySpecHandle Handle, const 
 	CloseParryWindow();
 	StopAbilityMontage();
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+}
+
+// --- Dodge ---
+
+UVaesenGA_Dodge::UVaesenGA_Dodge()
+{
+	InputBinding = EVaesenAbilityInput::Dodge;
+	SetAssetTags(FGameplayTagContainer::CreateFromArray(TArray<FGameplayTag>{ VaesenTags::Ability_Dodge }));
+	ActivationOwnedTags.AddTag(VaesenTags::State_Dodging);
+	for (const FGameplayTag& Tag : TArray<FGameplayTag>{ VaesenTags::State_Dodging, VaesenTags::State_Attacking, VaesenTags::State_SwitchingWeapon,
+		VaesenTags::State_Staggered, VaesenTags::State_Throwing, VaesenTags::State_Dead })
+	{
+		ActivationBlockedTags.AddTag(Tag);
+	}
+	// Dodging out of a guard or an aim drops it.
+	CancelAbilitiesWithTag.AddTag(VaesenTags::Ability_Block);
+	CancelAbilitiesWithTag.AddTag(VaesenTags::Ability_Aim);
+}
+
+UAnimMontage* UVaesenGA_Dodge::ChooseMontage(const AVaesenBaseCharacter* Character, const UVaesenWeaponItem* Weapon)
+{
+	if (!Character || !Weapon)
+	{
+		return nullptr;
+	}
+	// The way the player is steering (the server has the same from the client's moves); standing still steps back.
+	const FVector Steer = Character->GetCharacterMovement()->GetCurrentAcceleration().GetSafeNormal2D();
+	TObjectPtr<UAnimMontage> FVaesenWeaponMontages::* Which = &FVaesenWeaponMontages::DodgeBack;
+	if (!Steer.IsNearlyZero())
+	{
+		const float Forward = FVector::DotProduct(Steer, Character->GetActorForwardVector());
+		const float Right = FVector::DotProduct(Steer, Character->GetActorRightVector());
+		Which = FMath::Abs(Forward) >= FMath::Abs(Right)
+			? (Forward >= 0.0f ? &FVaesenWeaponMontages::DodgeForward : &FVaesenWeaponMontages::DodgeBack)
+			: (Right >= 0.0f ? &FVaesenWeaponMontages::DodgeRight : &FVaesenWeaponMontages::DodgeLeft);
+	}
+	return Weapon->GetMontage(Which);
+}
+
+bool UVaesenGA_Dodge::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags,
+	const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const
+{
+	if (!Super::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags))
+	{
+		return false;
+	}
+	const AVaesenBaseCharacter* Character = GetVaesenCharacter(ActorInfo);
+	return Character && Character->GetCharacterMovement()->IsMovingOnGround() && ChooseMontage(Character, GetDrawnWeapon(ActorInfo)) != nullptr;
+}
+
+void UVaesenGA_Dodge::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
+{
+	UAnimMontage* Montage = ChooseMontage(GetVaesenCharacter(ActorInfo), GetDrawnWeapon(ActorInfo));
+	if (!Montage || !CommitAbility(Handle, ActorInfo, ActivationInfo))
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+	const float Length = PlayAbilityMontage(Montage);
+	GetTimers().SetTimer(StepTimer, this, &UVaesenGA_Dodge::FinishDodge, FMath::Max(Length - Montage->BlendOut.GetBlendTime(), 0.1f), false);
+}
+
+void UVaesenGA_Dodge::FinishDodge()
+{
+	EndAbility(CurrentSpecHandle, GetCurrentActorInfo(), CurrentActivationInfo, true, false);
 }

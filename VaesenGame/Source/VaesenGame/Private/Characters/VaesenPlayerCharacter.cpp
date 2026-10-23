@@ -135,6 +135,7 @@ void AVaesenPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 	BindAbility(ThrowAction, EVaesenAbilityInput::Throw);
 	BindAbility(HolsterAction, EVaesenAbilityInput::Holster);
 	BindAbility(SwapWeaponAction, EVaesenAbilityInput::SwapWeapon);
+	BindAbility(DodgeAction, EVaesenAbilityInput::Dodge);
 	if (CrouchAction)
 	{
 		EnhancedInput->BindAction(CrouchAction, ETriggerEvent::Started, this, &AVaesenPlayerCharacter::ToggleCrouch);

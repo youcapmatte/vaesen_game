@@ -77,6 +77,15 @@ public:
 	/** Plays the effort (heavy attack, throw) or pain vocal from this character's voice. */
 	void PlayVocal(bool bPain);
 
+	/** Hit (not blocked) from From: flinches with the drawn weapon category's hit reaction, unless mid-swing, guarding or dodging. */
+	void PlayHitReaction(const FVector& From);
+
+	/** A hit taken on the guard: the weapon beats it aside. */
+	void PlayBlockImpact();
+
+	/** This character's swing met a block: it bounces off (the swing's blocked montage). */
+	void PlaySwingBlocked();
+
 	/** A footstep (AN_Footstep in a locomotion animation): sheathed weapons rattle, louder the faster it moves. */
 	void OnFootstep();
 
@@ -86,7 +95,7 @@ public:
 	virtual bool WantsToFaceAim() const;
 
 #if WITH_EDITOR
-	/** For the asset commandlet: grants To instead of From (a GA_ Blueprint instead of its C++ class). */
+	/** For the asset commandlet: grants To instead of From (a GA_ Blueprint instead of its C++ class), and To if it has neither. True if it changed. */
 	bool ReplaceDefaultAbility(UClass* From, UClass* To);
 #endif
 
@@ -111,6 +120,10 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Combat", meta = (ClampMin = "0", ClampMax = "1"))
 	float StaggeredSpeedScale = 0.2f;
+
+	/** Speed while swinging a melee weapon (its attacks are whole-body animations), as a share of normal. */
+	UPROPERTY(EditDefaultsOnly, Category = "Combat", meta = (ClampMin = "0", ClampMax = "1"))
+	float SwingingSpeedScale = 0.35f;
 
 	/** Grunt on heavy attacks and throws. Empty = silent. */
 	UPROPERTY(EditDefaultsOnly, Category = "Combat|Voice")

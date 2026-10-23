@@ -45,6 +45,9 @@ public:
 	 */
 	bool GetAttack(bool bHeavy, FVaesenMeleeAttack& OutAttack) const;
 
+	/** The montage of Swing (one of its attacks' swings) bouncing off a block, or null. */
+	UAnimMontage* GetBlockedMontage(const UAnimMontage* Swing) const;
+
 	virtual const FVaesenBlockProfile& GetBlockProfile() const override;
 
 	/** A shield: blocks with its own profile while a weapon is in the main hand. */

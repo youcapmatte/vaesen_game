@@ -138,6 +138,12 @@ void UVaesenDamageExecution::Execute_Implementation(const FGameplayEffectCustomE
 		// Only once the server has decided: nobody hears a block that didn't happen.
 		BlockingActor->MulticastPlaySound(bParried ? EVaesenWeaponSound::Parry : EVaesenWeaponSound::Block);
 	}
+	// A melee swing that meets a block stops there (everyone sees it bounce off: the hit cue plays the blocked swing).
+	if (Report.Outcome == EVaesenHitOutcome::Blocked && !bProjectile && SourceASC && SourceASC != TargetASC)
+	{
+		const FGameplayTagContainer Swings(VaesenTags::Ability_Melee);
+		SourceASC->CancelAbilities(&Swings);
+	}
 	if (bParried && SourceASC && SourceASC != TargetASC)
 	{
 		const FGameplayEffectSpecHandle Stagger = SourceASC->MakeOutgoingSpec(UVaesenGE_Stagger::StaticClass(), 1.0f, TargetASC->MakeEffectContext());

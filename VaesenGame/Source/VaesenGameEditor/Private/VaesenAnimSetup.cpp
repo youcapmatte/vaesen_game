@@ -11,6 +11,9 @@
 #include "Engine/SkeletalMeshSocket.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/StaticMeshSocket.h"
+#include "Engine/SCS_Node.h"
+#include "Engine/SimpleConstructionScript.h"
+#include "Components/StaticMeshComponent.h"
 #include "Misc/PackageName.h"
 #include "RetargetEditor/IKRetargetBatchOperation.h"
 #include "RetargetEditor/IKRetargeterController.h"
@@ -351,6 +354,183 @@ namespace VaesenAnimSetup
 		}
 	}
 
+	// --- One-handed sword pack (RamsterZ "One Hand Sword Attacks And Finishers") ---
+
+	const TCHAR* SwordPackFolder = TEXT("/Game/1HM_Sword_Attacks_Finishers/Animations");
+	const TCHAR* SwordPackMesh = TEXT("/Game/1HM_Sword_Attacks_Finishers/Mannequin/Character/Mesh/SK_Mannequin.SK_Mannequin");
+	const TCHAR* SwordFolder = TEXT("/Game/Vaesen/Animations/Sword");
+
+	/** How the sword hand moves through an animation: when it's fastest, and the stretch around it above half that speed. */
+	struct FSwingTiming
+	{
+		float Length = 0.0f;
+		float PeakTime = 0.0f;
+		float PeakSpeed = 0.0f;
+		float WindowStart = 0.0f;
+		float WindowEnd = 0.0f;
+		FVector RootMove = FVector::ZeroVector;
+	};
+
+	FSwingTiming MeasureSwing(const UAnimSequenceBase* Anim, FName Hand = TEXT("hand_r"))
+	{
+		FSwingTiming Timing;
+		Timing.Length = Anim->GetPlayLength();
+		const int32 Steps = FMath::Max(FMath::CeilToInt(Timing.Length * 60.0f), 2);
+		TArray<float> Speeds;
+		FVector Previous = FVector::ZeroVector;
+		FVector FirstRoot = FVector::ZeroVector;
+		for (int32 Step = 0; Step <= Steps; ++Step)
+		{
+			const double Time = Timing.Length * Step / Steps;
+			FAnimPose Pose;
+			FAnimPoseEvaluationOptions Options;
+			Options.bExtractRootMotion = false;
+			UAnimPoseExtensions::GetAnimPoseAtTime(Anim, Time, Options, Pose);
+			const FVector Root = UAnimPoseExtensions::GetBonePose(Pose, TEXT("root"), EAnimPoseSpaces::World).GetLocation();
+			// The hand relative to the root, so walking forward isn't a swing.
+			const FVector HandAt = UAnimPoseExtensions::GetBonePose(Pose, Hand, EAnimPoseSpaces::World).GetLocation() - Root;
+			if (Step == 0)
+			{
+				FirstRoot = Root;
+			}
+			else
+			{
+				Speeds.Add((HandAt - Previous).Size() * Steps / Timing.Length);
+			}
+			Previous = HandAt;
+			Timing.RootMove = Root - FirstRoot;
+		}
+		int32 Peak = 0;
+		for (int32 Index = 0; Index < Speeds.Num(); ++Index)
+		{
+			if (Speeds[Index] > Speeds[Peak])
+			{
+				Peak = Index;
+			}
+		}
+		Timing.PeakSpeed = Speeds.IsValidIndex(Peak) ? Speeds[Peak] : 0.0f;
+		int32 First = Peak, Last = Peak;
+		while (First > 0 && Speeds[First - 1] > Timing.PeakSpeed * 0.5f)
+		{
+			--First;
+		}
+		while (Last + 1 < Speeds.Num() && Speeds[Last + 1] > Timing.PeakSpeed * 0.5f)
+		{
+			++Last;
+		}
+		const float StepTime = Timing.Length / Steps;
+		Timing.PeakTime = (Peak + 0.5f) * StepTime;
+		Timing.WindowStart = First * StepTime;
+		Timing.WindowEnd = (Last + 1) * StepTime;
+		return Timing;
+	}
+
+	/** The time in [From, To] the bone is slowest (relative to the root): where a block settles into its guard. */
+	float FindSettle(const UAnimSequenceBase* Anim, float From, float To, FName Bone = TEXT("hand_r"))
+	{
+		const float Step = 1.0f / 60.0f;
+		float Best = From, BestSpeed = TNumericLimits<float>::Max();
+		FVector Previous = FVector::ZeroVector;
+		for (float Time = From; Time <= FMath::Min(To, Anim->GetPlayLength()); Time += Step)
+		{
+			FAnimPose Pose;
+			UAnimPoseExtensions::GetAnimPoseAtTime(Anim, Time, FAnimPoseEvaluationOptions(), Pose);
+			const FVector At = UAnimPoseExtensions::GetBonePose(Pose, Bone, EAnimPoseSpaces::World).GetLocation()
+				- UAnimPoseExtensions::GetBonePose(Pose, TEXT("root"), EAnimPoseSpaces::World).GetLocation();
+			const float Speed = (At - Previous).Size() / Step;
+			if (Time > From && Speed < BestSpeed)
+			{
+				BestSpeed = Speed;
+				Best = Time;
+			}
+			Previous = At;
+		}
+		return Best;
+	}
+
+	/** The time in [From, To] Bone comes nearest Target (the hand at the hip where the sword hangs). */
+	float FindNearest(const UAnimSequenceBase* Anim, FName Bone, FName Target, float From, float To)
+	{
+		float Best = From, BestDistance = TNumericLimits<float>::Max();
+		for (float Time = From; Time <= FMath::Min(To, Anim->GetPlayLength()); Time += 1.0f / 60.0f)
+		{
+			FAnimPose Pose;
+			UAnimPoseExtensions::GetAnimPoseAtTime(Anim, Time, FAnimPoseEvaluationOptions(), Pose);
+			const float Distance = FVector::Dist(UAnimPoseExtensions::GetBonePose(Pose, Bone, EAnimPoseSpaces::World).GetLocation(),
+				UAnimPoseExtensions::GetBonePose(Pose, Target, EAnimPoseSpaces::World).GetLocation());
+			if (Distance < BestDistance)
+			{
+				BestDistance = Distance;
+				Best = Time;
+			}
+		}
+		return Best;
+	}
+
+	bool BladeInHand(FVector& OutBlade, FVector& OutEdge, FVector& OutGrip);
+
+	void AnalyzeSword()
+	{
+		UE_LOG(LogVaesenAnimSetup, Display, TEXT("=== Sword pack analysis ==="));
+		IAssetRegistry& Registry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
+		Registry.SearchAllAssets(true);
+		TArray<FAssetData> Found;
+		Registry.GetAssetsByPath(FName(SwordPackFolder), Found, true);
+		Found.Sort([](const FAssetData& A, const FAssetData& B) { return A.AssetName.LexicalLess(B.AssetName); });
+		for (const FAssetData& Data : Found)
+		{
+			const FString Name = Data.AssetName.ToString();
+			const UAnimSequence* Anim = Cast<UAnimSequence>(Data.GetAsset());
+			if (!Anim || Name.Contains(TEXT("Mirrored")))
+			{
+				continue;
+			}
+			const FSwingTiming Timing = MeasureSwing(Anim);
+			UE_LOG(LogVaesenAnimSetup, Display, TEXT("%-40s %.2f s root motion %d, root moves %s; hand fastest %.0f cm/s at %.2f (%.2f..%.2f) skeleton %s"),
+				*Name, Timing.Length, Anim->bEnableRootMotion ? 1 : 0, *Timing.RootMove.ToCompactString(), Timing.PeakSpeed, Timing.PeakTime,
+				Timing.WindowStart, Timing.WindowEnd, *GetNameSafe(Anim->GetSkeleton()));
+		}
+		if (const USkeletalMesh* Mesh = LoadObject<USkeletalMesh>(nullptr, SwordPackMesh))
+		{
+			for (const USkeletalMeshSocket* Socket : Mesh->GetSkeleton()->Sockets)
+			{
+				UE_LOG(LogVaesenAnimSetup, Display, TEXT("Sword pack socket %s on %s: loc %s rot %s"), *Socket->SocketName.ToString(), *Socket->BoneName.ToString(),
+					*Socket->RelativeLocation.ToCompactString(), *Socket->RelativeRotation.ToCompactString());
+			}
+		}
+		// Where the pack's sword points in a few poses (the mannequin faces +Y; his right is -X).
+		const USkeletalMesh* PackMesh = LoadObject<USkeletalMesh>(nullptr, SwordPackMesh);
+		const USkeletalMeshSocket* Socket = PackMesh ? PackMesh->FindSocket(TEXT("WeaponSocket")) : nullptr;
+		struct FLook { const TCHAR* Folder; const TCHAR* Name; float Time; };
+		for (const FLook& Look : { FLook{ TEXT("1HM_Idle"), TEXT("1HM_Idle_Standing"), 0.0f }, FLook{ TEXT("1HM_Block"), TEXT("1HM_BlockRight"), 0.54f },
+				 FLook{ TEXT("1HM_Slash"), TEXT("1HM_Slash01"), 0.34f }, FLook{ TEXT("1HM_Stab"), TEXT("1HM_Stab01"), 0.3f }, FLook{ TEXT("1HM_Walk"), TEXT("1HM_WalkForward"), 0.0f } })
+		{
+			const UAnimSequence* Anim = LoadObject<UAnimSequence>(nullptr, *FString::Printf(TEXT("%s/%s/%s.%s"), SwordPackFolder, Look.Folder, Look.Name, Look.Name));
+			if (!Anim || !Socket)
+			{
+				continue;
+			}
+			FAnimPose Pose;
+			UAnimPoseExtensions::GetAnimPoseAtTime(Anim, Look.Time, FAnimPoseEvaluationOptions(), Pose);
+			const FTransform Hand = UAnimPoseExtensions::GetBonePose(Pose, TEXT("hand_r"), EAnimPoseSpaces::World);
+			const FVector Root = UAnimPoseExtensions::GetBonePose(Pose, TEXT("root"), EAnimPoseSpaces::World).GetLocation();
+			UE_LOG(LogVaesenAnimSetup, Display, TEXT("%s hand axes X %s Y %s Z %s; forearm %s"), Look.Name, *Hand.GetUnitAxis(EAxis::X).ToCompactString(), *Hand.GetUnitAxis(EAxis::Y).ToCompactString(), *Hand.GetUnitAxis(EAxis::Z).ToCompactString(),
+				*(Hand.GetLocation() - UAnimPoseExtensions::GetBonePose(Pose, TEXT("lowerarm_r"), EAnimPoseSpaces::World).GetLocation()).GetSafeNormal().ToCompactString());
+			FVector BladeLocal, EdgeLocal, GripLocal;
+			if (BladeInHand(BladeLocal, EdgeLocal, GripLocal))
+			{
+				const FVector Blade = Hand.TransformVectorNoScale(BladeLocal);
+				UE_LOG(LogVaesenAnimSetup, Display, TEXT("%s at %.2f: hand %s, blade points %s, tip at %s (from the root)"), Look.Name, Look.Time,
+					*(Hand.GetLocation() - Root).ToCompactString(), *Blade.ToCompactString(), *(Hand.TransformPosition(GripLocal) + Blade * 80.0 - Root).ToCompactString());
+			}
+		}
+		if (const UStaticMesh* Sword = LoadObject<UStaticMesh>(nullptr, TEXT("/Game/1HM_Sword_Attacks_Finishers/Weapons/OneHandSword_Mesh.OneHandSword_Mesh")))
+		{
+			const FBox Box = Sword->GetBoundingBox();
+			UE_LOG(LogVaesenAnimSetup, Display, TEXT("OneHandSword_Mesh bounds min %s max %s"), *Box.Min.ToCompactString(), *Box.Max.ToCompactString());
+		}
+	}
+
 	// --- Building blocks ---
 
 	const TCHAR* UpperBodySlot = TEXT("UpperBody");
@@ -385,6 +565,12 @@ namespace VaesenAnimSetup
 	{
 		if (UAnimMontage* Existing = LoadAt<UAnimMontage>(PackagePath))
 		{
+			// Moved to another slot since it was made (the sword's attacks went full body).
+			if (Existing->SlotAnimTracks.Num() > 0 && Existing->SlotAnimTracks[0].SlotName != Slot)
+			{
+				Existing->SlotAnimTracks[0].SlotName = Slot;
+				Save(Existing);
+			}
 			return Existing;
 		}
 		if (!Anim)
@@ -1142,6 +1328,569 @@ namespace VaesenAnimSetup
 			}
 		}
 	}
+
+	// --- The one-handed sword ---
+
+	const TCHAR* SwordGraphPath = TEXT("/Game/Vaesen/Animations/Sword/ABP_SwordLocomotion");
+
+	UAnimSequence* SwordAnim(const TCHAR* Name)
+	{
+		UAnimSequence* Anim = LoadAt<UAnimSequence>(FString(SwordFolder) / Name);
+		if (!Anim)
+		{
+			UE_LOG(LogVaesenAnimSetup, Warning, TEXT("Retargeted %s is missing."), Name);
+		}
+		return Anim;
+	}
+
+	/**
+	 * The pack's animations on Manny, in /Game/Vaesen/Animations/Sword (the right-handed ones; the mirrored
+	 * left-handed copies stay in the pack until there are left-handed fighters). Locomotion, attacks, blocks and hit
+	 * reactions stay in place (the capsule moves the character); the evades keep their root motion (they carry it).
+	 */
+	bool RetargetSwordPack()
+	{
+		if (Exists(FString(SwordFolder) / TEXT("1HM_Idle_Standing")))
+		{
+			return true;
+		}
+		USkeletalMesh* Source = LoadObject<USkeletalMesh>(nullptr, SwordPackMesh);
+		USkeletalMesh* Target = LoadObject<USkeletalMesh>(nullptr, MannyMesh);
+		if (!Source || !Target)
+		{
+			UE_LOG(LogVaesenAnimSetup, Display, TEXT("Sword pack (/Game/1HM_Sword_Attacks_Finishers) not in the project; skipping the sword."));
+			return false;
+		}
+		// The same UE4 mannequin -> Manny retargeter as the rifle's (the pack's mannequin has the same bones).
+		USkeletalMesh* RigSource = LoadObject<USkeletalMesh>(nullptr, UE4MannequinMesh);
+		UIKRetargeter* Retargeter = MakeRetargeter(RigSource ? RigSource : Source, Target);
+
+		IAssetRegistry& Registry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
+		Registry.SearchAllAssets(true);
+		TArray<FAssetData> Found;
+		Registry.GetAssetsByPath(FName(SwordPackFolder), Found, true);
+		FIKRetargetBatchOperationInputs Inputs;
+		for (const FAssetData& Asset : Found)
+		{
+			if (Asset.IsInstanceOf(UAnimSequence::StaticClass()) && !Asset.AssetName.ToString().Contains(TEXT("Mirrored")))
+			{
+				Inputs.AssetsToRetarget.Add(Asset);
+			}
+		}
+		Inputs.SourceMesh = Source;
+		Inputs.TargetMesh = Target;
+		Inputs.IKRetargetAsset = Retargeter;
+		Inputs.TargetPath = SwordFolder;
+		Inputs.bUseSourcePath = false;
+		Inputs.bIncludeReferencedAssets = false;
+		Inputs.bOverwriteExistingFiles = true;
+		const TArray<FAssetData> Results = UIKRetargetBatchOperation::RunBatchRetarget(Inputs);
+		UE_LOG(LogVaesenAnimSetup, Display, TEXT("Retargeted %d of %d sword animations to Manny."), Results.Num(), Inputs.AssetsToRetarget.Num());
+
+		for (const FAssetData& Result : Results)
+		{
+			if (UAnimSequence* Anim = Cast<UAnimSequence>(Result.GetAsset()))
+			{
+				const bool bCarries = Anim->GetName().Contains(TEXT("Evade"));
+				Anim->bEnableRootMotion = bCarries;
+				Anim->RootMotionRootLock = ERootMotionRootLock::RefPose;
+				Anim->bForceRootLock = !bCarries;
+				Anim->PostEditChange();
+				Save(Anim);
+			}
+		}
+		return Exists(FString(SwordFolder) / TEXT("1HM_Idle_Standing"));
+	}
+
+	/**
+	 * The pack's sword as its 1HMBladeMan Blueprint holds it (the mannequin with OneHandSword_Mesh attached to the
+	 * hand, at an offset of its own), in hand_r's space: the blade's direction (the mesh's Z), the way its edge faces
+	 * (its Y), and the point on it where the palm closes.
+	 */
+	bool BladeInHand(FVector& OutBlade, FVector& OutEdge, FVector& OutGrip)
+	{
+		const UBlueprint* BladeMan = LoadObject<UBlueprint>(nullptr, TEXT("/Game/1HM_Sword_Attacks_Finishers/Mannequin/Character/Mesh/1HMBladeMan.1HMBladeMan"));
+		const USkeletalMesh* Mesh = LoadObject<USkeletalMesh>(nullptr, SwordPackMesh);
+		if (!BladeMan || !BladeMan->SimpleConstructionScript || !Mesh)
+		{
+			return false;
+		}
+		const USCS_Node* SwordNode = nullptr;
+		for (const USCS_Node* Node : BladeMan->SimpleConstructionScript->GetAllNodes())
+		{
+			if (const UStaticMeshComponent* Component = Node ? Cast<UStaticMeshComponent>(Node->ComponentTemplate) : nullptr; Component && Component->GetStaticMesh())
+			{
+				SwordNode = Node;
+			}
+		}
+		if (!SwordNode)
+		{
+			return false;
+		}
+		const USceneComponent* Sword = Cast<USceneComponent>(SwordNode->ComponentTemplate);
+		// On a socket of the mannequin, or on the bone itself.
+		FTransform OnHand = Sword->GetRelativeTransform();
+		OnHand.SetScale3D(FVector::OneVector);
+		FName Bone = SwordNode->AttachToName;
+		if (const USkeletalMeshSocket* Socket = Mesh->FindSocket(SwordNode->AttachToName))
+		{
+			OnHand = OnHand * Socket->GetSocketLocalTransform();
+			Bone = Socket->BoneName;
+		}
+		const FReferenceSkeleton& Reference = Mesh->GetRefSkeleton();
+		const int32 HandIndex = Reference.FindBoneIndex(TEXT("hand_r"));
+		const int32 KnuckleIndex = Reference.FindBoneIndex(TEXT("middle_01_r"));
+		if (Bone != TEXT("hand_r") || HandIndex == INDEX_NONE || KnuckleIndex == INDEX_NONE)
+		{
+			UE_LOG(LogVaesenAnimSetup, Warning, TEXT("1HMBladeMan's sword is on %s, not the right hand."), *SwordNode->AttachToName.ToString());
+			return false;
+		}
+		const FTransform Hand = FAnimationRuntime::GetComponentSpaceTransformRefPose(Reference, HandIndex);
+		const FVector Knuckle = Hand.InverseTransformPosition(FAnimationRuntime::GetComponentSpaceTransformRefPose(Reference, KnuckleIndex).GetLocation());
+		const FVector Palm = Knuckle * 0.5;
+
+		OutBlade = OnHand.GetUnitAxis(EAxis::Z);
+		OutEdge = OnHand.GetUnitAxis(EAxis::Y);
+		OutGrip = OnHand.GetLocation() + OutBlade * FVector::DotProduct(Palm - OnHand.GetLocation(), OutBlade);
+		UE_LOG(LogVaesenAnimSetup, Display, TEXT("1HMBladeMan: sword on %s at %s; in hand_r: blade %s edge %s grip %s"), *SwordNode->AttachToName.ToString(),
+			*Describe(Sword->GetRelativeTransform()), *OutBlade.ToCompactString(), *OutEdge.ToCompactString(), *OutGrip.ToCompactString());
+		return true;
+	}
+
+	/**
+	 * How the pack holds its sword, as the category's InHand: the blade as 1HMBladeMan holds it (its WeaponSocket
+	 * doesn't match: a sword there points out sideways in every pose); ours have the blade along X and the edges along
+	 * Z, held by the Grip socket. Seen from Manny's retargeted hand (as the rifle's hand socket is).
+	 */
+	bool ComputeSwordInHand(const USkeleton* Skeleton, FTransform& OutInHand)
+	{
+		const UAnimSequence* Source = LoadObject<UAnimSequence>(nullptr, TEXT("/Game/1HM_Sword_Attacks_Finishers/Animations/1HM_Idle/1HM_Idle_Standing.1HM_Idle_Standing"));
+		const UAnimSequence* Target = SwordAnim(TEXT("1HM_Idle_Standing"));
+		const USkeletalMeshSocket* Palm = Skeleton->FindSocket(UVaesenWeaponCategoryDefaults::Get()->MainHandSocket);
+		FVector BladeLocal, EdgeLocal, GripLocal;
+		if (!Source || !Target || !Palm || !BladeInHand(BladeLocal, EdgeLocal, GripLocal))
+		{
+			return false;
+		}
+		const FAnimPose SourcePose = PoseAt(Source, 0.0);
+		const FAnimPose TargetPose = PoseAt(Target, 0.0);
+		const FTransform Hand4 = UAnimPoseExtensions::GetBonePose(SourcePose, TEXT("hand_r"), EAnimPoseSpaces::World);
+		const FTransform Hand5 = UAnimPoseExtensions::GetBonePose(TargetPose, TEXT("hand_r"), EAnimPoseSpaces::World);
+
+		const FQuat Ours4 = FRotationMatrix::MakeFromXZ(Hand4.TransformVectorNoScale(BladeLocal), Hand4.TransformVectorNoScale(EdgeLocal)).ToQuat();
+		const FVector Grip4 = Hand4.TransformPosition(GripLocal);
+
+		FTransform Desired;
+		Desired.SetRotation(Hand5.GetRotation().Inverse() * Ours4);
+		Desired.SetLocation(Hand5.GetRotation().UnrotateVector(Grip4 - Hand4.GetLocation()));
+		// In the node the weapon is InHand * hand socket * hand.
+		OutInHand = Desired * Palm->GetSocketLocalTransform().Inverse();
+		OutInHand.SetScale3D(FVector::OneVector);
+		UE_LOG(LogVaesenAnimSetup, Display, TEXT("Sword in the hand %s (category InHand %s); blade points %s"), *Describe(Desired), *Describe(OutInHand),
+			*(Hand5.GetRotation() * Desired.GetRotation()).GetForwardVector().ToCompactString());
+		return true;
+	}
+
+	/** Only part of the montage's animation plays: Start..End of it. */
+	void TrimMontage(UAnimMontage* Montage, float Start, float End)
+	{
+		if (!Montage || Montage->SlotAnimTracks.Num() == 0 || Montage->SlotAnimTracks[0].AnimTrack.AnimSegments.Num() == 0)
+		{
+			return;
+		}
+		FAnimSegment& Segment = Montage->SlotAnimTracks[0].AnimTrack.AnimSegments[0];
+		Segment.AnimStartTime = Start;
+		Segment.AnimEndTime = End;
+		Segment.StartPos = 0.0f;
+		Montage->SetCompositeLength(End - Start);
+		if (Montage->CompositeSections.Num() > 0)
+		{
+			Montage->CompositeSections[0].SetTime(0.0f);
+		}
+		Montage->RefreshCacheData();
+	}
+
+	void AddNotifyState(UAnimMontage* Montage, UAnimNotifyState* State, float Start, float Duration)
+	{
+		if (Montage->AnimNotifyTracks.Num() == 0)
+		{
+			Montage->AnimNotifyTracks.Add(FAnimNotifyTrack(TEXT("1"), FLinearColor::White));
+		}
+		FAnimNotifyEvent& Event = Montage->Notifies.AddDefaulted_GetRef();
+		Event.NotifyName = FName(State->GetNotifyName());
+		Event.NotifyStateClass = State;
+		Event.Link(Montage, Start);
+		Event.TriggerTimeOffset = GetTriggerTimeOffsetForType(Montage->CalculateOffsetForNotify(Start));
+		Event.SetDuration(Duration);
+		Event.EndLink.Link(Montage, Start + Duration);
+		Event.TrackIndex = 0;
+		Montage->RefreshCacheData();
+	}
+
+	/** An attack's montage (made once): the hit window where the sword hand moves fastest, the whoosh as it opens. */
+	UAnimMontage* MakeSwingMontage(const TCHAR* Anim, bool bHeavy, float* OutWindowEnd = nullptr, float* OutWindowStart = nullptr)
+	{
+		UAnimSequence* Sequence = SwordAnim(Anim);
+		if (!Sequence)
+		{
+			return nullptr;
+		}
+		const FSwingTiming Timing = MeasureSwing(Sequence);
+		// A little either side of the fastest stretch: the blade is dangerous a moment before and after its peak.
+		const float Start = FMath::Max(Timing.WindowStart - 0.06f, 0.0f);
+		const float End = FMath::Min(Timing.WindowEnd + 0.06f, Timing.Length);
+		if (OutWindowEnd)
+		{
+			*OutWindowEnd = End;
+		}
+		if (OutWindowStart)
+		{
+			*OutWindowStart = Start;
+		}
+		const FString Path = FString(SwordFolder) / (FString(TEXT("AM_")) + Anim);
+		const bool bNew = !Exists(Path);
+		// Full body: the hips and legs step into the swing (it reaches as far as the pack means it to).
+		UAnimMontage* Montage = MakeMontage(Path, Sequence, FAnimSlotGroup::DefaultSlotName, 0.1f, 0.3f);
+		if (Montage && bNew)
+		{
+			AddNotifyState(Montage, NewObject<UAnimNotifyState_VaesenMeleeHitWindow>(Montage), Start, End - Start);
+			UAnimNotify_VaesenWeaponSound* Whoosh = NewObject<UAnimNotify_VaesenWeaponSound>(Montage);
+			Whoosh->Sound = bHeavy ? EVaesenWeaponSound::SwingHeavy : EVaesenWeaponSound::SwingLight;
+			AddNotify(Montage, Whoosh, Start);
+			if (bHeavy)
+			{
+				AddNotify(Montage, NewObject<UAnimNotify_VaesenEffortVocal>(Montage), FMath::Max(Start - 0.05f, 0.0f));
+			}
+			Save(Montage);
+			UE_LOG(LogVaesenAnimSetup, Display, TEXT("%s: hit window %.2f..%.2f of %.2f s"), *Montage->GetName(), Start, End, Timing.Length);
+		}
+		return Montage;
+	}
+
+	/** A montage of part of an animation (made once), for the guard and its impacts. */
+	UAnimMontage* MakeTrimmedMontage(const TCHAR* Name, UAnimSequence* Sequence, FName Slot, float Start, float End, float BlendIn, float BlendOut)
+	{
+		const FString Path = FString(SwordFolder) / Name;
+		const bool bNew = !Exists(Path);
+		UAnimMontage* Montage = MakeMontage(Path, Sequence, Slot, BlendIn, BlendOut);
+		if (Montage && bNew)
+		{
+			TrimMontage(Montage, Start, End);
+			Save(Montage);
+		}
+		return Montage;
+	}
+
+	/** BS_1HM_Locomotion: idle, walk and run in eight directions, set like the rifle's (Direction, Speed), at each animation's own speed. */
+	UBlendSpace* MakeSwordBlendSpace(bool bRebuild)
+	{
+		const FString Path = FString(SwordFolder) / TEXT("BS_1HM_Locomotion");
+		UBlendSpace* Space = LoadAt<UBlendSpace>(Path);
+		if (Space && !bRebuild)
+		{
+			return Space;
+		}
+		if (!Space)
+		{
+			UBlendSpace* Rifle = RifleAsset<UBlendSpace>(TEXT("BS_Rifle"));
+			if (!Rifle)
+			{
+				return nullptr;
+			}
+			UPackage* Package = CreatePackage(*Path);
+			Space = DuplicateObject<UBlendSpace>(Rifle, Package, FName(TEXT("BS_1HM_Locomotion")));
+			Space->SetFlags(RF_Public | RF_Standalone);
+			FAssetRegistryModule::AssetCreated(Space);
+		}
+		while (Space->GetNumberOfBlendSamples() > 0)
+		{
+			Space->DeleteSample(0);
+		}
+
+		struct FSample { const TCHAR* Name; float Direction; };
+		const FSample Moving[] = {
+			{ TEXT("Forward"), 0.0f }, { TEXT("ForwardRight"), 45.0f }, { TEXT("Right"), 90.0f }, { TEXT("BackRight"), 135.0f },
+			{ TEXT("Back"), 180.0f }, { TEXT("Back"), -180.0f }, { TEXT("BackLeft"), -135.0f }, { TEXT("Left"), -90.0f }, { TEXT("ForwardLeft"), -45.0f } };
+		const auto Add = [Space](UAnimSequence* Anim, float Direction, float Speed)
+		{
+			if (Anim)
+			{
+				const FVector Value(Direction, Speed, 0.0);
+				Space->ExpandRangeForSample(Value);
+				Space->AddSample(Anim, Value);
+			}
+		};
+		UAnimSequence* Idle = SwordAnim(TEXT("1HM_Idle_Standing"));
+		for (const float Direction : { -180.0f, -90.0f, 0.0f, 90.0f, 180.0f })
+		{
+			Add(Idle, Direction, 0.0f);
+		}
+		for (const TCHAR* Gait : { TEXT("Walk"), TEXT("Run") })
+		{
+			for (const FSample& Sample : Moving)
+			{
+				const FString Name = FString::Printf(TEXT("1HM_%s%s"), Gait, Sample.Name);
+				UAnimSequence* Anim = SwordAnim(*Name);
+				if (const UAnimSequence* Original = Anim ? LoadObject<UAnimSequence>(nullptr, *FString::Printf(TEXT("%s/1HM_%s/%s.%s"), SwordPackFolder, Gait, *Name, *Name)) : nullptr)
+				{
+					// The speed it walks at (measured in the pack's own animation; ours has the root locked in place).
+					const FSwingTiming Timing = MeasureSwing(Original);
+					Add(Anim, Sample.Direction, FMath::RoundToFloat(Timing.RootMove.Size2D() / Timing.Length));
+				}
+			}
+		}
+		Space->ValidateSampleData();
+		Space->ResampleData();
+		Space->PostEditChange();
+		Save(Space);
+		UE_LOG(LogVaesenAnimSetup, Display, TEXT("BS_1HM_Locomotion: %d samples, speed up to %.0f"), Space->GetNumberOfBlendSamples(), Space->GetBlendParameter(1).Max);
+		return Space;
+	}
+
+	/**
+	 * ABP_SwordLocomotion: the sword's stance, linked into the character's graph while a one-handed sword is drawn.
+	 * Idle, walk and run (a direction/speed blend space), the jump loop in the air, and the guard over the upper body
+	 * while blocking (the pack's block held where it settles).
+	 */
+	UClass* BuildSwordLocomotion(USkeleton* Skeleton, bool bRebuild, UBlendSpace* Movement, UAnimSequence* GuardAnim, float GuardTime)
+	{
+		if (!bRebuild)
+		{
+			if (UAnimBlueprint* Existing = LoadAt<UAnimBlueprint>(SwordGraphPath))
+			{
+				return Existing->GeneratedClass;
+			}
+		}
+		UAnimBlueprint* Blueprint = OpenAnimBlueprint(SwordGraphPath, Skeleton);
+		FGraphBuilder Builder(Blueprint);
+		if (!Blueprint || !Builder.Graph)
+		{
+			return nullptr;
+		}
+
+		UAnimGraphNode_BlendSpacePlayer* Walking = Builder.Add<UAnimGraphNode_BlendSpacePlayer>(-1600, 0, [Movement](UAnimGraphNode_BlendSpacePlayer* Node)
+		{
+			Node->Node.SetBlendSpace(Movement);
+		});
+		Builder.Var(TEXT("Direction"), Walking, TEXT("X"));
+		Builder.Var(TEXT("Speed"), Walking, TEXT("Y"));
+		UAnimSequence* JumpLoop = SwordAnim(TEXT("1HM_JumpInPlace_Loop"));
+		UAnimGraphNode_SequencePlayer* Air = Builder.Add<UAnimGraphNode_SequencePlayer>(-1600, 300, [JumpLoop](UAnimGraphNode_SequencePlayer* Node)
+		{
+			Node->Node.SetSequence(JumpLoop);
+		});
+		UEdGraphNode* Moving = ByBool(Builder, -1250, 100, TEXT("bFalling"), Air, Walking, 0.15f);
+		UAnimGraphNode_SaveCachedPose* Cache = Builder.Add<UAnimGraphNode_SaveCachedPose>(-1000, 100, [](UAnimGraphNode_SaveCachedPose* Node)
+		{
+			Node->CacheName = TEXT("SwordLocomotion");
+		});
+		Builder.Pose(Moving, Cache, TEXT("Pose"));
+		const auto UseCache = [&Builder, Cache](int32 Y)
+		{
+			return Builder.Add<UAnimGraphNode_UseCachedPose>(-800, Y, [Cache](UAnimGraphNode_UseCachedPose* Node)
+			{
+				Node->SaveCachedPoseNode = Cache;
+			});
+		};
+
+		// The guard: the block's pose where it settles, from the spine up (the legs keep walking).
+		UAnimGraphNode_SequenceEvaluator* Guard = Builder.Add<UAnimGraphNode_SequenceEvaluator>(-800, 400, [GuardAnim, GuardTime](UAnimGraphNode_SequenceEvaluator* Node)
+		{
+			Node->Node.SetSequence(GuardAnim);
+			Node->Node.SetExplicitTime(GuardTime);
+		});
+		UAnimGraphNode_LayeredBoneBlend* Guarded = Builder.Add<UAnimGraphNode_LayeredBoneBlend>(-500, 250, [](UAnimGraphNode_LayeredBoneBlend* Node)
+		{
+			Node->Node.bMeshSpaceRotationBlend = true;
+			if (Node->Node.LayerSetup.Num() == 0)
+			{
+				Node->Node.LayerSetup.AddDefaulted();
+			}
+			FBranchFilter Filter;
+			Filter.BoneName = TEXT("spine_01");
+			Filter.BlendDepth = 0;
+			Node->Node.LayerSetup[0].BranchFilters = { Filter };
+		});
+		Builder.Pose(UseCache(200), Guarded, TEXT("BasePose"));
+		Builder.Pose(Guard, Guarded, TEXT("BlendPoses_0"));
+
+		UEdGraphNode* Final = ByBool(Builder, -250, 100, TEXT("bBlocking"), Guarded, UseCache(0), 0.15f);
+		Builder.Pose(Final, Builder.Root(), TEXT("Result"));
+
+		CompileAndSave(Blueprint);
+		return Blueprint->GeneratedClass;
+	}
+
+	void BuildSword()
+	{
+		const bool bRebuild = FParse::Param(FCommandLine::Get(), TEXT("rebuild"));
+		USkeleton* Skeleton = LoadObject<USkeleton>(nullptr, MannySkeletonPath);
+		UVaesenWeaponCategoryDefaults* Defaults = LoadObject<UVaesenWeaponCategoryDefaults>(nullptr, TEXT("/Game/Vaesen/Combat/DA_WeaponCategoryDefaults.DA_WeaponCategoryDefaults"));
+		if (!Skeleton || !Defaults || !RetargetSwordPack())
+		{
+			return;
+		}
+		const FString Folder = SwordFolder;
+
+		// Attacks: light = the four slashes in turn, heavy = the three stabs in turn.
+		struct FSwing { const TCHAR* Anim; const TCHAR* Blocked; };
+		const auto MakeCombo = [](TArrayView<const FSwing> Swings, bool bHeavy, FVaesenMeleeAttack& Attack)
+		{
+			float Recovery = 0.0f, FirstStart = 0.0f, FirstEnd = 0.0f;
+			Attack.ComboSteps.Reset();
+			for (int32 Index = 0; Index < Swings.Num(); ++Index)
+			{
+				float WindowStart = 0.0f, WindowEnd = 0.0f;
+				UAnimMontage* Swing = MakeSwingMontage(Swings[Index].Anim, bHeavy, &WindowEnd, &WindowStart);
+				UAnimMontage* Bounce = Swings[Index].Blocked
+					? MakeMontage(FString(SwordFolder) / (FString(TEXT("AM_")) + Swings[Index].Blocked), SwordAnim(Swings[Index].Blocked), FAnimSlotGroup::DefaultSlotName, 0.08f, 0.3f) : nullptr;
+				if (Bounce)
+				{
+					Save(Bounce);
+				}
+				// Over a moment after the blade has passed (the next swing may start; the follow-through plays out).
+				Recovery = FMath::Max(Recovery, WindowEnd + 0.2f);
+				if (Index == 0)
+				{
+					Attack.Montage = Swing;
+					Attack.BlockedMontage = Bounce;
+					FirstStart = WindowStart;
+					FirstEnd = WindowEnd;
+				}
+				else
+				{
+					FVaesenComboStep& Step = Attack.ComboSteps.AddDefaulted_GetRef();
+					Step.Montage = Swing;
+					Step.BlockedMontage = Bounce;
+				}
+			}
+			Attack.MontageSection = NAME_None;
+			Attack.RecoveryTime = Recovery;
+			Attack.ComboWindow = 0.6f;
+			Attack.HitWindowStart = FirstStart;
+			Attack.HitWindowEnd = FirstEnd;
+		};
+
+		FVaesenCategoryDefaults& Sword = Defaults->Categories.FindOrAdd(EVaesenWeaponCategory::OneHandedSword);
+		const FSwing Slashes[] = { { TEXT("1HM_Slash01"), TEXT("1HM_Slash01_Blocked") }, { TEXT("1HM_Slash02"), TEXT("1HM_Slash02_Blocked") },
+			{ TEXT("1HM_Slash03"), TEXT("1HM_Slash03_Blocked") }, { TEXT("1HM_Slash04"), TEXT("1HM_Slash04_Blocked") } };
+		const FSwing Stabs[] = { { TEXT("1HM_Stab01"), nullptr }, { TEXT("1HM_Stab02"), nullptr }, { TEXT("1HM_Stab03"), nullptr } };
+		MakeCombo(Slashes, false, Sword.LightAttack);
+		MakeCombo(Stabs, true, Sword.HeavyAttack);
+		Sword.bHasHeavyAttack = true;
+		Sword.Montages.Attack = Sword.LightAttack.Montage;
+
+		// The guard: the block raised to where it settles (it holds there in the stance while the block is held), and
+		// the four blocks from the snap into them as the impacts of hits taken on it.
+		UAnimSequence* GuardAnim = SwordAnim(TEXT("1HM_BlockRight"));
+		float GuardTime = 0.4f;
+		if (GuardAnim)
+		{
+			const FSwingTiming Raise = MeasureSwing(GuardAnim);
+			GuardTime = FindSettle(GuardAnim, Raise.PeakTime, Raise.PeakTime + 0.5f);
+			Sword.Montages.Block = MakeTrimmedMontage(TEXT("AM_1HM_Guard"), GuardAnim, UpperBodySlot, 0.0f, GuardTime, 0.1f, 0.12f);
+			UE_LOG(LogVaesenAnimSetup, Display, TEXT("Guard: 1HM_BlockRight held at %.2f s"), GuardTime);
+		}
+		Sword.Montages.BlockImpacts.Reset();
+		for (const TCHAR* Block : { TEXT("1HM_BlockLeft"), TEXT("1HM_BlockRight"), TEXT("1HM_BlockLeftLow"), TEXT("1HM_BlockRightLow") })
+		{
+			if (UAnimSequence* Anim = SwordAnim(Block))
+			{
+				const FSwingTiming Timing = MeasureSwing(Anim);
+				const float Settle = FindSettle(Anim, Timing.PeakTime, Timing.PeakTime + 0.5f);
+				const FString Name = FString(TEXT("AM_")) + Block + TEXT("_Impact");
+				if (UAnimMontage* Impact = MakeTrimmedMontage(*Name, Anim, UpperBodySlot, FMath::Max(Timing.PeakTime - 0.1f, 0.0f), FMath::Min(Settle + 0.3f, Timing.Length), 0.06f, 0.2f))
+				{
+					Sword.Montages.BlockImpacts.Add(Impact);
+				}
+			}
+		}
+
+		// Parried: the swing knocked aside and the swordsman reeling. Hit: a flinch (full body, in place).
+		Sword.Montages.Stagger = MakeMontage(Folder / TEXT("AM_1HM_Stagger"), SwordAnim(TEXT("1HM_HitReact02")), FAnimSlotGroup::DefaultSlotName, 0.08f, 0.25f);
+		Sword.Montages.HitReactions.Reset();
+		for (const TCHAR* Hit : { TEXT("1HM_HitReact01"), TEXT("1HM_HitReact02") })
+		{
+			if (UAnimMontage* Reaction = MakeMontage(Folder / (FString(TEXT("AM_")) + Hit), SwordAnim(Hit), FAnimSlotGroup::DefaultSlotName, 0.05f, 0.25f))
+			{
+				Sword.Montages.HitReactions.Add(Reaction);
+			}
+		}
+		Sword.Montages.HitReactionBehind = MakeMontage(Folder / TEXT("AM_1HM_HitReact_Behind01"), SwordAnim(TEXT("1HM_HitReact_Behind01")), FAnimSlotGroup::DefaultSlotName, 0.05f, 0.25f);
+
+		// Dodges (root motion).
+		Sword.Montages.DodgeForward = MakeMontage(Folder / TEXT("AM_1HM_Evade_Forward"), SwordAnim(TEXT("1HM_Evade_Forward")), FAnimSlotGroup::DefaultSlotName, 0.05f, 0.2f);
+		Sword.Montages.DodgeBack = MakeMontage(Folder / TEXT("AM_1HM_Evade_Back"), SwordAnim(TEXT("1HM_Evade_Back")), FAnimSlotGroup::DefaultSlotName, 0.05f, 0.2f);
+		Sword.Montages.DodgeLeft = MakeMontage(Folder / TEXT("AM_1HM_Evade_Left"), SwordAnim(TEXT("1HM_Evade_Left")), FAnimSlotGroup::DefaultSlotName, 0.05f, 0.2f);
+		Sword.Montages.DodgeRight = MakeMontage(Folder / TEXT("AM_1HM_Evade_Right"), SwordAnim(TEXT("1HM_Evade_Right")), FAnimSlotGroup::DefaultSlotName, 0.05f, 0.2f);
+
+		for (UAnimMontage* Montage : TArray<UAnimMontage*>{ Sword.Montages.Stagger, Sword.Montages.HitReactionBehind, Sword.Montages.DodgeForward,
+			Sword.Montages.DodgeBack, Sword.Montages.DodgeLeft, Sword.Montages.DodgeRight })
+		{
+			if (Montage)
+			{
+				Save(Montage);
+			}
+		}
+		for (UAnimMontage* Montage : Sword.Montages.HitReactions)
+		{
+			Save(Montage);
+		}
+
+		// Drawing from the left hip and sheathing there: the right hand crosses to the hilt (HandIK_Sheath up),
+		// takes it (AN_WeaponGrab) or lets go (AN_WeaponRelease) where it comes nearest the left hip.
+		// A little quicker than the pack plays them: a draw shouldn't keep a fighter waiting.
+		const float HipDrawRate = 1.4f;
+		const FString DrawPath = Folder / TEXT("AM_1HM_DrawFromHip");
+		const bool bNewDraw = !Exists(DrawPath);
+		UAnimSequence* EquipAnim = SwordAnim(TEXT("1HM_Idle_Equip"));
+		const float Grab = EquipAnim ? FindNearest(EquipAnim, TEXT("hand_r"), TEXT("thigh_l"), 0.0f, EquipAnim->GetPlayLength() * 0.7f) : 0.5f;
+		UAnimSequence* DrawAnim = CopyWithSheathCurve(Folder / TEXT("AS_1HM_DrawFromHip"), EquipAnim,
+			{ { 0.0f, 0.0f }, { FMath::Max(Grab - 0.25f, 0.0f), 0.0f }, { Grab - 0.04f, 1.0f }, { Grab + 0.04f, 1.0f }, { Grab + 0.3f, 0.0f } });
+		UAnimMontage* Draw = MakeMontage(DrawPath, DrawAnim, UpperBodySlot, 0.15f, 0.25f, HipDrawRate);
+		if (Draw && bNewDraw)
+		{
+			AddNotify(Draw, NewObject<UAnimNotify_VaesenWeaponGrab>(Draw), Grab);
+			Save(Draw);
+		}
+		const FString SheathPath = Folder / TEXT("AM_1HM_SheathToHip");
+		const bool bNewSheath = !Exists(SheathPath);
+		UAnimSequence* UnequipAnim = SwordAnim(TEXT("1HM_Idle_Unequip"));
+		const float Release = UnequipAnim ? FindNearest(UnequipAnim, TEXT("hand_r"), TEXT("thigh_l"), UnequipAnim->GetPlayLength() * 0.2f, UnequipAnim->GetPlayLength()) : 1.0f;
+		UAnimSequence* SheathAnim = CopyWithSheathCurve(Folder / TEXT("AS_1HM_SheathToHip"), UnequipAnim,
+			{ { 0.0f, 0.0f }, { FMath::Max(Release - 0.3f, 0.0f), 0.0f }, { Release - 0.04f, 1.0f }, { Release + 0.04f, 1.0f }, { Release + 0.25f, 0.0f } });
+		UAnimMontage* Sheath = MakeMontage(SheathPath, SheathAnim, UpperBodySlot, 0.15f, 0.25f, HipDrawRate);
+		if (Sheath && bNewSheath)
+		{
+			AddNotify(Sheath, NewObject<UAnimNotify_VaesenWeaponRelease>(Sheath), Release);
+			Save(Sheath);
+		}
+		for (UAnimMontage* Montage : { Draw, Sheath })
+		{
+			if (Montage && Montage->RateScale != HipDrawRate)
+			{
+				Montage->RateScale = HipDrawRate;
+				Save(Montage);
+			}
+		}
+		UE_LOG(LogVaesenAnimSetup, Display, TEXT("Hip draw: grabs at %.2f s; sheath lets go at %.2f s"), Grab, Release);
+		if (FVaesenSheathLocation* Hip = Defaults->SheathLocations.Find(TEXT("Sheath_HipLeft")))
+		{
+			Hip->DrawMontage = Draw;
+			Hip->SheathMontage = Sheath;
+			Hip->ReferenceGrabPoint = FVector::ZeroVector;
+		}
+
+		// The stance, the fingers round the hilt, and the sword angled in the hand as the pack holds it.
+		Sword.AnimLayer = BuildSwordLocomotion(Skeleton, bRebuild, MakeSwordBlendSpace(bRebuild), GuardAnim, GuardTime);
+		Sword.GripPose = SwordAnim(TEXT("1HM_Idle_Standing"));
+		FTransform InHand;
+		if (ComputeSwordInHand(Skeleton, InHand))
+		{
+			Sword.InHand = InHand;
+		}
+		Save(Defaults);
+	}
 }
 
 UVaesenAnimSetupCommandlet::UVaesenAnimSetupCommandlet()
@@ -1158,11 +1907,17 @@ int32 UVaesenAnimSetupCommandlet::Main(const FString& Params)
 	{
 		return 0;
 	}
+	if (Params.Contains(TEXT("-analyzesword")))
+	{
+		VaesenAnimSetup::AnalyzeSword();
+		return 0;
+	}
 	if (Params.Contains(TEXT("-analyze")))
 	{
 		VaesenAnimSetup::AnalyzeRifle();
 		return 0;
 	}
 	VaesenAnimSetup::BuildRifle();
+	VaesenAnimSetup::BuildSword();
 	return 0;
 }

@@ -592,6 +592,7 @@ namespace VaesenCombatAssets
 			{ TEXT("GA_Throw"), UVaesenGA_Throw::StaticClass() },
 			{ TEXT("GA_Holster"), UVaesenGA_Holster::StaticClass() },
 			{ TEXT("GA_SwapWeapon"), UVaesenGA_SwapWeapon::StaticClass() },
+			{ TEXT("GA_Dodge"), UVaesenGA_Dodge::StaticClass() },
 		};
 		UClass* StaminaCost = LoadBlueprintClass(TEXT("/Game/Vaesen/Combat/Effects/GE_StaminaCost"));
 		UBlueprint* Character = LoadObject<UBlueprint>(nullptr, *ObjectPathOf(PlayerCharacterPath));
@@ -675,6 +676,7 @@ namespace VaesenCombatAssets
 		UInputAction* Swap = GetOrCreateAction(TEXT("IA_SwapWeapon"));
 		UInputAction* Crouch = GetOrCreateAction(TEXT("IA_Crouch"));
 		UInputAction* SwitchGrip = GetOrCreateAction(TEXT("IA_SwitchGrip"));
+		UInputAction* Dodge = GetOrCreateAction(TEXT("IA_Dodge"));
 
 		bool bChanged = false;
 		bChanged |= MapOnce(Mappings, HeavyModifier, EKeys::LeftShift);
@@ -712,6 +714,8 @@ namespace VaesenCombatAssets
 		bChanged |= MapOnce(Mappings, Crouch, EKeys::Gamepad_FaceButton_Right);
 		bChanged |= MapOnce(Mappings, SwitchGrip, EKeys::V);
 		bChanged |= MapOnce(Mappings, SwitchGrip, EKeys::Gamepad_DPad_Down);
+		bChanged |= MapOnce(Mappings, Dodge, EKeys::LeftAlt);
+		bChanged |= MapOnce(Mappings, Dodge, EKeys::Gamepad_RightThumbstick);
 		if (bChanged)
 		{
 			Save(Mappings);
@@ -725,6 +729,7 @@ namespace VaesenCombatAssets
 			{ TEXT("HolsterAction"), Holster }, { TEXT("SwapWeaponAction"), Swap },
 			{ TEXT("CrouchAction"), Crouch },
 			{ TEXT("SwitchGripAction"), SwitchGrip },
+			{ TEXT("DodgeAction"), Dodge },
 		};
 		for (const TPair<const TCHAR*, UInputAction*>& Property : Properties)
 		{

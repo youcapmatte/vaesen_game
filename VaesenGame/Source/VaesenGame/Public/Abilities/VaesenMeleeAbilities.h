@@ -24,8 +24,11 @@ public:
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 
-	/** The attack this would make now, or false if there's none (a heavy attack on a weapon without one). */
+	/** The attack this would make now (the next swing of a combo), or false if there's none (a heavy attack on a weapon without one). */
 	bool ResolveAttack(const FGameplayAbilityActorInfo* ActorInfo, FVaesenMeleeAttack& OutAttack) const;
+
+	/** Which swing of the combo the next attack is (0 = the first). */
+	int32 GetNextComboStep() const;
 
 protected:
 	virtual float GetStaminaCost(const FGameplayAbilityActorInfo* ActorInfo) const override;
@@ -48,6 +51,11 @@ private:
 
 	FVaesenMeleeAttack Attack;
 	bool bWindowOpen = false;
+
+	/** The combo: the swing that comes next, and when the last one was over. */
+	int32 ComboStep = 0;
+	double LastSwingOverTime = -1.0;
+	float ComboWindow = 0.0f;
 	FDelegateHandle HitWindowHandle;
 	FTimerHandle WindowOpenTimer;
 	FTimerHandle WindowCloseTimer;
@@ -99,4 +107,34 @@ private:
 
 	float StaminaPerSecond = 0.0f;
 	bool bParryWindowOpen = false;
+};
+
+/**
+ * GA_Dodge (Left Alt, gamepad right stick click): a quick step out of the way with the drawn weapon, the way the
+ * character is moving (back when standing still), carried by the montage's root motion. Uses the weapon category's
+ * dodge montages; drops a block or aim.
+ */
+UCLASS()
+class VAESENGAME_API UVaesenGA_Dodge : public UVaesenGameplayAbility
+{
+	GENERATED_BODY()
+
+public:
+	UVaesenGA_Dodge();
+
+	virtual bool CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags,
+		const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const override;
+	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
+
+	/** The montage for a dodge the way Character is moving now (null = it can't dodge that way). */
+	static UAnimMontage* ChooseMontage(const AVaesenBaseCharacter* Character, const UVaesenWeaponItem* Weapon);
+
+protected:
+	virtual float GetStaminaCost(const FGameplayAbilityActorInfo* ActorInfo) const override { return StaminaCost; }
+
+	UPROPERTY(EditDefaultsOnly, Category = "Dodge", meta = (ClampMin = "0"))
+	float StaminaCost = 15.0f;
+
+private:
+	void FinishDodge();
 };

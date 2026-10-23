@@ -23,7 +23,9 @@ enum class EVaesenAbilityInput : uint8
 	/** H: draw or sheathe. */
 	Holster,
 	/** Q: draw the other carried weapon. */
-	SwapWeapon
+	SwapWeapon,
+	/** Left Alt: dodge (the way the character is moving; back when standing still). */
+	Dodge
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FVaesenDamageReported, const FVaesenDamageReport&, Report);

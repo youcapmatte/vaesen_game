@@ -13,7 +13,9 @@
 #include "Combat/VaesenCombatLibrary.h"
 #include "Combat/VaesenGameplayEffects.h"
 #include "Combat/VaesenGameplayTags.h"
+#include "Items/VaesenMeleeWeaponItem.h"
 #include "Items/VaesenWeaponItem.h"
+#include "Animation/AnimInstance.h"
 #include "Kismet/GameplayStatics.h"
 #include "Weapons/VaesenWeaponActor.h"
 #include "Animation/AnimMontage.h"
@@ -54,7 +56,7 @@ AVaesenBaseCharacter::AVaesenBaseCharacter()
 		UVaesenGA_FireWeapon::StaticClass(), UVaesenGA_Reload::StaticClass(), UVaesenGA_CycleAction::StaticClass(),
 		UVaesenGA_Aim::StaticClass(), UVaesenGA_DrawBow::StaticClass(), UVaesenGA_MeleeLight::StaticClass(),
 		UVaesenGA_MeleeHeavy::StaticClass(), UVaesenGA_Block::StaticClass(), UVaesenGA_Throw::StaticClass(),
-		UVaesenGA_Holster::StaticClass(), UVaesenGA_SwapWeapon::StaticClass(),
+		UVaesenGA_Holster::StaticClass(), UVaesenGA_SwapWeapon::StaticClass(), UVaesenGA_Dodge::StaticClass(),
 	};
 	// Item subobjects (equipped items, and inventories on subclasses) replicate through the registered list.
 	bReplicateUsingRegisteredSubObjectList = true;
@@ -132,7 +134,7 @@ void AVaesenBaseCharacter::BeginPlay()
 
 	AbilitySystem->InitAbilityActorInfo(this, this);
 	for (const FGameplayTag& Tag : TArray<FGameplayTag>{ VaesenTags::State_Blocking, VaesenTags::State_Aiming, VaesenTags::State_DrawingBow,
-		VaesenTags::State_Throwing, VaesenTags::State_Staggered })
+		VaesenTags::State_Throwing, VaesenTags::State_Staggered, VaesenTags::State_Attacking })
 	{
 		AbilitySystem->RegisterGameplayTagEvent(Tag, EGameplayTagEventType::NewOrRemoved).AddUObject(this, &AVaesenBaseCharacter::OnCombatStateChanged);
 	}
@@ -202,6 +204,12 @@ void AVaesenBaseCharacter::OnCombatStateChanged(const FGameplayTag Tag, int32 Ne
 	{
 		Scale = FMath::Min(Scale, AimingSpeedScale);
 	}
+	// Swinging a melee weapon (the attack animations step with the whole body; firing a gun doesn't slow).
+	const UVaesenWeaponItem* Drawn = Equipment ? Equipment->GetDrawnWeapon() : nullptr;
+	if (AbilitySystem->HasMatchingGameplayTag(VaesenTags::State_Attacking) && !(Drawn && Drawn->IsRanged()))
+	{
+		Scale = FMath::Min(Scale, SwingingSpeedScale);
+	}
 	if (AbilitySystem->HasMatchingGameplayTag(VaesenTags::State_Staggered))
 	{
 		Scale = FMath::Min(Scale, StaggeredSpeedScale);
@@ -256,8 +264,90 @@ void AVaesenBaseCharacter::HandleGameplayCue(AActor* Self, FGameplayTag Gameplay
 		{
 			PlayVocal(true);
 		}
+
+		// The bodies answer: a flinch, or the guard beating the blow aside (and a blocked swing bouncing off).
+		AActor* Attacker = Parameters.EffectContext.GetInstigator();
+		if (!bReduced && Parameters.RawMagnitude > 0.0f)
+		{
+			PlayHitReaction(Attacker ? Attacker->GetActorLocation() : FVector(Parameters.Location));
+		}
+		else if (bReduced)
+		{
+			PlayBlockImpact();
+			if (AVaesenBaseCharacter* Swinger = Cast<AVaesenBaseCharacter>(Attacker);
+				Swinger && Swinger != this && GameplayCueTag.MatchesTagExact(VaesenTags::GameplayCue_Hit_Blocked))
+			{
+				Swinger->PlaySwingBlocked();
+			}
+		}
 	}
 	IGameplayCueInterface::HandleGameplayCue(Self, GameplayCueTag, EventType, Parameters);
+}
+
+namespace
+{
+	/** One of Montages at random (null if there are none). */
+	UAnimMontage* PickOne(const TArray<TObjectPtr<UAnimMontage>>& Montages)
+	{
+		return Montages.Num() > 0 ? Montages[FMath::RandRange(0, Montages.Num() - 1)].Get() : nullptr;
+	}
+}
+
+void AVaesenBaseCharacter::PlayHitReaction(const FVector& From)
+{
+	static const FGameplayTagContainer Busy = FGameplayTagContainer::CreateFromArray(TArray<FGameplayTag>{
+		VaesenTags::State_Attacking, VaesenTags::State_Blocking, VaesenTags::State_Dodging, VaesenTags::State_Dead });
+	if (GetNetMode() == NM_DedicatedServer || (AbilitySystem && AbilitySystem->HasAnyMatchingGameplayTags(Busy)))
+	{
+		return;
+	}
+	const UVaesenWeaponItem* Weapon = Equipment ? Equipment->GetDrawnWeapon() : nullptr;
+	const FVaesenWeaponMontages& Montages = Weapon ? Weapon->GetCategoryDefaults().Montages
+		: UVaesenWeaponCategoryDefaults::Get()->GetCategory(EVaesenWeaponCategory::Unarmed).Montages;
+	const bool bFromBehind = FVector::DotProduct((From - GetActorLocation()).GetSafeNormal2D(), GetActorForwardVector()) < -0.3f;
+	UAnimMontage* Reaction = bFromBehind && Montages.HitReactionBehind ? Montages.HitReactionBehind.Get() : PickOne(Montages.HitReactions);
+	if (Reaction)
+	{
+		PlayAnimMontage(Reaction);
+	}
+}
+
+void AVaesenBaseCharacter::PlayBlockImpact()
+{
+	const UVaesenWeaponItem* Weapon = Equipment ? Equipment->GetDrawnWeapon() : nullptr;
+	if (UAnimMontage* Impact = Weapon && GetNetMode() != NM_DedicatedServer ? PickOne(Weapon->GetCategoryDefaults().Montages.BlockImpacts) : nullptr)
+	{
+		PlayAnimMontage(Impact);
+	}
+}
+
+void AVaesenBaseCharacter::PlaySwingBlocked()
+{
+	const UVaesenMeleeWeaponItem* Weapon = Equipment ? Cast<UVaesenMeleeWeaponItem>(Equipment->GetDrawnWeapon()) : nullptr;
+	UAnimInstance* Anim = GetMesh()->GetAnimInstance();
+	if (!Weapon || !Anim)
+	{
+		return;
+	}
+	// The swing playing now (it may already be stopping: the server cancels the attack), bounced off.
+	const UAnimMontage* Swing = Anim->GetCurrentActiveMontage();
+	for (const FAnimMontageInstance* Instance : Anim->MontageInstances)
+	{
+		if (Instance && Instance->Montage && Weapon->GetBlockedMontage(Instance->Montage))
+		{
+			Swing = Instance->Montage;
+		}
+	}
+	if (UAnimMontage* Bounce = Weapon->GetBlockedMontage(Swing))
+	{
+		// From as far into the bounce as the swing had got (they start alike).
+		float Position = 0.0f;
+		if (const FAnimMontageInstance* Instance = Anim->GetActiveInstanceForMontage(Swing))
+		{
+			Position = Instance->GetPosition();
+		}
+		Anim->Montage_Play(Bounce, 1.0f, EMontagePlayReturnType::MontageLength, FMath::Min(Position, Bounce->GetPlayLength() * 0.5f));
+	}
 }
 
 void AVaesenBaseCharacter::PlayVocal(bool bPain)
@@ -280,6 +370,12 @@ bool AVaesenBaseCharacter::ReplaceDefaultAbility(UClass* From, UClass* To)
 			Ability = To;
 			bReplaced = true;
 		}
+	}
+	// One added since the Blueprint saved its list (the dodge): granted too.
+	if (!bReplaced && To && To->IsChildOf(UVaesenGameplayAbility::StaticClass()) && !DefaultAbilities.Contains(To))
+	{
+		DefaultAbilities.Add(To);
+		bReplaced = true;
 	}
 	return bReplaced;
 }

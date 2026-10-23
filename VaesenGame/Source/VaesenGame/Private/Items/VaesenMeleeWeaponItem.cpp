@@ -55,3 +55,31 @@ const FVaesenBlockProfile& UVaesenMeleeWeaponItem::GetBlockProfile() const
 	}
 	return bOverrideBlockProfile ? BlockProfile : Super::GetBlockProfile();
 }
+
+UAnimMontage* UVaesenMeleeWeaponItem::GetBlockedMontage(const UAnimMontage* Swing) const
+{
+	if (!Swing)
+	{
+		return nullptr;
+	}
+	for (const bool bHeavy : { false, true })
+	{
+		FVaesenMeleeAttack Attack;
+		if (!GetAttack(bHeavy, Attack))
+		{
+			continue;
+		}
+		if (Attack.Montage == Swing)
+		{
+			return Attack.BlockedMontage;
+		}
+		for (const FVaesenComboStep& Step : Attack.ComboSteps)
+		{
+			if (Step.Montage == Swing)
+			{
+				return Step.BlockedMontage;
+			}
+		}
+	}
+	return nullptr;
+}

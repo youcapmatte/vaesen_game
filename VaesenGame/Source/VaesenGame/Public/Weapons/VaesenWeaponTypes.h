@@ -187,6 +187,44 @@ struct FVaesenWeaponMontages
 	/** Knocked off balance by a parry. */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
 	TObjectPtr<UAnimMontage> Stagger;
+
+	/** A hit taken on the block (or parried): the weapon beats it aside. One is picked at random. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
+	TArray<TObjectPtr<UAnimMontage>> BlockImpacts;
+
+	/** Hit from the front (full body). One is picked at random. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
+	TArray<TObjectPtr<UAnimMontage>> HitReactions;
+
+	/** Hit from behind. Empty = a front one. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
+	TObjectPtr<UAnimMontage> HitReactionBehind;
+
+	/** Dodging (root motion carries the character). Each empty one = no dodge that way. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|Dodge")
+	TObjectPtr<UAnimMontage> DodgeForward;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|Dodge")
+	TObjectPtr<UAnimMontage> DodgeBack;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|Dodge")
+	TObjectPtr<UAnimMontage> DodgeLeft;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation|Dodge")
+	TObjectPtr<UAnimMontage> DodgeRight;
+};
+
+/** A follow-up swing in a combo: its montage, and the same swing bouncing off a block. */
+USTRUCT(BlueprintType)
+struct FVaesenComboStep
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack")
+	TObjectPtr<UAnimMontage> Montage;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack")
+	TObjectPtr<UAnimMontage> BlockedMontage;
 };
 
 /**
@@ -205,6 +243,22 @@ struct FVaesenMeleeAttack
 	/** Section of the montage to play (None = from the start). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack")
 	FName MontageSection;
+
+	/** The swing bouncing off a block (played instead of the rest of the swing). Empty = the swing just stops. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack")
+	TObjectPtr<UAnimMontage> BlockedMontage;
+
+	/** Swings that follow this one when attacking again soon after (a combo); after the last it starts over. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack")
+	TArray<FVaesenComboStep> ComboSteps;
+
+	/** How long after a swing is over the next attack still continues the combo. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack", meta = (ClampMin = "0", Units = "s"))
+	float ComboWindow = 0.6f;
+
+	/** The swing is over this long after it starts: the next can begin while the follow-through plays out. 0 = the whole montage. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack", meta = (ClampMin = "0", Units = "s"))
+	float RecoveryTime = 0.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Attack")
 	FVaesenDamagePacket Damage;

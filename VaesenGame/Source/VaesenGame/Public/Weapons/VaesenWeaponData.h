@@ -169,6 +169,13 @@ struct FVaesenCategoryDefaults
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Category")
 	TObjectPtr<UAnimSequenceBase> GripPose;
 
+	/**
+	 * How this category's weapons sit in the hand, from the hand socket (its animation pack holds them so: a sword's
+	 * blade angled as the pack's sword is). A weapon's own Hold.InHand is applied on top.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Category")
+	FTransform InHand;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Category")
 	FVaesenWeaponMontages Montages;
 
