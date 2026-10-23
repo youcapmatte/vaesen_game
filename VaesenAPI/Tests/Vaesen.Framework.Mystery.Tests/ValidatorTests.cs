@@ -164,6 +164,20 @@ public sealed class ValidatorTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void A_tie_may_reach_anyone_in_the_Society_world_but_not_nobody()
+    {
+        var packet = SampleCase();
+        packet.Cast[0].Relationships = [new CastRelationship { CharacterId = "npc-sara-lindqvist" }, new CastRelationship { CharacterId = "npc-nobody" }];
+        var context = ContextFor(packet);
+        var withWorld = new ValidationContext { Pack = context.Pack, Level = context.Level, Vaesen = context.Vaesen, Conflict = context.Conflict, SocietyCharacterIds = ["npc-sara-lindqvist"] };
+
+        var issues = new CaseValidator().Validate(packet, withWorld, CheckScope.Cast);
+
+        Assert.DoesNotContain(issues, i => i.Explanation.Contains("npc-sara-lindqvist", StringComparison.Ordinal));
+        Assert.Contains(issues, i => !i.IsError && i.Explanation.Contains("'npc-nobody', who is not in the cast or the Society's world", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void Giveaway_and_deep_lore_are_derived_from_the_lore_ids()
     {
         var packet = SampleCase();

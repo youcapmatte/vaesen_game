@@ -8,3 +8,4 @@ Build the skeleton of the dispute behind this case.
 - The obvious folklore reading of why the creature turned may be kept as a decoy (decoyReading); then build the real cause from its deep lore.
 - truthSummary tells the whole hidden truth in one or two paragraphs: what happened, who did what and why, and what the creature is doing about it.
 - If nothing plausible fits this creature, level and conflict, set impossible to true and say why; the case will be re-rolled. Do not force it.
+- The focus (in the assignment) says where the difficulty lies. If this creature cannot carry it here (for example its identity is plain from its first signs, so identity cannot be the puzzle), set focusUnsuitable to true and say why; only the focus will be changed.

@@ -20,6 +20,7 @@
     "affliction",
     "bargainInvited"
   ],
+  "supportedFoci": [ "what", "whoWhy", "how" ],
   "resolutionShape": "notNegotiable",
   "originSet": [
     {

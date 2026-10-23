@@ -112,6 +112,11 @@ function CaseFile({ stored, onChanged }: { stored: StoredCase; onChanged: (next:
             : <Badge color="blood" variant="light">Failed · {errors} error{errors === 1 ? "" : "s"}</Badge>}
           <StatusBadge status={p.validation.passed ? stored.status : "rejected"} />
         </Group>
+        {stored.failedStep && (
+          <Text fz="sm" c="blood.3" mt={4}>
+            The {stored.failedStep} step gave up: the case stops there. Its last attempt is in the review tab.
+          </Text>
+        )}
         <Box mt="sm"><TableButton mysteryId={p.mysteryId} playable={canClose} /></Box>
         {canClose && (
           <Button mt="sm" size="xs" variant="outline" color="gold" leftSection={<IconBook2 size={14} />} onClick={openClose}>
@@ -403,13 +408,14 @@ function ReviewTab({ stored }: { stored: StoredCase }) {
         </Text>
         <Table fz="xs" striped withRowBorders={false}>
           <Table.Thead>
-            <Table.Tr><Table.Th>Step</Table.Th><Table.Th>Try</Table.Th><Table.Th>Result</Table.Th><Table.Th ta="right">Out</Table.Th><Table.Th ta="right">Seconds</Table.Th></Table.Tr>
+            <Table.Tr><Table.Th>Step</Table.Th><Table.Th>Try</Table.Th><Table.Th>Kind</Table.Th><Table.Th>Result</Table.Th><Table.Th ta="right">Out</Table.Th><Table.Th ta="right">Seconds</Table.Th></Table.Tr>
           </Table.Thead>
           <Table.Tbody>
             {stored.log.map((e, i) => (
               <Table.Tr key={i}>
                 <Table.Td>{e.caseAttempt > 0 ? `draft ${e.caseAttempt + 1}: ` : ""}{e.step}</Table.Td>
                 <Table.Td>{e.attempt + 1}</Table.Td>
+                <Table.Td>{e.kind ?? "full"}</Table.Td>
                 <Table.Td>{e.passed ? "passed" : e.error ?? [...new Set(e.issues.filter((x) => x.severity === "error").map((x) => x.code))].join(", ")}</Table.Td>
                 <Table.Td ta="right">{e.outputTokens.toLocaleString()}</Table.Td>
                 <Table.Td ta="right">{(e.latencyMs / 1000).toFixed(0)}</Table.Td>

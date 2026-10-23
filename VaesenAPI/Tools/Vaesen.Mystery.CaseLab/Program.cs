@@ -117,7 +117,7 @@ async Task<int> Generate()
             }
 
             var report = Path.Combine(folder, name + (result.Success ? ".md" : ".failed.md"));
-            File.WriteAllText(report, CaseReport.ToMarkdown(stored.Packet, stored.Brief, stored.Log));
+            File.WriteAllText(report, CaseReport.ToMarkdown(stored));
             Console.WriteLine($"  -> {report}");
         }
 
@@ -178,7 +178,7 @@ int Report()
         return 1;
     }
 
-    Console.WriteLine(CaseReport.ToMarkdown(stored.Packet, stored.Brief, stored.Log));
+    Console.WriteLine(CaseReport.ToMarkdown(stored));
     return 0;
 }
 

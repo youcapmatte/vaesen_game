@@ -374,7 +374,7 @@ public sealed class MysteryService(
             s.AppendLine();
             s.AppendLine("---");
             s.AppendLine();
-            s.Append(CaseReport.ToMarkdown(one.Packet, one.Brief, one.Log));
+            s.Append(CaseReport.ToMarkdown(one));
         }
 
         return ret.Ok(new MysteryExport { FileName = $"nexus-mysteries-{stamp}.md", ContentType = "text/markdown", Content = s.ToString() });
@@ -448,7 +448,7 @@ public sealed class MysteryService(
         var ret = new ResultBase<string>();
         var stored = await GetAsync(caller, mysteryId, cancellationToken).ConfigureAwait(false);
         return stored.Success
-            ? ret.Ok(CaseReport.ToMarkdown(stored.Result!.Packet, stored.Result.Brief, stored.Result.Log))
+            ? ret.Ok(CaseReport.ToMarkdown(stored.Result!))
             : ret.Fail(stored.ErrorMessage, stored.ErrorCode);
     }
 

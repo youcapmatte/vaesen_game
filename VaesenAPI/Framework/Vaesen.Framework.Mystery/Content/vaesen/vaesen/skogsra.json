@@ -21,6 +21,7 @@
     "selfOriginatingGrievance",
     "provokedOnly"
   ],
+  "supportedFoci": [ "what", "whoWhy", "how" ],
   "resolutionShape": "negotiable",
   "originSet": [
     {

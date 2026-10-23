@@ -159,6 +159,8 @@ export interface CasePacket {
 export interface GenerationLogEntry {
   caseAttempt: number;
   step: string;
+  /** full: the whole step; fresh: a restart after it gave up; patch: only the items with problems; check: the whole-case checks. */
+  kind: "full" | "fresh" | "patch" | "check";
   attempt: number;
   model?: string | null;
   inputTokens: number;
@@ -186,6 +188,8 @@ export interface StoredCase {
   prompts: { system: string; context: string };
   status: CaseStatus;
   closing?: CaseClosing | null;
+  /** For a rejected case: the step that gave up. */
+  failedStep?: string | null;
 }
 
 export interface CloseMysteryRequest {

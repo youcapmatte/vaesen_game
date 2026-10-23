@@ -46,6 +46,42 @@ public sealed class AssignmentTests
     }
 
     [Fact]
+    public void A_creature_is_only_given_a_focus_it_supports()
+    {
+        var pack = ContentTests.LoadPack();
+        pack.Vaesen = [pack.FindVaesen("nisse")!];
+        var foci = Enumerable.Range(0, 300)
+            .Select(seed => Assignment.Assign(pack, new SocietyHistory { SocietyId = "s" }, pack.Levels.First(l => ContentValidator.LevelFits(l, pack.Vaesen[0], pack.Vocabulary)).Month, seed, new MysteryOptions()).Focus)
+            .ToHashSet();
+
+        // A farm nisse is plain from its first signs: never an identity puzzle.
+        Assert.DoesNotContain(CaseFocus.What, foci);
+        Assert.Contains(CaseFocus.How, foci);
+        Assert.Equal(CaseFocus.WhoWhy, Assignment.SupportedFocus(pack.Vaesen[0], CaseFocus.What, hiddenHand: true));
+        Assert.Equal(CaseFocus.How, Assignment.SupportedFocus(pack.Vaesen[0], CaseFocus.What, hiddenHand: false));
+        Assert.Equal(CaseFocus.How, Assignment.SupportedFocus(pack.Vaesen[0], CaseFocus.WhoWhy, hiddenHand: true, exclude: [CaseFocus.WhoWhy]));
+    }
+
+    [Fact]
+    public void Persistent_characters_who_belong_to_the_place_come_first()
+    {
+        var level = Pack.FindLevel("level-forsby-october")!;
+        CharacterInstance Person(string id, string home, string linkPlace = "", string? mysteryId = null) => new()
+        {
+            Id = id,
+            Home = home,
+            NetworkLinks = linkPlace.Length == 0 ? [] : [new NetworkLink { TargetId = "x", Place = linkPlace }],
+            Memories = mysteryId is null ? [] : [new MemoryEntry { MysteryId = mysteryId, Text = "was there" }],
+        };
+        var recent = new HashSet<string> { "m9" };
+
+        Assert.Equal(3, PromptBuilder.Relevance(Person("a", "Forsby"), level, recent));
+        Assert.Equal(2, PromptBuilder.Relevance(Person("b", "Stockholm", linkPlace: "Tämnaren"), level, recent));
+        Assert.Equal(1, PromptBuilder.Relevance(Person("c", "Lund", mysteryId: "m9"), level, recent));
+        Assert.Equal(0, PromptBuilder.Relevance(Person("d", "Lund"), level, recent));
+    }
+
+    [Fact]
     public void A_creature_faced_recently_is_on_cooldown()
     {
         var history = History("nack", "werewolf", "nisse");

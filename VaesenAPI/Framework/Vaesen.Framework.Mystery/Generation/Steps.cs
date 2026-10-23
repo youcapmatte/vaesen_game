@@ -24,6 +24,9 @@ public static class StepErrorCodes
 
     /// <summary>The model said nothing plausible fits; the whole case should be re-rolled.</summary>
     public const string Reroll = "reroll";
+
+    /// <summary>The model said the focus does not suit this creature here; only the focus is re-rolled.</summary>
+    public const string RerollFocus = "reroll_focus";
 }
 
 /// <summary>
@@ -132,10 +135,10 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
             var repairs = EnumRepair.Normalize(output);
             var packet = draft.ClonePacket();
             var applyIssues = Apply(draft, packet, output);
-            if (applyIssues.Exists(i => i.Code == StepErrorCodes.Reroll))
+            if (applyIssues.Find(i => i.Code is StepErrorCodes.Reroll or StepErrorCodes.RerollFocus) is { } reroll)
             {
                 entry.Issues = applyIssues;
-                return ret.Fail(applyIssues.First(i => i.Code == StepErrorCodes.Reroll).Explanation, StepErrorCodes.Reroll);
+                return ret.Fail(reroll.Explanation, reroll.Code);
             }
 
             var context = draft.ValidationContext;
@@ -201,6 +204,11 @@ public sealed class ConflictStep(IMysteryModel model, ICoherenceValidator valida
         if (output.Impossible)
         {
             return [CoherenceIssue.Error(StepErrorCodes.Reroll, "conflict", output.ImpossibleReason ?? "Nothing plausible fits.")];
+        }
+
+        if (output.FocusUnsuitable)
+        {
+            return [CoherenceIssue.Error(StepErrorCodes.RerollFocus, "truth.focus", output.FocusUnsuitableReason ?? $"The focus {draft.Brief.Focus} does not suit this creature here.")];
         }
 
         packet.Title = output.Title;

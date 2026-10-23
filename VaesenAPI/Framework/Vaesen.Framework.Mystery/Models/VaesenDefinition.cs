@@ -30,6 +30,13 @@ public sealed class VaesenDefinition : ContentRecord
     [JsonProperty("reasonKinds")]
     public List<string> ReasonKinds { get; set; } = [];
 
+    /// <summary>
+    /// The case foci (<see cref="CaseFocus"/>) this creature can carry; empty means all. A farm nisse is recognised from
+    /// its first signs, so its identity cannot really be the puzzle: it supports whoWhy and how, not what.
+    /// </summary>
+    [JsonProperty("supportedFoci")]
+    public List<string> SupportedFoci { get; set; } = [];
+
     /// <summary><see cref="ResolutionShapes"/>: can its grievance be answered, or does depth move to a hidden hand?</summary>
     [JsonProperty("resolutionShape")]
     public string ResolutionShape { get; set; } = ResolutionShapes.Negotiable;

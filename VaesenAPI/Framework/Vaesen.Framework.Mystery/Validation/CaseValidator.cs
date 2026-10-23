@@ -307,9 +307,11 @@ public sealed class CaseValidator : ICoherenceValidator
                     Error(IssueCodes.Schema, at, $"Action '{action.Id}' has unknown desperation '{action.Desperation}'.{CoherenceIssue.Allowed(DesperationTiers.All)}");
                 }
 
-                foreach (var rel in member.Relationships.Where(r => packet.FindCast(r.CharacterId) is null))
+                // Ties may reach anyone in the Society's world, not only this case's cast.
+                foreach (var rel in member.Relationships.Where(r => packet.FindCast(r.CharacterId) is null
+                    && !context.SocietyCharacterIds.Contains(r.CharacterId) && context.Pack.FindCharacter(r.CharacterId) is null))
                 {
-                    Warn(IssueCodes.UnknownReference, at, $"Relationship to '{rel.CharacterId}', who is not in the cast.");
+                    Warn(IssueCodes.UnknownReference, at, $"Relationship to '{rel.CharacterId}', who is not in the cast or the Society's world.");
                 }
             }
 

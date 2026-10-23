@@ -123,6 +123,11 @@ public static class ContentValidator
             issues.Add(CoherenceIssue.Error(IssueCodes.Content, at, "No reason kinds."));
         }
 
+        foreach (var focus in v.SupportedFoci.Where(f => !CaseFocus.All.Contains(f)))
+        {
+            issues.Add(CoherenceIssue.Error(IssueCodes.Content, at, $"Unknown focus '{focus}'.{CoherenceIssue.Allowed(CaseFocus.All)}"));
+        }
+
         if (!ResolutionShapes.All.Contains(v.ResolutionShape))
         {
             issues.Add(CoherenceIssue.Error(IssueCodes.Content, at, $"Unknown resolution shape '{v.ResolutionShape}'.{CoherenceIssue.Allowed(ResolutionShapes.All)}"));

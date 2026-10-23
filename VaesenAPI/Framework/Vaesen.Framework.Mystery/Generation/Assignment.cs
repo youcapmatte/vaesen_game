@@ -141,9 +141,33 @@ public static class Assignment
                 : PlotCentreKinds.Provocation;
 
         var roll = random.NextDouble();
-        brief.Focus = brief.HiddenHand
+        var preferred = brief.HiddenHand
             ? roll < 0.75 ? CaseFocus.WhoWhy : CaseFocus.How
             : roll < 0.7 ? CaseFocus.What : CaseFocus.How;
+        brief.Focus = SupportedFocus(vaesen, preferred, brief.HiddenHand);
+    }
+
+    /// <summary>
+    /// The preferred focus if the creature supports it, otherwise the nearest it does: with a hidden hand whoWhy, else
+    /// how, else what it lists first.
+    /// </summary>
+    public static string SupportedFocus(VaesenDefinition vaesen, string preferred, bool hiddenHand, IReadOnlyCollection<string>? exclude = null)
+    {
+        var supported = (vaesen.SupportedFoci.Count == 0 ? CaseFocus.All : vaesen.SupportedFoci)
+            .Where(f => exclude is null || !exclude.Contains(f))
+            .ToList();
+        if (supported.Count == 0)
+        {
+            return preferred;
+        }
+
+        if (supported.Contains(preferred))
+        {
+            return preferred;
+        }
+
+        var order = hiddenHand ? new[] { CaseFocus.WhoWhy, CaseFocus.How, CaseFocus.What } : [CaseFocus.How, CaseFocus.WhoWhy, CaseFocus.What];
+        return order.First(supported.Contains);
     }
 
     /// <summary>A weighted hook channel and a hook-giver type, both kept off what the Society saw last.</summary>

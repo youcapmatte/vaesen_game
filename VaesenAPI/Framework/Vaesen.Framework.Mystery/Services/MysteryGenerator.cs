@@ -285,6 +285,7 @@ public sealed class MysteryGenerator(
         var from = 0;
         IReadOnlyList<CoherenceIssue> feedback = [];
         var reworkedEarlier = false;
+        var triedFoci = new List<string>();
         while (true)
         {
             ResultBase failed = ret.Ok();
@@ -304,6 +305,26 @@ public sealed class MysteryGenerator(
             if (failed.Success)
             {
                 return failed;
+            }
+
+            // The conflict step said the focus does not suit the creature here: change only the focus (fixes, section 8).
+            if (failed.ErrorCode == StepErrorCodes.RerollFocus)
+            {
+                triedFoci.Add(draft.Brief.Focus);
+                var next = Assignment.SupportedFocus(draft.Vaesen, draft.Brief.Focus, draft.Brief.HiddenHand, triedFoci);
+                if (triedFoci.Contains(next))
+                {
+                    return ret.Fail($"No focus suits {draft.Vaesen.Name} here: {failed.ErrorMessage}", StepErrorCodes.Reroll);
+                }
+
+                logger.LogInformation("The focus {Focus} does not suit {Vaesen}; trying {Next}", draft.Brief.Focus, draft.Vaesen.Id, next);
+                draft.Brief.Focus = next;
+                draft.Packet.Truth.Focus = next;
+                draft.CaseContext = PromptBuilder.CaseContext(draft);
+                draft.FailedStep = null;
+                from = 0;
+                feedback = [];
+                continue;
             }
 
             if (failed.ErrorCode != StepErrorCodes.StepFailed || reworkedEarlier)

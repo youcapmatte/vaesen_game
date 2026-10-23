@@ -12,12 +12,21 @@ namespace Vaesen.Framework.Mystery.Services;
 /// </summary>
 public static class CaseReport
 {
-    public static string ToMarkdown(CasePacket p, AssignmentBrief? brief = null, IReadOnlyList<GenerationLogEntry>? log = null)
+    /// <summary>A stored case with its brief, its log and, if it was rejected, the step that gave up.</summary>
+    public static string ToMarkdown(Data.StoredCase stored) => ToMarkdown(stored.Packet, stored.Brief, stored.Log, stored.FailedStep);
+
+    public static string ToMarkdown(CasePacket p, AssignmentBrief? brief = null, IReadOnlyList<GenerationLogEntry>? log = null, string? failedStep = null)
     {
         var s = new StringBuilder();
         var inv = CultureInfo.InvariantCulture;
         s.AppendLine(inv, $"# {p.Title}");
         s.AppendLine();
+        if (failedStep is not null)
+        {
+            s.AppendLine(inv, $"> **Rejected: the {failedStep} step gave up.** What follows is the case as far as it got; the last attempt of {failedStep} is at the end, under \"Where it failed\".");
+            s.AppendLine();
+        }
+
         s.AppendLine(inv, $"> Spoilers: this is the hidden GM file. `{p.MysteryId}`, generated {p.GeneratedAt:yyyy-MM-dd HH:mm} UTC by {p.Models.Creative}{(string.IsNullOrEmpty(p.Models.Critic) ? "" : $", critic {p.Models.Critic}")}.");
         s.AppendLine();
         s.AppendLine(inv, $"- **Level:** {p.Brief.LevelId}, month {p.Brief.Month}");
@@ -156,15 +165,36 @@ public static class CaseReport
         if (log is { Count: > 0 })
         {
             Section(s, "Generation log");
-            s.AppendLine("| case | step | try | passed | in | cached | out | ms | issues |");
-            s.AppendLine("|---|---|---|---|---|---|---|---|---|");
+            s.AppendLine("| case | step | try | kind | passed | in | cached | out | ms | issues |");
+            s.AppendLine("|---|---|---|---|---|---|---|---|---|---|");
             foreach (var e in log)
             {
-                s.AppendLine(inv, $"| {e.CaseAttempt} | {e.Step} | {e.Attempt} | {(e.Passed ? "yes" : "no")} | {e.InputTokens} | {e.CacheReadTokens} | {e.OutputTokens} | {e.LatencyMs} | {(e.Error ?? string.Join("; ", e.Issues.Where(i => i.IsError).Select(i => i.Code).Distinct()))} |");
+                s.AppendLine(inv, $"| {e.CaseAttempt} | {e.Step} | {e.Attempt} | {e.Kind} | {(e.Passed ? "yes" : "no")} | {e.InputTokens} | {e.CacheReadTokens} | {e.OutputTokens} | {e.LatencyMs} | {(e.Error ?? string.Join("; ", e.Issues.Where(i => i.IsError).Select(i => i.Code).Distinct()))} |");
             }
 
             s.AppendLine();
-            s.AppendLine(inv, $"Total: {log.Sum(e => e.InputTokens)} input ({log.Sum(e => e.CacheReadTokens)} cached), {log.Sum(e => e.OutputTokens)} output tokens, {log.Sum(e => e.LatencyMs) / 1000.0:0.0} s.");
+            s.AppendLine(inv, $"Total: {log.Count(e => e.Kind != LogEntryKinds.Check)} calls ({log.Count(e => e.Kind == LogEntryKinds.Patch)} patches), {log.Sum(e => e.InputTokens)} input ({log.Sum(e => e.CacheReadTokens)} cached), {log.Sum(e => e.OutputTokens)} output tokens, {log.Sum(e => e.LatencyMs) / 1000.0:0.0} s.");
+
+            // A rejected case: the failed step's last attempt, with its problems and its answer as it came back.
+            var lastTry = failedStep is null ? null : log.LastOrDefault(e => e.Step == failedStep);
+            if (lastTry is not null)
+            {
+                Section(s, "Where it failed");
+                s.AppendLine(inv, $"The {failedStep} step's last attempt (try {lastTry.Attempt}, {lastTry.Kind}):");
+                s.AppendLine();
+                foreach (var i in lastTry.Issues.OrderBy(i => i.IsError ? 0 : 1))
+                {
+                    s.AppendLine(inv, $"- {(i.IsError ? "**error**" : "warning")} `{i.Code}` at {i.Location}: {i.Explanation}");
+                }
+
+                if (!string.IsNullOrWhiteSpace(lastTry.Output))
+                {
+                    s.AppendLine();
+                    s.AppendLine("```json");
+                    s.AppendLine(lastTry.Output);
+                    s.AppendLine("```");
+                }
+            }
         }
 
         return s.ToString();

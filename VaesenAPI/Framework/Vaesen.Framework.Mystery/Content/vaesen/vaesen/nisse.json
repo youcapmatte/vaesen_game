@@ -20,6 +20,7 @@
     "domainViolated",
     "selfOriginatingGrievance"
   ],
+  "supportedFoci": [ "whoWhy", "how" ],
   "resolutionShape": "negotiable",
   "originSet": [
     {

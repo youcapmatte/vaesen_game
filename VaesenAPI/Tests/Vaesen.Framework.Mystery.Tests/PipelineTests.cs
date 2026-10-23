@@ -154,6 +154,27 @@ public sealed class PipelineTests
         Assert.Equal(FactKinds.Colour, result.Result.Case.Packet.FindFact("f10")!.Kind);
     }
 
+    [Fact]
+    public async Task A_focus_that_does_not_suit_the_creature_changes_only_the_focus()
+    {
+        var options = new MysteryOptions { UseCritic = false };
+        var model = ScriptedModel.FromSample(criticFailsFirst: false);
+        model.FocusUnsuitableOnce = true;
+        var (generator, _, _) = Build(options, model);
+
+        var result = await generator.GenerateAsync(new GenerationRequest
+        {
+            History = History, Month = 10, Seed = MatchingSeed(options), VaesenId = "nack", LevelId = "level-forsby-october", Store = false,
+        });
+
+        // The same brief with another focus: the conflict ran again, nothing was re-rolled.
+        Assert.Equal(["world", "conflict", "conflict", "escalation", "humans", "facts", "minds", "arc", "hook"], model.Calls);
+        Assert.Contains("- Focus: what", model.Contexts[1], StringComparison.Ordinal);
+        Assert.Contains("- Focus: how", model.Contexts[2], StringComparison.Ordinal);
+        Assert.Equal(CaseFocus.How, result.Result!.Case.Brief.Focus);
+        Assert.Equal([0], result.Result.Case.Log.Select(e => e.CaseAttempt).Distinct());
+    }
+
     /// <summary>Answers each step from the sample case; can break the clue step to exercise retries.</summary>
     public sealed class ScriptedModel(CasePacket sample, bool criticFailsFirst) : IMysteryModel
     {
@@ -177,6 +198,9 @@ public sealed class PipelineTests
 
         /// <summary>Gives fact f10 the invented kind "lore" in the first facts answer; a patch then answers f10 alone.</summary>
         public bool BadFactKindOnce { get; set; }
+
+        /// <summary>The first conflict answer says the focus does not suit the creature.</summary>
+        public bool FocusUnsuitableOnce { get; set; }
 
         public static ScriptedModel FromSample(bool criticFailsFirst) => new(ValidatorTests.SampleCase(), criticFailsFirst);
 
@@ -260,7 +284,18 @@ public sealed class PipelineTests
             Relationships = ties,
         };
 
-        private ConflictOutput Conflict() => new()
+        private ConflictOutput Conflict()
+        {
+            if (FocusUnsuitableOnce)
+            {
+                FocusUnsuitableOnce = false;
+                return new ConflictOutput { FocusUnsuitable = true, FocusUnsuitableReason = "Its identity is plain from the first signs." };
+            }
+
+            return ConflictFromSample();
+        }
+
+        private ConflictOutput ConflictFromSample() => new()
         {
             Title = sample.Title,
             ConflictArchetypeId = sample.Brief.ConflictArchetypeId,

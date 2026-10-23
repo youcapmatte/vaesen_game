@@ -68,9 +68,17 @@ public static class PromptBuilder
         var brief = draft.Brief;
         var hook = draft.Pack.Setting.FindHookChannel(brief.HookChannelId);
         var origin = draft.Vaesen.OriginSet.Find(o => o.Id == brief.OriginId);
-        var roster = (draft.World?.Characters ?? draft.Pack.Characters.Select(WorldSeeder.Instantiate).ToList())
+        var offered = (draft.World?.Characters ?? draft.Pack.Characters.Select(WorldSeeder.Instantiate).ToList())
             .Where(c => brief.PersistentCastIds.Contains(c.Id))
-            .OrderBy(c => brief.PersistentCastIds.IndexOf(c.Id))
+            .ToList();
+        var recent = draft.History.Mysteries.TakeLast(2).Select(m => m.MysteryId).ToHashSet(StringComparer.Ordinal);
+        var ranked = offered
+            .OrderByDescending(c => Relevance(c, draft.Level, recent))
+            .ThenBy(c => brief.PersistentCastIds.IndexOf(c.Id))
+            .ToList();
+        var others = ranked.Skip(FullDetailCast).Select(c => $"- {c.Id}: {c.Name}, {c.Identity.Occupation}, {c.Home}").ToList();
+        var roster = ranked
+            .Take(FullDetailCast)
             .Select(c => new
             {
                 id = c.Id,
@@ -119,8 +127,14 @@ public static class PromptBuilder
         text.AppendLine("# Conflict archetypes on offer");
         text.AppendLine(Json(draft.Conflicts));
         text.AppendLine();
-        text.AppendLine("# Persistent characters who may be drawn in (the Society's world, most important first)");
+        text.AppendLine("# Persistent characters who may be drawn in (the Society's world, most relevant to this place first)");
         text.AppendLine(Json(roster));
+        if (others.Count > 0)
+        {
+            text.AppendLine();
+            text.AppendLine("# Others in the Society's world (one line each; they may still be drawn in by id)");
+            text.AppendLine(string.Join("\n", others));
+        }
         if (gone.Count > 0)
         {
             text.AppendLine();
@@ -139,6 +153,47 @@ public static class PromptBuilder
         }
 
         return text.ToString();
+    }
+
+    /// <summary>How many persistent characters a case sees in full; the rest get one line each (fixes, section 10).</summary>
+    public const int FullDetailCast = 8;
+
+    private static readonly HashSet<string> CommonWords = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "with", "from", "below", "above", "near", "lake", "river", "manor", "northern", "southern", "eastern", "western",
+        "north", "south", "east", "west", "plain", "village", "town", "farm", "crofts", "their", "this", "that", "upper", "lower",
+    };
+
+    /// <summary>
+    /// How plausibly a persistent character belongs in a case at <paramref name="level"/>: a home there, network links
+    /// to it, hooks that name it, or a part in the Society's last two mysteries.
+    /// </summary>
+    public static int Relevance(CharacterInstance c, LevelDefinition level, IReadOnlySet<string> recentMysteryIds)
+    {
+        var words = (level.Name + " " + level.Region + " " + string.Join(" ", level.Places.Select(p => p.Name)))
+            .Split([' ', ',', '.', ';', ':', '(', ')', '-', '\''], StringSplitOptions.RemoveEmptyEntries)
+            .Where(w => w.Length >= 4 && !CommonWords.Contains(w))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        bool Mentions(string? text) => !string.IsNullOrEmpty(text) && words.Any(w => text.Contains(w, StringComparison.OrdinalIgnoreCase));
+
+        var score = 0;
+        if (Mentions(c.Home) || Mentions(c.Identity.Home))
+        {
+            score += 3;
+        }
+
+        score += 2 * c.NetworkLinks.Count(l => Mentions(l.Place));
+        if (c.LatentHooks.Exists(h => Mentions(h.Text)))
+        {
+            score += 1;
+        }
+
+        if (c.Memories.Exists(m => m.MysteryId is not null && recentMysteryIds.Contains(m.MysteryId)))
+        {
+            score += 1;
+        }
+
+        return score;
     }
 
     public static string FocusMeaning(string focus) => focus switch

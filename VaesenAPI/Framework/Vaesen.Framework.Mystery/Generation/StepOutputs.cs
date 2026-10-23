@@ -44,6 +44,13 @@ public sealed class ConflictOutput
 
     [JsonProperty("impossibleReason")]
     public string? ImpossibleReason { get; set; }
+
+    /// <summary>Signal that the brief's focus does not suit this creature here: only the focus is changed.</summary>
+    [JsonProperty("focusUnsuitable")]
+    public bool FocusUnsuitable { get; set; }
+
+    [JsonProperty("focusUnsuitableReason")]
+    public string? FocusUnsuitableReason { get; set; }
 }
 
 /// <summary>Step 4, escalation: what has concretely happened.</summary>
