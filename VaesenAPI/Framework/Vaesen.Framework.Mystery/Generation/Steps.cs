@@ -1,3 +1,4 @@
+using System.Collections;
 using Vaesen.Framework.Core.Models;
 using Vaesen.Framework.Mystery.Ai;
 using Vaesen.Framework.Mystery.Models;
@@ -26,8 +27,16 @@ public static class StepErrorCodes
 }
 
 /// <summary>
-/// A creative step: ask the model for <typeparamref name="TOutput"/>, fold it into a copy of the packet, run the
-/// structural checks for what exists so far, and re-roll with the issues fed back until clean or out of retries.
+/// A list of items in a step's output that a patch call can correct one by one, by id ("lever" items are found at
+/// issue locations "lever:{id}").
+/// </summary>
+public sealed record PatchList(string Prefix, IList Items, Func<object, string> Id);
+
+/// <summary>
+/// A creative step: ask the model for <typeparamref name="TOutput"/>, repair near-miss values, fold it into a copy of
+/// the packet, run the structural checks for what exists so far, and try again until clean or out of retries. When
+/// the only errors are field-level ones on a few items, only those items are asked for again (a patch) and merged
+/// back; anything structural gets a full retry with the issues fed back.
 /// </summary>
 public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICoherenceValidator validator, MysteryOptions options)
     : IMysteryGenerationStep<TIn, TOut>
@@ -47,31 +56,42 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
 
     protected abstract TOut Next(MysteryDraft draft);
 
+    /// <summary>How hard the first try thinks (fixes, section 9): <see cref="MysteryOptions.StandardEffort"/> by default.</summary>
+    protected virtual string FirstTryEffort(MysteryOptions o) => o.StandardEffort;
+
+    /// <summary>The lists of items a patch can correct; none means every retry is a full one.</summary>
+    protected virtual IReadOnlyList<PatchList> PatchLists(TOutput output) => [];
+
     public async Task<ResultBase<TOut>> RunAsync(TIn input, IReadOnlyList<CoherenceIssue> feedback, int caseAttempt, CancellationToken cancellationToken, bool fresh = false)
     {
         var ret = new ResultBase<TOut>();
         var draft = input.Draft;
         var issues = feedback.ToList();
         string? previous = null;
+        TOutput? last = null;
+        List<CoherenceIssue> patchErrors = [];
 
         for (var attempt = 0; attempt <= options.MaxStepRetries; attempt++)
         {
+            var patching = last is not null && patchErrors.Count > 0;
             var entry = new GenerationLogEntry
             {
                 CaseAttempt = caseAttempt,
                 Step = Name,
                 Attempt = attempt,
-                Kind = fresh && attempt == 0 ? LogEntryKinds.Fresh : LogEntryKinds.Full,
+                Kind = patching ? LogEntryKinds.Patch : fresh && attempt == 0 ? LogEntryKinds.Fresh : LogEntryKinds.Full,
             };
             draft.Log.Add(entry);
 
-            entry.Instruction = PromptBuilder.WithCaseAndFeedback(Instruction(draft), draft.Packet, issues, previous);
+            entry.Instruction = patching
+                ? PromptBuilder.WithCase(Patch.Instruction(Name, Patch.Items(PatchLists(last!), patchErrors), patchErrors, previous!), draft.Packet)
+                : PromptBuilder.WithCaseAndFeedback(Instruction(draft), draft.Packet, issues, previous);
             var reply = await model.GenerateAsync<TOutput>(new ModelRequest
             {
                 Step = Name,
-                Model = options.CreativeModel,
-                Effort = options.CreativeEffort,
-                MaxTokens = options.MaxOutputTokens,
+                Model = patching ? Or(options.PatchModel, options.CreativeModel) : attempt == 0 ? options.CreativeModel : Or(options.RetryModel, options.CreativeModel),
+                Effort = patching ? options.PatchEffort : attempt == 0 ? FirstTryEffort(options) : options.LightEffort,
+                MaxTokens = patching ? options.PatchMaxOutputTokens : options.MaxOutputTokens,
                 System = draft.SystemPrompt,
                 Context = draft.CaseContext,
                 Instruction = entry.Instruction,
@@ -84,6 +104,8 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
                 {
                     issues = [CoherenceIssue.Error(IssueCodes.Schema, Name, reply.ErrorMessage, "Answer with complete JSON that fits the schema; be more concise if needed.")];
                     previous = null;
+                    last = null;
+                    patchErrors = [];
                     continue;
                 }
 
@@ -99,8 +121,17 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
             entry.LatencyMs = answer.LatencyMs;
             entry.Output = answer.RawJson;
 
+            // A patch answers only the corrected items: merge them into the last full answer.
+            var output = answer.Value;
+            if (patching)
+            {
+                Patch.Merge(PatchLists(last!), PatchLists(output));
+                output = last!;
+            }
+
+            var repairs = EnumRepair.Normalize(output);
             var packet = draft.ClonePacket();
-            var applyIssues = Apply(draft, packet, answer.Value);
+            var applyIssues = Apply(draft, packet, output);
             if (applyIssues.Exists(i => i.Code == StepErrorCodes.Reroll))
             {
                 entry.Issues = applyIssues;
@@ -117,7 +148,7 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
                 UnavailableCharacterIds = context.UnavailableCharacterIds,
                 SocietyCharacterIds = context.SocietyCharacterIds,
             };
-            var found = applyIssues.Concat(validator.Validate(packet, checkContext, Scope)).ToList();
+            var found = repairs.Concat(applyIssues).Concat(validator.Validate(packet, checkContext, Scope)).ToList();
             entry.Issues = found;
             packet.Validation.Runs++;
 
@@ -131,12 +162,16 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
             }
 
             issues = found.Where(i => i.IsError).ToList();
-            previous = answer.RawJson;
+            last = output;
+            previous = Newtonsoft.Json.JsonConvert.SerializeObject(output);
+            patchErrors = Patch.Patchable(PatchLists(output), issues, options.PatchShare) ? issues : [];
         }
 
         return ret.Fail($"The {Name} step still had problems after {options.MaxStepRetries + 1} attempts: "
             + string.Join(" ", issues.Take(5).Select(i => i.ToString())), StepErrorCodes.StepFailed);
     }
+
+    private static string Or(string value, string fallback) => string.IsNullOrWhiteSpace(value) ? fallback : value;
 }
 
 /// <summary>Step 3: the conflict skeleton.</summary>
@@ -148,6 +183,8 @@ public sealed class ConflictStep(IMysteryModel model, ICoherenceValidator valida
     public override string Name => StepName;
 
     protected override CheckScope Scope => CheckScope.Conflict;
+
+    protected override string FirstTryEffort(MysteryOptions o) => o.CreativeEffort;
 
     protected override string Instruction(MysteryDraft draft)
     {
@@ -195,6 +232,8 @@ public sealed class EscalationStep(IMysteryModel model, ICoherenceValidator vali
 
     protected override CheckScope Scope => CheckScope.Escalation;
 
+    protected override IReadOnlyList<PatchList> PatchLists(EscalationOutput output) => [new("event", output.Events, e => ((EscalationDraft)e).Id)];
+
     protected override string Instruction(MysteryDraft draft) =>
         PromptBuilder.Fill(PromptBuilder.Template("escalation"), new Dictionary<string, string>
         {
@@ -228,6 +267,8 @@ public sealed class HumansStep(IMysteryModel model, ICoherenceValidator validato
     public override string Name => StepName;
 
     protected override CheckScope Scope => CheckScope.Cast;
+
+    protected override IReadOnlyList<PatchList> PatchLists(HumansOutput output) => [new("cast", output.Cast, c => ((CastDraft)c).CharacterId)];
 
     protected override string Instruction(MysteryDraft draft) =>
         PromptBuilder.Fill(PromptBuilder.Template("humans"), new Dictionary<string, string>
@@ -272,6 +313,14 @@ public sealed class FactsStep(IMysteryModel model, ICoherenceValidator validator
     public override string Name => StepName;
 
     protected override CheckScope Scope => CheckScope.Facts;
+
+    protected override string FirstTryEffort(MysteryOptions o) => o.CreativeEffort;
+
+    protected override IReadOnlyList<PatchList> PatchLists(FactsOutput output) =>
+    [
+        new("fact", output.Facts, f => ((FactDraft)f).Id),
+        new("decoy", output.Decoys, d => ((DecoyThread)d).ThreadId),
+    ];
 
     protected override string Instruction(MysteryDraft draft) =>
         PromptBuilder.Fill(PromptBuilder.Template("facts"), new Dictionary<string, string>
@@ -330,6 +379,14 @@ public sealed class MindsStep(IMysteryModel model, ICoherenceValidator validator
 
     protected override CheckScope Scope => CheckScope.Minds;
 
+    protected override string FirstTryEffort(MysteryOptions o) => o.CreativeEffort;
+
+    protected override IReadOnlyList<PatchList> PatchLists(MindsOutput output) =>
+    [
+        new("cast", output.Minds, m => ((CastMind)m).CharacterId),
+        new("channel", output.Channels, c => ((CaseChannel)c).Id),
+    ];
+
     protected override string Instruction(MysteryDraft draft) =>
         PromptBuilder.Fill(PromptBuilder.Template("minds"), new Dictionary<string, string>
         {
@@ -377,6 +434,12 @@ public sealed class ArcStep(IMysteryModel model, ICoherenceValidator validator, 
 
     protected override CheckScope Scope => CheckScope.Arc;
 
+    protected override IReadOnlyList<PatchList> PatchLists(ArcOutput output) =>
+    [
+        new("beat", output.Beats, b => ((CaseBeat)b).Id),
+        new("lever", output.ResolutionLevers, l => ((ResolutionLever)l).Id),
+    ];
+
     protected override string Instruction(MysteryDraft draft) =>
         PromptBuilder.Fill(PromptBuilder.Template("arc"), new Dictionary<string, string>
         {
@@ -405,6 +468,8 @@ public sealed class HookStep(IMysteryModel model, ICoherenceValidator validator,
     public override string Name => StepName;
 
     protected override CheckScope Scope => CheckScope.Hook;
+
+    protected override string FirstTryEffort(MysteryOptions o) => o.LightEffort;
 
     protected override string Instruction(MysteryDraft draft)
     {

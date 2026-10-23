@@ -214,6 +214,9 @@ public static class PromptBuilder
         ? "there is a crude solve and a deep, discoverable solve; the deep one is the better outcome."
         : "the resolution levers are distinct, plausible and have different consequences for the world and the cast.";
 
+    /// <summary>The case so far, then the instruction (a patch call has its own problems and answer in it).</summary>
+    public static string WithCase(string instruction, CasePacket soFar) => $"# The case so far\n{Json(soFar)}\n\n{instruction}";
+
     /// <summary>The case so far, and on a retry the issues to fix and the previous answer.</summary>
     public static string WithCaseAndFeedback(string instruction, CasePacket soFar, IReadOnlyList<CoherenceIssue> feedback, string? previousJson)
     {

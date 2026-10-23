@@ -10,6 +10,9 @@ namespace Vaesen.Framework.Mystery.Models;
 [AttributeUsage(AttributeTargets.Property)]
 public sealed class OneOfAttribute(Type valuesType) : Attribute
 {
+    /// <summary>The class whose <c>All</c> list holds the values (also the key for near-miss synonyms).</summary>
+    public Type ValuesType { get; } = valuesType;
+
     public IReadOnlyList<string> Values { get; } =
         valuesType.GetField("All", BindingFlags.Public | BindingFlags.Static)?.GetValue(null) as IReadOnlyList<string>
         ?? throw new ArgumentException($"{valuesType.Name} has no static All list of strings.", nameof(valuesType));

@@ -38,14 +38,38 @@ public sealed class MysteryOptions
     /// <summary>Model for the creative steps.</summary>
     public string CreativeModel { get; set; } = "claude-opus-5-5";
 
-    /// <summary>Effort for the creative steps: low, medium, high, xhigh or max.</summary>
+    /// <summary>
+    /// Effort (low, medium, high, xhigh or max) for the calls that decide the case: the conflict, and the first try of
+    /// the facts and of minds and channels.
+    /// </summary>
     public string CreativeEffort { get; set; } = "high";
+
+    /// <summary>Effort for the first try of the other steps: escalation, humans, the arc.</summary>
+    public string StandardEffort { get; set; } = "medium";
+
+    /// <summary>Effort for retries after the first, and for the hook and scenes.</summary>
+    public string LightEffort { get; set; } = "low";
+
+    /// <summary>A smaller model for retries after the first; empty: <see cref="CreativeModel"/>.</summary>
+    public string RetryModel { get; set; } = "";
+
+    /// <summary>The model for patch calls; empty: <see cref="CreativeModel"/>.</summary>
+    public string PatchModel { get; set; } = "";
+
+    public string PatchEffort { get; set; } = "low";
+
+    /// <summary>Output cap (thinking included) of a patch call.</summary>
+    public int PatchMaxOutputTokens { get; set; } = 16000;
+
+    /// <summary>A step is patched instead of regenerated when its field-level errors touch at most this share of its items.</summary>
+    public double PatchShare { get; set; } = 0.25;
 
     /// <summary>Model for the critic (judgement checks on the whole case).</summary>
     public string CriticModel { get; set; } = "claude-opus-5-5";
 
     public string CriticEffort { get; set; } = "high";
 
+    /// <summary>Output cap (thinking included) of a full step call.</summary>
     public int MaxOutputTokens { get; set; } = 64000;
 
     /// <summary>Run the model critic after the structural checks pass.</summary>

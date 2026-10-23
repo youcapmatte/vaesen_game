@@ -79,6 +79,9 @@ public static class IssueCodes
 
     /// <summary>A step gave up, so everything after it is missing (reported once, not as every check on blank data).</summary>
     public const string Incomplete = "incomplete";
+
+    /// <summary>A near miss in a fixed-value field was repaired in code (a warning; see EnumRepair).</summary>
+    public const string Repaired = "repaired";
 }
 
 /// <summary>A parsed channel access requirement (see <see cref="ChannelAccess"/>).</summary>

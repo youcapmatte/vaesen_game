@@ -138,6 +138,32 @@ public sealed class ValidatorTests(ITestOutputHelper output)
     }
 
     [Fact]
+    public void Near_misses_are_repaired_in_code_and_reported_but_judgement_calls_are_left()
+    {
+        var arc = new Generation.ArcOutput
+        {
+            ResolutionLevers =
+            [
+                new ResolutionLever { Id = "r1", SolveDepth = " Surface " },
+                new ResolutionLever { Id = "r2", SolveDepth = "answersGrievance" },
+                new ResolutionLever { Id = "r3", SolveDepth = "half" },
+                new ResolutionLever { Id = "r4", SolveDepth = "Deep" },
+            ],
+        };
+        var facts = new Generation.FactsOutput { Facts = [new Generation.FactDraft { Id = "f1", Kind = "lore" }, new Generation.FactDraft { Id = "f2", Kind = "IDENTITY" }] };
+
+        var repaired = Generation.EnumRepair.Normalize(arc).Concat(Generation.EnumRepair.Normalize(facts)).ToList();
+
+        Assert.Equal([SolveDepths.Crude, SolveDepths.Deep, SolveDepths.Partial, SolveDepths.Deep], arc.ResolutionLevers.Select(l => l.SolveDepth));
+        Assert.Equal(FactKinds.Identity, facts.Facts[1].Kind);
+        Assert.Equal("lore", facts.Facts[0].Kind);
+        Assert.Equal(5, repaired.Count);
+        Assert.All(repaired, i => Assert.Equal(IssueCodes.Repaired, i.Code));
+        Assert.All(repaired, i => Assert.False(i.IsError));
+        Assert.Contains(repaired, i => i.Location == "ResolutionLevers[r3].SolveDepth" && i.Explanation == "'half' was read as 'partial'.");
+    }
+
+    [Fact]
     public void Giveaway_and_deep_lore_are_derived_from_the_lore_ids()
     {
         var packet = SampleCase();

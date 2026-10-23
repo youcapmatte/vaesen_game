@@ -132,6 +132,28 @@ public sealed class PipelineTests
         Assert.Contains(result.Result.Case.Packet.Validation.Issues, i => i.Code == IssueCodes.Redundancy);
     }
 
+    [Fact]
+    public async Task One_bad_value_is_patched_with_one_small_call_not_a_full_retry()
+    {
+        var options = new MysteryOptions { UseCritic = false };
+        var model = ScriptedModel.FromSample(criticFailsFirst: false);
+        model.BadFactKindOnce = true;
+        var (generator, _, _) = Build(options, model);
+
+        var result = await generator.GenerateAsync(new GenerationRequest
+        {
+            History = History, Month = 10, Seed = MatchingSeed(options), VaesenId = "nack", LevelId = "level-forsby-october", Store = false,
+        });
+
+        Assert.True(result.Success, result.ErrorMessage);
+        Assert.Equal(["world", "conflict", "escalation", "humans", "facts", "facts", "minds", "arc", "hook"], model.Calls);
+        var patch = result.Result!.Case.Log.Single(e => e.Step == "facts" && e.Kind == LogEntryKinds.Patch);
+        Assert.True(patch.Passed);
+        Assert.Contains("# Patch", patch.Instruction, StringComparison.Ordinal);
+        Assert.Contains("Allowed: symptom, cause, identity", patch.Instruction, StringComparison.Ordinal);
+        Assert.Equal(FactKinds.Colour, result.Result.Case.Packet.FindFact("f10")!.Kind);
+    }
+
     /// <summary>Answers each step from the sample case; can break the clue step to exercise retries.</summary>
     public sealed class ScriptedModel(CasePacket sample, bool criticFailsFirst) : IMysteryModel
     {
@@ -152,6 +174,9 @@ public sealed class PipelineTests
 
         /// <summary>Leaves out channel c10 in every minds-and-channels answer.</summary>
         public bool AlwaysBreakClues { get; set; }
+
+        /// <summary>Gives fact f10 the invented kind "lore" in the first facts answer; a patch then answers f10 alone.</summary>
+        public bool BadFactKindOnce { get; set; }
 
         public static ScriptedModel FromSample(bool criticFailsFirst) => new(ValidatorTests.SampleCase(), criticFailsFirst);
 
@@ -178,7 +203,7 @@ public sealed class PipelineTests
                     }).ToList(),
                 },
                 "humans" => new HumansOutput { Cast = sample.Cast.Select(Draft).ToList() },
-                "facts" => Facts(),
+                "facts" => Facts(request.Instruction),
                 "minds" => Minds(),
                 "arc" => new ArcOutput { Beats = sample.Beats, Climax = sample.Climax, ResolutionLevers = sample.ResolutionLevers },
                 "hook" => new HookOutput
@@ -253,16 +278,31 @@ public sealed class PipelineTests
             Routine = c.Routine, VoiceNotes = c.VoiceNotes, Relationships = c.Relationships,
         };
 
-        private FactsOutput Facts() => new()
+        private FactsOutput Facts(string instruction)
         {
-            Facts = sample.Facts.Select(f => new FactDraft
+            var facts = sample.Facts.Select(f => new FactDraft
             {
                 Id = f.Id, Statement = f.Statement, LoadBearing = f.LoadBearing, Kind = f.Kind, PointsTo = f.PointsTo, LoreIds = f.LoreIds,
-            }).ToList(),
-            Decoys = sample.Decoys,
-            EventFacts = sample.Truth.Escalation.Select(e => new EventFacts { EventId = e.Id, FactIds = e.FactIds }).ToList(),
-            SeasonThreads = sample.SeasonThreads,
-        };
+            }).ToList();
+            if (instruction.Contains("# Patch", StringComparison.Ordinal))
+            {
+                return new FactsOutput { Facts = facts.Where(f => f.Id == "f10").ToList() };
+            }
+
+            if (BadFactKindOnce)
+            {
+                BadFactKindOnce = false;
+                facts.Single(f => f.Id == "f10").Kind = "lore";
+            }
+
+            return new FactsOutput
+            {
+                Facts = facts,
+                Decoys = sample.Decoys,
+                EventFacts = sample.Truth.Escalation.Select(e => new EventFacts { EventId = e.Id, FactIds = e.FactIds }).ToList(),
+                SeasonThreads = sample.SeasonThreads,
+            };
+        }
 
         private MindsOutput Minds()
         {
