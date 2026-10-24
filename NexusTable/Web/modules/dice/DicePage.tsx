@@ -1,11 +1,12 @@
 "use client";
 
-import { Badge, Box, Button, Container, Group, NumberInput, Stack, Text } from "@mantine/core";
+import { Badge, Box, Button, Container, Group, NumberInput, Stack, Switch, Text } from "@mantine/core";
 import { IconArrowBackUp, IconDice5 } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
 import { Corners } from "@/common/client/components/Ornament";
 import { PageFrame, PageTitle } from "@/common/client/components/PageFrame";
 import { Die, DieFace, TUMBLE_MS } from "./Die";
+import { diceSoundOn, setDiceSound } from "./diceSound";
 
 const MAX_DICE = 15;
 const STAGGER_MS = 70;
@@ -46,7 +47,11 @@ function DiceTray() {
   const [current, setCurrent] = useState<Throw>();
   const [settled, setSettled] = useState(true);
   const [log, setLog] = useState<Throw[]>([]);
+  const [sound, setSound] = useState(true);
   const nextId = useRef(1);
+
+  // Read after mount: the choice lives in the browser, not on the server that renders the page.
+  useEffect(() => setSound(diceSoundOn()), []);
 
   // The outcome shows once the last die has landed.
   useEffect(() => {
@@ -98,6 +103,15 @@ function DiceTray() {
           <Button size="md" color="blood" leftSection={<IconDice5 size={18} />} onClick={roll} disabled={!settled}>
             Throw the dice
           </Button>
+          <Switch
+            label="Sound"
+            checked={sound}
+            onChange={(e) => {
+              setSound(e.currentTarget.checked);
+              setDiceSound(e.currentTarget.checked);
+            }}
+            mb={10}
+          />
         </Group>
       </Box>
 

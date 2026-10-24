@@ -2,6 +2,7 @@
 
 import { useLayoutEffect, useRef } from "react";
 import styles from "./Dice.module.css";
+import { playDieThrow } from "./diceSound";
 
 /** Which pips are inked on each face, on a 3×3 grid (0 = top left, 8 = bottom right). */
 const PIPS: Record<number, number[]> = {
@@ -76,6 +77,17 @@ function throwFrames(size: number, rx: number, ry: number): Keyframe[] {
 }
 
 /**
+ * When the throw's die strikes the table, as offsets of the throw (they match <see cref="throwFrames"/>): the landing,
+ * two bounces, then a few small clicks as it rolls on and rocks to rest.
+ */
+const THROW_IMPACTS = () => [
+  { offset: 0.28, strength: rand(0.85, 1) },
+  { offset: 0.58, strength: rand(0.45, 0.6) },
+  { offset: 0.75, strength: rand(0.25, 0.35) },
+  ...Array.from({ length: 3 + Math.floor(Math.random() * 3) }, (_, i) => ({ offset: 0.78 + i * rand(0.025, 0.035), strength: rand(0.06, 0.14) })),
+];
+
+/**
  * A bone die thrown onto <paramref name="value"/>. Change <paramref name="throwKey"/> to throw it again.
  * The value comes from the server; the throw is only for show.
  */
@@ -87,9 +99,17 @@ export function Die({ value, size = 44, throwKey, delay = 0, dim }: { value: num
   // Before paint, so the face it lands on never shows before the throw starts.
   useLayoutEffect(() => {
     const el = cube.current;
-    if (!el || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!el) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      return playDieThrow(delay, TUMBLE_MS, [{ offset: 0, strength: 0.5 }]);
+    }
+
     const animation = el.animate(throwFrames(size, rx, ry), { duration: TUMBLE_MS, delay, fill: "backwards" });
-    return () => animation.cancel();
+    const silence = playDieThrow(delay, TUMBLE_MS, THROW_IMPACTS());
+    return () => {
+      animation.cancel();
+      silence();
+    };
     // Thrown again only when the throw changes; a new value always comes with a new throw.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [throwKey, delay]);
