@@ -474,7 +474,7 @@ void AVaesenWeaponActor::StrikeTarget(const FHitResult& Hit)
 
 void AVaesenWeaponActor::MulticastImpact_Implementation(const FHitResult& Hit, FGameplayTag DamageType, bool bBullet)
 {
-	UVaesenCombatLibrary::PlayImpactEffects(this, DamageType, Hit, bBullet);
+	UVaesenCombatLibrary::PlayImpactEffects(this, DamageType, Hit, bBullet ? EVaesenImpactDelivery::Shot : EVaesenImpactDelivery::ByHand);
 }
 
 #if WITH_EDITOR

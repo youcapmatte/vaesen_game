@@ -50,6 +50,17 @@ public:
 	}
 };
 
+/** How a hit was delivered, for the impact table (a sword's stab and a bullet are both piercing). */
+UENUM(BlueprintType)
+enum class EVaesenImpactDelivery : uint8
+{
+	Any,
+	/** Swung or thrown by hand: blades, clubs, fists, a thrown knife. */
+	ByHand,
+	/** Shot: bullets, arrows, bolts. */
+	Shot
+};
+
 /** One row of the impact table: what a hit of a damage type on a surface sounds and looks like. */
 USTRUCT(BlueprintType)
 struct FVaesenImpactEntry
@@ -64,6 +75,10 @@ struct FVaesenImpactEntry
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Impact")
 	TEnumAsByte<EPhysicalSurface> Surface = SurfaceType_Default;
 
+	/** Any = however it was delivered. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Impact")
+	EVaesenImpactDelivery Delivery = EVaesenImpactDelivery::Any;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Impact")
 	TObjectPtr<USoundBase> Sound;
 
@@ -77,7 +92,8 @@ struct FVaesenImpactEntry
 
 /**
  * The impact table (DA_ImpactEffects): sounds and effects for hits, by damage type and the physical material hit.
- * The most specific row wins: type and surface, then surface only, then type only, then the any/any row.
+ * The most specific row wins: one for how it was delivered (by hand or shot) first, then type and surface, then
+ * surface only, then type only, then the any/any row.
  */
 UCLASS(BlueprintType)
 class VAESENGAME_API UVaesenImpactEffects : public UPrimaryDataAsset
@@ -93,7 +109,7 @@ public:
 	TObjectPtr<USoundBase> RicochetSound;
 
 	/** The best row for this hit, or null. */
-	const FVaesenImpactEntry* FindEntry(const FGameplayTag& DamageType, EPhysicalSurface Surface) const;
+	const FVaesenImpactEntry* FindEntry(const FGameplayTag& DamageType, EPhysicalSurface Surface, EVaesenImpactDelivery Delivery = EVaesenImpactDelivery::Any) const;
 };
 
 /**

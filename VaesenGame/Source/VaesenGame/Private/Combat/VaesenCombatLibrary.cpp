@@ -114,7 +114,7 @@ EPhysicalSurface UVaesenCombatLibrary::GetSurface(const FHitResult& Hit)
 	return SurfaceType_Default;
 }
 
-void UVaesenCombatLibrary::PlayImpactEffects(const UObject* WorldContext, FGameplayTag DamageType, const FHitResult& Hit, bool bBullet)
+void UVaesenCombatLibrary::PlayImpactEffects(const UObject* WorldContext, FGameplayTag DamageType, const FHitResult& Hit, EVaesenImpactDelivery Delivery)
 {
 	UWorld* World = WorldContext ? WorldContext->GetWorld() : nullptr;
 	if (!World || World->GetNetMode() == NM_DedicatedServer)
@@ -129,7 +129,7 @@ void UVaesenCombatLibrary::PlayImpactEffects(const UObject* WorldContext, FGamep
 	}
 
 	const UVaesenImpactEffects* Table = UVaesenWeaponCategoryDefaults::Get()->ImpactEffects;
-	const FVaesenImpactEntry* Entry = Table ? Table->FindEntry(DamageType, GetSurface(Hit)) : nullptr;
+	const FVaesenImpactEntry* Entry = Table ? Table->FindEntry(DamageType, GetSurface(Hit), Delivery) : nullptr;
 	if (!Entry)
 	{
 		return;
@@ -148,7 +148,7 @@ void UVaesenCombatLibrary::PlayImpactEffects(const UObject* WorldContext, FGamep
 	{
 		UGameplayStatics::SpawnEmitterAtLocation(World, Cascade, Location, Rotation);
 	}
-	if (bBullet && Table->RicochetSound && FMath::FRand() < Entry->RicochetChance)
+	if (Delivery == EVaesenImpactDelivery::Shot && Table->RicochetSound && FMath::FRand() < Entry->RicochetChance)
 	{
 		UGameplayStatics::PlaySoundAtLocation(World, Table->RicochetSound, Location);
 	}

@@ -3,7 +3,7 @@
 #include "Combat/VaesenGameplayTags.h"
 #include "Core/VaesenSettings.h"
 
-const FVaesenImpactEntry* UVaesenImpactEffects::FindEntry(const FGameplayTag& DamageType, EPhysicalSurface Surface) const
+const FVaesenImpactEntry* UVaesenImpactEffects::FindEntry(const FGameplayTag& DamageType, EPhysicalSurface Surface, EVaesenImpactDelivery Delivery) const
 {
 	const FVaesenImpactEntry* Best = nullptr;
 	int32 BestScore = -1;
@@ -11,12 +11,14 @@ const FVaesenImpactEntry* UVaesenImpactEffects::FindEntry(const FGameplayTag& Da
 	{
 		const bool bAnyType = !Entry.DamageType.IsValid();
 		const bool bAnySurface = Entry.Surface == SurfaceType_Default;
-		if ((!bAnyType && !DamageType.MatchesTag(Entry.DamageType)) || (!bAnySurface && Entry.Surface != Surface))
+		const bool bAnyDelivery = Entry.Delivery == EVaesenImpactDelivery::Any;
+		if ((!bAnyType && !DamageType.MatchesTag(Entry.DamageType)) || (!bAnySurface && Entry.Surface != Surface)
+			|| (!bAnyDelivery && Entry.Delivery != Delivery))
 		{
 			continue;
 		}
-		// Type and surface (3), surface only (2), type only (1), anything (0).
-		const int32 Score = (bAnySurface ? 0 : 2) + (bAnyType ? 0 : 1);
+		// Its delivery (4) first; then type and surface (3), surface only (2), type only (1), anything (0).
+		const int32 Score = (bAnyDelivery ? 0 : 4) + (bAnySurface ? 0 : 2) + (bAnyType ? 0 : 1);
 		if (Score > BestScore)
 		{
 			Best = &Entry;

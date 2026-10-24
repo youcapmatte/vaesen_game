@@ -174,7 +174,7 @@ void AVaesenProjectile::MulticastStuck_Implementation(FVector_NetQuantize Locati
 
 	const UVaesenAmmoItem* AmmoDefaults = Ammo ? Ammo->GetDefaultObject<UVaesenAmmoItem>() : nullptr;
 	const FGameplayTag DamageType = AmmoDefaults ? UVaesenCombatLibrary::GetMainDamageType(AmmoDefaults->Damage) : FGameplayTag();
-	UVaesenCombatLibrary::PlayImpactEffects(this, DamageType, Hit);
+	UVaesenCombatLibrary::PlayImpactEffects(this, DamageType, Hit, EVaesenImpactDelivery::Shot);
 	if (USoundBase* Sound = StickSound.Get())
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, Sound, Location);
@@ -185,7 +185,7 @@ void AVaesenProjectile::MulticastImpact_Implementation(const FHitResult& Hit)
 {
 	const UVaesenAmmoItem* AmmoDefaults = Ammo ? Ammo->GetDefaultObject<UVaesenAmmoItem>() : nullptr;
 	const FGameplayTag DamageType = AmmoDefaults ? UVaesenCombatLibrary::GetMainDamageType(AmmoDefaults->Damage) : FGameplayTag();
-	UVaesenCombatLibrary::PlayImpactEffects(this, DamageType, Hit, true);
+	UVaesenCombatLibrary::PlayImpactEffects(this, DamageType, Hit, EVaesenImpactDelivery::Shot);
 }
 
 void AVaesenProjectile::UpdateFlyby()

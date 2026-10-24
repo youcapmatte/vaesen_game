@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Combat/VaesenDamageTypes.h"
+#include "Weapons/VaesenWeaponData.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "VaesenCombatLibrary.generated.h"
 
@@ -28,9 +29,9 @@ public:
 	static bool ApplyDamagePacket(AActor* DamageInstigator, AActor* Target, const FVaesenDamagePacket& Packet, const FHitResult& Hit,
 		UObject* SourceObject, bool bCanBeBlocked = true, bool bProjectile = false, float Knockback = 0.0f);
 
-	/** Plays the impact table's sound and effect for a hit of DamageType on what Hit touched (locally, cosmetic). */
+	/** Plays the impact table's sound and effect for a hit of DamageType, delivered so, on what Hit touched (locally, cosmetic). Shots can ricochet. */
 	UFUNCTION(BlueprintCallable, Category = "Combat", meta = (WorldContext = "WorldContext"))
-	static void PlayImpactEffects(const UObject* WorldContext, FGameplayTag DamageType, const FHitResult& Hit, bool bBullet = false);
+	static void PlayImpactEffects(const UObject* WorldContext, FGameplayTag DamageType, const FHitResult& Hit, EVaesenImpactDelivery Delivery = EVaesenImpactDelivery::ByHand);
 
 	/** The surface (physical material) Hit touched. */
 	static EPhysicalSurface GetSurface(const FHitResult& Hit);

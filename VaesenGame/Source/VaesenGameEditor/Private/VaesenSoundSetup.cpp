@@ -20,6 +20,7 @@
 #include "UObject/SavePackage.h"
 #include "Weapons/VaesenWeaponData.h"
 #include "Weapons/VaesenWeaponTypes.h"
+#include "Combat/VaesenGameplayTags.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogVaesenSoundSetup, Log, All);
 
@@ -37,10 +38,11 @@ namespace VaesenSoundSetup
 		return LoadObject<T>(nullptr, *(PackagePath + TEXT(".") + FPackageName::GetShortName(PackagePath)));
 	}
 
+	/** In WeaponVerse1 (relative), or anywhere (a /Game/ path). */
 	template <typename T>
 	T* PackAsset(const FString& Relative)
 	{
-		T* Asset = LoadAt<T>(FString(Pack) / Relative);
+		T* Asset = LoadAt<T>(Relative.StartsWith(TEXT("/Game/")) ? Relative : FString(Pack) / Relative);
 		if (!Asset)
 		{
 			UE_LOG(LogVaesenSoundSetup, Warning, TEXT("Not in the pack: %s"), *Relative);
@@ -257,8 +259,9 @@ namespace VaesenSoundSetup
 			}
 		}
 		// The pack's own falloffs: a shot is heard out to 300 m, handling out to 25 m.
-		Set->GunshotAttenuation = PackAsset<USoundAttenuation>(TEXT("Attenuations/Field/300M_Field"));
-		Set->ShortRangeAttenuation = PackAsset<USoundAttenuation>(TEXT("Attenuations/Field/25M_Field"));
+		// (Without WeaponVerse1, each sound's own.)
+		Set->GunshotAttenuation = LoadAt<USoundAttenuation>(FString(Pack) / TEXT("Attenuations/Field/300M_Field"));
+		Set->ShortRangeAttenuation = LoadAt<USoundAttenuation>(FString(Pack) / TEXT("Attenuations/Field/25M_Field"));
 		Save(Set);
 		return Set;
 	}
@@ -358,6 +361,127 @@ namespace VaesenSoundSetup
 			{ EVaesenWeaponSound::Flyby, Flyby },
 		}));
 	}
+
+	// --- Combat Sounds - Bundle Collection (Audios With Love): blades and hits ---
+
+	const TCHAR* CombatPack = TEXT("/Game/Combat_SFX_Bundle/WAV");
+
+	/** Takes Name_01..Name_Count in a folder of the combat pack (Count 0: just Name). */
+	TArray<FString> Takes(const TCHAR* Group, const TCHAR* Name, int32 Count)
+	{
+		TArray<FString> Paths;
+		if (Count == 0)
+		{
+			Paths.Add(FString::Printf(TEXT("%s/%s/%s"), CombatPack, Group, Name));
+		}
+		for (int32 Take = 1; Take <= Count; ++Take)
+		{
+			Paths.Add(FString::Printf(TEXT("%s/%s/%s_%02d"), CombatPack, Group, Name, Take));
+		}
+		return Paths;
+	}
+
+	TArray<FString> operator+(TArray<FString> A, const TArray<FString>& B)
+	{
+		A.Append(B);
+		return A;
+	}
+
+	void SetupCombatPack()
+	{
+		if (!LoadAt<USoundWave>(Takes(TEXT("Sword_Hits_Blocks"), TEXT("Take_Out_Sword"), 1)[0]))
+		{
+			UE_LOG(LogVaesenSoundSetup, Display, TEXT("Combat Sounds - Bundle Collection (/Game/Combat_SFX_Bundle) not in the project; skipping blade and hit sounds."));
+			return;
+		}
+		UVaesenWeaponCategoryDefaults* Defaults = LoadObject<UVaesenWeaponCategoryDefaults>(nullptr, TEXT("/Game/Vaesen/Combat/DA_WeaponCategoryDefaults.DA_WeaponCategoryDefaults"));
+		if (!Defaults)
+		{
+			return;
+		}
+		const TCHAR* Blades = TEXT("Sword_Hits_Blocks");
+		const TCHAR* Weapons = TEXT("Combat_Sounds_Weapons_And_Spells");
+		const TCHAR* Blood = TEXT("Blood");
+
+		// The sword's own: drawn and put away, the swing (light: a quick whoosh; heavy: a big one), steel meeting steel
+		// on the guard, and the ring of a parry. Every sword (the category's set).
+		UVaesenWeaponSoundSet* Sword = SoundSet(TEXT("DA_WeaponSounds_Sword"), {
+			{ EVaesenWeaponSound::Draw, RandomTakes(TEXT("SC_Sword_Draw"), Takes(Blades, TEXT("Take_Out_Sword"), 4) + Takes(Blades, TEXT("Take_Sword"), 0)) },
+			{ EVaesenWeaponSound::Sheath, RandomTakes(TEXT("SC_Sword_Sheath"), Takes(Blades, TEXT("Pack_Away_Sword"), 3)) },
+			{ EVaesenWeaponSound::SwingLight, RandomTakes(TEXT("SC_Sword_SwingLight"),
+				Takes(Blades, TEXT("Whoosh_Standard_Sword"), 3) + Takes(Weapons, TEXT("Whoosh_Sword"), 2) + Takes(Weapons, TEXT("Whoosh"), 7)) },
+			{ EVaesenWeaponSound::SwingHeavy, RandomTakes(TEXT("SC_Sword_SwingHeavy"),
+				Takes(Blades, TEXT("Whoosh_Big_Sword"), 4) + Takes(Weapons, TEXT("BigSword_Whoosh"), 2) + Takes(Weapons, TEXT("Whoosh_Critical_01_1"), 0)
+				+ Takes(Weapons, TEXT("Whoosh_Critical_02_1"), 0)) },
+			{ EVaesenWeaponSound::Block, RandomTakes(TEXT("SC_Sword_Block"), Takes(Blades, TEXT("Sword_VS_Sword_Hit"), 10) + Takes(Blades, TEXT("Impact_On_Other_Sword"), 3)) },
+			{ EVaesenWeaponSound::Parry, RandomTakes(TEXT("SC_Sword_Parry"), Takes(Weapons, TEXT("Impact_Sword_Parry"), 5) + Takes(Blades, TEXT("Special_Crit_Sword_VS_Sword"), 3)) },
+		});
+		FVaesenCategoryDefaults& SwordCategory = Defaults->Categories.FindOrAdd(EVaesenWeaponCategory::OneHandedSword);
+		if (Sword && SwordCategory.Sounds != Sword)
+		{
+			SwordCategory.Sounds = Sword;
+			Save(Defaults);
+		}
+
+		// The impact table, by hand (blades, clubs, fists): what the blow lands on. Flesh is also each type's
+		// any-surface row (a body with no material of its own). Shots keep their own rows.
+		UVaesenImpactEffects* Table = Defaults->ImpactEffects;
+		if (!Table)
+		{
+			return;
+		}
+		USoundBase* SlashFlesh = RandomTakes(TEXT("SC_Hit_Slash_Flesh"), Takes(Weapons, TEXT("Impact_Sword_To_Body"), 5) + Takes(Blood, TEXT("Hit_Then_Blood"), 5));
+		USoundBase* StabFlesh = RandomTakes(TEXT("SC_Hit_Stab_Flesh"), Takes(Blades, TEXT("Pierce_Enemy"), 10) + Takes(Blood, TEXT("Sword_Stab_With_Blood"), 2)
+			+ Takes(Blood, TEXT("Stab"), 3));
+		USoundBase* BluntFlesh = RandomTakes(TEXT("SC_Hit_Blunt_Flesh"), Takes(Weapons, TEXT("Impact_Punch"), 5) + Takes(Weapons, TEXT("Impact_Punch_Soft"), 4)
+			+ Takes(Weapons, TEXT("Impact_Punch_With_Blood"), 7));
+		USoundBase* BladeWood = RandomTakes(TEXT("SC_Hit_Blade_Wood"), Takes(Blades, TEXT("Impact_Sword_Wood"), 6) + Takes(Weapons, TEXT("Impact_Sword_To_Wood"), 4));
+		USoundBase* BladeStone = RandomTakes(TEXT("SC_Hit_Blade_Stone"), Takes(Weapons, TEXT("Impact_Sword_To_Stone"), 4));
+		USoundBase* BladeMetal = RandomTakes(TEXT("SC_Hit_Blade_Metal"), Takes(Weapons, TEXT("Impact_Sword_To_PlateArmour"), 5)
+			+ Takes(Weapons, TEXT("Impact_Sword_To_Armour_Chain"), 5) + Takes(Blades, TEXT("Impact_Armour"), 2));
+		USoundBase* BluntHard = RandomTakes(TEXT("SC_Hit_Blunt_Hard"), Takes(Weapons, TEXT("BigHammer_Impact"), 3));
+		USoundBase* BluntMetal = RandomTakes(TEXT("SC_Hit_Blunt_Metal"), Takes(Blades, TEXT("Impact_Metal"), 6));
+
+		// Ours from an earlier run go; the rest of the table stays.
+		const FString Ours = FString(Folder) / TEXT("SC_Hit_");
+		Table->Entries.RemoveAll([&Ours](const FVaesenImpactEntry& Entry)
+		{
+			return Entry.Sound && Entry.Sound->GetPathName().StartsWith(Ours);
+		});
+		const auto Row = [Table](const FGameplayTag& Type, EPhysicalSurface Surface, USoundBase* Sound)
+		{
+			if (Sound)
+			{
+				FVaesenImpactEntry& Entry = Table->Entries.AddDefaulted_GetRef();
+				Entry.DamageType = Type;
+				Entry.Surface = Surface;
+				Entry.Delivery = EVaesenImpactDelivery::ByHand;
+				Entry.Sound = Sound;
+			}
+		};
+		// Flesh, Wood, Stone, Metal, Cloth (Config/DefaultEngine.ini).
+		const EPhysicalSurface Flesh = SurfaceType1, Wood = SurfaceType2, Stone = SurfaceType3, Metal = SurfaceType4, Cloth = SurfaceType7;
+		const TPair<FGameplayTag, USoundBase*> OnBodies[] = {
+			{ VaesenTags::Damage_Slashing, SlashFlesh }, { VaesenTags::Damage_Piercing, StabFlesh }, { VaesenTags::Damage_Blunt, BluntFlesh } };
+		for (const TPair<FGameplayTag, USoundBase*>& Body : OnBodies)
+		{
+			for (const EPhysicalSurface Surface : { SurfaceType_Default, Flesh, Cloth })
+			{
+				Row(Body.Key, Surface, Body.Value);
+			}
+		}
+		for (const FGameplayTag& Edge : TArray<FGameplayTag>{ VaesenTags::Damage_Slashing, VaesenTags::Damage_Piercing })
+		{
+			Row(Edge, Wood, BladeWood);
+			Row(Edge, Stone, BladeStone);
+			Row(Edge, Metal, BladeMetal);
+		}
+		Row(VaesenTags::Damage_Blunt, Wood, BluntHard);
+		Row(VaesenTags::Damage_Blunt, Stone, BluntHard);
+		Row(VaesenTags::Damage_Blunt, Metal, BluntMetal);
+		Save(Table);
+		UE_LOG(LogVaesenSoundSetup, Display, TEXT("Impact table: %d rows (blades, clubs and fists by hand from the combat pack)."), Table->Entries.Num());
+	}
 }
 
 UVaesenSoundSetupCommandlet::UVaesenSoundSetupCommandlet()
@@ -372,5 +496,6 @@ int32 UVaesenSoundSetupCommandlet::Main(const FString& Params)
 {
 	VaesenSoundSetup::bRebuild = FParse::Param(*Params, TEXT("rebuild"));
 	VaesenSoundSetup::SetupWeaponVerse();
+	VaesenSoundSetup::SetupCombatPack();
 	return 0;
 }

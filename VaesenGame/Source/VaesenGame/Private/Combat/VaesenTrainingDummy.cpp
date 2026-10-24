@@ -192,7 +192,8 @@ void AVaesenTrainingDummy::HandleGameplayCue(AActor* Self, FGameplayTag Gameplay
 		Hit.ImpactNormal = Parameters.Normal;
 		Hit.PhysMaterial = SurfaceMaterial;
 		const FGameplayTag DamageType = Parameters.AggregatedSourceTags.Num() > 0 ? Parameters.AggregatedSourceTags.First() : FGameplayTag();
-		UVaesenCombatLibrary::PlayImpactEffects(this, DamageType, Hit);
+		UVaesenCombatLibrary::PlayImpactEffects(this, DamageType, Hit, Parameters.AggregatedTargetTags.HasTagExact(VaesenTags::Data_Projectile)
+			? EVaesenImpactDelivery::Shot : EVaesenImpactDelivery::ByHand);
 	}
 	IGameplayCueInterface::HandleGameplayCue(Self, GameplayCueTag, EventType, Parameters);
 }

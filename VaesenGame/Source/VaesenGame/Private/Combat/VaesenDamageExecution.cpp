@@ -168,6 +168,11 @@ void UVaesenDamageExecution::Execute_Implementation(const FGameplayEffectCustomE
 	Cue.EffectContext = Context;
 	Cue.RawMagnitude = Report.TotalFinal;
 	Cue.AggregatedSourceTags.AddTag(UVaesenCombatLibrary::GetMainDamageType(Packet));
+	// Shot (a bullet, an arrow) or by hand: the impact table tells a stab from a bullet.
+	if (bProjectile)
+	{
+		Cue.AggregatedTargetTags.AddTag(VaesenTags::Data_Projectile);
+	}
 	if (const FHitResult* Hit = Context.GetHitResult())
 	{
 		Cue.Normal = Hit->ImpactNormal;

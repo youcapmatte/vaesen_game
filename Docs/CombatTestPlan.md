@@ -19,7 +19,12 @@ Close the editor, then run the commandlet. It only creates what's missing, so ru
 - Bullets crack as they pass.
 - The muzzle-loader has a stand-in: the pack's pump shotgun (R870), pitched down to sound like black powder, until there's a black-powder pack.
 
-Bows, crossbows, melee weapons and impacts still need other packs.
+**Blades and hits:** install the Fab pack **Combat Sounds - Bundle Collection** (Audios With Love) into `Content/Combat_SFX_Bundle` (kept out of git; 317 MB), then run the same `-run=VaesenSoundSetup`. It builds:
+
+- **Every sword** (the OneHandedSword category's `DA_WeaponSounds_Sword`): drawing (`Take_Out_Sword`) and sheathing (`Pack_Away_Sword`) on the frame the hand takes or lets go of the hilt; light and heavy swings (plain and big whooshes); steel on steel when the sword blocks; a parry's ring. Each is a random take with a slight pitch change.
+- **The impact table** (`DA_ImpactEffects`), rows **by hand** (blades, clubs, fists; not bullets or arrows, which keep their own rows): slashing, piercing (stabs) and blunt on flesh (also each type's any-surface row, for bodies with no material) and cloth; blades on wood, stone and metal (armour); blunt on wood, stone and metal. A hit's row is chosen by how it was delivered (by hand or shot), then damage type and surface. Blocked and parried hits play the blocking weapon's Block or Parry sound instead.
+
+Bows, crossbows, shields and bullet impacts still need sounds.
 
 ```
 UnrealEditor-Cmd.exe VaesenGame.uproject -run=VaesenCreateWidgets

@@ -288,6 +288,13 @@ bool FVaesenImpactTableTest::RunTest(const FString& Parameters)
 	TestTrue(TEXT("Type only"), Table->FindEntry(VaesenTags::Damage_Slashing, SurfaceType1) == &Table->Entries[1]);
 	TestTrue(TEXT("Anything"), Table->FindEntry(VaesenTags::Damage_Blunt, SurfaceType1) == &Table->Entries[0]);
 	TestNull(TEXT("Empty table"), NewObject<UVaesenImpactEffects>()->FindEntry(VaesenTags::Damage_Blunt, SurfaceType1));
+
+	// By hand or shot: a sword's stab has its own row, a bullet (also piercing) never gets it.
+	FVaesenImpactEntry& StabByHand = Table->Entries.AddDefaulted_GetRef();
+	StabByHand.DamageType = VaesenTags::Damage_Piercing;
+	StabByHand.Delivery = EVaesenImpactDelivery::ByHand;
+	TestTrue(TEXT("By hand: its own row first"), Table->FindEntry(VaesenTags::Damage_Piercing, SurfaceType4, EVaesenImpactDelivery::ByHand) == &Table->Entries[4]);
+	TestTrue(TEXT("Shot: never the by-hand row"), Table->FindEntry(VaesenTags::Damage_Piercing, SurfaceType4, EVaesenImpactDelivery::Shot) == &Table->Entries[2]);
 	return true;
 }
 

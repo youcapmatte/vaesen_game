@@ -252,7 +252,8 @@ void AVaesenBaseCharacter::HandleGameplayCue(AActor* Self, FGameplayTag Gameplay
 		const bool bReduced = GameplayCueTag.MatchesTagExact(VaesenTags::GameplayCue_Hit_Blocked) || GameplayCueTag.MatchesTagExact(VaesenTags::GameplayCue_Hit_Parried);
 		if (!bReduced)
 		{
-			UVaesenCombatLibrary::PlayImpactEffects(this, DamageType, Hit);
+			UVaesenCombatLibrary::PlayImpactEffects(this, DamageType, Hit, Parameters.AggregatedTargetTags.HasTagExact(VaesenTags::Data_Projectile)
+			? EVaesenImpactDelivery::Shot : EVaesenImpactDelivery::ByHand);
 		}
 		if (!bReduced && Parameters.RawMagnitude > 0.0f)
 		{
