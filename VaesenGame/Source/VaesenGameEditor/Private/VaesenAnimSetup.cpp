@@ -2151,6 +2151,70 @@ namespace VaesenAnimSetup
 		return Copy;
 	}
 
+	bool ComputePistolInHand(const USkeleton* Skeleton, FTransform& OutDesired, FTransform& OutInHand);
+
+	/** The right arm in the pack's stance: the pack's own animation, our copy, and Manny's idle, side by side. */
+	void AnalyzePistolArm()
+	{
+		const USkeleton* Pack = LoadAt<USkeleton>(PistolPackSkeleton);
+		const USkeleton* Manny = LoadObject<USkeleton>(nullptr, MannySkeletonPath);
+		const TCHAR* Bones[] = { TEXT("spine_05"), TEXT("clavicle_r"), TEXT("upperarm_r"), TEXT("lowerarm_r"), TEXT("hand_r"), TEXT("clavicle_l"), TEXT("upperarm_l") };
+		for (const TCHAR* Bone : Bones)
+		{
+			const int32 A = Pack ? Pack->GetReferenceSkeleton().FindBoneIndex(Bone) : INDEX_NONE;
+			const int32 B = Manny ? Manny->GetReferenceSkeleton().FindBoneIndex(Bone) : INDEX_NONE;
+			if (A != INDEX_NONE && B != INDEX_NONE)
+			{
+				UE_LOG(LogVaesenAnimSetup, Display, TEXT("ref %-11s pack %s | manny %s"), Bone, *Describe(Pack->GetReferenceSkeleton().GetRefBonePose()[A]),
+					*Describe(Manny->GetReferenceSkeleton().GetRefBonePose()[B]));
+			}
+		}
+		const auto Dump = [&Bones](const TCHAR* Label, const TCHAR* Path, float Time)
+		{
+			const UAnimSequence* Anim = LoadObject<UAnimSequence>(nullptr, Path);
+			if (!Anim)
+			{
+				UE_LOG(LogVaesenAnimSetup, Display, TEXT("%s: missing %s"), Label, Path);
+				return;
+			}
+			const FAnimPose Pose = PoseAt(Anim, Time);
+			FString Line;
+			for (const TCHAR* Bone : Bones)
+			{
+				const FTransform World = UAnimPoseExtensions::GetBonePose(Pose, Bone, EAnimPoseSpaces::World);
+				const FTransform Local = UAnimPoseExtensions::GetBonePose(Pose, Bone, EAnimPoseSpaces::Local);
+				Line += FString::Printf(TEXT("\n    %-11s world %s local rot %s loc %s"), Bone, *World.GetLocation().ToCompactString(), *Local.Rotator().ToCompactString(), *Local.GetLocation().ToCompactString());
+			}
+			UE_LOG(LogVaesenAnimSetup, Display, TEXT("%s (%s, skeleton %s):%s"), Label, Path, *GetNameSafe(Anim->GetSkeleton()), *Line);
+		};
+		Dump(TEXT("PACK stand idle"), TEXT("/Game/PistolLocomotionPack/Animations/StandIdle/anim_pistol_stand_idle.anim_pistol_stand_idle"), 0.0f);
+		Dump(TEXT("OURS stand idle"), TEXT("/Game/Vaesen/Animations/Pistol/anim_pistol_stand_idle.anim_pistol_stand_idle"), 0.0f);
+		Dump(TEXT("PACK jog fwd"), TEXT("/Game/PistolLocomotionPack/Animations/Jog/anim_pistol_jog_fwd_loop.anim_pistol_jog_fwd_loop"), 0.0f);
+		Dump(TEXT("OURS jog fwd"), TEXT("/Game/Vaesen/Animations/Pistol/anim_pistol_jog_fwd_loop.anim_pistol_jog_fwd_loop"), 0.0f);
+		Dump(TEXT("MM_Idle"), TEXT("/Game/Characters/Mannequins/Animations/Manny/MM_Idle.MM_Idle"), 0.0f);
+
+		// How the relaxed stance holds the gun, and where the right leg is.
+		FTransform GunInHand, InHand;
+		if (Manny && ComputePistolInHand(Manny, GunInHand, InHand))
+		{
+			for (const TCHAR* Path : { TEXT("/Game/Vaesen/Animations/Pistol/anim_pistol_stand_idle.anim_pistol_stand_idle"), TEXT("/Game/Characters/Mannequins/Animations/Manny/MM_Idle.MM_Idle") })
+			{
+				const UAnimSequence* Anim = LoadObject<UAnimSequence>(nullptr, Path);
+				if (!Anim)
+				{
+					continue;
+				}
+				const FAnimPose Pose = PoseAt(Anim, 0.0);
+				const FTransform Gun = GunInHand * UAnimPoseExtensions::GetBonePose(Pose, TEXT("hand_r"), EAnimPoseSpaces::World);
+				UE_LOG(LogVaesenAnimSetup, Display, TEXT("%s (%.2f s): gun at %s barrel %s top %s; thigh_r %s calf_r %s pelvis %s"), *GetNameSafe(Anim), Anim->GetPlayLength(),
+					*Gun.GetLocation().ToCompactString(), *Gun.GetUnitAxis(EAxis::X).ToCompactString(), *Gun.GetUnitAxis(EAxis::Z).ToCompactString(),
+					*UAnimPoseExtensions::GetBonePose(Pose, TEXT("thigh_r"), EAnimPoseSpaces::World).GetLocation().ToCompactString(),
+					*UAnimPoseExtensions::GetBonePose(Pose, TEXT("calf_r"), EAnimPoseSpaces::World).GetLocation().ToCompactString(),
+					*UAnimPoseExtensions::GetBonePose(Pose, TEXT("pelvis"), EAnimPoseSpaces::World).GetLocation().ToCompactString());
+			}
+		}
+	}
+
 	/** How fast the pack's walk with root motion (Loop_root/<Name>) goes, in cm/s. */
 	float PistolGaitSpeed(const FString& RootName)
 	{
@@ -2372,13 +2436,37 @@ namespace VaesenAnimSetup
 		UEdGraphNode* Hip = LocomotionWithAim(Builder, -1600, 0, Relaxed, AimOffset);
 		UEdGraphNode* Aim = LocomotionWithAim(Builder, -1600, 250, Aimed, AimOffset);
 		UEdGraphNode* Crouch = LocomotionWithAim(Builder, -1600, 500, Crouched, AimOffset);
-		UEdGraphNode* Standing = ByBool(Builder, -900, 100, TEXT("bAiming"), Aim, Hip, 0.2f);
+
+		// Not squared up (not aiming): the plain locomotion (ABP_Manny), standing, running and jumping, arms and all;
+		// the hand hanging at his side holds the gun muzzle down. The pack's relaxed set leaves the right collarbone at
+		// the bind pose, the shoulder rolled forward into the body.
+		UClass* Plain = LoadObject<UClass>(nullptr, UnarmedGraphPath);
+		UAnimGraphNode_LinkedAnimGraph* PlainGraph = Builder.Add<UAnimGraphNode_LinkedAnimGraph>(-1600, -300, [Plain](UAnimGraphNode_LinkedAnimGraph* Node)
+		{
+			Node->Node.InstanceClass = Plain;
+		});
+		UAnimGraphNode_SaveCachedPose* PlainCache = Builder.Add<UAnimGraphNode_SaveCachedPose>(-1300, -300, [](UAnimGraphNode_SaveCachedPose* Node)
+		{
+			Node->CacheName = TEXT("PistolPlain");
+		});
+		Builder.Pose(PlainGraph, PlainCache, TEXT("Pose"));
+		const auto UsePlain = [&Builder, PlainCache](int32 Y)
+		{
+			return Builder.Add<UAnimGraphNode_UseCachedPose>(-1150, Y, [PlainCache](UAnimGraphNode_UseCachedPose* Node)
+			{
+				Node->SaveCachedPoseNode = PlainCache;
+			});
+		};
+
+		UEdGraphNode* Lowered = ByBool(Builder, -1100, 0, TEXT("bRelaxed"), UsePlain(-150), Hip, 0.3f);
+		UEdGraphNode* Standing = ByBool(Builder, -900, 100, TEXT("bAiming"), Aim, Lowered, 0.2f);
 		UEdGraphNode* Grounded = ByBool(Builder, -600, 300, TEXT("bCrouching"), Crouch, Standing, 0.25f);
-		UAnimGraphNode_SequencePlayer* Air = Builder.Add<UAnimGraphNode_SequencePlayer>(-600, 650, [Fall](UAnimGraphNode_SequencePlayer* Node)
+		UAnimGraphNode_SequencePlayer* Air = Builder.Add<UAnimGraphNode_SequencePlayer>(-900, 650, [Fall](UAnimGraphNode_SequencePlayer* Node)
 		{
 			Node->Node.SetSequence(Fall);
 		});
-		UEdGraphNode* Final = ByBool(Builder, -300, 300, TEXT("bFalling"), Air, Grounded, 0.15f);
+		UEdGraphNode* Falling = ByBool(Builder, -600, 650, TEXT("bRelaxed"), UsePlain(800), Air, 0.2f);
+		UEdGraphNode* Final = ByBool(Builder, -300, 300, TEXT("bFalling"), Falling, Grounded, 0.15f);
 		Builder.Pose(Final, Builder.Root(), TEXT("Result"));
 		CompileAndSave(Blueprint);
 		return Blueprint->GeneratedClass;
@@ -2466,6 +2554,67 @@ namespace VaesenAnimSetup
 			UE_LOG(LogVaesenAnimSetup, Display, TEXT("Pistol reload %.2f s: the left hand meets the gun at %.2f s"), Length, Insert);
 		}
 
+		// Drawing from the right-hip holster and holstering there (the pack has neither): the relaxed stance from the
+		// spine up, the hand reaching the holstered gun's grip (HandIK_Sheath up), taking it or letting go there.
+		const float HolsterGrab = 0.32f;
+		UAnimSequence* DrawAnim = CopyWithSheathCurve(Folder / TEXT("AS_Pistol_DrawFromHolster"), StandIdle,
+			{ { 0.0f, 0.0f }, { 0.05f, 0.0f }, { HolsterGrab - 0.03f, 1.0f }, { HolsterGrab + 0.04f, 1.0f }, { HolsterGrab + 0.33f, 0.0f } });
+		const bool bNewDraw = !Exists(Folder / TEXT("AM_Pistol_DrawFromHolster"));
+		UAnimMontage* Draw = DrawAnim ? MakeTrimmedPistolMontage(TEXT("AM_Pistol_DrawFromHolster"), DrawAnim, 0.0f, 0.85f) : nullptr;
+		if (Draw && bNewDraw)
+		{
+			AddNotify(Draw, NewObject<UAnimNotify_VaesenWeaponGrab>(Draw), HolsterGrab);
+		}
+		const float HolsterRelease = 0.33f;
+		UAnimSequence* HolsterAnim = CopyWithSheathCurve(Folder / TEXT("AS_Pistol_Holster"), StandIdle,
+			{ { 0.0f, 0.0f }, { 0.05f, 0.0f }, { HolsterRelease - 0.03f, 1.0f }, { HolsterRelease + 0.04f, 1.0f }, { HolsterRelease + 0.27f, 0.0f } });
+		const bool bNewHolster = !Exists(Folder / TEXT("AM_Pistol_Holster"));
+		UAnimMontage* Holster = HolsterAnim ? MakeTrimmedPistolMontage(TEXT("AM_Pistol_Holster"), HolsterAnim, 0.0f, 0.75f) : nullptr;
+		if (Holster && bNewHolster)
+		{
+			AddNotify(Holster, NewObject<UAnimNotify_VaesenWeaponRelease>(Holster), HolsterRelease);
+		}
+		if (Draw)
+		{
+			SetSoundNotify(Draw, EVaesenWeaponSound::Draw, FMath::Max(HolsterGrab - SoundLead, 0.0f));
+			Save(Draw);
+		}
+		if (Holster)
+		{
+			SetSoundNotify(Holster, EVaesenWeaponSound::Sheath, FMath::Max(HolsterRelease - 0.1f, 0.0f));
+			Save(Holster);
+		}
+		if (FVaesenSheathLocation* Hip = Defaults->SheathLocations.Find(TEXT("Sheath_HipRight")))
+		{
+			Hip->DrawMontage = Draw;
+			Hip->SheathMontage = Holster;
+			Hip->ReferenceGrabPoint = FVector::ZeroVector;
+			// A holster holds the gun still; it rides the thigh (below).
+			Hip->HangAngle = 0.0f;
+		}
+
+		// The holster: on the right thigh (a tied-down holster, so it goes with the leg as he runs), the grip a little
+		// out from the hip joint and up at the belt, the gun turned as the relaxed hand holds it (muzzle down, the top
+		// to the front), so the hand takes it without a turn. Placed against the plain idle, which he stands in with the
+		// gun holstered. Only over the grey-box guess (on the pelvis) or with -resetsockets / -resetsheath.
+		const USkeletalMeshSocket* HolsterSocket = Skeleton->FindSocket(TEXT("Sheath_HipRight"));
+		const bool bGreyBoxHolster = !HolsterSocket || HolsterSocket->BoneName == TEXT("pelvis");
+		const bool bResetHolster = FParse::Param(FCommandLine::Get(), TEXT("resetsockets")) || FParse::Param(FCommandLine::Get(), TEXT("resetsheath"));
+		const UAnimSequence* PlainIdle = LoadObject<UAnimSequence>(nullptr, TEXT("/Game/Characters/Mannequins/Animations/Manny/MM_Idle.MM_Idle"));
+		if (bHold && StandIdle && PlainIdle && (bGreyBoxHolster || bResetHolster))
+		{
+			const FQuat Held = (GunInHand * UAnimPoseExtensions::GetBonePose(PoseAt(StandIdle, HolsterGrab), TEXT("hand_r"), EAnimPoseSpaces::World)).GetRotation();
+			const FTransform Thigh = UAnimPoseExtensions::GetBonePose(PoseAt(PlainIdle, 0.0), TEXT("thigh_r"), EAnimPoseSpaces::World);
+			// Manny faces +Y; his right is -X.
+			const FTransform Grip(Held, Thigh.GetLocation() + FVector(-13.0, -2.0, 6.0));
+			FTransform OnThigh = Grip.GetRelativeTransform(Thigh);
+			OnThigh.SetScale3D(FVector::OneVector);
+			SetSkeletonSocket(Skeleton, TEXT("Sheath_HipRight"), TEXT("thigh_r"), OnThigh, true);
+			UE_LOG(LogVaesenAnimSetup, Display, TEXT("Right-hip holster: grip at %s (hip joint %s), barrel %s, top %s (mesh space; Manny faces +Y, his right is -X)"),
+				*Grip.GetLocation().ToCompactString(), *Thigh.GetLocation().ToCompactString(), *Grip.GetUnitAxis(EAxis::X).ToCompactString(), *Grip.GetUnitAxis(EAxis::Z).ToCompactString());
+			Save(Skeleton);
+		}
+
 		// The categories: the pistol (the rolling-block, a whole reload) and the revolver (round by round).
 		for (const EVaesenWeaponCategory Category : { EVaesenWeaponCategory::Pistol, EVaesenWeaponCategory::Revolver })
 		{
@@ -2531,6 +2680,11 @@ int32 UVaesenAnimSetupCommandlet::Main(const FString& Params)
 {
 	if (!VaesenAnimSetup::RetargetRiflePack())
 	{
+		return 0;
+	}
+	if (Params.Contains(TEXT("-analyzepistolarm")))
+	{
+		VaesenAnimSetup::AnalyzePistolArm();
 		return 0;
 	}
 	if (Params.Contains(TEXT("-analyzepistol")))

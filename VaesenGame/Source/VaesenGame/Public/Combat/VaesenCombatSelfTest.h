@@ -96,7 +96,7 @@ private:
 	TObjectPtr<ACameraActor> ShotCamera;
 
 	/** Side-on screenshot of the fighter (Saved/Screenshots/SelfTest/Name.png), when vaesen.combat.selftest.shots is on; with the pack's own swordsman in PackAnim at PackTime behind him. */
-	void Shot(const TCHAR* Name, const TCHAR* PackAnim = nullptr, float PackTime = 0.0f, bool bFromFront = false);
+	void Shot(const TCHAR* Name, const TCHAR* PackAnim = nullptr, float PackTime = 0.0f, bool bFromFront = false, bool bFromBehind = false);
 
 	/** Beside the fighter in the shots: the sword pack's own 1HMBladeMan, posed as the pack has it (to compare). */
 	UPROPERTY()

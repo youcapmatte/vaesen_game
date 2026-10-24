@@ -1,4 +1,4 @@
-#include "Combat/VaesenCombatSelfTest.h"
+﻿#include "Combat/VaesenCombatSelfTest.h"
 
 #include "AIController.h"
 #include "Animation/AnimInstance.h"
@@ -321,7 +321,7 @@ void UVaesenCombatSelfTest::ResetAll()
 	Controller->SetControlRotation(FRotator::ZeroRotator);
 }
 
-void UVaesenCombatSelfTest::Shot(const TCHAR* Name, const TCHAR* PackAnim, float PackTime, bool bFromFront)
+void UVaesenCombatSelfTest::Shot(const TCHAR* Name, const TCHAR* PackAnim, float PackTime, bool bFromFront, bool bFromBehind)
 {
 	UWorld* Here = Fighter ? Fighter->GetWorld() : nullptr;
 	APlayerController* Viewer = Here ? Here->GetFirstPlayerController() : nullptr;
@@ -333,13 +333,13 @@ void UVaesenCombatSelfTest::Shot(const TCHAR* Name, const TCHAR* PackAnim, float
 	{
 		ShotCamera = Here->SpawnActor<ACameraActor>();
 		Spawned.Add(ShotCamera);
-		// The HUD (crosshair, notices) would sit over the fighter.
-		for (TObjectIterator<UVaesenCombatHUDWidget> Widget; Widget; ++Widget)
+	}
+	// The HUD (crosshair, notices) would sit over the fighter; a drawn gun adds its own.
+	for (TObjectIterator<UUserWidget> Widget; Widget; ++Widget)
+	{
+		if (Widget->GetWorld() == Here && Widget->IsInViewport())
 		{
-			if (Widget->GetWorld() == Here)
-			{
-				Widget->SetVisibility(ESlateVisibility::Collapsed);
-			}
+			Widget->SetVisibility(ESlateVisibility::Collapsed);
 		}
 	}
 	// From the fighter's left, at chest height: him in front, the pack's swordsman behind him. Or close, from ahead
@@ -349,7 +349,18 @@ void UVaesenCombatSelfTest::Shot(const TCHAR* Name, const TCHAR* PackAnim, float
 		: Fighter->GetActorLocation() - Forward * 90.0 + FVector(0.0, 0.0, 20.0);
 	const FVector Eye = bFromFront ? Body + Forward * 200.0 - Fighter->GetActorRightVector() * 70.0 + FVector(0.0, 0.0, 10.0)
 		: Body - Fighter->GetActorRightVector() * 420.0 + FVector(0.0, 0.0, 20.0);
-	ShotCamera->SetActorLocationAndRotation(Eye, (Body - Eye).Rotation());
+	if (bFromBehind)
+	{
+		// Close, from behind and to his right, a little above the hips: the right arm, hip and holster.
+		const FVector Right = Fighter->GetActorRightVector();
+		const FVector Back = Fighter->GetActorLocation() + Right * 15.0 + FVector(0.0, 0.0, 10.0);
+		const FVector BackEye = Back - Forward * 170.0 + Right * 70.0 + FVector(0.0, 0.0, 40.0);
+		ShotCamera->SetActorLocationAndRotation(BackEye, (Back - BackEye).Rotation());
+	}
+	else
+	{
+		ShotCamera->SetActorLocationAndRotation(Eye, (Body - Eye).Rotation());
+	}
 	Viewer->SetViewTarget(ShotCamera);
 
 	if (!ShotReference)
@@ -371,7 +382,7 @@ void UVaesenCombatSelfTest::Shot(const TCHAR* Name, const TCHAR* PackAnim, float
 		{
 			// Where the fighter's mesh is, 180 cm behind him (the pack's mannequin faces +Y, as Manny does).
 			const FTransform At = Fighter->GetMesh()->GetComponentTransform();
-			ShotReference->SetActorLocationAndRotation(At.GetLocation() - Forward * 180.0, At.GetRotation());
+			ShotReference->SetActorLocationAndRotation(At.GetLocation() + (bFromBehind ? Fighter->GetActorRightVector() * 100.0 : -Forward * 180.0), At.GetRotation());
 			ReferenceMesh->SetAnimationMode(EAnimationMode::AnimationSingleNode);
 			ReferenceMesh->PlayAnimation(Pose, false);
 			ReferenceMesh->SetPosition(PackTime, false);
@@ -488,11 +499,26 @@ void UVaesenCombatSelfTest::BuildSteps()
 	{
 		ResetAll();
 		Check(GiveAndEquip(*Path(Weapons, TEXT("BP_Weapon_Revolver"))), TEXT("revolver equipped (sidearm)"));
-		Tap(Holster);
-		return 1.0f;
+		return 0.5f;
 	} });
+	// Holstered on the right hip, the muzzle down.
+	Steps.Add({ FString(), [this, Tap, Holster]()
+	{
+		Shot(TEXT("12a_RevolverHolstered"), nullptr, 0.0f, false, true);
+		const UVaesenWeaponItem* Revolver = Fighter->GetEquipment()->GetWeaponInSlot(EVaesenEquipmentSlot::Sidearm);
+		const AVaesenWeaponActor* Holstered = Revolver ? Revolver->GetWeaponActor() : nullptr;
+		const FVector Pelvis = Fighter->GetMesh()->GetSocketLocation(TEXT("pelvis"));
+		const float Right = Holstered ? FVector::DotProduct(Holstered->GetActorLocation() - Pelvis, Fighter->GetActorRightVector()) : 0.0f;
+		const float Down = Holstered ? -Holstered->GetActorForwardVector().Z : 0.0f;
+		Check(Holstered && !Holstered->IsInHand() && Right > 8.0f && Down > 0.7f, FString::Printf(TEXT("the holstered revolver is on the right hip, muzzle down (%.0f cm right of the pelvis, %.2f down; %s)"),
+			Right, Down, Revolver ? *Revolver->SheathSocket.ToString() : TEXT("-")));
+		Tap(Holster);
+		return 0.4f;
+	} });
+	Steps.Add({ FString(), [this]() { Shot(TEXT("12b_RevolverDrawing"), nullptr, 0.0f, false, true); return 1.0f; } });
 	Steps.Add({ FString(), [this, Equipment, Inventory, Tap, Reload]()
 	{
+		Shot(TEXT("12c_RevolverRelaxed"), nullptr, 0.0f, false, true);
 		const UVaesenRangedWeaponItem* Revolver = Cast<UVaesenRangedWeaponItem>(Equipment->GetDrawnWeapon());
 		Check(Revolver != nullptr, TEXT("H drew it"));
 		if (UClass* Cartridges = LoadTestClass(*Path(Ammo, TEXT("BP_Ammo_RevolverCartridge"))))
@@ -570,7 +596,7 @@ void UVaesenCombatSelfTest::BuildSteps()
 	} });
 
 	// --- Krag: magazine reload, projectile, automatic bolt cycle ---
-	Steps.Add({ TEXT("Krag-JÃƒÂ¸rgensen"), [this, Equipment, Inventory, Holster, Tap]()
+	Steps.Add({ TEXT("Krag-JÃƒÆ’Ã‚Â¸rgensen"), [this, Equipment, Inventory, Holster, Tap]()
 	{
 		ResetAll();
 		Check(GiveAndEquip(*Path(Weapons, TEXT("BP_Weapon_KragRifle"))), TEXT("rifle equipped (main hand)"));
