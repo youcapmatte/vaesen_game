@@ -1,4 +1,5 @@
 #include "Inventory/VaesenEquipmentComponent.h"
+#include "Anim/VaesenAnimNotifies.h"
 
 #include "Characters/VaesenBaseCharacter.h"
 #include "Characters/VaesenPlayerCharacter.h"
@@ -511,6 +512,15 @@ bool UVaesenEquipmentComponent::IsInHand(EVaesenEquipmentSlot Slot) const
 	return AppliedDrawState.bDrawn && IsInSet(Slot, AppliedDrawState.WeaponSlot);
 }
 
+UVaesenWeaponItem* UVaesenEquipmentComponent::GetWeaponBeingSwitched() const
+{
+	if (!bStepRunning)
+	{
+		return nullptr;
+	}
+	return CurrentStep.WeaponSlot == EVaesenEquipmentSlot::Sidearm ? GetWeaponInSlot(EVaesenEquipmentSlot::Sidearm) : GetWeaponInSlot(EVaesenEquipmentSlot::MainHand);
+}
+
 UVaesenWeaponItem* UVaesenEquipmentComponent::GetDrawnWeapon() const
 {
 	if (!AppliedDrawState.bDrawn)
@@ -804,12 +814,15 @@ void UVaesenEquipmentComponent::GrabForCurrentStep()
 	RefreshWeaponAttachments();
 	ApplyDrawnLook();
 
-	// Every machine runs this, so the sound plays locally on each.
+	// Every machine runs this, so the sound plays locally on each; unless the montage times it itself (a Weapon Sound
+	// notify for it: the blade sliding out or in, a moment before or after the hand changes).
 	const UVaesenWeaponItem* Weapon = CurrentStep.WeaponSlot == EVaesenEquipmentSlot::Sidearm
 		? GetWeaponInSlot(EVaesenEquipmentSlot::Sidearm) : GetWeaponInSlot(EVaesenEquipmentSlot::MainHand);
-	if (AVaesenWeaponActor* Actor = Weapon ? Weapon->GetWeaponActor() : nullptr)
+	const EVaesenWeaponSound Sound = CurrentStep.bDraw ? EVaesenWeaponSound::Draw : EVaesenWeaponSound::Sheath;
+	AVaesenWeaponActor* Actor = Weapon ? Weapon->GetWeaponActor() : nullptr;
+	if (Actor && !UAnimNotify_VaesenWeaponSound::IsIn(Weapon->GetDrawMontage(CurrentStep.bDraw), Sound))
 	{
-		Actor->PlayWeaponSound(CurrentStep.bDraw ? EVaesenWeaponSound::Draw : EVaesenWeaponSound::Sheath);
+		Actor->PlayWeaponSound(Sound);
 	}
 	OnDrawStateChanged.Broadcast();
 }

@@ -1542,6 +1542,46 @@ namespace VaesenAnimSetup
 		Montage->RefreshCacheData();
 	}
 
+	/** How far ahead of its moment a sound starts (s): whooshes and blades sliding build up to their peak. */
+	const float SoundLead = 0.15f;
+
+	/** Sets a Weapon Sound notify for Sound at Time (moving one already there). True if it changed. */
+	bool SetSoundNotify(UAnimMontage* Montage, EVaesenWeaponSound Sound, float Time)
+	{
+		for (const FAnimNotifyEvent& Event : Montage->Notifies)
+		{
+			const UAnimNotify_VaesenWeaponSound* Notify = Cast<UAnimNotify_VaesenWeaponSound>(Event.Notify);
+			if (Notify && Notify->Sound == Sound && FMath::IsNearlyEqual(Event.GetTime(), Time, 0.005f))
+			{
+				return false;
+			}
+		}
+		Montage->Notifies.RemoveAll([Sound](const FAnimNotifyEvent& Event)
+		{
+			const UAnimNotify_VaesenWeaponSound* Notify = Cast<UAnimNotify_VaesenWeaponSound>(Event.Notify);
+			return Notify && Notify->Sound == Sound;
+		});
+		UAnimNotify_VaesenWeaponSound* Notify = NewObject<UAnimNotify_VaesenWeaponSound>(Montage);
+		Notify->Sound = Sound;
+		AddNotify(Montage, Notify, Time);
+		return true;
+	}
+
+	/** Sets the Effort Vocal notify at Time (moving one already there). True if it changed. */
+	bool SetEffortNotify(UAnimMontage* Montage, float Time)
+	{
+		for (const FAnimNotifyEvent& Event : Montage->Notifies)
+		{
+			if (Cast<UAnimNotify_VaesenEffortVocal>(Event.Notify) && FMath::IsNearlyEqual(Event.GetTime(), Time, 0.005f))
+			{
+				return false;
+			}
+		}
+		Montage->Notifies.RemoveAll([](const FAnimNotifyEvent& Event) { return Cast<UAnimNotify_VaesenEffortVocal>(Event.Notify) != nullptr; });
+		AddNotify(Montage, NewObject<UAnimNotify_VaesenEffortVocal>(Montage), Time);
+		return true;
+	}
+
 	/** An attack's montage (made once): the hit window where the sword hand moves fastest, the whoosh as it opens. */
 	UAnimMontage* MakeSwingMontage(const TCHAR* Anim, bool bHeavy, float* OutWindowEnd = nullptr, float* OutWindowStart = nullptr)
 	{
@@ -1569,15 +1609,22 @@ namespace VaesenAnimSetup
 		if (Montage && bNew)
 		{
 			AddNotifyState(Montage, NewObject<UAnimNotifyState_VaesenMeleeHitWindow>(Montage), Start, End - Start);
-			UAnimNotify_VaesenWeaponSound* Whoosh = NewObject<UAnimNotify_VaesenWeaponSound>(Montage);
-			Whoosh->Sound = bHeavy ? EVaesenWeaponSound::SwingHeavy : EVaesenWeaponSound::SwingLight;
-			AddNotify(Montage, Whoosh, Start);
-			if (bHeavy)
-			{
-				AddNotify(Montage, NewObject<UAnimNotify_VaesenEffortVocal>(Montage), FMath::Max(Start - 0.05f, 0.0f));
-			}
 			Save(Montage);
 			UE_LOG(LogVaesenAnimSetup, Display, TEXT("%s: hit window %.2f..%.2f of %.2f s"), *Montage->GetName(), Start, End, Timing.Length);
+		}
+		// The whoosh leads the blade (a whoosh builds before its peak), and the heavy swing's grunt a moment before.
+		if (Montage)
+		{
+			const float WhooshAt = FMath::Max(Start - SoundLead, 0.0f);
+			bool bChanged = SetSoundNotify(Montage, bHeavy ? EVaesenWeaponSound::SwingHeavy : EVaesenWeaponSound::SwingLight, WhooshAt);
+			if (bHeavy)
+			{
+				bChanged |= SetEffortNotify(Montage, FMath::Max(WhooshAt - 0.07f, 0.0f));
+			}
+			if (bChanged)
+			{
+				Save(Montage);
+			}
 		}
 		return Montage;
 	}
@@ -1906,11 +1953,21 @@ namespace VaesenAnimSetup
 			AddNotify(Sheath, NewObject<UAnimNotify_VaesenWeaponRelease>(Sheath), Release);
 			Save(Sheath);
 		}
+		// Their sounds, timed here rather than at the hand's grab or release: the blade starts to slide out as the hand
+		// closes on the hilt, and slides in a good while before the hand lets go at the end of the sheathing.
+		const float SheathSoundAt = FMath::Max(Release - 0.45f, 0.0f);
 		for (UAnimMontage* Montage : { Draw, Sheath })
 		{
-			if (Montage && Montage->RateScale != HipDrawRate)
+			if (!Montage)
 			{
-				Montage->RateScale = HipDrawRate;
+				continue;
+			}
+			bool bChanged = Montage->RateScale != HipDrawRate;
+			Montage->RateScale = HipDrawRate;
+			bChanged |= Montage == Draw ? SetSoundNotify(Montage, EVaesenWeaponSound::Draw, FMath::Max(Grab - SoundLead, 0.0f))
+				: SetSoundNotify(Montage, EVaesenWeaponSound::Sheath, SheathSoundAt);
+			if (bChanged)
+			{
 				Save(Montage);
 			}
 		}

@@ -157,6 +157,9 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Equipment|Weapons")
 	UVaesenWeaponItem* GetDrawnWeapon() const;
 
+	/** The weapon a draw or sheathe under way is moving (null when none is): its sounds before the hand has it. */
+	UVaesenWeaponItem* GetWeaponBeingSwitched() const;
+
 	/** The shield in the off hand while the main-hand set is drawn. */
 	UFUNCTION(BlueprintPure, Category = "Equipment|Weapons")
 	UVaesenMeleeWeaponItem* GetDrawnShield() const;

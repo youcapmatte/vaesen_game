@@ -45,7 +45,16 @@ void UAnimNotify_VaesenEjectCasing::Notify(USkeletalMeshComponent* MeshComp, UAn
 void UAnimNotify_VaesenWeaponSound::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
 {
 	Super::Notify(MeshComp, Animation, EventReference);
-	if (const AVaesenWeaponActor* Weapon = VaesenNotifies::GetDrawnWeaponActor(MeshComp))
+	// Drawing or sheathing: the weapon on the move (before the hand has it, it isn't drawn yet).
+	const AVaesenBaseCharacter* Owner = VaesenNotifies::GetCharacter(MeshComp);
+	const UVaesenEquipmentComponent* Equipment = Owner ? Owner->GetEquipment() : nullptr;
+	const UVaesenWeaponItem* Switching = Equipment && (Sound == EVaesenWeaponSound::Draw || Sound == EVaesenWeaponSound::Sheath)
+		? Equipment->GetWeaponBeingSwitched() : nullptr;
+	if (const AVaesenWeaponActor* Moving = Switching ? Switching->GetWeaponActor() : nullptr)
+	{
+		Moving->PlayWeaponSound(Sound);
+	}
+	else if (const AVaesenWeaponActor* Weapon = VaesenNotifies::GetDrawnWeaponActor(MeshComp))
 	{
 		Weapon->PlayWeaponSound(Sound);
 	}
@@ -58,6 +67,23 @@ void UAnimNotify_VaesenWeaponSound::Notify(USkeletalMeshComponent* MeshComp, UAn
 			UGameplayStatics::PlaySoundAtLocation(Character, Played, Character->GetActorLocation(), FRotator::ZeroRotator, 1.0f, 1.0f, 0.0f, Set->ShortRangeAttenuation, Set->Concurrency);
 		}
 	}
+}
+
+bool UAnimNotify_VaesenWeaponSound::IsIn(const UAnimSequenceBase* Animation, EVaesenWeaponSound Sound)
+{
+	if (!Animation)
+	{
+		return false;
+	}
+	for (const FAnimNotifyEvent& Event : Animation->Notifies)
+	{
+		const UAnimNotify_VaesenWeaponSound* Notify = Cast<UAnimNotify_VaesenWeaponSound>(Event.Notify);
+		if (Notify && Notify->Sound == Sound)
+		{
+			return true;
+		}
+	}
+	return false;
 }
 
 FString UAnimNotify_VaesenWeaponSound::GetNotifyName_Implementation() const

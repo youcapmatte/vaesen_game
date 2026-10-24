@@ -381,6 +381,83 @@ namespace VaesenSoundSetup
 		return Paths;
 	}
 
+	/** Where a recording starts to be heard (above -30 dB of its peak) and where it peaks, in seconds. */
+	bool MeasureOnset(const USoundWave* Wave, float& OutOnset, float& OutPeak)
+	{
+		TArray<uint8> Raw;
+		uint32 SampleRate = 0;
+		uint16 Channels = 0;
+		if (!Wave || !Wave->GetImportedSoundWaveData(Raw, SampleRate, Channels) || SampleRate == 0 || Channels == 0)
+		{
+			return false;
+		}
+		const int16* Samples = reinterpret_cast<const int16*>(Raw.GetData());
+		const int32 Frames = Raw.Num() / (2 * Channels);
+		int32 PeakFrame = 0;
+		int32 PeakValue = 0;
+		for (int32 Frame = 0; Frame < Frames; ++Frame)
+		{
+			const int32 Value = FMath::Abs(static_cast<int32>(Samples[Frame * Channels]));
+			if (Value > PeakValue)
+			{
+				PeakValue = Value;
+				PeakFrame = Frame;
+			}
+		}
+		int32 Onset = 0;
+		while (Onset < Frames && FMath::Abs(static_cast<int32>(Samples[Onset * Channels])) < PeakValue / 32)
+		{
+			++Onset;
+		}
+		OutOnset = static_cast<float>(Onset) / SampleRate;
+		OutPeak = static_cast<float>(PeakFrame) / SampleRate;
+		return true;
+	}
+
+	void AnalyzeCombatPack()
+	{
+		for (const TCHAR* Group : { TEXT("Sword_Hits_Blocks"), TEXT("Combat_Sounds_Weapons_And_Spells") })
+		{
+			IAssetRegistry& Registry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
+			TArray<FAssetData> Found;
+			Registry.GetAssetsByPath(FName(FString(CombatPack) / Group), Found, false);
+			Found.Sort([](const FAssetData& A, const FAssetData& B) { return A.AssetName.LexicalLess(B.AssetName); });
+			for (const FAssetData& Data : Found)
+			{
+				const FString Name = Data.AssetName.ToString();
+				if (!Name.Contains(TEXT("Whoosh")) && !Name.Contains(TEXT("Take")) && !Name.Contains(TEXT("Pack_Away")) && !Name.Contains(TEXT("VS_Sword"))
+					&& !Name.Contains(TEXT("Parry")) && !Name.Contains(TEXT("To_Body")))
+				{
+					continue;
+				}
+				float Onset = 0.0f, Peak = 0.0f;
+				const USoundWave* Wave = Cast<USoundWave>(Data.GetAsset());
+				if (MeasureOnset(Wave, Onset, Peak))
+				{
+					UE_LOG(LogVaesenSoundSetup, Display, TEXT("%-40s %.2f s long, heard from %.2f s, peaks at %.2f s"), *Name, Wave->Duration, Onset, Peak);
+				}
+			}
+		}
+	}
+
+	/** Just the take that peaks soonest (some build up slowly; the character draws and sheathes quickly). */
+	TArray<FString> Quickest(const TArray<FString>& Paths)
+	{
+		FString Best;
+		float BestPeak = TNumericLimits<float>::Max();
+		for (const FString& Path : Paths)
+		{
+			float Onset = 0.0f, Peak = 0.0f;
+			if (MeasureOnset(LoadAt<USoundWave>(Path), Onset, Peak) && Peak < BestPeak)
+			{
+				Best = Path;
+				BestPeak = Peak;
+			}
+		}
+		UE_LOG(LogVaesenSoundSetup, Display, TEXT("Quickest take: %s (peaks at %.2f s)"), *FPackageName::GetShortName(Best), BestPeak);
+		return Best.IsEmpty() ? TArray<FString>() : TArray<FString>{ Best };
+	}
+
 	TArray<FString> operator+(TArray<FString> A, const TArray<FString>& B)
 	{
 		A.Append(B);
@@ -403,16 +480,16 @@ namespace VaesenSoundSetup
 		const TCHAR* Weapons = TEXT("Combat_Sounds_Weapons_And_Spells");
 		const TCHAR* Blood = TEXT("Blood");
 
-		// The sword's own: drawn and put away, the swing (light: a quick whoosh; heavy: a big one), steel meeting steel
-		// on the guard, and the ring of a parry. Every sword (the category's set).
+		// The sword's own: drawn and put away (one quick take each; the montages time them), the swing (light: a quick
+		// whoosh; heavy: a big one), steel meeting steel on the guard, and the ring of a parry. Every sword (the
+		// category's set).
 		UVaesenWeaponSoundSet* Sword = SoundSet(TEXT("DA_WeaponSounds_Sword"), {
-			{ EVaesenWeaponSound::Draw, RandomTakes(TEXT("SC_Sword_Draw"), Takes(Blades, TEXT("Take_Out_Sword"), 4) + Takes(Blades, TEXT("Take_Sword"), 0)) },
-			{ EVaesenWeaponSound::Sheath, RandomTakes(TEXT("SC_Sword_Sheath"), Takes(Blades, TEXT("Pack_Away_Sword"), 3)) },
+			{ EVaesenWeaponSound::Draw, RandomTakes(TEXT("SC_Sword_Draw"), Quickest(Takes(Blades, TEXT("Take_Out_Sword"), 4))) },
+			{ EVaesenWeaponSound::Sheath, RandomTakes(TEXT("SC_Sword_Sheath"), Quickest(Takes(Blades, TEXT("Pack_Away_Sword"), 3))) },
 			{ EVaesenWeaponSound::SwingLight, RandomTakes(TEXT("SC_Sword_SwingLight"),
 				Takes(Blades, TEXT("Whoosh_Standard_Sword"), 3) + Takes(Weapons, TEXT("Whoosh_Sword"), 2) + Takes(Weapons, TEXT("Whoosh"), 7)) },
 			{ EVaesenWeaponSound::SwingHeavy, RandomTakes(TEXT("SC_Sword_SwingHeavy"),
-				Takes(Blades, TEXT("Whoosh_Big_Sword"), 4) + Takes(Weapons, TEXT("BigSword_Whoosh"), 2) + Takes(Weapons, TEXT("Whoosh_Critical_01_1"), 0)
-				+ Takes(Weapons, TEXT("Whoosh_Critical_02_1"), 0)) },
+				Takes(Blades, TEXT("Whoosh_Big_Sword"), 4) + Takes(Weapons, TEXT("BigSword_Whoosh"), 2)) },
 			{ EVaesenWeaponSound::Block, RandomTakes(TEXT("SC_Sword_Block"), Takes(Blades, TEXT("Sword_VS_Sword_Hit"), 10) + Takes(Blades, TEXT("Impact_On_Other_Sword"), 3)) },
 			{ EVaesenWeaponSound::Parry, RandomTakes(TEXT("SC_Sword_Parry"), Takes(Weapons, TEXT("Impact_Sword_Parry"), 5) + Takes(Blades, TEXT("Special_Crit_Sword_VS_Sword"), 3)) },
 		});
@@ -495,6 +572,11 @@ UVaesenSoundSetupCommandlet::UVaesenSoundSetupCommandlet()
 int32 UVaesenSoundSetupCommandlet::Main(const FString& Params)
 {
 	VaesenSoundSetup::bRebuild = FParse::Param(*Params, TEXT("rebuild"));
+	if (FParse::Param(*Params, TEXT("analyze")))
+	{
+		VaesenSoundSetup::AnalyzeCombatPack();
+		return 0;
+	}
 	VaesenSoundSetup::SetupWeaponVerse();
 	VaesenSoundSetup::SetupCombatPack();
 	return 0;

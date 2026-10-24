@@ -70,6 +70,9 @@ public:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sound")
 	EVaesenWeaponSound Sound = EVaesenWeaponSound::SwingLight;
+
+	/** Whether Animation (a montage) plays Sound itself (a draw or sheathe that times its own). */
+	static bool IsIn(const UAnimSequenceBase* Animation, EVaesenWeaponSound Sound);
 };
 
 /** Plays the character's effort grunt (heavy attacks, throws), from its voice set. */
