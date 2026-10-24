@@ -60,6 +60,23 @@ Services/      MysteryGenerator, WorldService (seeding, closing, write-back), Co
 
 The engine sets the fact weights. Colour and season facts, and what the group knows on arrival, weigh nothing, so the dial starts at its start; decoy facts weigh half, load-bearing ones double. The weights are scaled so the deep solve's path (its lever's facts and what gates them) ends 15% past the climax. A beat with a time fires when its threshold is reached and its time has come, whichever is later.
 
+### Fixes 5: critic fixes that land
+
+- **Code fixes prove they changed the data** (`TextReplacements`).
+  - Each replacement pair is its own operation, with its own log line: matches in scope, matches elsewhere replaced, matches elsewhere left.
+  - A pair that matches nothing, or leaves a copy where it should have replaced, has failed.
+  - A pair is searched for in the whole packet. Elsewhere it is replaced too when it is three words or more, or holds a name or a number ("late May"). A shorter phrase found elsewhere is left and reported.
+  - A pair on JSON (`":` or `{`) or on an id is refused.
+  - Field values are set as fields: `setFields` with a path by id (`cast[id=npc-x].identity.rank`, `cast[id=npc-x].knows[factId=f2].when`). Values from a fixed list are checked, and the field is read back.
+- **Parts.** Each issue is split into parts: replacements and field sets (code), and patches (the critic's `patches`, each with its own target and fix, or one per target when it gives none). Every part has an owner and a status: done, failed, undone or unrouted. A target the case lacks is unrouted. A patch is done only when the item it names changed.
+- **Four labels**, and no others: `fixed (verified)`, `fixed (unverified)`, `did not hold` and `not fixed`. "Verified" needs the scoped re-check (`FixVerifier`): one call on the small model that sees only the items the issues name, before and after. A structural warning is re-checked by its check. Only what the re-check finds still standing is retried, once.
+- **Blocking by default** (`CriticChecks.BlockingByDefault`): hook, npcRecords, mindsAgree, worldConsistency, timeline, fairClues, solves, scenes, nonTrivial, knowledgeGate. The critic may move one with `impact` and a reason. A critic run passes only with nothing blocking. A case with a blocking issue not fixed gets status `needsReview`: it is not offered as ready to play, `CaseLab list` puts it first with its open issues, and the report header says how many are open.
+- **Scene check** compares each scene only with the gated channels at its place (there, or told by someone who lives there). Three shared key terms, or a proper name the reveal brings in, is a leak, quoted by sentence.
+- **Small items.**
+  - Role ids stop at "and" or a comma (`npc-farm-farmhand`).
+  - A clue at a place the case does not use is an error, sent to minds and channels.
+  - Parent and child ties in the Society's world, and roster people's own ties, silence the similar-name warning.
+
 ### Review 3 (case 07)
 
 - **Each fix is checked on its own.** After every code replacement and every step's fix, the structural checks run again. A fix that adds an error the case did not have gets one repair: too few ways in goes to minds and channels as a new channel or a first-hand teller, and anything else goes to the step that owns the broken item. If the repair does not hold, only that fix is undone (an `undo` log entry). The others are kept, and code replacements always stay unless they break something themselves.

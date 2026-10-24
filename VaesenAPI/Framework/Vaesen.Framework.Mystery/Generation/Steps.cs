@@ -229,6 +229,8 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
                 WorldNames = context.WorldNames,
                 Holders = context.Holders,
                 SettledPublicFacts = context.SettledPublicFacts,
+                ParentChild = context.ParentChild,
+                MaxLeverFacts = context.MaxLeverFacts,
             };
             var found = repairs.Concat(applyIssues).Concat(validator.Validate(packet, checkContext, Scope)).ToList();
             if (keptIds is not null)
@@ -534,6 +536,7 @@ public sealed class ResidentsStep(IMysteryModel model, ICoherenceValidator valid
                 HomePlaceId = c.HomePlaceId,
                 Wants = new CastWants { Drives = c.Drives.Select(d => d.Text).ToList(), Fears = c.Fears.ToList() },
                 Secrets = c.LatentHooks.Select(h => h.Text).ToList(),
+                Relationships = c.Relationships.Select(r => new CastRelationship { CharacterId = r.CharacterId, Nature = r.Nature, Sentiment = r.Sentiment }).ToList(),
                 Routine = c.Background,
                 VoiceNotes = c.Voice.Register,
             })
@@ -889,7 +892,17 @@ public sealed class CriticStep(IMysteryModel model, MysteryOptions options)
                 Targets = c.Targets.Where(t => !string.IsNullOrWhiteSpace(t)).Select(t => t.Trim()).ToList(),
                 Replacements = c.Replacements.Where(r => r.From.Length > 0 && r.From != r.To).ToList() is { Count: > 0 } replacements ? replacements : null,
                 Everywhere = c.Everywhere,
-                Blocking = c.Blocking,
+                SetFields = c.SetFields.Where(f => f.Path.Length > 0).ToList() is { Count: > 0 } fields ? fields : null,
+                Patches = c.Patches.Where(p => p.Target.Length > 0).ToList() is { Count: > 0 } patches ? patches : null,
+
+                // Each check blocks or advises by default (fixes 5, section 5); the critic may move it, with a reason.
+                Blocking = c.Impact switch
+                {
+                    "blocking" => true,
+                    "advisory" => false,
+                    _ => CriticChecks.BlockingByDefault.Contains(c.Check),
+                },
+                ImpactReason = string.IsNullOrWhiteSpace(c.ImpactReason) ? null : c.ImpactReason,
             })
             .ToList();
 
@@ -906,7 +919,9 @@ public sealed class CriticStep(IMysteryModel model, MysteryOptions options)
         }
 
         entry.Issues = issues;
-        entry.Passed = !issues.Exists(i => i.IsError);
+
+        // A critic run passes only when it raised nothing blocking (fixes 5, section 5).
+        entry.Passed = !issues.Exists(i => i.IsError || i.Blocking);
         draft.Packet.Validation.Runs++;
         return ret.Ok(issues);
     }

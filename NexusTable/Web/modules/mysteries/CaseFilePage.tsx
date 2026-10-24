@@ -110,7 +110,6 @@ function CaseFile({ stored, onChanged }: { stored: StoredCase; onChanged: (next:
           {p.validation.passed
             ? <Badge color="moss" variant="light">Passed · {warnings} warning{warnings === 1 ? "" : "s"}</Badge>
             : <Badge color="blood" variant="light">Failed · {errors} error{errors === 1 ? "" : "s"}</Badge>}
-          {p.validation.needsReview && <Badge color="blood" variant="outline" title="A blocking problem the critic found was not fixed: see the review tab before playing.">Needs review</Badge>}
           <StatusBadge status={p.validation.passed ? stored.status : "rejected"} />
         </Group>
         {stored.failedStep && (
@@ -452,11 +451,19 @@ function IssueLine({ issue }: { issue: CoherenceIssue }) {
         <Text fz="xs" fw={600}>{issue.code}</Text>
         <Text fz="xs" c="var(--nx-ink-soft)">{issue.location} · {issue.source}</Text>
         {issue.blocking && <Badge size="xs" color="blood" variant="outline">blocking</Badge>}
-        {issue.applied && <Badge size="xs" color="moss" variant="light">fix verified</Badge>}
-        {issue.unresolved && <Badge size="xs" color="blood" variant="light" title={issue.unresolved}>fix did not hold</Badge>}
+        {issue.label && (
+          <Badge size="xs" color={issue.label.startsWith("fixed") ? "moss" : "blood"} variant={issue.label === "fixed (unverified)" ? "outline" : "light"} title={issue.unresolved ?? undefined}>
+            {issue.label}
+          </Badge>
+        )}
       </Group>
       <Text fz="sm">{issue.explanation}</Text>
       {issue.suggestedFix && <Text fz="xs" fs="italic" c="var(--nx-ink-soft)">{issue.suggestedFix}</Text>}
+      {issue.parts?.map((part, i) => (
+        <Text key={i} fz="xs" c={part.status === "done" ? "var(--nx-ink-soft)" : "blood.3"}>
+          {part.kind} by {part.owner || "nobody"}{part.target ? ` on ${part.target}` : ""}: {part.status}{part.note ? ` (${part.note})` : ""}
+        </Text>
+      ))}
     </Box>
   );
 }

@@ -236,9 +236,9 @@ public sealed class PipelineTests
         var reviews = log.Where(e => e.Step == "critic").ToList();
         Assert.DoesNotContain("# Your last review", reviews[0].Instruction, StringComparison.Ordinal);
         Assert.Contains("# Your last review", reviews[1].Instruction, StringComparison.Ordinal);
-        // The last round patches on the patch model, never the small one, and a verifying look confirms the fix took.
+        // The last round patches on the patch model; the scoped re-check that confirms the fix runs on the small one.
         Assert.Equal(options.CreativeModel, model.Models[^2]);
-        Assert.Equal(options.CriticModel, model.Models[^1]);
+        Assert.Equal(options.LightModel, model.Models[^1]);
         var packet = result.Result.Case.Packet;
         Assert.True(packet.Validation.Passed);
         Assert.True(Assert.Single(packet.Validation.Issues, i => i.Code == "critic." + CriticChecks.Solves).Applied);
@@ -288,7 +288,8 @@ public sealed class PipelineTests
             Instructions.Add(request.Instruction);
             Contexts.Add(request.Context);
             Assert.False(string.IsNullOrWhiteSpace(request.System));
-            if (request.Step is not (WorldSeeder.StepName or RosterBuilder.StepName))
+            // The re-check sees only the items it is asked about (fixes 5, section 4), not the case.
+            if (request.Step is not (WorldSeeder.StepName or RosterBuilder.StepName or FixVerifier.StepName))
             {
                 Assert.Contains("# The assignment", request.Context, StringComparison.Ordinal);
             }
@@ -327,6 +328,20 @@ public sealed class PipelineTests
             };
 
             var json = JsonConvert.SerializeObject(value);
+
+            // A fix that changes nothing is not done (fixes 5, section 3): a step's later answers reword its prose.
+            if (Calls.Count(c => c == request.Step) > 1 && !FixesChangeNothing && request.Step is not ("critic" or FixVerifier.StepName))
+            {
+                var tree = Newtonsoft.Json.Linq.JToken.Parse(json);
+                foreach (var prose in ((Newtonsoft.Json.Linq.JContainer)tree).Descendants().OfType<Newtonsoft.Json.Linq.JProperty>()
+                    .Where(p => p.Name is "description" or "statement" or "reveal" or "routine" or "belief" or "story" or "resolution" && p.Value.Type == Newtonsoft.Json.Linq.JTokenType.String).ToList())
+                {
+                    prose.Value = (string)prose.Value! + $" Revised {Calls.Count(c => c == request.Step)}.";
+                }
+
+                json = tree.ToString(Formatting.None);
+            }
+
             return Task.FromResult(new ResultBase<ModelReply<T>>().Ok(new ModelReply<T>
             {
                 Value = JsonConvert.DeserializeObject<T>(json)!, RawJson = json, Model = "scripted",
@@ -362,7 +377,7 @@ public sealed class PipelineTests
         /// <summary>Every fix took, unless <see cref="FixesDoNotTake"/>: one result per numbered issue in the instruction.</summary>
         private VerifyOutput Verify(string instruction) => new()
         {
-            Results = System.Text.RegularExpressions.Regex.Matches(instruction, @"(?m)^(\d+)\. ")
+            Results = System.Text.RegularExpressions.Regex.Matches(instruction, @"(?m)^## Issue (\d+):")
                 .Select(m => new VerifyResult { Issue = int.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture), Resolved = !FixesDoNotTake, Remaining = FixesDoNotTake ? "Still there." : "" })
                 .ToList(),
         };
@@ -483,6 +498,9 @@ public sealed class PipelineTests
             return output;
         }
 
+        /// <summary>Later answers of a step come back word for word: every patch leaves its items as they were.</summary>
+        public bool FixesChangeNothing { get; set; }
+
         /// <summary>Every minds-and-channels answer after the first gates c10 behind f8, breaking f7's two ways in, repairs included.</summary>
         public bool MindsFixesBreak { get; set; }
 
@@ -519,7 +537,7 @@ public sealed class PipelineTests
                 CriticCheck Warning(string name, List<string> targets, bool blocking, List<TextReplacement>? replacements = null) => new()
                 {
                     Check = name, Passed = false, Severity = IssueSeverities.Warning, Location = string.Join(", ", targets), Targets = targets,
-                    Explanation = $"{name} needs a change.", SuggestedFix = "Change it as described.", Blocking = blocking,
+                    Explanation = $"{name} needs a change.", SuggestedFix = "Change it as described.", Impact = blocking ? "blocking" : "advisory",
                     Replacements = replacements ?? [], Everywhere = replacements is not null,
                 };
                 return new CriticOutput

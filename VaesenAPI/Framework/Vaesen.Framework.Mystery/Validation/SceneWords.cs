@@ -8,11 +8,8 @@ namespace Vaesen.Framework.Mystery.Validation;
 /// </summary>
 public static partial class SceneWords
 {
-    /// <summary>A scene leaks a reveal when it shares at least this many of its distinctive words...</summary>
+    /// <summary>A scene leaks a reveal when it shares at least this many of its key terms (fixes 5, section 6).</summary>
     public const int LeakWords = 3;
-
-    /// <summary>...and at least one in this many of them.</summary>
-    public const int LeakShare = 3;
 
     private static readonly HashSet<string> Stop = new(StringComparer.Ordinal)
     {

@@ -57,8 +57,11 @@ export interface CaseSummary {
   status: CaseStatus;
 }
 
-/** generated: written, not yet played to its end; rejected: generation failed and it was kept to see why. */
-export type CaseStatus = "generated" | "solved" | "failed" | "rejected";
+/**
+ * generated: written, not yet played to its end; needsReview: passed, but a blocking critic issue is open;
+ * rejected: generation failed and it was kept to see why.
+ */
+export type CaseStatus = "generated" | "needsReview" | "solved" | "failed" | "rejected";
 
 export interface CoherenceIssue {
   code: string;
@@ -75,6 +78,21 @@ export interface CoherenceIssue {
   unresolved?: string | null;
   /** A critic issue that breaks the case at the table if it stays. */
   blocking?: boolean;
+  /** How its fix ended: "fixed (verified)", "fixed (unverified)", "did not hold" or "not fixed". */
+  label?: FixLabel | null;
+  /** The fix's parts and how each ended. */
+  parts?: FixPart[] | null;
+}
+
+export type FixLabel = "fixed (verified)" | "fixed (unverified)" | "did not hold" | "not fixed";
+
+export interface FixPart {
+  kind: "replace" | "setField" | "patch";
+  owner: string;
+  target: string;
+  detail: string;
+  status: "pending" | "done" | "failed" | "undone" | "unrouted";
+  note?: string | null;
 }
 
 export interface EscalationEvent {

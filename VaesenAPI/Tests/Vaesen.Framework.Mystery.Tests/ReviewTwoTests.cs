@@ -45,8 +45,9 @@ public sealed class ReviewTwoTests
         Assert.True(Assert.Single(packet.Validation.Issues, i => i.Code == "critic." + CriticChecks.Timeline).Applied);
         Assert.Contains(result.Case.Log, e => e.Kind == LogEntryKinds.Replace && e.Passed);
 
-        // No model was asked to do it, and nothing needed a verifying look.
-        Assert.Equal("critic", model.Calls[^1]);
+        // No model was asked to do it; only the scoped re-check looked, to call it verified (fixes 5, section 4).
+        Assert.Equal(["critic", FixVerifier.StepName], model.Calls[^2..]);
+        Assert.Equal(FixLabels.Verified, Assert.Single(packet.Validation.Issues, i => i.Code == "critic." + CriticChecks.Timeline).Label);
     }
 
     [Fact]
@@ -210,7 +211,7 @@ public sealed class ReviewTwoTests
         var target = packet.Facts.First(f => f.Statement.Contains("wheel", StringComparison.Ordinal));
         var issue = new CoherenceIssue { Targets = [target.Id], Replacements = [new TextReplacement { From = "wheel", To = "WHEEL" }] };
 
-        Assert.True(TextReplacements.Apply(draft, issue) > 0);
+        Assert.True(TextReplacements.Apply(draft, issue).TrueForAll(r => r.Ok));
         Assert.Contains("WHEEL", draft.Packet.FindFact(target.Id)!.Statement, StringComparison.Ordinal);
         Assert.Contains(draft.Packet.Facts, f => f.Id != target.Id && f.Statement.Contains("wheel", StringComparison.Ordinal));
         Assert.True(TextReplacements.Holds(draft, issue));

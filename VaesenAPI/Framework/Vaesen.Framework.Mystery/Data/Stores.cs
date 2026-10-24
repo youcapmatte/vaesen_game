@@ -91,6 +91,12 @@ public static class CaseStatuses
     /// <summary>Written and checked, not played to its end.</summary>
     public const string Generated = "generated";
 
+    /// <summary>
+    /// Written and passed, but a blocking critic issue is still open (fixes 5, section 5): never queued for play until
+    /// a person has read it.
+    /// </summary>
+    public const string NeedsReview = "needsReview";
+
     /// <summary>The Society solved it.</summary>
     public const string Solved = "solved";
 

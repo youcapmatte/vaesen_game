@@ -10,9 +10,13 @@ Give a concrete suggestedFix for every warning too: what to change, item by item
 
 When a person is called by two names, the cast's name is the right one: target the items that use the other name, never the cast member's identity. Never suggest a name that breaks the name rules.{{usedNames}}
 
-Mechanical fixes are done by the engine, not rewritten: for a rename, a date, a number or a wrong id, give replacements (the exact old text as it stands in the case, and the new text), and set everywhere true for a rename that holds across the case; otherwise the replacements apply only inside the targets. Never give a replacement for an id (npc-..., f3, c7, e4): ids are fixed, even when they read oddly or name no one. Use replacements only where exact text swaps fix it; anything that needs rewording is a suggestedFix.
+Split every fix into its parts, and give each part once, in the form that does it:
+- replacements: exact prose to swap, for a rename, a date or a term (the old text exactly as it stands in the case, and the new). The engine searches the whole case; set everywhere true for a rename. Never a fragment of JSON, never an id (npc-..., f3, c7, e4): ids are fixed, even when they read oddly or name no one.
+- setFields: a field value, set by path, for anything that is not prose: a rank, a placeId or affordanceId, a knowledge source or when, a kind, a true or false. The path names items by id: cast[id=npc-anna-lind].identity.rank, channels[id=c66].placeId, cast[id=npc-anna-lind].knows[factId=f2].when.
+- patches: each item that needs rewording, as target (an id as listed above) and fix (what to change in that item). A part that moves a clue or changes what a fact says is a patch on that item.
+Every part of the problem needs one of these; a part left out stays unfixed. suggestedFix sums the whole fix up.
 
-Set blocking true on a failed check that would break the case at the table if it stayed: a scene or the opening that shows a clue players are meant to earn, a hook that contradicts the cast or the facts (a wrong name, a fact its writer does not know), a period error players would notice, someone saying what they cannot know, an event that happens twice. Leave it false for what would only make the case better. A blocking problem left unfixed marks the case for a person to review.
+Each check blocks the case or only advises by default. Move it with impact ("blocking" or "advisory") and one line in impactReason only when this instance is clearly more or less serious than its check usually is. A blocking problem is one that breaks the case at the table: a scene or the opening that shows a clue players are meant to earn, a hook that contradicts the cast or the facts, a period error players would notice, someone saying what they cannot know, an event that happens twice. A blocking problem left unfixed marks the case for a person to review.
 
 Keep explanation and suggestedFix to about 60 words each: the items and the change, nothing else. When a date or a detail disagrees, say which version every item should use.
 

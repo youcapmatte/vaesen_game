@@ -32,6 +32,15 @@ public sealed class ValidationContext
     /// <summary>The level's public facts the Society's other cases there already explain (fixes 4, section 12.2).</summary>
     public List<Generation.SettledPublicFact> SettledPublicFacts { get; init; } = [];
 
+    /// <summary>
+    /// Parent and child pairs the Society's world records (fixes 5, section 7), as "a|b" with the ids in order: a son's
+    /// patronymic that echoes his father's name is expected, not a mix-up.
+    /// </summary>
+    public HashSet<string> ParentChild { get; init; } = [];
+
+    /// <summary>The key of a pair in <see cref="ParentChild"/>.</summary>
+    public static string PairKey(string a, string b) => string.CompareOrdinal(a, b) < 0 ? $"{a}|{b}" : $"{b}|{a}";
+
     /// <summary>The most facts a lever may require (review 2, item 8): a voice session cannot hold more.</summary>
     public int MaxLeverFacts { get; init; } = 8;
 }
@@ -78,6 +87,9 @@ public sealed partial class CaseValidator : ICoherenceValidator
 {
     /// <summary>A group that only talks (or only searches) should still reach this share of the load-bearing facts.</summary>
     public const double EntryStyleCoverage = 0.5;
+
+    /// <summary>Whether a relationship's nature is parent and child ("father", "eldest son"), not an in-law.</summary>
+    public static bool IsParentChild(string nature) => Run.IsParentChild(nature);
 
     public List<CoherenceIssue> Validate(CasePacket packet, ValidationContext context, CheckScope scope = CheckScope.Full)
     {
@@ -1049,10 +1061,10 @@ public sealed partial class CaseValidator : ICoherenceValidator
             }
 
             var (a, b) = (atA[5..], atB[5..]);
-            return Ties().Any(t => IsParentChild(t.Nature) && ((t.A.CharacterId == a && t.B.CharacterId == b) || (t.A.CharacterId == b && t.B.CharacterId == a)));
+            return context.ParentChild.Contains(ValidationContext.PairKey(a, b)) || Ties().Any(t => IsParentChild(t.Nature) && ((t.A.CharacterId == a && t.B.CharacterId == b) || (t.A.CharacterId == b && t.B.CharacterId == a)));
         }
 
-        private static bool IsParentChild(string nature) =>
+        internal static bool IsParentChild(string nature) =>
             System.Text.RegularExpressions.Regex.IsMatch(nature, @"\b(father|mother|son|daughter|parent|child|boy|girl|lad)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase)
             && !nature.Contains("in-law", StringComparison.OrdinalIgnoreCase);
 
@@ -1487,39 +1499,61 @@ public sealed partial class CaseValidator : ICoherenceValidator
         // ---- Review 3: scenes, the hook's writer, beats and the people they lean on ------------------------------
 
         /// <summary>
-        /// A scene description is read to the players when they arrive (review 3, item 4): it must not show what a
-        /// channel hides behind trust, a roll, a time, an item or another fact. Code compares the scene's words with each
-        /// gated reveal's distinctive words (not the place's own, not what the opening already says); a large overlap is
-        /// an error, sent to the hook and scenes.
+        /// A scene description is read to the players when they arrive (review 3, item 4; fixes 5, section 6): it must
+        /// not show what a channel at that place keeps behind trust, a roll, a time, an item, a fact or a beat. A channel
+        /// is at the place when it sits there or its teller lives there. Code compares the scene's key terms with each
+        /// gated reveal's (not the place's own words, not what the opening already says): three shared, or one proper
+        /// name the reveal brings in, is a leak. An error for the hook and scenes, quoting the sentence.
         /// </summary>
         public void CheckSceneLeaks()
         {
             var open = packet.Channels.Where(c => !Gated(c)).Select(c => c.Reveal)
                 .Append(packet.Hook.Text)
                 .Concat(packet.Truth.Escalation.Where(e => e.Opening).Select(e => e.Description));
-            var common = SceneWords.Of(string.Join(' ', open));
+            var openText = string.Join(' ', open);
+            var common = SceneWords.Of(openText);
+            var known = packet.Cast.Select(c => c.Name).Concat(packet.OffstagePeople.Select(o => o.Name))
+                .Concat(context.Level.Places.Select(p => p.Name)).Append(context.Level.Name).Append(openText)
+                .SelectMany(n => n.Split(' ', StringSplitOptions.RemoveEmptyEntries)).ToHashSet(StringComparer.Ordinal);
             foreach (var (placeId, scene) in packet.Level.SceneDescriptions)
             {
                 var place = context.Level.FindPlace(placeId);
                 var own = SceneWords.Of(string.Join(' ', new[] { place?.Name, place?.Description, context.Level.Name }
                     .Concat(place?.AllAffordances().Select(a => a.Name) ?? [])));
                 var seen = SceneWords.Of(scene);
-                foreach (var channel in packet.Channels.Where(Gated))
+                var here = packet.Channels.Where(c => Gated(c) && (c.PlaceId == placeId || packet.FindCast(c.SourceCharacterId)?.HomePlaceId == placeId));
+                foreach (var channel in here)
                 {
                     var hidden = SceneWords.Of(channel.Reveal);
                     hidden.ExceptWith(own);
                     hidden.ExceptWith(common);
                     var shown = hidden.Intersect(seen).ToList();
-                    if (shown.Count >= SceneWords.LeakWords && shown.Count * SceneWords.LeakShare >= hidden.Count)
+                    var names = IntroducedName().Matches(channel.Reveal).Select(m => m.Value)
+                        .Where(n => !known.Contains(n) && System.Text.RegularExpressions.Regex.IsMatch(scene, $@"\b{n}\b")).Distinct().ToList();
+                    if (shown.Count < SceneWords.LeakWords && names.Count == 0)
                     {
-                        Error(IssueCodes.Giveaway, $"scene:{placeId}",
-                            $"The scene at {place?.Name ?? placeId} shows what channel {channel.Id} ({channel.FactId}) keeps behind {string.Join(", ", channel.Access.Requires)}: it shares \"{string.Join("\", \"", shown)}\" with that reveal. The game master reads the scene aloud on arrival.",
-                            $"Cut from the scene what {channel.Id} reveals; describe only what anyone sees on arriving.");
-                        break;
+                        continue;
                     }
+
+                    var terms = shown.Concat(names).ToList();
+                    var sentence = SentenceOf(scene, terms);
+                    Error(IssueCodes.Giveaway, $"scene:{placeId}",
+                        $"The scene at {place?.Name ?? placeId} shows what channel {channel.Id} ({channel.FactId}) keeps behind {string.Join(", ", channel.Access.Requires.Append(channel.Access.Item).OfType<string>())}: it shares \"{string.Join("\", \"", terms)}\" with that reveal, in \"{sentence}\". The game master reads the scene aloud on arrival.",
+                        $"Rewrite the sentence \"{sentence}\" so it sets the place without showing what {channel.Id} reveals.");
                 }
             }
         }
+
+        /// <summary>The scene's sentence that holds most of the shared terms.</summary>
+        private static string SentenceOf(string scene, List<string> terms) =>
+            System.Text.RegularExpressions.Regex.Split(scene, @"(?<=[.!?;])\s+")
+                .OrderByDescending(s => SceneWords.Of(s).Count(terms.Contains) + terms.Count(t => s.Contains(t, StringComparison.Ordinal)))
+                .First()
+                .Trim();
+
+        /// <summary>A capitalised word inside a sentence, not at its start: a proper name a reveal brings in.</summary>
+        [System.Text.RegularExpressions.GeneratedRegex(@"(?<=[\p{Ll},;:] )\p{Lu}\p{Ll}+")]
+        private static partial System.Text.RegularExpressions.Regex IntroducedName();
 
         /// <summary>A channel players cannot open on arrival: it needs trust, a roll, a time, an item, a fact or a beat.</summary>
         private bool Gated(CaseChannel c) =>
@@ -1642,7 +1676,9 @@ public sealed partial class CaseValidator : ICoherenceValidator
 
             foreach (var c in packet.Channels.Where(c => c.PlaceId is not null && level.FindPlace(c.PlaceId) is not null && !packet.Level.PlacesUsed.Contains(c.PlaceId)))
             {
-                Warn(IssueCodes.AffordanceFit, $"channel:{c.Id}", $"Place '{c.PlaceId}' holds a clue but is not in placesUsed.");
+                // The runtime loads only the places used (fixes 5, section 7): an error, sent to minds and channels to move it.
+                Error(IssueCodes.AffordanceFit, $"channel:{c.Id}", $"Place '{c.PlaceId}' holds a clue but is not one of the places the case uses.",
+                    $"Move {c.Id} to a place the case uses ({string.Join(", ", packet.Level.PlacesUsed)}), or to its owner's home there.");
             }
 
             foreach (var fact in packet.Facts.Where(f => !f.LoadBearing && !_graph.HasAnySource(f.Id) && !_graph.OpeningKnowledge().Contains(f.Id)))

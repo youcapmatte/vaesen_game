@@ -392,9 +392,21 @@ public sealed class CriticCheck
     [JsonProperty("everywhere")]
     public bool Everywhere { get; set; }
 
-    /// <summary>Left unfixed, the case breaks at the table (see the critic prompt); otherwise advisory.</summary>
-    [JsonProperty("blocking")]
-    public bool Blocking { get; set; }
+    /// <summary>Field values to set by code: a rank, a place, a source, a when, an enum, a boolean.</summary>
+    [JsonProperty("setFields")]
+    public List<FieldSet> SetFields { get; set; } = [];
+
+    /// <summary>The parts that need rewording by the step that owns each target.</summary>
+    [JsonProperty("patches")]
+    public List<PatchAsk> Patches { get; set; } = [];
+
+    /// <summary>"blocking" or "advisory" to move the issue from its check's default; empty keeps the default.</summary>
+    [JsonProperty("impact")]
+    public string Impact { get; set; } = "";
+
+    /// <summary>One line on why, when <see cref="Impact"/> moves it.</summary>
+    [JsonProperty("impactReason")]
+    public string ImpactReason { get; set; } = "";
 
     /// <summary>Every id the issue touches, so it is routed to the step that owns each (see the critic prompt).</summary>
     [JsonProperty("targets")]
@@ -435,6 +447,15 @@ public static class CriticChecks
 
     /// <summary>Scene descriptions show only what anyone sees on arrival, never a gated clue (review 3, item 4).</summary>
     public const string Scenes = "scenes";
+
+    /// <summary>
+    /// Checks whose failures block the case by default (fixes 5, section 5): left open, the case needs review. The
+    /// others are advisory unless the critic says otherwise.
+    /// </summary>
+    public static readonly IReadOnlySet<string> BlockingByDefault = new HashSet<string>(StringComparer.Ordinal)
+    {
+        Hook, NpcRecords, MindsAgree, WorldConsistency, Timeline, FairClues, Solves, Scenes, NonTrivial, KnowledgeGate,
+    };
 
     public static readonly IReadOnlyList<string> All =
         [DeepLoreTrail, NonTrivial, KnowledgeGate, HumansFromConflict, DifficultyOnFocus, Hook, FairClues, HonestRedHerrings, Solves, WorldConsistency, Timeline, Mechanisms, ActsToPlan, Leverage, MindsAgree, NpcRecords, Scenes];

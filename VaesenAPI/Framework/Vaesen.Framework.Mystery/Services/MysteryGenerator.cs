@@ -191,6 +191,7 @@ public sealed class MysteryGenerator(
             if (outcome.Success)
             {
                 Finish(draft, passed: true);
+                last.Status = draft.Packet.Validation.NeedsReview ? CaseStatuses.NeedsReview : CaseStatuses.Generated;
                 if (request.Store)
                 {
                     var saved = await cases.SaveAsync(last, cancellationToken);
@@ -581,7 +582,8 @@ public sealed class MysteryGenerator(
                 // fixes are applied in one cheap round, kept only if the case still passes its checks.
                 critique = critique.Select(i => i.IsError ? AsWarning(i) : i).ToList();
                 draft.Packet.Validation.Issues.AddRange(critique);
-                var last = critique.Where(Fixable).Concat(TargetedWarnings(draft)).ToList();
+                // Every critic issue it answered goes in, so each ends with a label: nothing to route is "not fixed" (fixes 5).
+                var last = critique.Where(i => i.Location != "critic").Concat(TargetedWarnings(draft)).ToList();
                 if (last.Count > 0)
                 {
                     progress?.Report(new GenerationProgress(caseAttempt, CheckStepName, "Applying the critic's last suggestions, and checking each took."));
@@ -677,7 +679,9 @@ public sealed class MysteryGenerator(
             .ToList();
 
     /// <summary>A critic issue that names its items and says how to fix them.</summary>
-    private static bool Fixable(CoherenceIssue issue) => issue.Targets is { Count: > 0 } && !string.IsNullOrWhiteSpace(issue.SuggestedFix);
+    private static bool Fixable(CoherenceIssue issue) =>
+        issue.Targets is { Count: > 0 } && !string.IsNullOrWhiteSpace(issue.SuggestedFix)
+        || issue.Replacements is { Count: > 0 } || issue.SetFields is { Count: > 0 } || issue.Patches is { Count: > 0 };
 
     private static CoherenceIssue AsWarning(CoherenceIssue issue) => new()
     {
@@ -691,17 +695,61 @@ public sealed class MysteryGenerator(
         Replacements = issue.Replacements,
         Everywhere = issue.Everywhere,
         Blocking = issue.Blocking,
+        SetFields = issue.SetFields,
+        Patches = issue.Patches,
+        ImpactReason = issue.ImpactReason,
     };
 
-    /// <summary>What a round of fixes did: the issues whose fixes were kept, and those undone, with why.</summary>
-    private sealed record FixRound(List<CoherenceIssue> Applied, Dictionary<CoherenceIssue, string> Undone);
+    /// <summary>What a round of fixes did: the issues every part of which was done (each issue's parts carry their status).</summary>
+    private sealed record FixRound(List<CoherenceIssue> Applied);
 
     /// <summary>
-    /// Routes the issues to their owning steps (fixes 2, section 1) and fixes each step in place, in pipeline order:
-    /// a patch of the items named, or a revised answer. Each fix is checked on its own (review 3, item 1): one that
-    /// breaks a structural check the case passed before gets one repair from the steps that own the broken checks
-    /// (a redundancy break is a new way in from minds and channels), and if that does not hold, only that fix is
-    /// undone. Code replacements are checked one by one the same way.
+    /// The parts of an issue's fix, each with its owner (fixes 5, section 3): every replacement pair and field set is
+    /// code's, every patch the step's that owns its target. An issue that names targets and a fix but no parts is one
+    /// patch per target. A target the case does not have, or an issue with nothing to route, is unrouted; in a full
+    /// round (not the light last one) a critic issue with no targets revises its step as a whole.
+    /// </summary>
+    internal static List<FixPart> PartsOf(CasePacket packet, CoherenceIssue issue, bool light)
+    {
+        var parts = new List<FixPart>();
+        var scope = string.Join(", ", issue.Everywhere ? ["everywhere"] : issue.Targets ?? []);
+        parts.AddRange((issue.Replacements ?? []).Select(r => new FixPart { Kind = FixPartKinds.Replace, Owner = "code", Target = scope, Detail = $"\"{r.From}\" → \"{r.To}\"" }));
+        parts.AddRange((issue.SetFields ?? []).Select(f => new FixPart { Kind = FixPartKinds.SetField, Owner = "code", Target = f.Path, Detail = f.Value }));
+        var asks = issue.Patches is { Count: > 0 } patches
+            ? patches.Select(p => (p.Target, Fix: string.IsNullOrWhiteSpace(p.Fix) ? issue.SuggestedFix ?? "" : p.Fix)).ToList()
+            : parts.Count == 0 ? (issue.Targets ?? []).Select(t => (Target: t, Fix: issue.SuggestedFix ?? "")).ToList() : [];
+        var tree = CaseItems.Tree(packet);
+        foreach (var (target, fix) in asks)
+        {
+            var (step, location) = CriticRouting.Owner(target);
+            var known = location.StartsWith(Patch.NewItem, StringComparison.Ordinal) || CaseItems.Json(tree, target) is not null;
+            parts.Add(new FixPart
+            {
+                Kind = FixPartKinds.Patch,
+                Owner = known ? step : "",
+                Target = target,
+                Detail = fix,
+                Status = known ? FixPartStatuses.Pending : FixPartStatuses.Unrouted,
+                Note = known ? null : $"The case has no item {target}.",
+            });
+        }
+
+        if (parts.Count == 0)
+        {
+            parts.Add(!light && issue.Source == IssueSources.Critic
+                ? new FixPart { Kind = FixPartKinds.Patch, Owner = CriticRouting.DefaultStep(issue.Code), Target = "", Detail = issue.SuggestedFix ?? issue.Explanation }
+                : new FixPart { Kind = FixPartKinds.Patch, Status = FixPartStatuses.Unrouted, Note = "Nothing to route: no target and no operation." });
+        }
+
+        return parts;
+    }
+
+    /// <summary>
+    /// Fixes the issues' parts (fixes 2, section 1; review 3, item 1; fixes 5, sections 1 to 3). Code parts first, one at
+    /// a time; then each step's patches, in pipeline order. Every part is checked on its own: one that adds a structural
+    /// error the case did not have gets one repair from the steps that own the broken checks, and if that does not hold,
+    /// it alone is undone. A part is done only when its post-condition holds: a pair's text is gone where it was to be
+    /// replaced, a field reads back as set, a patched item is not as it was.
     /// </summary>
     private async Task<FixRound> FixRoundAsync(MysteryDraft draft, IReadOnlyList<CoherenceIssue> issues, int caseAttempt, bool light, CancellationToken ct)
     {
@@ -719,80 +767,99 @@ public sealed class MysteryGenerator(
             [HookStep.StepName] = new HookStep(model, validator, o),
         };
 
-        var applied = new List<CoherenceIssue>();
-        var undone = new Dictionary<CoherenceIssue, string>();
+        foreach (var issue in issues)
+        {
+            issue.Parts = PartsOf(draft.Packet, issue, light);
+        }
 
         // What the case already fails is not any fix's fault: only new errors count against a fix.
         var baseline = ErrorKeys(Errors(draft));
 
-        // Mechanical fixes are done by code (review 2, item 2): a rename, a date or a wrong id is exact text replaced
-        // in the packet and every kept output, and logged. Only what changed nothing goes on to a model.
-        var replaced = new List<CoherenceIssue>();
-        foreach (var issue in issues.Where(i => i.Replacements is { Count: > 0 }))
+        // Code parts: each pair and field on its own, so one that matched nothing or broke a check costs only itself.
+        foreach (var issue in issues)
         {
-            var before = Snapshot(draft);
-            var places = TextReplacements.Apply(draft, issue);
-            draft.Log.Add(new GenerationLogEntry
+            var codeParts = issue.Parts!.Where(p => p.Owner == "code").ToList();
+            var pairs = issue.Replacements ?? [];
+            var fields = issue.SetFields ?? [];
+            for (var i = 0; i < codeParts.Count; i++)
             {
-                CaseAttempt = caseAttempt,
-                Step = CheckStepName,
-                Kind = LogEntryKinds.Replace,
-                Passed = places > 0,
-                Instruction = string.Join("; ", issue.Replacements!.Select(r => $"\"{r.From}\" → \"{r.To}\"")) + (issue.Everywhere ? " everywhere" : $" in {string.Join(", ", issue.Targets ?? [])}"),
-                Output = $"{places} place(s)",
-            });
-            if (places == 0)
-            {
-                continue;
-            }
+                var part = codeParts[i];
+                var before = Snapshot(draft);
+                var result = part.Kind == FixPartKinds.Replace
+                    ? TextReplacements.Apply(draft, new CoherenceIssue { Targets = issue.Targets, Everywhere = issue.Everywhere, Replacements = [pairs[i]] })[0]
+                    : TextReplacements.SetField(draft, fields[i - pairs.Count]);
+                draft.Log.Add(new GenerationLogEntry
+                {
+                    CaseAttempt = caseAttempt,
+                    Step = CheckStepName,
+                    Kind = LogEntryKinds.Replace,
+                    Passed = result.Ok,
+                    Instruction = $"{issue.Code}: {result.Op} {result.What} in {part.Target}",
+                    Output = result.ToString(),
+                });
+                part.Note = result.ToString();
+                if (!result.Ok)
+                {
+                    Restore(draft, before);
+                    part.Status = FixPartStatuses.Failed;
+                    continue;
+                }
 
-            if (NewErrors(draft, baseline) is { Count: > 0 } broke)
-            {
-                Restore(draft, before);
-                undone[issue] = $"Its replacement broke {Describe(broke)} and was undone.";
-                LogUndo(draft, caseAttempt, "replacement", broke);
-                continue;
-            }
+                if (NewErrors(draft, baseline) is { Count: > 0 } broke)
+                {
+                    Restore(draft, before);
+                    part.Status = FixPartStatuses.Undone;
+                    part.Note = $"It broke {Describe(broke)} and was undone.";
+                    LogUndo(draft, caseAttempt, $"{result.Op} {result.What}", broke);
+                    continue;
+                }
 
-            replaced.Add(issue);
+                part.Status = FixPartStatuses.Done;
+            }
         }
 
-        applied.AddRange(replaced);
-
-        // An issue split over several steps is applied only if every part was: one failed part means it was not.
-        var routed = CriticRouting.Route(issues.Except(replaced).Except(undone.Keys)).ToDictionary(r => r.Step, r => r.Issues, StringComparer.Ordinal);
-
-        // A resident's record is the residents step's, not humans'.
-        if (draft.Outputs.TryGetValue(ResidentsStep.StepName, out var kept) && kept is ResidentsOutput residents
-            && routed.TryGetValue(HumansStep.StepName, out var people))
+        // Model parts, grouped by the step that owns each; a resident's record is the residents step's, not humans'.
+        var residents = draft.Outputs.TryGetValue(ResidentsStep.StepName, out var kept) && kept is ResidentsOutput r
+            ? r.Residents.Select(c => $"cast:{c.CharacterId}").ToHashSet(StringComparer.Ordinal)
+            : [];
+        var routed = new Dictionary<string, List<(FixPart Part, CoherenceIssue Ask)>>(StringComparer.Ordinal);
+        foreach (var issue in issues)
         {
-            var theirs = residents.Residents.Select(c => $"cast:{c.CharacterId}").ToHashSet(StringComparer.Ordinal);
-            var moved = people.Where(p => theirs.Contains(p.Part.Location)).ToList();
-            if (moved.Count > 0)
+            foreach (var part in issue.Parts!.Where(p => p.Kind == FixPartKinds.Patch && p.Status == FixPartStatuses.Pending))
             {
-                people.RemoveAll(moved.Contains);
-                routed[ResidentsStep.StepName] = moved;
-                if (people.Count == 0)
+                var location = part.Target.Length == 0 ? issue.Location : CriticRouting.Owner(part.Target).Location;
+                var step = part.Owner == HumansStep.StepName && residents.Contains(location) ? ResidentsStep.StepName : part.Owner;
+                var ask = new CoherenceIssue
                 {
-                    routed.Remove(HumansStep.StepName);
+                    Code = issue.Code, Severity = issue.Severity, Location = location, Explanation = issue.Explanation,
+                    SuggestedFix = part.Detail, Source = issue.Source, Targets = part.Target.Length == 0 ? issue.Targets : [part.Target],
+                };
+                if (!routed.TryGetValue(step, out var list))
+                {
+                    routed[step] = list = [];
                 }
+
+                list.Add((part, ask));
             }
         }
 
         foreach (var step in CriticRouting.PipelineOrder)
         {
-            if (!routed.TryGetValue(step, out var parts))
+            if (!routed.TryGetValue(step, out var asks) || asks.Count == 0)
             {
                 continue;
             }
 
             var before = Snapshot(draft);
-            var result = await steps[step].FixAsync(draft, parts.Select(p => p.Part).ToList(), caseAttempt, light, ct);
+            var beforeTree = CaseItems.Tree(before.Packet);
+            var beforeOutput = Newtonsoft.Json.JsonConvert.SerializeObject(before.Outputs.GetValueOrDefault(step));
+            var result = await steps[step].FixAsync(draft, asks.Select(a => a.Ask).ToList(), caseAttempt, light, ct);
             if (!result.Success)
             {
-                foreach (var part in parts)
+                foreach (var (part, _) in asks.Where(a => a.Part.Status == FixPartStatuses.Pending))
                 {
-                    undone.TryAdd(part.Original, $"The {step} fix did not pass that step's checks: {result.ErrorMessage}");
+                    part.Status = FixPartStatuses.Failed;
+                    part.Note = $"The {step} patch did not pass that step's checks: {result.ErrorMessage}";
                 }
 
                 logger.LogWarning("The fix for {Step} did not pass its checks and was not applied: {Error}", step, result.ErrorMessage);
@@ -807,9 +874,10 @@ public sealed class MysteryGenerator(
                 if (!repaired)
                 {
                     Restore(draft, before);
-                    foreach (var part in parts)
+                    foreach (var (part, _) in asks)
                     {
-                        undone.TryAdd(part.Original, $"The {step} fix broke {Describe(broke)}; one repair did not hold, so this fix alone was undone.");
+                        part.Status = FixPartStatuses.Undone;
+                        part.Note = $"The {step} patch broke {Describe(broke)}; one repair did not hold, so it alone was undone.";
                     }
 
                     LogUndo(draft, caseAttempt, step, broke);
@@ -817,7 +885,17 @@ public sealed class MysteryGenerator(
                 }
             }
 
-            applied.AddRange(parts.Select(p => p.Original));
+            // The post-condition of a patch: the item it names is not as it was ("the call succeeded" is not one).
+            var afterTree = CaseItems.Tree(draft.Packet);
+            var afterOutput = Newtonsoft.Json.JsonConvert.SerializeObject(draft.Outputs.GetValueOrDefault(step));
+            foreach (var (part, _) in asks)
+            {
+                var changed = part.Target.Length == 0
+                    ? beforeOutput != afterOutput
+                    : CaseItems.Json(beforeTree, part.Target) != CaseItems.Json(afterTree, part.Target);
+                part.Status = changed ? FixPartStatuses.Done : FixPartStatuses.Failed;
+                part.Note = changed ? null : $"The {step} patch left {(part.Target.Length == 0 ? "the step" : part.Target)} as it was.";
+            }
 
             // What this fix changed reaches the later steps whose items are built on it.
             foreach (var (later, follow) in CriticRouting.Dependents(before.Packet, draft.Packet))
@@ -827,11 +905,11 @@ public sealed class MysteryGenerator(
                     routed[later] = list = [];
                 }
 
-                list.Add((follow, follow));
+                list.Add((new FixPart { Kind = FixPartKinds.Patch, Owner = later, Target = "", Detail = follow.SuggestedFix ?? "" }, follow));
             }
         }
 
-        return new FixRound(applied.Where(i => i.Code != IssueCodes.Consistency && !undone.ContainsKey(i)).Distinct().ToList(), undone);
+        return new FixRound(issues.Where(i => i.Code != IssueCodes.Consistency && i.Parts!.TrueForAll(p => p.Status == FixPartStatuses.Done)).ToList());
     }
 
     /// <summary>
@@ -906,21 +984,23 @@ public sealed class MysteryGenerator(
     });
 
     /// <summary>
-    /// The last round (fixes 2, section 2; review 2, items 1 and 2; review 3, items 1 and 2): the remaining warnings
-    /// with concrete fixes, as replacements in code and patches on the patch model, never whole-step rewrites. Each fix
-    /// is kept or undone on its own (see <see cref="FixRoundAsync"/>). Then a check that each kept fix took: a
-    /// structural warning must be gone, a replacement's old text must be gone, and a critic issue must be found gone by
-    /// a verifying look. Only what a verifying look found still standing is tried again, with what it found; an undone
-    /// fix and an instruction already sent are not. Returns the issues that still did not hold.
+    /// The last round (fixes 2, section 2; review 3, items 1 and 2; fixes 5, sections 3 and 4): every remaining critic
+    /// issue and every targeted structural warning, split into parts and fixed by code and patches, never whole-step
+    /// rewrites. Then the labels: an issue whose parts all held goes to a scoped re-check on the small model, which sees
+    /// only the items it names, before and after; a structural warning is re-checked by its check. What the re-check
+    /// finds still standing is tried once more with what it found; an undone part and an instruction already sent are
+    /// not. Returns the issues not fixed.
     /// </summary>
     private async Task<List<CoherenceIssue>> ApplyWarningsAsync(MysteryDraft draft, IReadOnlyList<CoherenceIssue> warnings, int caseAttempt, CancellationToken ct)
     {
-        var held = new List<CoherenceIssue>();
-        var remaining = new Dictionary<CoherenceIssue, string>();
+        var originals = warnings.Distinct().ToList();
+        var reasons = new Dictionary<CoherenceIssue, string?>();
+        var rechecked = new HashSet<CoherenceIssue>();
         var sent = new HashSet<string>(StringComparer.Ordinal);
+        var startPacket = draft.ClonePacket();
 
         // What is asked this time, by the original issue it stands for.
-        var asked = warnings.Distinct().ToDictionary(i => i, i => i);
+        var asked = originals.ToDictionary(i => i, i => i);
         for (var attempt = 0; attempt <= Options.FixRetries && asked.Count > 0; attempt++)
         {
             foreach (var ask in asked.Values)
@@ -929,52 +1009,65 @@ public sealed class MysteryGenerator(
             }
 
             var before = Snapshot(draft);
-            var round = await FixRoundAsync(draft, asked.Values.ToList(), caseAttempt, light: true, ct);
+            await FixRoundAsync(draft, asked.Values.ToList(), caseAttempt, light: true, ct);
             if (!StillPasses(draft, caseAttempt))
             {
-                // Each fix was checked alone, so this is fixes that clash: keep the case as it was.
+                // Each part was checked alone, so this is parts that clash: keep the case as it was.
                 logger.LogInformation("The last round's fixes broke the case's checks together; keeping it as it was");
                 Restore(draft, before);
-                foreach (var original in asked.Keys)
+                foreach (var (original, ask) in asked)
                 {
-                    remaining[original] = "Its fix clashed with another fix in the same round and was undone.";
+                    foreach (var part in ask.Parts ?? [])
+                    {
+                        part.Status = FixPartStatuses.Undone;
+                        part.Note = "It clashed with another fix in the same round and was undone.";
+                    }
+
+                    original.Parts = Merge(original.Parts, ask.Parts);
                 }
 
                 break;
             }
 
-            var byAsk = asked.ToDictionary(p => p.Value, p => p.Key);
-            foreach (var (ask, why) in round.Undone)
+            foreach (var (original, ask) in asked)
             {
-                if (byAsk.TryGetValue(ask, out var original))
-                {
-                    remaining[original] = why;
-                }
+                original.Parts = Merge(original.Parts, ask.Parts);
             }
 
-            var tried = asked.Keys.Where(i => !round.Undone.ContainsKey(asked[i])).ToList();
+            // The scoped re-check, for issues whose every part held.
+            var whole = asked.Keys.Where(i => i.Parts!.TrueForAll(p => p.Status == FixPartStatuses.Done)).ToList();
             var now = validator.Validate(draft.Packet, draft.ValidationContext, CheckScope.Full);
-            var critic = tried.Where(i => i.Source == IssueSources.Critic && i.Replacements is not { Count: > 0 }).ToList();
-            var looked = critic.Count == 0 ? [] : (await new FixVerifier(model, Options).VerifyAsync(draft, critic, caseAttempt, ct)).Result
-                ?? critic.Select(_ => (string?)"The verifying look failed.").ToList();
+            var critic = whole.Where(i => i.Source == IssueSources.Critic).ToList();
+            var looked = critic.Count == 0 ? null : (await new FixVerifier(model, Options).VerifyAsync(draft, critic, startPacket, caseAttempt, ct)).Result;
             var again = new Dictionary<CoherenceIssue, CoherenceIssue>();
-            foreach (var issue in tried)
+            foreach (var issue in whole)
             {
-                string? still = issue switch
+                string? still;
+                if (issue.Source == IssueSources.Structural)
                 {
-                    { Replacements.Count: > 0 } => TextReplacements.Holds(draft, issue) ? null : "The old text is still there.",
-                    { Source: IssueSources.Structural } => now.Exists(n => n.Code == issue.Code && n.Location == issue.Location) ? "The check still finds it." : null,
-                    _ => looked[critic.IndexOf(issue)],
-                };
+                    still = now.Exists(n => n.Code == issue.Code && n.Location == issue.Location) ? "The check still finds it." : null;
+                }
+                else if (looked is null)
+                {
+                    // No re-check ran: fixed, but not verified.
+                    reasons.Remove(issue);
+                    rechecked.Remove(issue);
+                    continue;
+                }
+                else
+                {
+                    still = looked[critic.IndexOf(issue)];
+                }
+
+                rechecked.Add(issue);
+                reasons[issue] = still;
                 if (still is null)
                 {
-                    held.Add(issue);
-                    remaining.Remove(issue);
                     continue;
                 }
 
-                remaining[issue] = still;
-                var retry = WithRemaining(issue, still);
+                // Tried again only with what the re-check found, as patches of the same items; never the same words twice.
+                var retry = Retry(issue, still);
                 if (!sent.Contains(Signature(retry)))
                 {
                     again[issue] = retry;
@@ -984,45 +1077,75 @@ public sealed class MysteryGenerator(
             asked = again;
         }
 
+        foreach (var issue in originals)
+        {
+            var parts = issue.Parts ?? [];
+            (issue.Label, issue.Unresolved) = parts switch
+            {
+                _ when parts.Exists(p => p.Status == FixPartStatuses.Undone) => (FixLabels.DidNotHold, parts.First(p => p.Status == FixPartStatuses.Undone).Note),
+                _ when parts.Exists(p => p.Status is FixPartStatuses.Failed or FixPartStatuses.Unrouted or FixPartStatuses.Pending) =>
+                    (FixLabels.NotFixed, string.Join(" ", parts.Where(p => p.Status != FixPartStatuses.Done).Select(p => $"{(p.Target.Length > 0 ? p.Target : p.Kind)}: {p.Note ?? p.Status}."))),
+                _ when !rechecked.Contains(issue) => (FixLabels.Unverified, null),
+                _ when reasons.GetValueOrDefault(issue) is { } still => (FixLabels.NotFixed, still),
+                _ => (FixLabels.Verified, null),
+            };
+            issue.Applied = FixLabels.IsFixed(issue.Label);
+        }
+
+        // The packet's critic issues are these same objects when the critique was passed in; copy across in case not.
         foreach (var issue in draft.Packet.Validation.Issues.Where(i => i.Source == IssueSources.Critic))
         {
-            issue.Applied = held.Exists(a => a.Code == issue.Code && a.Explanation == issue.Explanation);
-            issue.Unresolved = issue.Applied ? null : remaining.FirstOrDefault(r => r.Key.Code == issue.Code && r.Key.Explanation == issue.Explanation).Value;
+            if (originals.Find(o => o.Code == issue.Code && o.Explanation == issue.Explanation) is { } done && !ReferenceEquals(done, issue))
+            {
+                (issue.Label, issue.Unresolved, issue.Applied, issue.Parts) = (done.Label, done.Unresolved, done.Applied, done.Parts);
+            }
         }
 
-        logger.LogInformation("Last round: {Held} fixes held, {Unresolved} did not", held.Count, remaining.Count);
+        logger.LogInformation("Last round: {Fixed} fixed, {Open} not", originals.Count(i => i.Applied), originals.Count(i => !i.Applied));
 
         // The structural ones the checks still find (a second hook-giver left standing) count as much as the critic's.
-        var structural = remaining.Where(r => r.Key.Source == IssueSources.Structural).Select(r => WithRemaining(r.Key, null)).ToList();
-        foreach (var issue in structural)
+        var structural = originals.Where(i => i.Source == IssueSources.Structural && !i.Applied).ToList();
+        return draft.Packet.Validation.Issues.Where(i => i.Source == IssueSources.Critic && i.Label is not null && !FixLabels.IsFixed(i.Label)).Concat(structural).ToList();
+    }
+
+    /// <summary>The parts as they now stand: a retry's parts replace the parts they redo, done parts stay.</summary>
+    private static List<FixPart> Merge(List<FixPart>? had, List<FixPart>? now)
+    {
+        if (had is null || ReferenceEquals(had, now))
         {
-            issue.Unresolved = remaining.First(r => r.Key.Code == issue.Code && r.Key.Location == issue.Location).Value;
+            return now ?? [];
         }
 
-        return draft.Packet.Validation.Issues.Where(i => i.Source == IssueSources.Critic && i.Unresolved is not null).Concat(structural).ToList();
+        var redone = (now ?? []).Select(p => p.Target).ToHashSet(StringComparer.Ordinal);
+        return had.Where(p => p.Status == FixPartStatuses.Done && p.Kind != FixPartKinds.Patch || !redone.Contains(p.Target)).Concat(now ?? []).ToList();
+    }
+
+    /// <summary>The issue again as patches of the items it names, with what the re-check found still standing.</summary>
+    private static CoherenceIssue Retry(CoherenceIssue issue, string still)
+    {
+        var patched = (issue.Parts ?? []).Where(p => p.Kind == FixPartKinds.Patch && p.Target.Length > 0).Select(p => p.Target).ToList();
+        var targets = patched.Count > 0 ? patched : issue.Targets ?? [];
+        return new CoherenceIssue
+        {
+            Code = issue.Code,
+            Severity = issue.Severity,
+            Location = issue.Location,
+            Explanation = issue.Explanation,
+            SuggestedFix = $"{issue.SuggestedFix} Still not done: {still}",
+            Source = issue.Source,
+            Targets = issue.Targets,
+            Patches = targets.Select(t => new PatchAsk { Target = t, Fix = $"{issue.SuggestedFix} Still not done: {still}" }).ToList(),
+            Blocking = issue.Blocking,
+        };
     }
 
     /// <summary>What an instruction asks, to never send the same one twice.</summary>
-    private static string Signature(CoherenceIssue issue) => $"{issue.Code}|{issue.Location}|{string.Join(",", issue.Targets ?? [])}|{issue.Explanation}|{issue.SuggestedFix}";
+    private static string Signature(CoherenceIssue issue) =>
+        $"{issue.Code}|{issue.Location}|{string.Join(",", issue.Targets ?? [])}|{issue.Explanation}|{issue.SuggestedFix}|{string.Join(",", (issue.Patches ?? []).Select(p => p.Target + p.Fix))}";
 
     /// <summary>A fix that must hold for the case to be played: two people claiming to have fetched the Society.</summary>
     private static bool BreaksTheTable(CoherenceIssue issue) =>
         issue.Source == IssueSources.Structural && issue.Code == IssueCodes.Opening && issue.Location.StartsWith("cast:", StringComparison.Ordinal);
-
-    /// <summary>The issue again, with what the verifying look found still standing, for the retry.</summary>
-    private static CoherenceIssue WithRemaining(CoherenceIssue issue, string? still) => new()
-    {
-        Code = issue.Code,
-        Severity = issue.Severity,
-        Location = issue.Location,
-        Explanation = issue.Explanation,
-        SuggestedFix = still is null ? issue.SuggestedFix : $"{issue.SuggestedFix} Still not done: {still}",
-        Source = issue.Source,
-        Targets = issue.Targets,
-        Replacements = issue.Replacements,
-        Everywhere = issue.Everywhere,
-        Blocking = issue.Blocking,
-    };
 
     /// <summary>
     /// A redundancy or single-point issue as a patch of minds and channels: a new channel, and the minds of the people
@@ -1138,8 +1261,8 @@ public sealed class MysteryGenerator(
         packet.Validation.Issues = structural.Concat(critic).ToList();
         packet.Validation.Passed = passed && !structural.Exists(i => i.IsError);
 
-        // A blocking critic issue no fix took (review 3, item 3): the case is kept, but marked for a person to read.
-        packet.Validation.NeedsReview = packet.Validation.Passed && critic.Exists(i => i.Blocking && !i.Applied);
+        // A blocking critic issue not fixed (review 3, item 3; fixes 5, section 5): the case is kept, but needs review.
+        packet.Validation.NeedsReview = packet.Validation.Passed && critic.Exists(i => i.Blocking && !FixLabels.IsFixed(i.Label));
         packet.Validation.Runs++;
     }
 }

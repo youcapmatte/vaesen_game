@@ -54,6 +54,26 @@ public sealed class CoherenceIssue
     [JsonProperty("everywhere", DefaultValueHandling = DefaultValueHandling.Ignore)]
     public bool Everywhere { get; set; }
 
+    /// <summary>Field values to set by code (fixes 5, section 1).</summary>
+    [JsonProperty("setFields", NullValueHandling = NullValueHandling.Ignore)]
+    public List<FieldSet>? SetFields { get; set; }
+
+    /// <summary>The parts that need a model, each with its own target and instruction (fixes 5, section 3).</summary>
+    [JsonProperty("patches", NullValueHandling = NullValueHandling.Ignore)]
+    public List<PatchAsk>? Patches { get; set; }
+
+    /// <summary>The fix's parts as the router split them, with their status.</summary>
+    [JsonProperty("parts", NullValueHandling = NullValueHandling.Ignore)]
+    public List<FixPart>? Parts { get; set; }
+
+    /// <summary>One of <see cref="FixLabels"/> once a fix was tried or found impossible; null when none was.</summary>
+    [JsonProperty("label", NullValueHandling = NullValueHandling.Ignore)]
+    public string? Label { get; set; }
+
+    /// <summary>Why the critic moved this issue from its check's default (blocking or advisory), if it did.</summary>
+    [JsonProperty("impactReason", NullValueHandling = NullValueHandling.Ignore)]
+    public string? ImpactReason { get; set; }
+
     /// <summary>
     /// A critic issue that breaks the case at the table if it stays (review 3, item 3): a scene or opening that gives
     /// away a gated clue, a hook that contradicts the cast or the facts, a period error players would notice, someone
@@ -85,6 +105,99 @@ public sealed class TextReplacement
 
     [JsonProperty("to")]
     public string To { get; set; } = "";
+}
+
+/// <summary>A field set by code (fixes 5, section 1): "cast[id=npc-x].identity.rank" to "worker". Never a text replacement.</summary>
+public sealed class FieldSet
+{
+    [JsonProperty("path")]
+    public string Path { get; set; } = "";
+
+    [JsonProperty("value")]
+    public string Value { get; set; } = "";
+}
+
+/// <summary>A part of a critic issue that needs a model: the item to patch and what to change in it.</summary>
+public sealed class PatchAsk
+{
+    [JsonProperty("target")]
+    public string Target { get; set; } = "";
+
+    [JsonProperty("fix")]
+    public string Fix { get; set; } = "";
+}
+
+/// <summary>
+/// One part of an issue's fix with its owner and status (fixes 5, section 3): an issue is fixed only when every part
+/// is, and a part is done only when its post-condition holds (the data changed), never because a call succeeded.
+/// </summary>
+public sealed class FixPart
+{
+    /// <summary>"replace", "setField" or "patch".</summary>
+    [JsonProperty("kind")]
+    public string Kind { get; set; } = "";
+
+    /// <summary>"code", or the step that patches it.</summary>
+    [JsonProperty("owner")]
+    public string Owner { get; set; } = "";
+
+    /// <summary>The item it is about ("c66", "npc-x.knows"), or the pair or path for code.</summary>
+    [JsonProperty("target")]
+    public string Target { get; set; } = "";
+
+    /// <summary>What to change: the pair, the value, or the patch's instruction.</summary>
+    [JsonProperty("detail")]
+    public string Detail { get; set; } = "";
+
+    /// <summary>One of <see cref="FixPartStatuses"/>.</summary>
+    [JsonProperty("status")]
+    public string Status { get; set; } = FixPartStatuses.Pending;
+
+    /// <summary>What happened: matches, copies left, why it failed.</summary>
+    [JsonProperty("note", NullValueHandling = NullValueHandling.Ignore)]
+    public string? Note { get; set; }
+}
+
+public static class FixPartKinds
+{
+    public const string Replace = "replace";
+    public const string SetField = "setField";
+    public const string Patch = "patch";
+}
+
+public static class FixPartStatuses
+{
+    public const string Pending = "pending";
+
+    /// <summary>Its post-condition holds: the data changed as asked.</summary>
+    public const string Done = "done";
+
+    /// <summary>It matched nothing, failed its post-condition, or its step's patch did not pass.</summary>
+    public const string Failed = "failed";
+
+    /// <summary>It broke a structural check, one repair did not hold, and it was undone.</summary>
+    public const string Undone = "undone";
+
+    /// <summary>No step owns it: no target, or a target the case does not have.</summary>
+    public const string Unrouted = "unrouted";
+}
+
+/// <summary>The only four labels a fixed issue carries (fixes 5, section 4).</summary>
+public static class FixLabels
+{
+    /// <summary>Every part passed its post-condition, and the scoped re-check said it is gone.</summary>
+    public const string Verified = "fixed (verified)";
+
+    /// <summary>Every part passed its post-condition; no re-check ran.</summary>
+    public const string Unverified = "fixed (unverified)";
+
+    /// <summary>A part broke a structural check and was undone.</summary>
+    public const string DidNotHold = "did not hold";
+
+    /// <summary>A part matched nothing, failed its post-condition or had no route, or the re-check said it is still there.</summary>
+    public const string NotFixed = "not fixed";
+
+    public static bool IsFixed(string? label) => label is Verified or Unverified;
 }
 
 public static class IssueSeverities

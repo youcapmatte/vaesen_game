@@ -75,6 +75,9 @@ public sealed class MysteryDraft
                 .GroupBy(c => c.HomePlaceId!, StringComparer.Ordinal)
                 .ToDictionary(g => g.Key, g => (g.First().Id, g.First().Name), StringComparer.Ordinal),
         SettledPublicFacts = SettledPublicFacts,
+        ParentChild = World?.Characters
+            .SelectMany(c => c.Relationships.Where(r => CaseValidator.IsParentChild(r.Nature)).Select(r => ValidationContext.PairKey(c.Id, r.CharacterId)))
+            .ToHashSet(StringComparer.Ordinal) ?? [],
     };
 
     /// <summary>A deep copy of the packet, for a step to work on without touching the draft until it passes.</summary>

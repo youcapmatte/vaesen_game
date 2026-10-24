@@ -50,6 +50,7 @@ public sealed class ReviewThreeTests
         var clue = Assert.Single(issues, i => i.Code == "critic." + CriticChecks.FairClues);
         Assert.False(clue.Applied);
         Assert.Contains("undone", clue.Unresolved, StringComparison.Ordinal);
+        Assert.Equal(FixLabels.DidNotHold, clue.Label);
         Assert.Contains("knowsFact:f6", packet.FindChannel("c10")!.Access.Requires);
         Assert.Contains("millrace", JsonConvert.SerializeObject(packet.Facts), StringComparison.Ordinal);
         Assert.Contains(result.Case.Log, e => e.Kind == LogEntryKinds.Undo);
@@ -179,7 +180,9 @@ public sealed class ReviewThreeTests
             Replacements = [new TextReplacement { From = "npc-case-maid", To = "npc-anna-lind" }, new TextReplacement { From = "mill race", To = "millrace" }],
         };
 
-        Assert.True(TextReplacements.Apply(draft, issue) > 0);
+        var results = TextReplacements.Apply(draft, issue);
+        Assert.Contains("ids are fixed", results[0].Failed, StringComparison.Ordinal);
+        Assert.True(results[1].Ok);
         Assert.NotNull(draft.Packet.FindCast("npc-case-maid"));
         Assert.Null(draft.Packet.FindCast("npc-anna-lind"));
     }

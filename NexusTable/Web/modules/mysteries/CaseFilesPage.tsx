@@ -129,7 +129,6 @@ export function CaseCard({ summary, atTable = false, href }: { summary: CaseSumm
           <IconScript size={22} color="var(--nx-blood)" stroke={1.5} />
           <Group gap={4}>
             {atTable && <Badge size="xs" color="gold" leftSection={<IconCandle size={10} />}>At the table</Badge>}
-            {summary.needsReview && <Badge size="xs" color="blood" variant="outline">Needs review</Badge>}
             <StatusBadge status={summary.passed ? summary.status : "rejected"} />
           </Group>
         </Group>
@@ -147,6 +146,7 @@ export function CaseCard({ summary, atTable = false, href }: { summary: CaseSumm
 
 const StatusLabels: Record<CaseStatus, { label: string; color: string; variant: "filled" | "outline" }> = {
   generated: { label: "Ready to play", color: "moss", variant: "filled" },
+  needsReview: { label: "Needs review", color: "blood", variant: "outline" },
   solved: { label: "Solved", color: "gold.8", variant: "filled" },
   failed: { label: "Unresolved", color: "blood", variant: "filled" },
   rejected: { label: "Failed the checks", color: "blood", variant: "outline" },

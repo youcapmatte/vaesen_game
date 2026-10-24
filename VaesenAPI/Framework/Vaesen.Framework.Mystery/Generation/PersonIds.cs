@@ -20,7 +20,9 @@ public static class PersonIds
     public static string ForRole(string? role, string? placeId, ISet<string> taken)
     {
         // "widow who takes in washing" is a widow, "bailiff's wife" a bailiff-wife: the role stops at a clause.
-        var words = Slug(role ?? "").Split('-', StringSplitOptions.RemoveEmptyEntries)
+        // "farmhand and would-be navvy" is a farmhand: the role is its first part, before a comma or an "and".
+        var first = System.Text.RegularExpressions.Regex.Split(role ?? "", @"[,;(]| and | or ")[0];
+        var words = Slug(first).Split('-', StringSplitOptions.RemoveEmptyEntries)
             .TakeWhile(w => !Clause.Contains(w))
             .Where(w => !Filler.Contains(w) && w.Length > 1)
             .Take(2)

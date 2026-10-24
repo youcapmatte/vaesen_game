@@ -21,6 +21,7 @@ return command switch
     "validate" => Validate(),
     "report" => Report(),
     "discard" => await Discard(),
+    "list" => await List(),
     _ => Help(),
 };
 
@@ -42,6 +43,9 @@ int Help()
                     a level's people are kept in its world. --return goes back to a level on purpose.
           validate  <case.json>   Run the structural checks on a case packet.
           report    <case.json>   Write the Markdown report of a case packet to stdout.
+          list      [--society id] [--out dir]
+                    The Society's cases in --out, those that need review first, with their open
+                    blocking issues.
           discard   --society id <mysteryId>
                     Delete an unplayed case from --out, and the level's people written for it if
                     no other case has used them.
@@ -193,6 +197,37 @@ int Validate()
 
     Console.WriteLine(issues.Exists(i => i.IsError) ? "FAILED" : "passed");
     return issues.Exists(i => i.IsError) ? 1 : 0;
+}
+
+async Task<int> List()
+{
+    using var services = Services();
+    var store = services.GetRequiredService<ICasePacketStore>();
+    var society = args2.Get("society") ?? "caselab";
+    var listed = await store.ListAsync(society);
+    if (!listed.Success)
+    {
+        Console.Error.WriteLine(listed.ErrorMessage);
+        return 1;
+    }
+
+    // Cases that need review first (fixes 5, section 5), then the newest.
+    foreach (var summary in listed.Result!.OrderByDescending(s => s.Status == CaseStatuses.NeedsReview).ThenByDescending(s => s.GeneratedAt))
+    {
+        Console.WriteLine($"{summary.Status,-12} {summary.MysteryId}  {summary.Title} ({summary.LevelId}, {new InWorldDate(summary.Year, summary.Month)})");
+        if (summary.Status != CaseStatuses.NeedsReview)
+        {
+            continue;
+        }
+
+        var stored = await store.GetAsync(society, summary.MysteryId);
+        foreach (var issue in stored.Result?.Packet.Validation.Issues.Where(i => i.Blocking && !FixLabels.IsFixed(i.Label)) ?? [])
+        {
+            Console.WriteLine($"             open: {issue.Code} at {issue.Location} ({issue.Label ?? "not fixed"}): {issue.Explanation}");
+        }
+    }
+
+    return 0;
 }
 
 async Task<int> Discard()
