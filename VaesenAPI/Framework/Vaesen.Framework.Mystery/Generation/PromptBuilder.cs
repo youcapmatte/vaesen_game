@@ -126,7 +126,7 @@ public static class PromptBuilder
         if (For(ConflictStep.StepName, EscalationStep.StepName, HumansStep.StepName, ResidentsStep.StepName, MindsStep.StepName, ArcStep.StepName, HookStep.StepName))
         {
             text.AppendLine("# The level");
-            text.AppendLine(Json(LevelView(draft.Level, step)));
+            text.AppendLine(Json(LevelView(draft, step)));
             text.AppendLine();
         }
 
@@ -234,11 +234,18 @@ public static class PromptBuilder
     /// The level as a step needs it. Only minds and channels place things in rooms and furniture, so only they (and the
     /// critic) get the affordances, as one line each; the others get the places' names and descriptions.
     /// </summary>
-    private static object LevelView(LevelDefinition level, string? step)
+    private static object LevelView(MysteryDraft draft, string? step)
     {
+        var level = draft.Level;
+        var year = draft.Brief.Year > 0 ? draft.Brief.Year : draft.Pack.Setting.StartYear;
+        var routes = level.RoutesFor(year, draft.Brief.Month, draft.Pack.Setting).Select(r => new
+        {
+            r.Name,
+            legs = r.Legs.Select(l => $"{l.From} to {l.To}: {l.Mode}{(draft.Pack.Setting.FindLine(l.LineId) is { } line ? $" ({line.Name})" : "")}, {l.Duration}{(string.IsNullOrWhiteSpace(l.Notes) ? "" : $"; {l.Notes}")}"),
+        }).ToList();
         if (step is null or CriticStep.Name)
         {
-            return level;
+            return new { level, routesThisMonth = routes };
         }
 
         var withAffordances = step == MindsStep.StepName;
@@ -253,6 +260,8 @@ public static class PromptBuilder
             level.Description,
             level.SeasonNotes,
             level.Travel,
+            routesThisMonth = routes.Count == 0 ? null : routes,
+            geography = level.Geography.IsEmpty ? null : Geography(level.Geography),
             publicFacts = level.PublicFactsWithIds.Select(f => $"{f.Id}: {f.Text}"),
             places = level.Places.Select(p => new
             {
@@ -267,6 +276,18 @@ public static class PromptBuilder
             }),
         };
     }
+
+    /// <summary>Where the level is, for the steps: the real place it is modelled on only as grounding, never to be named.</summary>
+    private static object Geography(LevelGeography g) => new
+    {
+        realAnalogueForGroundingOnly = string.IsNullOrWhiteSpace(g.RealAnalogue) ? null : $"{g.RealAnalogue} (never name it in the case)",
+        g.Province,
+        g.County,
+        g.Parish,
+        g.KnownFor,
+        neighbours = g.Neighbours.Select(n => $"{n.Name} ({n.Kind}), {n.Distance}: {string.Join(", ", n.Offers)}"),
+        authorities = g.Authorities.All().Where(a => !string.IsNullOrWhiteSpace(a.Where)).ToDictionary(a => a.Kind, a => a.Where),
+    };
 
     /// <summary>"mill-attic (attic): Grain loft", nested ones after their container, "(lockable)" where it applies.</summary>
     private static IEnumerable<string> Affordances(IEnumerable<LevelAffordance> affordances) => affordances.SelectMany(a =>

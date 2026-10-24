@@ -15,6 +15,7 @@ public static class ContentValidator
 
         CheckVocabulary(vocab, issues);
         CheckSetting(pack.Setting, issues);
+        CheckPeriodCanon(pack.Setting, issues);
         CheckUniqueIds(pack, issues);
 
         foreach (var vaesen in pack.Vaesen)
@@ -30,6 +31,7 @@ public static class ContentValidator
         foreach (var level in pack.Levels)
         {
             CheckLevel(level, pack, issues);
+            CheckGeography(level, pack.Setting, issues);
         }
 
         foreach (var conflict in pack.Conflicts)
@@ -324,6 +326,117 @@ public static class ContentValidator
             {
                 issues.Add(CoherenceIssue.Error(IssueCodes.UnknownReference, variantAt, $"A description for '{placeId}', which is no place of the level."));
             }
+        }
+    }
+
+    /// <summary>The period transport and institutions canon (fixes 4, section 15): ids unique, kinds and months valid.</summary>
+    private static void CheckPeriodCanon(Setting setting, List<CoherenceIssue> issues)
+    {
+        foreach (var duplicate in setting.PeriodTransport.GroupBy(l => l.Id).Where(g => g.Count() > 1))
+        {
+            issues.Add(CoherenceIssue.Error(IssueCodes.Content, $"transport:{duplicate.Key}", "Transport line id is used twice."));
+        }
+
+        foreach (var line in setting.PeriodTransport)
+        {
+            var at = $"transport:{line.Id}";
+            if (!TransportKinds.All.Contains(line.Kind))
+            {
+                issues.Add(CoherenceIssue.Error(IssueCodes.Content, at, $"Unknown transport kind '{line.Kind}'.{CoherenceIssue.Allowed(TransportKinds.All)}"));
+            }
+
+            if (line.Opened <= 0 || line.Months.Exists(m => m is < 1 or > 12))
+            {
+                issues.Add(CoherenceIssue.Error(IssueCodes.Content, at, "A line needs the year it opened, and months 1-12."));
+            }
+        }
+
+        foreach (var duplicate in setting.RegionalInstitutions.GroupBy(i => i.Id).Where(g => g.Count() > 1))
+        {
+            issues.Add(CoherenceIssue.Error(IssueCodes.Content, $"institution:{duplicate.Key}", "Institution id is used twice."));
+        }
+    }
+
+    /// <summary>
+    /// A level's geography and journey (fixes 4, sections 13 and 14): it says where it is, and every leg of the journey
+    /// runs on a line that was open in the setting's start year, in the months the line runs.
+    /// </summary>
+    private static void CheckGeography(LevelDefinition level, Setting setting, List<CoherenceIssue> issues)
+    {
+        var at = $"level:{level.Id}";
+        if (level.Geography.IsEmpty)
+        {
+            issues.Add(CoherenceIssue.Warning(IssueCodes.Content, at, $"{level.Name} has no geography: neighbouring towns, authorities, what it is known for.",
+                "Fill it with ContentTool geography " + level.Id + "."));
+        }
+        else
+        {
+            foreach (var (kind, where, _) in level.Geography.Authorities.All().Where(a => a.Kind is "police" or "court" or "doctor" && string.IsNullOrWhiteSpace(a.Where)))
+            {
+                issues.Add(CoherenceIssue.Warning(IssueCodes.Content, at, $"{level.Name} does not say where its {kind} is."));
+            }
+        }
+
+        if (level.Journey.Routes.Count == 0)
+        {
+            issues.Add(CoherenceIssue.Warning(IssueCodes.Content, at, $"{level.Name} has no journey legs, only the line of travel text."));
+            return;
+        }
+
+        var year = setting.StartYear;
+        foreach (var route in level.Journey.Routes)
+        {
+            foreach (var leg in route.Legs)
+            {
+                var legAt = $"{at}:route:{route.Name}:{leg.From}-{leg.To}";
+                if (!TravelModes.All.Contains(leg.Mode))
+                {
+                    issues.Add(CoherenceIssue.Error(IssueCodes.Content, legAt, $"Unknown travel mode '{leg.Mode}'.{CoherenceIssue.Allowed(TravelModes.All)}"));
+                }
+
+                if (leg.Months.Exists(m => m is < 1 or > 12))
+                {
+                    issues.Add(CoherenceIssue.Error(IssueCodes.Content, legAt, "Months must be 1-12."));
+                }
+
+                if (leg.LineId is null)
+                {
+                    if (TravelModes.NeedsLine(leg.Mode))
+                    {
+                        issues.Add(CoherenceIssue.Warning(IssueCodes.Content, legAt, $"A {leg.Mode} leg should name its line from the period transport, so its opening year can be checked."));
+                    }
+
+                    continue;
+                }
+
+                if (setting.FindLine(leg.LineId) is not { } line)
+                {
+                    issues.Add(CoherenceIssue.Error(IssueCodes.UnknownReference, legAt, $"No transport line '{leg.LineId}' in the setting's period transport."));
+                    continue;
+                }
+
+                if (TransportKinds.For(leg.Mode) is { } kind && kind != line.Kind)
+                {
+                    issues.Add(CoherenceIssue.Error(IssueCodes.Content, legAt, $"A {leg.Mode} leg on {line.Name}, which is a {line.Kind}."));
+                }
+
+                if (line.Opened > year)
+                {
+                    issues.Add(CoherenceIssue.Error(IssueCodes.Content, legAt, $"{line.Name} opened in {line.Opened}; in {year} it is not open.",
+                        "Use a route that existed then (a coach road, a steamer), or note the line only as being built."));
+                }
+
+                var closed = (leg.Months.Count == 0 ? Enumerable.Range(1, 12) : leg.Months).Where(m => line.Months.Count > 0 && !line.Months.Contains(m)).ToList();
+                if (closed.Count > 0)
+                {
+                    issues.Add(CoherenceIssue.Warning(IssueCodes.Content, legAt, $"The leg runs in months {string.Join(", ", closed)}, when {line.Name} does not.", "Give the leg the line's months."));
+                }
+            }
+        }
+
+        foreach (var month in level.Months.Where(m => level.RoutesFor(year, m, setting).Count == 0))
+        {
+            issues.Add(CoherenceIssue.Warning(IssueCodes.Content, at, $"No route to {level.Name} runs in month {month} of {year}."));
         }
     }
 

@@ -119,6 +119,7 @@ public sealed class CaseValidator : ICoherenceValidator
         if (scope.HasFlag(CheckScope.Hook))
         {
             run.CheckHook();
+            run.CheckGeography();
         }
 
         if (scope.HasFlag(CheckScope.Whole))
@@ -1151,6 +1152,62 @@ public sealed class CaseValidator : ICoherenceValidator
         }
 
         // ---- Sub-step 6d: the hook and the scenes -------------------------------------------------------------
+
+        /// <summary>
+        /// The case keeps to the level's geography (fixes 4, section 13): it names no authority the level does not have
+        /// within reach, no known town besides the level's neighbours and its journey, and never the real analogue.
+        /// </summary>
+        public void CheckGeography()
+        {
+            var g = context.Level.Geography;
+            if (g.IsEmpty)
+            {
+                return;
+            }
+
+            var text = string.Join('\n', CaseTexts());
+            bool Says(string phrase) => System.Text.RegularExpressions.Regex.IsMatch(text,
+                $@"(?<![\p{{L}}]){System.Text.RegularExpressions.Regex.Escape(phrase)}(?![\p{{L}}])", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+            foreach (var (kind, where, words) in g.Authorities.All().Where(a => string.IsNullOrWhiteSpace(a.Where)))
+            {
+                if (words.FirstOrDefault(Says) is { } word)
+                {
+                    Warn(IssueCodes.Consistency, "geography", $"The case speaks of a {word}, but {context.Level.Name} lists no {kind} within reach.",
+                        "Leave it out, or use an authority the level's geography lists.");
+                }
+            }
+
+            var allowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Stockholm", "Uppsala", context.Level.Journey.FromHeadquarters };
+            allowed.UnionWith(g.Neighbours.Select(n => n.Name));
+            allowed.UnionWith(context.Level.Journey.Routes.SelectMany(r => r.Legs).SelectMany(l => new[] { l.From, l.To }));
+            var known = context.Pack.Setting.PeriodTransport.SelectMany(l => l.Places)
+                .Concat(context.Pack.Setting.RegionalInstitutions.Select(i => i.Seat))
+                .Concat(context.Pack.Levels.SelectMany(l => l.Geography.Neighbours).Select(n => n.Name))
+                .Where(t => t.Length > 2 && !allowed.Contains(t))
+                .Distinct(StringComparer.OrdinalIgnoreCase);
+            foreach (var town in known.Where(Says))
+            {
+                Warn(IssueCodes.Consistency, "geography", $"The case names {town}, which is not among {context.Level.Name}'s neighbouring towns.",
+                    $"Use one of: {string.Join(", ", g.Neighbours.Select(n => n.Name))}.");
+            }
+
+            if (g.Fictional && g.RealAnalogue.Split(' ', '(')[0] is { Length: > 2 } analogue && Says(analogue) && !allowed.Contains(analogue))
+            {
+                Warn(IssueCodes.Consistency, "geography", $"The case names {analogue}, the real place {context.Level.Name} is modelled on.", "Never name the real analogue.");
+            }
+        }
+
+        /// <summary>Every piece of prose in the case a player could hear.</summary>
+        private IEnumerable<string> CaseTexts() =>
+            new[] { packet.Truth.Summary, packet.Truth.Provocation, packet.Hook.Text }
+                .Concat(packet.Truth.Escalation.Select(e => e.Description))
+                .Concat(packet.Facts.Select(f => f.Statement))
+                .Concat(packet.Channels.Select(c => c.Reveal))
+                .Concat(packet.Level.SceneDescriptions.Values)
+                .Concat(packet.Cast.SelectMany(c => new[] { c.PlotRole, c.Routine }.Concat(c.Secrets)))
+                .Concat(packet.OffstagePeople.Select(o => $"{o.Relation} {o.Note}"))
+                .Where(t => !string.IsNullOrWhiteSpace(t));
 
         public void CheckHook()
         {

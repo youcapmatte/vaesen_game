@@ -60,6 +60,14 @@ Services/      MysteryGenerator, WorldService (seeding, closing, write-back), Co
 
 The engine sets the fact weights. Colour and season facts, and what the group knows on arrival, weigh nothing, so the dial starts at its start; decoy facts weigh half, load-bearing ones double. The weights are scaled so the deep solve's path (its lever's facts and what gates them) ends 15% past the climax. A beat with a time fires when its threshold is reached and its time has come, whichever is later.
 
+### Fixes 4, part C: geography and travel
+
+- **Geography** (`LevelDefinition.Geography`): the real place a level is modelled on (`realAnalogue`, grounding only, never named in a case), province, county, parish, what an educated Swede of the period knows of it, neighbouring towns with rough distances and what they offer, and where the authorities are (sheriff, district court, provincial doctor, post, telegraph, bank, newspaper).
+- **Journey** (`LevelDefinition.Journey`): routes from headquarters as legs (from, to, mode, duration, cost, schedule, months, notes); railway, steamer and canal legs name their line. `travel` stays as the one-line summary. `RoutesFor(year, month, setting)` gives the routes whose every leg runs that month on a line open that year; steps see only those (`routesThisMonth`), and the hook may only use them.
+- **Period canon** in the setting: `periodTransport` (railways, canals, steamers, telegraphs with the year each opened and the months it runs) and `regionalInstitutions` (county seats, courts, sheriffs, doctors, banks, newspapers).
+- **Checks:** the content validator fails a leg on a line not open in the start year, warns on a rail or water leg that names no line, a leg in months its line does not run, a level month with no route, and a level without geography or authorities. The case validator warns when a case speaks of an authority the level lacks, names a known town that is not a neighbour, or names the real analogue; the critic checks the same.
+- **Content tool:** `canon` drafts the transport and institutions canon into setting.json for the owner to review once; `geography <levelId>` places a level (geography, journey, travel line) from the canon and puts it back to draft.
+
 ### Fixes 4, part B: returning to a place
 
 - **The in-world calendar** only moves forward. A case is set at least `MonthsBetweenCases` after the Society's latest case (queued ones included); without a pinned month the assignment moves on to the first month, up to `MonthsToSearch` ahead, where a level and a creature fit. The date is on the brief and the packet (`year`, `month`).

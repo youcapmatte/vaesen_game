@@ -28,6 +28,8 @@ return command switch
     "retire" => SetStatus(ContentStatus.Retired),
     "generate" => await Generate(),
     "variant" => await Variant(),
+    "canon" => await Canon(),
+    "geography" => await Geography(),
     _ => Help(),
 };
 
@@ -43,6 +45,12 @@ int Help()
           retire <id>                    Take a record out of use.
           generate <vaesen|conflict|character> "<what you want>"
                                          Have the model write a new draft record (needs ANTHROPIC_API_KEY).
+          canon                          Have the model draft the period transport (railways, canals, steamers,
+                                         telegraphs with opening years and months) and the regional institutions
+                                         into setting.json, for the owner to review once.
+          geography <levelId>            Have the model place a level in the country: real analogue, county,
+                                         neighbouring towns, authorities, and the journey as legs checked against
+                                         the period transport. The level goes back to draft until approved again.
           variant <levelId> <month>      Have the model write the level as it is in another month: same places,
                                          owners and history; new season, travel and scenes. The level goes back
                                          to draft until approved again.
@@ -191,6 +199,79 @@ async Task<int> Variant()
     var path = ContentLoader.Write(dir, level);
     Console.WriteLine($"Written to {path}");
     foreach (var issue in ContentValidator.Validate(pack).Where(i => i.Location.StartsWith($"level:{level.Id}", StringComparison.Ordinal)))
+    {
+        Console.WriteLine(issue);
+    }
+
+    Console.WriteLine("Review it, edit it if needed, then: approve " + level.Id);
+    return 0;
+}
+
+async Task<int> Canon()
+{
+    var pack = ContentLoader.Load(dir);
+    using var services = MysteryToolHost.Build();
+    Console.WriteLine("Drafting the period transport and institutions...");
+    var result = await services.GetRequiredService<ContentGenerator>().GenerateCanonAsync(pack);
+    if (!result.Success)
+    {
+        Console.Error.WriteLine(result.ErrorMessage);
+        return 1;
+    }
+
+    // Written into setting.json as JSON nodes, so the rest of the file stays exactly as the owner wrote it.
+    var path = Path.Combine(dir, ContentLoader.SettingFile);
+    var setting = Newtonsoft.Json.Linq.JObject.Parse(File.ReadAllText(path));
+    setting["periodTransport"] = Newtonsoft.Json.Linq.JToken.FromObject(result.Result!.PeriodTransport);
+    setting["regionalInstitutions"] = Newtonsoft.Json.Linq.JToken.FromObject(result.Result.RegionalInstitutions);
+    File.WriteAllText(path, setting.ToString(Newtonsoft.Json.Formatting.Indented) + "\n");
+    Console.WriteLine($"{result.Result.PeriodTransport.Count} lines and {result.Result.RegionalInstitutions.Count} institutions written to {path}");
+    foreach (var issue in ContentValidator.Validate(ContentLoader.Load(dir)).Where(i => i.Location.StartsWith("transport:", StringComparison.Ordinal) || i.Location.StartsWith("institution:", StringComparison.Ordinal)))
+    {
+        Console.WriteLine(issue);
+    }
+
+    Console.WriteLine("Review it (opening years above all) and edit what is wrong; it is canon from then on.");
+    return 0;
+}
+
+async Task<int> Geography()
+{
+    var levelId = a.Positional.ElementAtOrDefault(1);
+    var pack = ContentLoader.Load(dir);
+    var level = levelId is null ? null : pack.FindLevel(levelId);
+    if (level is null)
+    {
+        Console.Error.WriteLine("Usage: geography <levelId>");
+        return 1;
+    }
+
+    if (pack.Setting.PeriodTransport.Count == 0)
+    {
+        Console.Error.WriteLine("The setting has no period transport yet; run canon first.");
+        return 1;
+    }
+
+    using var services = MysteryToolHost.Build();
+    Console.WriteLine($"Placing {level.Name} in the country...");
+    var result = await services.GetRequiredService<ContentGenerator>().GenerateGeographyAsync(pack, level);
+    if (!result.Success)
+    {
+        Console.Error.WriteLine(result.ErrorMessage);
+        return 1;
+    }
+
+    level.Geography = result.Result!.Geography;
+    level.Journey = result.Result.Journey;
+    if (!string.IsNullOrWhiteSpace(result.Result.Travel))
+    {
+        level.Travel = result.Result.Travel;
+    }
+
+    level.Status = ContentStatus.Draft;
+    var path = ContentLoader.Write(dir, level);
+    Console.WriteLine($"Written to {path}");
+    foreach (var issue in ContentValidator.Validate(ContentLoader.Load(dir)).Where(i => i.Location.StartsWith($"level:{level.Id}", StringComparison.Ordinal)))
     {
         Console.WriteLine(issue);
     }

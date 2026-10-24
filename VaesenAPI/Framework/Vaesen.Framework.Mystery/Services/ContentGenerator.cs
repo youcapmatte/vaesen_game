@@ -14,6 +14,29 @@ namespace Vaesen.Framework.Mystery.Services;
 /// assembled from place templates and are not generated here yet (their nested affordances are recursive, which
 /// structured outputs do not allow).
 /// </summary>
+/// <summary>The period canon as the content tool drafts it.</summary>
+public sealed class PeriodCanon
+{
+    [Newtonsoft.Json.JsonProperty("periodTransport")]
+    public List<PeriodTransportLine> PeriodTransport { get; set; } = [];
+
+    [Newtonsoft.Json.JsonProperty("regionalInstitutions")]
+    public List<RegionalInstitution> RegionalInstitutions { get; set; } = [];
+}
+
+/// <summary>A level's place in the country as the content tool drafts it.</summary>
+public sealed class LevelPlacement
+{
+    [Newtonsoft.Json.JsonProperty("geography")]
+    public LevelGeography Geography { get; set; } = new();
+
+    [Newtonsoft.Json.JsonProperty("journey")]
+    public LevelJourney Journey { get; set; } = new();
+
+    [Newtonsoft.Json.JsonProperty("travel")]
+    public string Travel { get; set; } = "";
+}
+
 public sealed class ContentGenerator(IMysteryModel model, IOptions<MysteryOptions> options)
 {
     public static readonly IReadOnlyList<string> Kinds = ["vaesen", "conflict", "character"];
@@ -108,6 +131,98 @@ public sealed class ContentGenerator(IMysteryModel model, IOptions<MysteryOption
         var variant = reply.Result!.Value;
         variant.Month = month;
         return ret.Ok(variant);
+    }
+
+    /// <summary>
+    /// Drafts the period canon (fixes 4, section 15) for the regions the levels are in: railways, canals, steamer routes
+    /// and telegraph lines with the year each opened and the months it runs, and where the authorities sit. The owner
+    /// reviews it once, like the canonical roster.
+    /// </summary>
+    public async Task<ResultBase<PeriodCanon>> GenerateCanonAsync(ContentPack pack, CancellationToken cancellationToken = default)
+    {
+        var ret = new ResultBase<PeriodCanon>();
+        var context = new StringBuilder();
+        context.AppendLine($"# Headquarters: Uppsala. Play starts in {pack.Setting.StartYear}.");
+        context.AppendLine("# The levels' regions and how the travel text says one gets there");
+        foreach (var level in pack.Levels)
+        {
+            context.AppendLine($"- {level.Name} ({level.Region}): {level.Travel}");
+        }
+
+        context.AppendLine();
+        context.AppendLine("# Already in the canon (keep these ids; correct them if they are wrong)");
+        context.AppendLine(PromptBuilder.Json(new { pack.Setting.PeriodTransport, pack.Setting.RegionalInstitutions }));
+        var instruction = $"""
+            # Write the period transport and institutions canon
+
+            periodTransport: every railway, canal, steamer route and telegraph line a journey from Uppsala to these regions
+            could use between {pack.Setting.StartYear} and {pack.Setting.StartYear + 10}, and the main lines between them.
+            For each: a readable id, its name, kind, endpoints and the main stops between (via), the year it opened (for a
+            line that opened in stages, one entry per stage with the stretch it covers), the months it runs (canals and lake
+            or coastal steamers stop when the ice comes; leave empty for all year), the region, and notes (gauge, private
+            or state, what it carried). Lines being built in {pack.Setting.StartYear} are listed with the year they opened.
+            Only what you are confident existed: leave out what you are unsure of, and say in notes when a year is approximate.
+
+            regionalInstitutions: for each region, the county seat and governor, the district courts (häradsrätt) and where
+            they sit, the crown sheriffs (kronolänsman) of the districts, the provincial doctors, the savings banks and the
+            newspapers of the nearest towns. A readable id, the kind (countySeat, districtCourt, crownSheriff,
+            provincialDoctor, bank, newspaper), the name, the town it sits in (seat), the region, notes.
+            """;
+        var reply = await model.GenerateAsync<PeriodCanon>(Request(options.Value, BuildSystem(pack), context.ToString(), instruction), cancellationToken);
+        return reply.Success ? ret.Ok(reply.Result!.Value) : ret.Fail(reply.ErrorMessage, reply.ErrorCode);
+    }
+
+    /// <summary>
+    /// A level's geography and journey (fixes 4, sections 13 and 14), from its region, the period canon and a real place
+    /// it can be modelled on. The places, owners and history stay as they are.
+    /// </summary>
+    public async Task<ResultBase<LevelPlacement>> GenerateGeographyAsync(ContentPack pack, LevelDefinition level, CancellationToken cancellationToken = default)
+    {
+        var ret = new ResultBase<LevelPlacement>();
+        var context = new StringBuilder();
+        context.AppendLine($"# The level (play starts in {pack.Setting.StartYear}; the level is written for month {level.Month}, with variants for months {string.Join(", ", level.MonthVariants.Select(v => v.Month))})");
+        context.AppendLine(PromptBuilder.Json(new
+        {
+            level.Name,
+            level.Region,
+            level.SettlementType,
+            level.Size,
+            level.Terrain,
+            level.Description,
+            level.Travel,
+            level.PublicFacts,
+            places = level.Places.Select(p => new { p.Id, p.Name, p.OwnerRole }),
+        }));
+        context.AppendLine();
+        context.AppendLine("# Period transport (lineId values) and institutions");
+        context.AppendLine(PromptBuilder.Json(new { pack.Setting.PeriodTransport, pack.Setting.RegionalInstitutions }));
+        var instruction = $"""
+            # Place this level in the real country
+
+            geography:
+            - realAnalogue: the real place it is closest to in history, industry and landscape, as "Place (district)". It
+              grounds the routes and distances; it is never shown to players. fictional: true unless the level is that place.
+            - province, county, parish.
+            - knownFor: two to four things an educated Swede of {pack.Setting.StartYear} would know of the place or district before arriving.
+            - neighbours: the nearest market town, the county seat and any other town the case may need (a works, a
+              mining town, a port): name, kind, a rough distance and direction by road or water, and what each offers
+              (market, bank, newspaper, steamers, railway from a year).
+            - authorities: where the crown sheriff (or police), the district court and its sessions, the provincial doctor,
+              the post office and how often the post goes, the telegraph, the nearest bank and newspaper are, and how far.
+              Use the institutions above where they fit. Empty only if the level truly has none within reach.
+
+            journey, from Uppsala, valid for {pack.Setting.StartYear}:
+            - two routes where the country allows (by road, and by rail or water), each as legs: from, to, mode, lineId for
+              railway, steamer and canal legs (an id from the period transport, open by {pack.Setting.StartYear}), duration,
+              cost in the period's money if known, schedule, months it runs (empty for all year; a winter sleigh road over the
+              ice only in the frozen months), notes. A line not open yet is only a note ("rail from 1873").
+            - Every month the level is written for must have at least one route.
+            - journeyScene: three or four sentences of the journey for the game master to narrate on the way.
+
+            travel: the journey again in one line, agreeing with the legs.
+            """;
+        var reply = await model.GenerateAsync<LevelPlacement>(Request(options.Value, BuildSystem(pack), context.ToString(), instruction), cancellationToken);
+        return reply.Success ? ret.Ok(reply.Result!.Value) : ret.Fail(reply.ErrorMessage, reply.ErrorCode);
     }
 
     /// <summary>Checks a new record against the pack it would join; returns only its own issues.</summary>

@@ -115,9 +115,17 @@ public sealed class LevelDefinition : ContentRecord
     [JsonProperty("seasonNotes")]
     public string SeasonNotes { get; set; } = "";
 
-    /// <summary>How the Society gets there from Uppsala, and how long it takes.</summary>
+    /// <summary>How the Society gets there from Uppsala, and how long it takes, in a line; <see cref="Journey"/> has the legs.</summary>
     [JsonProperty("travel")]
     public string Travel { get; set; } = "";
+
+    /// <summary>Where it is: real analogue, county, neighbouring towns, authorities (fixes 4, section 13).</summary>
+    [JsonProperty("geography")]
+    public LevelGeography Geography { get; set; } = new();
+
+    /// <summary>The routes from headquarters, leg by leg, with the months each leg runs (fixes 4, section 14).</summary>
+    [JsonProperty("journey")]
+    public LevelJourney Journey { get; set; } = new();
 
     /// <summary>Things everyone here knows; NPCs and narration may use them freely.</summary>
     [JsonProperty("publicFacts")]
@@ -134,11 +142,24 @@ public sealed class LevelDefinition : ContentRecord
     public List<LevelMonthVariant> MonthVariants { get; set; } = [];
 
     /// <summary>Every month the level can be used in: its own and its variants'.</summary>
+    [JsonIgnore]
+    [System.Text.Json.Serialization.JsonIgnore]
     public IEnumerable<int> Months => MonthVariants.Select(v => v.Month).Prepend(Month).Distinct();
 
     public LevelPlace? FindPlace(string? id) => Places.Find(p => p.Id == id);
 
+    /// <summary>
+    /// The routes a journey can take in that year and month: every leg runs then, and every line it uses is open then
+    /// (a canal frozen, a railway not built yet).
+    /// </summary>
+    public List<TravelRoute> RoutesFor(int year, int month, Setting setting) => Journey.Routes
+        .Where(r => r.Legs.Count > 0 && r.Legs.TrueForAll(l => l.RunsIn(month)
+            && (l.LineId is null || setting.FindLine(l.LineId) is { } line && line.OpenIn(year, month))))
+        .ToList();
+
     /// <summary>The public facts with the ids prompts and cases use for them: pf1, pf2 and so on.</summary>
+    [JsonIgnore]
+    [System.Text.Json.Serialization.JsonIgnore]
     public IEnumerable<(string Id, string Text)> PublicFactsWithIds => PublicFacts.Select((f, i) => ($"pf{i + 1}", f));
 
     /// <summary>

@@ -34,6 +34,16 @@ public sealed class Setting : ContentRecord
     public HookGiverType? FindHookGiverType(string? id) => HookGiverTypes.Find(t => t.Id == id);
 
     public HookChannel? FindHookChannel(string? id) => HookChannels.Find(c => c.Id == id);
+
+    /// <summary>The railways, canals, steamer routes and telegraph lines of the period, with when they opened (fixes 4, section 15).</summary>
+    [JsonProperty("periodTransport")]
+    public List<PeriodTransportLine> PeriodTransport { get; set; } = [];
+
+    /// <summary>Where each region's county seat, courts, doctors and newspapers are (fixes 4, section 15).</summary>
+    [JsonProperty("regionalInstitutions")]
+    public List<RegionalInstitution> RegionalInstitutions { get; set; } = [];
+
+    public PeriodTransportLine? FindLine(string? id) => PeriodTransport.Find(l => l.Id == id);
 }
 
 /// <summary>A kind of person who brings the trouble to the Society, and the words that recognise one.</summary>
