@@ -139,9 +139,10 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	const AVaesenRangedWeaponActor* Ranged = Cast<AVaesenRangedWeaponActor>(WeaponActor);
 	BowDrawAlpha = Ranged ? Ranged->GetDrawAlpha() : 0.0f;
 
-	// Shouldered while aiming two-handed guns (not bows: they have their own draw). The Shoulder Aim node in the
-	// graph does the shouldering on the frame's pose; this gathers what it needs.
-	const bool bShoulderAim = bShouldering && bTwoHanded && bInHand && bHandsFree && Held.IsValid() && Held.Hold->bShoulderAim
+	// Raised while aiming guns: two-handed into the shoulder, pistols at arm's length in one hand (not bows: they
+	// have their own draw). The Shoulder Aim node in the graph does it on the frame's pose; this gathers what it needs.
+	const bool bOneHandedGun = !bTwoHanded && Weapon && Weapon->IsRanged() && !Weapon->IsHeldInOffHand();
+	const bool bShoulderAim = bShouldering && (bTwoHanded || bOneHandedGun) && bInHand && bHandsFree && Held.IsValid() && Held.Hold->bShoulderAim
 		&& WeaponCategory != EVaesenWeaponCategory::Bow;
 	const FTransform& Component = Body->GetComponentTransform();
 

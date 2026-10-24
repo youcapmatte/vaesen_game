@@ -1173,6 +1173,48 @@ namespace VaesenCombatAssets
 		}
 	}
 
+	/**
+	 * Pistols aim one-handed at arm's length (a duelling stance until there's a pistol animation pack): a Sight socket
+	 * on the top strap (the rear sight), the sight line held out in front of the eye, and a pistol's recoil (the
+	 * muzzle flips up more than the hand is driven back). Only where not set already (they can be tuned by hand).
+	 */
+	void MakePistolsAim()
+	{
+		struct FPistol { const TCHAR* Weapon; const TCHAR* Mesh; FVector Sight; };
+		const FPistol Pistols[] = {
+			{ TEXT("BP_Weapon_Revolver"), TEXT("SM_GB_Revolver"), FVector(2.0, 0.0, 4.3) },
+			{ TEXT("BP_Weapon_RollingBlockPistol"), TEXT("SM_GB_Pistol"), FVector(2.0, 0.0, 4.0) },
+		};
+		const FVaesenWeaponHold Untuned;
+		for (const FPistol& Each : Pistols)
+		{
+			UStaticMesh* Mesh = LoadAsset<UStaticMesh>(Join(GreyBoxFolder, Each.Mesh));
+			if (Mesh && !Mesh->FindSocket(TEXT("Sight")))
+			{
+				UStaticMeshSocket* Socket = NewObject<UStaticMeshSocket>(Mesh);
+				Socket->SocketName = TEXT("Sight");
+				Socket->RelativeLocation = Each.Sight;
+				Mesh->AddSocket(Socket);
+				Save(Mesh);
+			}
+			UBlueprint* Blueprint = LoadAsset<UBlueprint>(Join(WeaponsFolder, Each.Weapon));
+			UVaesenWeaponItem* Defaults = Blueprint ? DefaultsOf<UVaesenWeaponItem>(Blueprint) : nullptr;
+			if (Defaults && Defaults->Hold.AimSightOffset.Equals(Untuned.AimSightOffset))
+			{
+				FVaesenWeaponHold& Hold = Defaults->Hold;
+				Hold.bShoulderAim = true;
+				// The sight about a forearm and a half in front of the eye: the arm nearly straight.
+				Hold.AimSightOffset = FVector(52.0, 0.0, 0.0);
+				Hold.RecoilBack = 2.5f;
+				Hold.RecoilPitch = 14.0f;
+				Hold.RecoilBodyPitch = 1.5f;
+				Hold.RecoilRecovery = 0.3f;
+				Hold.CameraKick = 2.0f;
+				Finish(Blueprint);
+			}
+		}
+	}
+
 }
 
 void VaesenCombatAssets::SetupCombat()
@@ -1185,6 +1227,7 @@ void VaesenCombatAssets::SetupCombat()
 	SetupCombatInput();
 	CreateTestItems(Meshes);
 	MakeVersatile();
+	MakePistolsAim();
 	CreateDummies(Materials);
 	CreateTestMap(Materials);
 	CreateWeaponFitMap();

@@ -529,6 +529,38 @@ void UVaesenCombatSelfTest::BuildSteps()
 		Release(AimOrBlock);
 		return 0.5f;
 	} });
+	// Aimed, the revolver is held out at arm's length: along the aim, its sight line through the eye.
+	Steps.Add({ FString(), [this, AimOrBlock]() { Press(AimOrBlock); return 0.7f; } });
+	Steps.Add({ FString(), [this, Equipment, AimOrBlock]()
+	{
+		Shot(TEXT("12_RevolverAim"), nullptr, 0.0f, true);
+		const UVaesenWeaponItem* Revolver = Equipment->GetDrawnWeapon();
+		const AVaesenWeaponActor* Actor = Revolver ? Revolver->GetWeaponActor() : nullptr;
+		FTransform Muzzle, Sight;
+		if (Actor && Actor->GetSocketTransform(TEXT("Muzzle"), Muzzle) && Actor->GetSocketTransform(TEXT("Sight"), Sight))
+		{
+			FRotator Aim = Fighter->GetBaseAimRotation();
+			Aim.Roll = 0.0f;
+			// Along the bore (sight to muzzle; the grip is below it).
+			const float Alignment = FVector::DotProduct((Muzzle.GetLocation() - Sight.GetLocation()).GetSafeNormal(), Aim.Vector());
+			const FVector Eye = UVaesenAnimInstance::EyePoint(Fighter->GetMesh());
+			const FVector ToEye = Eye + Aim.RotateVector(Actor->Hold.AimSightOffset) - Sight.GetLocation();
+			const FVector Line = Sight.GetRotation().GetForwardVector();
+			const float EyeGap = (ToEye - Line * FVector::DotProduct(ToEye, Line)).Size();
+			const float Reach = FVector::DotProduct(Sight.GetLocation() - Eye, Aim.Vector());
+			const FString Measured = FString::Printf(TEXT("(barrel along the aim %.2f, sight %.0f cm out from the eye, sight line %.1f cm from the eye)"), Alignment, Reach, EyeGap);
+			if (GetWorld()->GetNetMode() == NM_DedicatedServer)
+			{
+				Say(TEXT("INFO  pistol aim not measured on a dedicated server ") + Measured, FColor::Yellow);
+			}
+			else
+			{
+				Check(Alignment > 0.97f && EyeGap < 4.0f && Reach > 35.0f, TEXT("aimed, the revolver is held out at arm's length, sights at the eye ") + Measured);
+			}
+		}
+		Release(AimOrBlock);
+		return 0.3f;
+	} });
 	Steps.Add({ FString(), [this, Cartridge, Equipment]()
 	{
 		const float Expected = FMath::Max(0.0f, Cartridge.GetTotal() - Armored->ProtectionPiercing);

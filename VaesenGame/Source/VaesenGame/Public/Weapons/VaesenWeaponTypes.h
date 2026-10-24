@@ -382,7 +382,10 @@ struct FVaesenWeaponHold
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hold")
 	FVector LeftHandOffset = FVector::ZeroVector;
 
-	/** Lay it against the shoulder while aiming (off: the aim animation holds it as it is). */
+	/**
+	 * Raise it to the eye while aiming: a long gun into the shoulder (its Stock), a pistol held out at arm's length
+	 * (no Stock: its sight AimSightOffset in front of the eye). Off: the aim animation holds it as it is.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Hold|Aim")
 	bool bShoulderAim = true;
 

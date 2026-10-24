@@ -176,7 +176,7 @@ In a running game (PIE with a dedicated server is fine), open the console and ty
 
 It first checks that the interaction trace finds every pickup in the map and picks up a rifle through its interaction. It then runs the test Blueprints: revolver (draw, reload, fire, armored target), Krag (left hand on LeftGrip from the hip and aimed, shouldered, the bolt worked by hand at the shoulder, the case out as the bolt comes back), punch, sword (stamina, block, parry, wear), stone throw, and bow.
 
-Every check prints PASS or FAIL on screen and in the log, and everything it spawned is removed at the end. In `L_CombatTest` it reported **66 passed, 0 failed** (with the sword animations: the swing hits by root motion, the combo, the stab and the dodge).
+Every check prints PASS or FAIL on screen and in the log, and everything it spawned is removed at the end. In `L_CombatTest` it reported **67 passed, 0 failed** (with the sword animations: the swing hits by root motion, the combo, the stab and the dodge).
 
 It checks what the C++ tests can't: the generated assets, the Blueprints and the map's collision together. Both clients should see the fighter do everything. The sword swing is reported as INFO until an attack montage exists, because without one the blade stays where the hand hangs.
 
@@ -230,6 +230,10 @@ It photographs the fighter side-on (idle, two slashes, a stab, the guard, a dodg
 - A diamond marks the target on the HUD.
 
 A category can have its own **Locked Anim Layer** (`DA_WeaponCategoryDefaults` → category): a separate animation set while locked. Empty = its normal layer, which sees `bTargetLocked` (and `bRelaxed` false) and can square up itself, as the sword's does. Range, angle and break distance are on the character (Combat → Target Lock).
+
+### 0.7e Pistols aimed (procedural, until there's a pistol animation pack)
+
+Right mouse with the revolver or the rolling-block pistol raises it one-handed to arm's length, a duelling stance: the Shoulder Aim node lays the gun along the aim with its `Sight` socket (the rear sight, on the top strap) **Aim Sight Offset** in front of the eye (52 cm: the arm nearly straight), and solves the right arm onto the grip; the left arm stays as the stance has it. A shot flips the muzzle up (Recoil Pitch 14°), pushes the hand back a little (2.5 cm) and kicks the camera (2°). The pistols' Hold (Weapon Blueprint → Hold) has these; tune them in the Weapon Fit rig. Without a pistol stance the drawn pistol walks with the plain mannequin, and fire, reload and the holster draw are still timed without animations.
 
 ### 0.8 How weapons are held (sockets), and the Weapon Fit rig
 
