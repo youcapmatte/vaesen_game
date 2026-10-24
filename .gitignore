@@ -50,3 +50,9 @@ VaesenGame/Content/WeaponVerse1/
 
 # Combat Sounds - Bundle Collection (Audios With Love, 317 MB). The project's own sword sound set, cues and impact rows that use it are committed.
 VaesenGame/Content/Combat_SFX_Bundle/
+
+# More third-party packs (reinstall from Fab). What the project uses of them lives in Content/Vaesen/ThirdParty/<pack>
+# (-run=VaesenContentAudit lists and moves it); the setup tools read the packs themselves only when rebuilding.
+VaesenGame/Content/ThirdParty/
+VaesenGame/Content/1HM_Sword_Attacks_Finishers/
+VaesenGame/Content/RifleAnims/

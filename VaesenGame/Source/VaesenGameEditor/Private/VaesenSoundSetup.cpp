@@ -32,10 +32,27 @@ namespace VaesenSoundSetup
 
 	bool bRebuild = false;
 
+	/**
+	 * A pack's asset where the project keeps it: what the project uses of a pack lives in /Game/Vaesen/ThirdParty/<pack>
+	 * (the pack itself isn't in git; -run=VaesenContentAudit moves it there). Else in the pack, if it's installed.
+	 */
+	FString Resolve(const FString& PackagePath)
+	{
+		if (!PackagePath.StartsWith(TEXT("/Game/")) || PackagePath.StartsWith(TEXT("/Game/Vaesen/")))
+		{
+			return PackagePath;
+		}
+		FString Rest = PackagePath.Mid(6);
+		Rest.RemoveFromStart(TEXT("ThirdParty/"));
+		const FString Kept = FString(TEXT("/Game/Vaesen/ThirdParty/")) + Rest;
+		return FPackageName::DoesPackageExist(Kept) ? Kept : PackagePath;
+	}
+
 	template <typename T>
 	T* LoadAt(const FString& PackagePath)
 	{
-		return LoadObject<T>(nullptr, *(PackagePath + TEXT(".") + FPackageName::GetShortName(PackagePath)));
+		const FString Path = Resolve(PackagePath);
+		return LoadObject<T>(nullptr, *(Path + TEXT(".") + FPackageName::GetShortName(Path)));
 	}
 
 	/** In WeaponVerse1 (relative), or anywhere (a /Game/ path). */

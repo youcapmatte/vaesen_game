@@ -69,7 +69,8 @@ namespace VaesenAnimSetup
 	const TCHAR* RifleFolder = TEXT("/Game/Vaesen/Animations/Rifle");
 	const TCHAR* RigFolder = TEXT("/Game/Vaesen/Animations/Retargeting");
 	const TCHAR* RiflePackFolder = TEXT("/Game/RifleAnims/Animations");
-	const TCHAR* UE4MannequinMesh = TEXT("/Game/RifleAnims/ShowcaseAssets/Meshes/Mannequin/SK_Mannequin.SK_Mannequin");
+	// The rifle pack's UE4 mannequin (the retargeting source), kept in the project (the pack itself isn't in git).
+	const TCHAR* UE4MannequinMesh = TEXT("/Game/Vaesen/ThirdParty/RifleAnims/ShowcaseAssets/Meshes/Mannequin/SK_Mannequin.SK_Mannequin");
 	const TCHAR* MannyMesh = TEXT("/Game/Characters/Mannequins/Meshes/SKM_Manny.SKM_Manny");
 
 	bool Exists(const FString& PackagePath)
@@ -283,7 +284,7 @@ namespace VaesenAnimSetup
 				UE_LOG(LogVaesenAnimSetup, Display, TEXT("UE4 virtual bone %s: %s -> %s"), *Bone.VirtualBoneName.ToString(), *Bone.SourceBoneName.ToString(), *Bone.TargetBoneName.ToString());
 			}
 		}
-		if (const UStaticMesh* Rifle = LoadObject<UStaticMesh>(nullptr, TEXT("/Game/RifleAnims/ShowcaseAssets/Meshes/Rifle/SM_Rifle.SM_Rifle")))
+		if (const UStaticMesh* Rifle = LoadObject<UStaticMesh>(nullptr, TEXT("/Game/Vaesen/ThirdParty/RifleAnims/ShowcaseAssets/Meshes/Rifle/SM_Rifle.SM_Rifle")))
 		{
 			const FBox Box = Rifle->GetBoundingBox();
 			UE_LOG(LogVaesenAnimSetup, Display, TEXT("SM_Rifle bounds min %s max %s"), *Box.Min.ToCompactString(), *Box.Max.ToCompactString());
@@ -1648,7 +1649,9 @@ namespace VaesenAnimSetup
 	{
 		const FString Path = FString(SwordFolder) / TEXT("BS_1HM_Locomotion");
 		UBlendSpace* Space = LoadAt<UBlendSpace>(Path);
-		if (Space && !bRebuild)
+		// The samples' speeds are measured in the pack's own animations: without the pack, keep what's there.
+		const bool bPack = FPackageName::DoesPackageExist(FString(SwordPackFolder) / TEXT("1HM_Walk/1HM_WalkForward"));
+		if (Space && (!bRebuild || !bPack))
 		{
 			return Space;
 		}
