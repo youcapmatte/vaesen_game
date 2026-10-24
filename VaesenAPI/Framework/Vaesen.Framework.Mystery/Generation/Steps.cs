@@ -123,6 +123,12 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
         // A fix names its items, so it is always a patch when it can be: answering a few dozen items beats rewriting all.
         var patchErrors = last is not null && Patch.Patchable(PatchLists(last), issues, fixing ? 1.0 : options.PatchShare, anyCode: fixing) ? issues : [];
 
+        // The last round never rewrites a whole step: what cannot be a patch is left as it is, and stays a warning.
+        if (mode == Mode.FixLight && patchErrors.Count == 0 && last is not null && PatchLists(last).Count > 0)
+        {
+            return ret.Fail($"Not a patch of {Name}'s items; left for the game master.", StepErrorCodes.StepFailed);
+        }
+
         for (var attempt = 0; attempt <= retries; attempt++)
         {
             var patching = last is not null && patchErrors.Count > 0;
@@ -143,7 +149,8 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
                     : PromptBuilder.WithCaseAndFeedback(Instruction(draft), view, issues, previous);
             var (modelName, effort) = (patching, fixing, attempt) switch
             {
-                (_, true, _) when mode == Mode.FixLight => (Or(options.LightModel, options.CreativeModel), options.LightEffort),
+                // Judgement fixes go to the patch model as patches, never to the small model (review 2, item 2).
+                (_, true, _) when mode == Mode.FixLight => (Or(options.PatchModel, options.CreativeModel), options.PatchEffort),
                 (true, _, _) or (_, true, _) => (Or(options.PatchModel, options.CreativeModel), options.PatchEffort),
                 (_, _, 0) => (Or(FirstTryModel(options), options.CreativeModel), FirstTryEffort(options)),
                 _ => (Or(options.RetryModel, options.CreativeModel), options.LightEffort),
@@ -726,6 +733,9 @@ public sealed class CreatureStep(IMysteryModel model, ICoherenceValidator valida
 
     protected override CheckScope Scope => CheckScope.Creature;
 
+    // One creature per case: its mind is one item a patch can answer (review 2, item 2), never the whole step again.
+    protected override IReadOnlyList<PatchList> PatchLists(CreatureOutput output) => [new("creatureMinds", output.CreatureMinds, _ => CriticRouting.CreatureItem)];
+
     /// <summary>Only a creature the players can bargain with gets a mind.</summary>
     public static bool Needed(MysteryDraft draft) => draft.Vaesen.ResolutionShape == ResolutionShapes.Negotiable;
 
@@ -762,6 +772,7 @@ public sealed class HookStep(IMysteryModel model, ICoherenceValidator validator,
         return PromptBuilder.Fill(PromptBuilder.Template("hook"), new Dictionary<string, string>
         {
             ["hookChannel"] = hook is null ? draft.Brief.HookChannelId : $"{hook.Name.ToLowerInvariant()} ({hook.Description})",
+            ["giverRule"] = draft.Pack.Setting.FindHookGiverType(draft.Brief.HookGiverType) is { } giver ? giver.Meaning : "a cast member with a reason to call for help",
             ["giveawayRule"] = PromptBuilder.GiveawayRuleForHook(draft.Brief),
         });
     }
@@ -851,6 +862,8 @@ public sealed class CriticStep(IMysteryModel model, MysteryOptions options)
                 SuggestedFix = c.SuggestedFix,
                 Source = IssueSources.Critic,
                 Targets = c.Targets.Where(t => !string.IsNullOrWhiteSpace(t)).Select(t => t.Trim()).ToList(),
+                Replacements = c.Replacements.Where(r => r.From.Length > 0 && r.From != r.To).ToList() is { Count: > 0 } replacements ? replacements : null,
+                Everywhere = c.Everywhere,
             })
             .ToList();
 

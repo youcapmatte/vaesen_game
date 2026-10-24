@@ -584,8 +584,19 @@ public sealed class MysteryGenerator(
                 var last = critique.Where(Fixable).Concat(TargetedWarnings(draft)).ToList();
                 if (last.Count > 0)
                 {
-                    progress?.Report(new GenerationProgress(caseAttempt, CheckStepName, "Applying the critic's last suggestions."));
-                    await ApplyWarningsAsync(draft, last, caseAttempt, ct);
+                    progress?.Report(new GenerationProgress(caseAttempt, CheckStepName, "Applying the critic's last suggestions, and checking each took."));
+                    var unresolved = await ApplyWarningsAsync(draft, last, caseAttempt, ct);
+
+                    // The whole-case warnings as the case now stands, not as it was before the fixes.
+                    draft.Packet.Validation.Issues.RemoveAll(i => i.Source == IssueSources.Structural);
+                    whole = validator.Validate(draft.Packet, draft.ValidationContext, CheckScope.Whole);
+                    if (unresolved.Count > 0 && o.UnresolvedFixIsError)
+                    {
+                        draft.FailedStep = CheckStepName;
+                        draft.Packet.Validation.Issues.AddRange(whole);
+                        return ret.Fail("Fixes that did not hold after a retry: " + string.Join(" ", unresolved.Select(u => $"{u.Code} at {string.Join(", ", u.Targets ?? [])}: {u.Unresolved}")),
+                            StepErrorCodes.StepFailed);
+                    }
                 }
 
                 errors = [];
@@ -675,6 +686,8 @@ public sealed class MysteryGenerator(
         SuggestedFix = issue.SuggestedFix,
         Source = issue.Source,
         Targets = issue.Targets,
+        Replacements = issue.Replacements,
+        Everywhere = issue.Everywhere,
     };
 
     /// <summary>
@@ -699,9 +712,32 @@ public sealed class MysteryGenerator(
 
         var applied = new List<CoherenceIssue>();
 
+        // Mechanical fixes are done by code (review 2, item 2): a rename, a date or a wrong id is exact text replaced
+        // in the packet and every kept output, and logged. Only what changed nothing goes on to a model.
+        var replaced = new List<CoherenceIssue>();
+        foreach (var issue in issues.Where(i => i.Replacements is { Count: > 0 }))
+        {
+            var places = TextReplacements.Apply(draft, issue);
+            draft.Log.Add(new GenerationLogEntry
+            {
+                CaseAttempt = caseAttempt,
+                Step = CheckStepName,
+                Kind = LogEntryKinds.Replace,
+                Passed = places > 0,
+                Instruction = string.Join("; ", issue.Replacements!.Select(r => $"\"{r.From}\" → \"{r.To}\"")) + (issue.Everywhere ? " everywhere" : $" in {string.Join(", ", issue.Targets ?? [])}"),
+                Output = $"{places} place(s)",
+            });
+            if (places > 0)
+            {
+                replaced.Add(issue);
+            }
+        }
+
+        applied.AddRange(replaced);
+
         // An issue split over several steps is applied only if every part was: one failed part means it was not.
         var failed = new HashSet<CoherenceIssue>();
-        var routed = CriticRouting.Route(issues).ToDictionary(r => r.Step, r => r.Issues, StringComparer.Ordinal);
+        var routed = CriticRouting.Route(issues.Except(replaced)).ToDictionary(r => r.Step, r => r.Issues, StringComparer.Ordinal);
 
         // A resident's record is the residents step's, not humans'.
         if (draft.Outputs.TryGetValue(ResidentsStep.StepName, out var kept) && kept is ResidentsOutput residents
@@ -753,32 +789,91 @@ public sealed class MysteryGenerator(
     }
 
     /// <summary>
-    /// The last round (fixes 2, section 2): the critic's remaining warnings with concrete fixes, applied with the light
-    /// model, then the structural checks again. No third critic. If the case no longer passes, it goes back to how it was.
+    /// The last round (fixes 2, section 2; review 2, items 1 and 2): the remaining warnings with concrete fixes, as
+    /// replacements in code and patches on the patch model, never whole-step rewrites. Then the structural checks, and
+    /// a check that each fix took: a structural warning must be gone, a replacement's old text must be gone, and a
+    /// critic issue must be found gone by a verifying look. What did not take is tried once more with what still
+    /// stands; only what then holds is marked applied. Returns the critic issues that still did not hold.
     /// </summary>
-    private async Task ApplyWarningsAsync(MysteryDraft draft, IReadOnlyList<CoherenceIssue> warnings, int caseAttempt, CancellationToken ct)
+    private async Task<List<CoherenceIssue>> ApplyWarningsAsync(MysteryDraft draft, IReadOnlyList<CoherenceIssue> warnings, int caseAttempt, CancellationToken ct)
     {
-        var before = Snapshot(draft);
-        var applied = await FixRoundAsync(draft, warnings, caseAttempt, light: true, ct);
-        if (applied.Count == 0)
+        var pending = warnings.ToList();
+        var held = new List<CoherenceIssue>();
+        var remaining = new Dictionary<CoherenceIssue, string>();
+        for (var attempt = 0; attempt <= Options.FixRetries && pending.Count > 0; attempt++)
         {
-            return;
-        }
+            var before = Snapshot(draft);
+            var asked = attempt == 0 ? pending : pending.Select(i => WithRemaining(i, remaining.GetValueOrDefault(i))).ToList();
+            await FixRoundAsync(draft, asked, caseAttempt, light: true, ct);
+            if (!StillPasses(draft, caseAttempt))
+            {
+                logger.LogInformation("The last round's fixes broke the case's checks; keeping it as it was");
+                Restore(draft, before);
+                foreach (var issue in pending)
+                {
+                    remaining[issue] = "Its fix broke the case's structural checks and was undone.";
+                }
 
-        if (!StillPasses(draft, caseAttempt))
-        {
-            logger.LogInformation("Applying the critic's warnings broke the case's checks; keeping it as it was");
-            Restore(draft, before);
-            return;
+                break;
+            }
+
+            var now = validator.Validate(draft.Packet, draft.ValidationContext, CheckScope.Full);
+            var critic = pending.Where(i => i.Source == IssueSources.Critic && i.Replacements is not { Count: > 0 }).ToList();
+            var looked = critic.Count == 0 ? [] : (await new FixVerifier(model, Options).VerifyAsync(draft, critic, caseAttempt, ct)).Result
+                ?? critic.Select(_ => (string?)"The verifying look failed.").ToList();
+            foreach (var issue in pending)
+            {
+                string? still = issue switch
+                {
+                    { Replacements.Count: > 0 } => TextReplacements.Holds(draft, issue) ? null : "The old text is still there.",
+                    { Source: IssueSources.Structural } => now.Exists(n => n.Code == issue.Code && n.Location == issue.Location) ? "The check still finds it." : null,
+                    _ => looked[critic.IndexOf(issue)],
+                };
+                if (still is null)
+                {
+                    held.Add(issue);
+                    remaining.Remove(issue);
+                }
+                else
+                {
+                    remaining[issue] = still;
+                }
+            }
+
+            pending = pending.Except(held).ToList();
         }
 
         foreach (var issue in draft.Packet.Validation.Issues.Where(i => i.Source == IssueSources.Critic))
         {
-            issue.Applied = applied.Exists(a => a.Code == issue.Code && a.Explanation == issue.Explanation);
+            issue.Applied = held.Exists(a => a.Code == issue.Code && a.Explanation == issue.Explanation);
+            issue.Unresolved = remaining.FirstOrDefault(r => r.Key.Code == issue.Code && r.Key.Explanation == issue.Explanation).Value;
         }
 
-        logger.LogInformation("Applied {Count} warnings in the last round: {Codes}", applied.Count, string.Join(", ", applied.Select(a => a.Code)));
+        logger.LogInformation("Last round: {Held} fixes held, {Unresolved} did not", held.Count, remaining.Count);
+
+        // The structural ones the checks still find (a second hook-giver left standing) count as much as the critic's.
+        var structural = remaining.Where(r => r.Key.Source == IssueSources.Structural).Select(r => WithRemaining(r.Key, null)).ToList();
+        foreach (var issue in structural)
+        {
+            issue.Unresolved = remaining.First(r => r.Key.Code == issue.Code && r.Key.Location == issue.Location).Value;
+        }
+
+        return draft.Packet.Validation.Issues.Where(i => i.Source == IssueSources.Critic && i.Unresolved is not null).Concat(structural).ToList();
     }
+
+    /// <summary>The issue again, with what the verifying look found still standing, for the retry.</summary>
+    private static CoherenceIssue WithRemaining(CoherenceIssue issue, string? still) => new()
+    {
+        Code = issue.Code,
+        Severity = issue.Severity,
+        Location = issue.Location,
+        Explanation = issue.Explanation,
+        SuggestedFix = still is null ? issue.SuggestedFix : $"{issue.SuggestedFix} Still not done: {still}",
+        Source = issue.Source,
+        Targets = issue.Targets,
+        Replacements = issue.Replacements,
+        Everywhere = issue.Everywhere,
+    };
 
     /// <summary>
     /// A redundancy or single-point issue as a patch of minds and channels: a new channel, and the minds of the people
@@ -841,7 +936,7 @@ public sealed class MysteryGenerator(
         "critic." + CriticChecks.Solves => 2,
         "critic." + CriticChecks.DeepLoreTrail => 0,
         _ when issue.Location.StartsWith("hook", StringComparison.Ordinal) => 4,
-        _ when issue.Location == "creatureMinds" => 3,
+        _ when issue.Location.StartsWith("creatureMinds", StringComparison.Ordinal) => 3,
         _ when issue.Location == "facts" && issue.Code is IssueCodes.Schema or IssueCodes.Giveaway => 0,
         _ when issue.Location.StartsWith("beat", StringComparison.Ordinal) || issue.Location == "climax" => 2,
         _ => 1,

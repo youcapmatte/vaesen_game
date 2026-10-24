@@ -450,7 +450,8 @@ function IssueLine({ issue }: { issue: CoherenceIssue }) {
         <Badge size="xs" color={error ? "blood" : "gold"} variant={error ? "filled" : "light"}>{issue.severity}</Badge>
         <Text fz="xs" fw={600}>{issue.code}</Text>
         <Text fz="xs" c="var(--nx-ink-soft)">{issue.location} · {issue.source}</Text>
-        {issue.applied && <Badge size="xs" color="moss" variant="light">fix applied</Badge>}
+        {issue.applied && <Badge size="xs" color="moss" variant="light">fix verified</Badge>}
+        {issue.unresolved && <Badge size="xs" color="blood" variant="light" title={issue.unresolved}>fix did not hold</Badge>}
       </Group>
       <Text fz="sm">{issue.explanation}</Text>
       {issue.suggestedFix && <Text fz="xs" fs="italic" c="var(--nx-ink-soft)">{issue.suggestedFix}</Text>}

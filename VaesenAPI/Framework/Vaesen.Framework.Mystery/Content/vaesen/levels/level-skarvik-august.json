@@ -1,8 +1,4 @@
 {
-  "id": "level-skarvik-august",
-  "version": 1,
-  "status": "draft",
-  "name": "Skärvik Fishing Village",
   "region": "Northern Bohuslän, on the Skagerrak coast",
   "settlementType": "village",
   "size": 2,
@@ -15,7 +11,201 @@
   ],
   "description": "Skärvik clings to a cleft in the bare granite of the Bohuslän coast, its white and red houses crowded together on rock ledges above a narrow harbour. The great herring shoals that made the coast rich left sixty years ago and have not returned; the people fish for cod, ling, mackerel and lobster, farm thin patches of soil between the rocks, and look out to sea. Beyond the village lies treeless heath and skerries without number.",
   "seasonNotes": "August, late summer. The lobster season opens and the boats go out at dawn with the creels. The water is at its warmest and the evenings are long and golden, though the first dark nights return at the month's end. The heath is purple with heather. Hay is drying in small fields between the rocks, and the women split and salt fish on the jetties. Squalls come in from the west without warning.",
-  "travel": "From Uppsala by rail to Gothenburg via Stockholm and the western line, about a day and a half, then by coastal steamer north along the skerries, a further day.",
+  "travel": "Uppsala by rail to Stockholm, by rail to Katrineholm and on the western line to Gothenburg (about a day), then the Bohuslän coastal steamer north to Skärvik (a further day, twice weekly in summer); the alternative is the post road from Gothenburg to Tanum and a cart over the heath.",
+  "geography": {
+    "realAnalogue": "Fjällbacka (Tanum district, northern Bohuslän)",
+    "fictional": true,
+    "province": "Bohuslän",
+    "county": "Göteborgs och Bohus län",
+    "parish": "Skärvik parish, Tanum hundred (the vicar also serves two neighbouring island parishes)",
+    "knownFor": [
+      "The great herring fishery of the last century, which failed after 1808 and left a coast of empty salting houses and old men who still wait for the shoals",
+      "Treacherous skerries, skilled pilots, and wrecks that feed the district court with salvage disputes",
+      "Granite quarrying along the coast, with stone shipped south from the small harbours",
+      "The ancient rock carvings in the Tanum district, known to antiquaries and curious to everyone else"
+    ],
+    "neighbours": [
+      {
+        "name": "Fjällbacka",
+        "kind": "small port and seat of the crown sheriff",
+        "distance": "about 3 hours south by boat or steamer, or a rough day by the coast track",
+        "offers": [
+          "Crown sheriff for the skerry district",
+          "Post office",
+          "Merchants and a ship chandler",
+          "Steamer calls on the Gothenburg-Strömstad route"
+        ]
+      },
+      {
+        "name": "Tanum",
+        "kind": "church village and seat of the district court",
+        "distance": "about 25 km inland to the east, a half-day by cart over the heath and rock",
+        "offers": [
+          "Häradsrätt for northern Bohuslän, sitting a few times a year",
+          "Large parish church and a clerk who keeps the registers",
+          "Inn and horse-post station on the post road"
+        ]
+      },
+      {
+        "name": "Strömstad",
+        "kind": "market town and sea-bathing resort",
+        "distance": "about 50 km north, a long day by steamer",
+        "offers": [
+          "Provincial doctor for northern Bohuslän",
+          "Telegraph office",
+          "Market and merchants",
+          "Customs house and Norwegian trade",
+          "Steamers"
+        ]
+      },
+      {
+        "name": "Uddevalla",
+        "kind": "larger town with shipyards and trade",
+        "distance": "about 100 km south by road or two days by coastal steamer with calls",
+        "offers": [
+          "Savings bank",
+          "A local newspaper",
+          "Shipowners, herring merchants and a hospital",
+          "Railway to Vänersborg and Herrljunga (the last leg is not on the Society's usual route)"
+        ]
+      },
+      {
+        "name": "Gothenburg",
+        "kind": "county seat and great port",
+        "distance": "about 160 km south, a day by steamer",
+        "offers": [
+          "Governor of Göteborgs och Bohus län and the county administration",
+          "Banks and the Göteborgs Handels- och Sjöfartstidning",
+          "Telegraph to Stockholm",
+          "Western main line to Katrineholm and Stockholm"
+        ]
+      }
+    ],
+    "authorities": {
+      "police": "The kronolänsman of the Skärvik district sits in Fjällbacka, about three hours away by boat. He travels the skerries in his own boat and is seldom in the village. In his absence the vicar, the pilot and the eldest fisherman settle most matters.",
+      "court": "The häradsrätt for northern Bohuslän meets at Tanum, about 25 km inland, with a häradshövding and twelve lay assessors. It sits a few times a year, and cases of wreck-salvage, smuggling and brawling wait for those sessions.",
+      "doctor": "The provincial doctor for northern Bohuslän lives in Strömstad, a day's steamer away. His district is a scatter of islands and fishing hamlets. He signs death certificates and gives a natural cause, usually after the burial, while the village relies on the vicar and the wise woman on the heath.",
+      "post": "The mail arrives with the coastal steamer, twice a week in summer. The nearest post office is at Fjällbacka. In winter, when ice or gales stop the steamer, letters wait or go by a fisherman's boat.",
+      "telegraph": "None in Skärvik. The nearest telegraph office is at Strömstad, a day by steamer, and messages from the village go by steamer or post. A telegram from the Society's headquarters is wired to Gothenburg or Strömstad and then carried onward.",
+      "bank": "No bank in the village. The fishing parishes use the small savings banks of the coastal towns, the nearest being at Uddevalla. Herring merchants and shipowners deal with Gothenburg banks, and in Skärvik money is mostly credit with the merchant and the parish chest.",
+      "newspaper": "Göteborgs Handels- och Sjöfartstidning comes with the steamer, a few days old, to the inn and the vicar. It reports wrecks, shipping and the herring. A small Uddevalla paper reaches the village now and then."
+    }
+  },
+  "journey": {
+    "fromHeadquarters": "Uppsala",
+    "routes": [
+      {
+        "name": "By rail to Gothenburg and the coastal steamer",
+        "legs": [
+          {
+            "from": "Uppsala",
+            "to": "Stockholm",
+            "mode": "railway",
+            "lineId": "stockholm-uppsala-railway",
+            "duration": "about 2 hours",
+            "cost": "about 1 riksdaler 50 öre third class, about 2 riksdaler 50 öre second class",
+            "schedule": "Several trains daily; take the morning train to make the Stockholm connection",
+            "months": [],
+            "notes": "Trains stop at Knivsta, Märsta and Rotebro. The Stockholm station is some way from the southern line's platforms, so allow time to cross the city."
+          },
+          {
+            "from": "Stockholm",
+            "to": "Katrineholm",
+            "mode": "railway",
+            "lineId": "stockholm-katrineholm-railway",
+            "duration": "about 4 hours",
+            "cost": "about 5 riksdaler third class (the through fare to Gothenburg is about 11 riksdaler third class)",
+            "schedule": "Daily trains on the state trunk line; through trains to Gothenburg are scheduled so that Gothenburg is reached next morning",
+            "months": [],
+            "notes": "The line passes Södertälje and Gnesta. At Katrineholm the western line branches off from the southern line, and passengers may have to change carriages or wait."
+          },
+          {
+            "from": "Katrineholm",
+            "to": "Gothenburg",
+            "mode": "railway",
+            "lineId": "vastra-stambanan-katrineholm-goteborg",
+            "duration": "about 11 hours with stops",
+            "cost": "included in the through fare above",
+            "schedule": "Daily; an overnight run or an overnight stay in Hallsberg or Skövde is usual",
+            "months": [],
+            "notes": "The line goes through Hallsberg, Skövde, Falköping, Herrljunga and Alingsås. Passengers arrive in Gothenburg stiff and smoke-grimed, and need a night's lodging before the steamer."
+          },
+          {
+            "from": "Gothenburg",
+            "to": "Skärvik",
+            "mode": "steamer",
+            "lineId": "gothenburg-bohuslan-coastal-steamer",
+            "duration": "about 14 hours with calls at Marstrand, Lysekil, Smögen and Fjällbacka",
+            "cost": "about 5 riksdaler deck passage, about 8 riksdaler cabin",
+            "schedule": "Calls at Skärvik twice a week in summer, usually leaving Gothenburg in the early morning",
+            "months": [],
+            "notes": "Gales or ice can delay or cancel the steamer. In a hard winter it does not call at Skärvik at all, and the traveller must take the road route. Disembark by ferry boat at the harbour."
+          }
+        ]
+      },
+      {
+        "name": "By rail to Gothenburg, then by the post road and over the heath",
+        "legs": [
+          {
+            "from": "Uppsala",
+            "to": "Stockholm",
+            "mode": "railway",
+            "lineId": "stockholm-uppsala-railway",
+            "duration": "about 2 hours",
+            "cost": "about 1 riksdaler 50 öre third class",
+            "schedule": "Several trains daily",
+            "months": [],
+            "notes": "Same first leg as the steamer route."
+          },
+          {
+            "from": "Stockholm",
+            "to": "Katrineholm",
+            "mode": "railway",
+            "lineId": "stockholm-katrineholm-railway",
+            "duration": "about 4 hours",
+            "cost": "about 5 riksdaler third class",
+            "schedule": "Daily trains",
+            "months": [],
+            "notes": "The state trunk line via Södertälje and Gnesta."
+          },
+          {
+            "from": "Katrineholm",
+            "to": "Gothenburg",
+            "mode": "railway",
+            "lineId": "vastra-stambanan-katrineholm-goteborg",
+            "duration": "about 11 hours with stops",
+            "cost": "included in the through fare",
+            "schedule": "Daily",
+            "months": [],
+            "notes": "Arrive in Gothenburg late or the following morning."
+          },
+          {
+            "from": "Gothenburg",
+            "to": "Tanum",
+            "mode": "coach",
+            "lineId": null,
+            "duration": "about 2 days with changes of horses and a night at an inn",
+            "cost": "about 3 riksdaler by the post-coach, or about 8 to 10 riksdaler for a hired carriage",
+            "schedule": "The post-carriage goes north along the coast road a few times a week; hire a carriage at the posting inns on other days",
+            "months": [],
+            "notes": "The road goes by Kungälv and Uddevalla, then Kvistrum, with the horse-post stations (skjutsstationer) every few Swedish miles. Fares are fixed by the mile and horse, and the traveller pays at each station."
+          },
+          {
+            "from": "Tanum",
+            "to": "Skärvik",
+            "mode": "cart",
+            "lineId": null,
+            "duration": "about half a day (25 km over heath and rock)",
+            "cost": "about 2 riksdaler for a farmer's cart, plus the driver's meal",
+            "schedule": "On request; the inn at Tanum or the clerk can find a cart",
+            "months": [],
+            "notes": "The last stretch is a rutted track over bare moor and granite, and the horse must be led on the steepest ledges. In August the heath is dry and bright, and the track is passable even for a loaded cart. In rain the bogs make it a day's work."
+          }
+        ]
+      }
+    ],
+    "journeyScene": "The train runs out of the Uppland plain into the Västergötland hills, and the farmsteads grow smaller and the rock begins to show through the fields. In Gothenburg the air tastes of coal, tar and fish, and the steamer is loaded with barrels, crates and mail sacks. North of Marstrand the land turns to bare granite and skerries, with no tree to be seen, and the sea is silver and slow in the August light. Skärvik appears as a cleft in the rock with white and red houses stacked above the harbour, and the pilot's island lies a short pull of the oars beyond it. Gulls cry over the empty salting houses as the steamer comes alongside, and every window in the village seems to have someone behind it."
+  },
   "publicFacts": [
     "The herring has not returned to the Bohuslän coast since 1808; old men still keep the salting houses in hope.",
     "Last autumn a boat with four men from Skärvik was lost in a storm off the outer skerries; their widows receive a small parish relief.",
@@ -648,5 +838,10 @@
         }
       ]
     }
-  ]
+  ],
+  "monthVariants": [],
+  "id": "level-skarvik-august",
+  "version": 1,
+  "status": "draft",
+  "name": "Skärvik Fishing Village"
 }

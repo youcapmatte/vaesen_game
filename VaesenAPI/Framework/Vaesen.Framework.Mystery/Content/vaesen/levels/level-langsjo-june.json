@@ -1,8 +1,4 @@
 {
-  "id": "level-langsjo-june",
-  "version": 1,
-  "status": "draft",
-  "name": "Långsjö Parish",
   "region": "Dalarna, on a lake north of Siljan",
   "settlementType": "village",
   "size": 2,
@@ -16,7 +12,210 @@
   ],
   "description": "Långsjö is a lakeside parish of closely built villages of grey and red timber, where the farms have been divided by inheritance so many times that each family's strips of field are barely wide enough to turn a plough. In summer the women and girls take the cattle to the fäbod, the summer pastures in the forest hills, and live there until autumn. The men go away to work on the railways and in the towns, and come back for midsummer.",
   "seasonNotes": "June, around midsummer. The nights do not grow dark at all, only a long amber dusk that turns straight into dawn. The midsummer pole is raised in the village meadow, dressed in birch and flowers, and people dance on the grass all night. The cattle went up to the summer pastures at the start of the month. Haymaking has not yet begun; the meadows are full of flowers and mosquitoes swarm by the water.",
-  "travel": "From Uppsala by coach to Gävle, then by the Gävle-Dala railway to Falun and on by coach and lake steamer, about three days.",
+  "travel": "From Uppsala by post-coach to Gävle (the railway there opens only in 1874), by the Gävle-Dala railway to Falun, by coach to Leksand, then by Siljan steamer to Mora (May to October) and on by hired cart to Långsjö; or from Falun by coach to Rättvik and by carriage to Långsjö. About three days.",
+  "geography": {
+    "realAnalogue": "Orsa (Ovansiljan, Dalarna)",
+    "fictional": true,
+    "province": "Dalarna",
+    "county": "Kopparbergs län",
+    "parish": "Långsjö",
+    "knownFor": [
+      "Painted furniture and clocks that go south to the markets",
+      "Fäbod farming, where women and girls spend summers with the cattle in the forest hills",
+      "The church-boat races across the lake on midsummer day",
+      "Young men leaving to work as navvies on the railways and as masons in Stockholm"
+    ],
+    "neighbours": [
+      {
+        "name": "Mora",
+        "kind": "market town",
+        "distance": "about 20 km south by road, or by cart and then lake steamer",
+        "offers": [
+          "market",
+          "district court seat",
+          "Siljan steamer landing",
+          "parish savings bank",
+          "shops and an inn"
+        ]
+      },
+      {
+        "name": "Rättvik",
+        "kind": "parish village and steamer landing",
+        "distance": "about 35 km south-east by road",
+        "offers": [
+          "crown sheriff's seat",
+          "Siljan steamer landing",
+          "inn and post-horses"
+        ]
+      },
+      {
+        "name": "Leksand",
+        "kind": "parish village and steamer landing",
+        "distance": "about 50 km south-west by road or lake",
+        "offers": [
+          "provincial doctor",
+          "Siljan steamer landing",
+          "post-horses",
+          "pharmacy dealings"
+        ]
+      },
+      {
+        "name": "Falun",
+        "kind": "county seat and copper town",
+        "distance": "about 110 km south-east by road; railhead for the whole province",
+        "offers": [
+          "governor's seat",
+          "Gävle-Dala railway from 1859",
+          "telegraph at the station",
+          "Stora Kopparbergs läns Enskilda Bank",
+          "Fahlu Weckoblad",
+          "big market"
+        ]
+      },
+      {
+        "name": "Gävle",
+        "kind": "port and railway town",
+        "distance": "about 200 km east, beyond Falun",
+        "offers": [
+          "Gävle-Dala railway terminus",
+          "coastal steamers",
+          "telegraph",
+          "banks and newspapers"
+        ]
+      }
+    ],
+    "authorities": {
+      "police": "The kronolänsman of the Långsjö district lives at Rättvik, about 35 km away. He covers a huge forest and lake district by boat, sleigh and on foot, so he is seldom in the parish. The village elders and the parish constable keep order between his visits.",
+      "court": "The häradsrätt for the parishes north of Siljan sits at Mora, about 20 km away, at fixed sessions a few times a year. Farmers travel far to attend. Serious cases go on to Falun.",
+      "doctor": "The provinsialläkare for the Siljan district lives at Leksand, about 50 km away. His district is huge and the roads are few, so he comes only for deaths and grave injuries. Most people go to Kerstin the wise woman, the parish clerk or the vicar.",
+      "post": "The parish post is carried by a post-carrier from Mora, twice a week in summer. Letters from Minnesota and the south come by Falun, Leksand and the steamer.",
+      "telegraph": "The nearest office is at Falun station, about 110 km away. A message from Långsjö must go by post-carrier or steamer to reach it, which takes a day or two.",
+      "bank": "The parish savings bank at Mora serves the farmers. Stora Kopparbergs läns Enskilda Bank at Falun lends to the mines and ironworks and handles larger sums.",
+      "newspaper": "Fahlu Weckoblad is printed at Falun and reaches the parish by post several days late. Its notices are mostly about copper-mine business, sales and court sittings. The vicar and the miller are the only readers in the parish."
+    }
+  },
+  "journey": {
+    "fromHeadquarters": "Uppsala",
+    "routes": [
+      {
+        "name": "By coach, Dala railway and lake steamer",
+        "legs": [
+          {
+            "from": "Uppsala",
+            "to": "Gävle",
+            "mode": "coach",
+            "lineId": null,
+            "duration": "about 14 hours with changes of horses at Tierp and Örbyhus",
+            "cost": "about 6 riksdaler",
+            "schedule": "post-coach daily, leaving early morning",
+            "months": [],
+            "notes": "The Uppsala-Gävle railway is under construction and opens in 1874. Until then the road is the only way. A night is spent at an inn in Gävle."
+          },
+          {
+            "from": "Gävle",
+            "to": "Falun",
+            "mode": "railway",
+            "lineId": "gavle-dala-railway",
+            "duration": "about 4 hours via Sandviken and Storvik",
+            "cost": "about 3 riksdaler in third class",
+            "schedule": "one or two trains daily",
+            "months": [],
+            "notes": "The only railway into Dalarna. It carries copper, iron and timber as well as passengers."
+          },
+          {
+            "from": "Falun",
+            "to": "Leksand",
+            "mode": "coach",
+            "lineId": null,
+            "duration": "about 8 hours over forest roads",
+            "cost": "about 5 riksdaler by post-coach or hired carriage",
+            "schedule": "post-coach most days, hired carriage by arrangement",
+            "months": [],
+            "notes": "The road runs through villages and forest with a few steep hills. Travellers usually spend a night at Leksand or take the carriage through the short June night."
+          },
+          {
+            "from": "Leksand",
+            "to": "Mora",
+            "mode": "steamer",
+            "lineId": "siljan-lake-steamer",
+            "duration": "about 5 hours with a call at Rättvik",
+            "cost": "about 2 riksdaler",
+            "schedule": "a few sailings each week in summer",
+            "months": [
+              5,
+              6,
+              7,
+              8,
+              9,
+              10
+            ],
+            "notes": "The steamer is small and crowded with church-goers, pedlars and fäbod women going up for the summer. Ice stops it in winter."
+          },
+          {
+            "from": "Mora",
+            "to": "Långsjö",
+            "mode": "hiredCarriage",
+            "lineId": null,
+            "duration": "about 4 hours",
+            "cost": "about 2 riksdaler",
+            "schedule": "hired at the inn at Mora",
+            "months": [],
+            "notes": "A rough cart road along the lake. The last stretch is narrow, with strips of field either side. The last stretch in early summer is soft after the thaw."
+          }
+        ]
+      },
+      {
+        "name": "By coach, Dala railway and the lake road",
+        "legs": [
+          {
+            "from": "Uppsala",
+            "to": "Gävle",
+            "mode": "coach",
+            "lineId": null,
+            "duration": "about 14 hours",
+            "cost": "about 6 riksdaler",
+            "schedule": "post-coach daily",
+            "months": [],
+            "notes": "As above. The railway from Uppsala is not yet open."
+          },
+          {
+            "from": "Gävle",
+            "to": "Falun",
+            "mode": "railway",
+            "lineId": "gavle-dala-railway",
+            "duration": "about 4 hours",
+            "cost": "about 3 riksdaler in third class",
+            "schedule": "one or two trains daily",
+            "months": [],
+            "notes": "Change nothing; the line runs straight through."
+          },
+          {
+            "from": "Falun",
+            "to": "Rättvik",
+            "mode": "coach",
+            "lineId": null,
+            "duration": "about 10 hours",
+            "cost": "about 6 riksdaler",
+            "schedule": "post-coach most days, with a change of horses at the post stations",
+            "months": [],
+            "notes": "Keeps clear of the lake and takes the long way round, so it suits travellers with heavy luggage or a wish to avoid the steamer's timetable."
+          },
+          {
+            "from": "Rättvik",
+            "to": "Långsjö",
+            "mode": "hiredCarriage",
+            "lineId": null,
+            "duration": "about 6 hours",
+            "cost": "about 3 riksdaler",
+            "schedule": "hired from the inn at Rättvik",
+            "months": [],
+            "notes": "The road passes the kronolänsman's house at Rättvik. It goes through forest and past fäbod tracks, and the carriage is sometimes met by cattle going up to the hills."
+          }
+        ]
+      }
+    ],
+    "journeyScene": "The post-coach rattles north from Uppsala through flat farmland that gives way to pine, and the roadside inns grow plainer with every change of horses. At Gävle the railway carries you into the hills, where the engine's smoke hangs among the spruce and the stations are crowded with navvies. Beyond Falun the villages are red and grey and the lake glints between the trees, and from the steamer you can see the long church boats drawn up on the shore. In the light of the June night the forests are never quite dark, and cattle bells sound faintly from the hills."
+  },
   "publicFacts": [
     "The great land redistribution (storskifte) of the parish is under way, and surveyors are redrawing the strips of every farm; it has caused bitter quarrels.",
     "Many young men of Långsjö go away every year to work as navvies on the railways or as masons in Stockholm.",
@@ -607,5 +806,10 @@
         }
       ]
     }
-  ]
+  ],
+  "monthVariants": [],
+  "id": "level-langsjo-june",
+  "version": 1,
+  "status": "draft",
+  "name": "Långsjö Parish"
 }

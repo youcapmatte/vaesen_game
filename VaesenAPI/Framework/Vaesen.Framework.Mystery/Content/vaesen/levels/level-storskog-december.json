@@ -1,8 +1,4 @@
 {
-  "id": "level-storskog-december",
-  "version": 1,
-  "status": "draft",
-  "name": "Storskog Logging District",
   "region": "Inland Ångermanland, Norrland",
   "settlementType": "hamlet",
   "size": 1,
@@ -16,7 +12,232 @@
   ],
   "description": "Storskog is a scattering of homesteads along a great northern river, three days upstream from the coast, surrounded by forest that seems to have no end. Every winter the timber companies from the coastal sawmills send crews to fell trees on land they bought cheaply from the farmers, hauling logs down to the river ice to wait for the spring flood. Beyond the last farm there are only marshes, ridges and the camps.",
   "seasonNotes": "December, the depth of winter. The sun barely clears the ridges for a few hours around noon and the rest is blue twilight and dark. Snow lies thigh-deep in the forest and the river is frozen hard enough for horses. The cold reaches thirty degrees below on still nights, and trees crack like gunshots in the frost. Felling and hauling go on by daylight; the crews come down to the chapel for Christmas only if the weather allows.",
-  "travel": "From Uppsala by coach to Gävle, then by sleigh along the coast road through Hälsingland and up the river valley, about six days in good conditions; in summer by steamer from Stockholm to Härnösand and on by river boat.",
+  "travel": "From Uppsala in December: post coach to Gävle (about 1 day), post sleigh up the coast to Härnösand (about 3 days), then sleigh on the river ice via Sollefteå to Storskog (about 2 days), roughly six days in all; in the open season (May-October) rail to Stockholm, coastal steamer to Härnösand, river steamer to Sollefteå and cart to Storskog, about five days.",
+  "geography": {
+    "realAnalogue": "Junsele (Ångermanälven valley above Sollefteå, inland Ångermanland)",
+    "fictional": true,
+    "province": "Ångermanland (Norrland)",
+    "county": "Västernorrlands län",
+    "parish": "Storskog (a chapel congregation under a larger upriver parish; the parish itself is fictional)",
+    "knownFor": [
+      "Timber: the coastal sawmills buy up the valley's forest and float its logs down the Ångermanälven each spring flood.",
+      "The hunger years of 1867-68, when Norrland farmers ate bark bread and some farms were left empty.",
+      "Settlers clearing new homesteads on crown forest land, with years free of tax.",
+      "Forests so wide and thinly peopled that the crown sheriff covers them mostly by sleigh in winter."
+    ],
+    "neighbours": [
+      {
+        "name": "Sollefteå",
+        "kind": "market town and court seat",
+        "distance": "about 60 km downriver, a day by sleigh on the ice road",
+        "offers": [
+          "district court (häradsrätt) for inland Ångermanland",
+          "crown sheriff",
+          "provincial doctor",
+          "market and general merchants",
+          "river-steamer landing in summer",
+          "parish savings bank"
+        ]
+      },
+      {
+        "name": "Härnösand",
+        "kind": "county seat and port",
+        "distance": "about 150 km downriver and coast, roughly two days from Sollefteå by sleigh and one by river steamer",
+        "offers": [
+          "governor's seat and county administration",
+          "cathedral chapter and grammar school",
+          "county hospital",
+          "Hernösands Enskilda Bank",
+          "newspaper Hernösands-Posten",
+          "telegraph office on the coast line",
+          "coastal steamers to Stockholm in the open season"
+        ]
+      },
+      {
+        "name": "Kramfors",
+        "kind": "sawmill district on the lower river",
+        "distance": "about 100 km downriver, on the way to Härnösand",
+        "offers": [
+          "sawmills and timber company offices",
+          "river steamer calls in season",
+          "labour hiring for the logging crews",
+          "a lay doctor and merchants"
+        ]
+      },
+      {
+        "name": "Sundsvall",
+        "kind": "port and sawmill town",
+        "distance": "about 120 km south-east of Härnösand by the coast road",
+        "offers": [
+          "telegraph on the coast line",
+          "great sawmills and timber merchants",
+          "coastal steamers in season",
+          "bank branches and shipping agents"
+        ]
+      },
+      {
+        "name": "Gävle",
+        "kind": "port, railway town and provincial town",
+        "distance": "about 300 km south of Härnösand by the coast road, three days by post sleigh",
+        "offers": [
+          "Gävle-Dala Railway to Falun",
+          "telegraph",
+          "banks and newspapers",
+          "coastal steamers in season",
+          "connection south by coach to Uppsala (rail from 1874)"
+        ]
+      }
+    ],
+    "authorities": {
+      "police": "The kronolänsman of the Storskog district sits at Sollefteå, about 60 km away. He covers a vast forest district and reaches Storskog only on sleigh rounds in winter or when sent for. In practice the village depends on its own church-warden and the logging boss.",
+      "court": "Häradsrätt for inland Ångermanland at Sollefteå, with a judge and twelve lay assessors. It sits in fixed sessions and extra sittings in winter, when the sleigh roads are best for witnesses. Appeals go to Härnösand.",
+      "doctor": "The provincial doctor for inland Ångermanland lives at Sollefteå. He is a day or more away and often has to be fetched by sleigh. He signs the death certificates and explains camp injuries, frostbite and fevers in natural terms.",
+      "post": "The post comes up the valley by farm-to-farm relay, about once a week in winter and less often in thaw or break-up. Letters are left at the Ferry Posting Farm and sent on from the chapel.",
+      "telegraph": "The nearest office is at Härnösand on the Norrland coast line, about 150 km away. The valley has no wire, so a telegram has to be carried up by sleigh or river boat, taking two to three days.",
+      "bank": "Hernösands Enskilda Bank at Härnösand finances the timber firms and sawmills. A parish savings bank at Sollefteå serves small farmers.",
+      "newspaper": "Hernösands-Posten, from Härnösand. It prints timber prices, court news and notices of the logging firms, and arrives days or weeks late."
+    }
+  },
+  "journey": {
+    "fromHeadquarters": "Uppsala",
+    "routes": [
+      {
+        "name": "Winter road: coach and sleigh via Gävle, Härnösand and the river ice",
+        "legs": [
+          {
+            "from": "Uppsala",
+            "to": "Gävle",
+            "mode": "coach",
+            "lineId": null,
+            "duration": "about one long day (c. 100 km) with changes of horses at the posting stations",
+            "cost": "about 8 riksdaler by post coach or 20-25 by hired carriage, food at the stations extra",
+            "schedule": "post coach a few days a week; hired carriage any day",
+            "months": [],
+            "notes": "The Uppsala-Gävle railway is only being built and opens in 1874, so the road is the only way. In December, snow may already make a sleigh necessary on the northern stretch."
+          },
+          {
+            "from": "Gävle",
+            "to": "Härnösand",
+            "mode": "sleigh",
+            "lineId": null,
+            "duration": "about three days (c. 300 km) by post sleigh, changing horses at each posting farm",
+            "cost": "about 25-30 riksdaler for a hired sleigh with posting fees; lodging and food extra",
+            "schedule": "post sleigh a few times a week; hired sleighs on demand, with horses ordered ahead at the posting farms",
+            "months": [
+              12,
+              1,
+              2,
+              3
+            ],
+            "notes": "The coastal steamers are stopped by ice and the sleigh is the only way. Posting farms at Hudiksvall and Sundsvall are the main stops, and fresh snow can slow the road to a walk."
+          },
+          {
+            "from": "Härnösand",
+            "to": "Sollefteå",
+            "mode": "sleigh",
+            "lineId": null,
+            "duration": "about one day (c. 90 km) by road and river ice",
+            "cost": "about 6-8 riksdaler for a hired sleigh and driver",
+            "schedule": "on demand; ask at the posting farm or the livery",
+            "months": [
+              12,
+              1,
+              2,
+              3
+            ],
+            "notes": "River steamers are laid up and the ice road is safe for horses from Advent until the end of March. Wind-swept stretches and open water near rapids and inflows are dangerous at dusk."
+          },
+          {
+            "from": "Sollefteå",
+            "to": "Storskog (the Ferry Posting Farm)",
+            "mode": "sleigh",
+            "lineId": null,
+            "duration": "about one long day (c. 60 km) upriver on the ice and forest road",
+            "cost": "about 4-5 riksdaler for a hired sleigh; the ferryman's horses can be hired for the last stretch",
+            "schedule": "on demand; log haulers also come down with empty sleighs",
+            "months": [
+              12,
+              1,
+              2,
+              3
+            ],
+            "notes": "Dark falls early in December, so travellers lodge on the way at a farm or a logging camp. A telegram or letter sent ahead may arrive after the traveller."
+          }
+        ]
+      },
+      {
+        "name": "Open-water route: railway to Stockholm, coastal steamer and river steamer",
+        "legs": [
+          {
+            "from": "Uppsala",
+            "to": "Stockholm",
+            "mode": "railway",
+            "lineId": "stockholm-uppsala-railway",
+            "duration": "about two and a half hours",
+            "cost": "about 2 riksdaler second class",
+            "schedule": "a few trains a day",
+            "months": [],
+            "notes": "Via Knivsta, Märsta and Rotebro. Runs all year, but the steamer connection is only in the open season."
+          },
+          {
+            "from": "Stockholm",
+            "to": "Härnösand",
+            "mode": "steamer",
+            "lineId": "stockholm-harnosand-steamer",
+            "duration": "about two days at sea, calling at Östhammar, Gävle, Hudiksvall and Sundsvall",
+            "cost": "about 20 riksdaler second class, meals extra",
+            "schedule": "once or twice a week in season",
+            "months": [
+              5,
+              6,
+              7,
+              8,
+              9,
+              10
+            ],
+            "notes": "Ice stops the route in winter. Sailings may be delayed by autumn gales."
+          },
+          {
+            "from": "Härnösand",
+            "to": "Sollefteå",
+            "mode": "steamer",
+            "lineId": "angermanalven-river-boat",
+            "duration": "about one long day",
+            "cost": "about 4 riksdaler",
+            "schedule": "a few sailings a week in the open season",
+            "months": [
+              5,
+              6,
+              7,
+              8,
+              9,
+              10
+            ],
+            "notes": "The small river steamer calls at Kramfors and landings on the way. Low water in late summer can strand it at the shallows."
+          },
+          {
+            "from": "Sollefteå",
+            "to": "Storskog (the Ferry Posting Farm)",
+            "mode": "cart",
+            "lineId": null,
+            "duration": "about one long day (c. 60 km) by farm road and river track",
+            "cost": "about 3-4 riksdaler for a hired cart and driver",
+            "schedule": "on demand; the ferryman keeps horses at the posting farm",
+            "months": [
+              5,
+              6,
+              7,
+              8,
+              9,
+              10
+            ],
+            "notes": "The road is poor and muddy in autumn rain. Mosquitoes and midges are bad in summer near the marshes."
+          }
+        ]
+      }
+    ],
+    "journeyScene": "The post coach rattles north out of Uppsala through flat farmland. By Gävle the snow is thicker and the sea smoky with ice. Then the hired sleigh runs for days up the coast through Hälsingland, with bells on the harness, steaming horses and posting farms where the hostler wakes at dawn to harness fresh ones. Beyond Härnösand the way turns up the frozen river between walls of black spruce, and the daylight shrinks to a few grey hours. Lamps glow only at far-apart farms and logging camps, and you pass haulers with groaning log sleighs who seem to say little and look hard at strangers.."
+  },
   "publicFacts": [
     "Most of the forest round Storskog was sold to a coastal sawmill company in the 1860s for a fraction of its worth; many farmers regret it.",
     "The famine winter of 1867 is remembered here; people ate bark bread and two families died out.",
@@ -385,8 +606,8 @@
     {
       "id": "herbalist-cottage",
       "templateId": "herbalist-cottage",
-      "name": "Old Brita's Cottage",
-      "ownerRole": "old Brita, the wise woman the cottage is named for",
+      "name": "The Cottage by the Bog",
+      "ownerRole": "the wise woman of the valley",
       "description": "A tiny cottage stands where the forest meets a frozen bog, so snowed in that only the chimney and a trodden path mark it. Inside, the air is thick with smoke and the smell of tar salve and dried yarrow. Reindeer hides cover the bench. The old woman who lives there sets bones for the loggers, who pay her in coffee and salt pork.",
       "tags": [
         "herbalist-cottage",
@@ -516,5 +737,10 @@
         }
       ]
     }
-  ]
+  ],
+  "monthVariants": [],
+  "id": "level-storskog-december",
+  "version": 1,
+  "status": "draft",
+  "name": "Storskog Logging District"
 }

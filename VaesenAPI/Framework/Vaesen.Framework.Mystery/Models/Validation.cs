@@ -32,9 +32,27 @@ public sealed class CoherenceIssue
     [JsonProperty("targets", NullValueHandling = NullValueHandling.Ignore)]
     public List<string>? Targets { get; set; }
 
-    /// <summary>A critic warning whose suggested fix was applied in the last round.</summary>
+    /// <summary>
+    /// A fix that was tried and then verified (review 2, item 1): a structural warning that no longer appears, a critic
+    /// issue a verifying look found gone, or a replacement whose old text is gone. Never set on trust.
+    /// </summary>
     [JsonProperty("applied", DefaultValueHandling = DefaultValueHandling.Ignore)]
     public bool Applied { get; set; }
+
+    /// <summary>A fix was tried and did not hold: what still stands, as the verifying look saw it.</summary>
+    [JsonProperty("unresolved", NullValueHandling = NullValueHandling.Ignore)]
+    public string? Unresolved { get; set; }
+
+    /// <summary>
+    /// Mechanical fixes (review 2, item 2): exact text to replace, done by code and logged, never by a model. A rename,
+    /// a date, a wrong fact id.
+    /// </summary>
+    [JsonProperty("replacements", NullValueHandling = NullValueHandling.Ignore)]
+    public List<TextReplacement>? Replacements { get; set; }
+
+    /// <summary>Replace everywhere in the case (a rename); otherwise only inside the targets.</summary>
+    [JsonProperty("everywhere", DefaultValueHandling = DefaultValueHandling.Ignore)]
+    public bool Everywhere { get; set; }
 
     [JsonIgnore]
     [System.Text.Json.Serialization.JsonIgnore]
@@ -50,6 +68,15 @@ public sealed class CoherenceIssue
     public static string Allowed(IEnumerable<string> values) => $" Allowed: {string.Join(", ", values)}.";
 
     public override string ToString() => $"[{Severity}] {Code} at {Location}: {Explanation}";
+}
+
+public sealed class TextReplacement
+{
+    [JsonProperty("from")]
+    public string From { get; set; } = "";
+
+    [JsonProperty("to")]
+    public string To { get; set; } = "";
 }
 
 public static class IssueSeverities

@@ -366,7 +366,8 @@ public static class ContentValidator
         var at = $"level:{level.Id}";
         if (level.Geography.IsEmpty)
         {
-            issues.Add(CoherenceIssue.Warning(IssueCodes.Content, at, $"{level.Name} has no geography: neighbouring towns, authorities, what it is known for.",
+            // Review 2, item 6: a case cannot name a town, a court or a sheriff for a level that says where nothing is.
+            issues.Add(CoherenceIssue.Error(IssueCodes.Content, at, $"{level.Name} has no geography: neighbouring towns, authorities, what it is known for.",
                 "Fill it with ContentTool geography " + level.Id + "."));
         }
         else
@@ -379,7 +380,8 @@ public static class ContentValidator
 
         if (level.Journey.Routes.Count == 0)
         {
-            issues.Add(CoherenceIssue.Warning(IssueCodes.Content, at, $"{level.Name} has no journey legs, only the line of travel text."));
+            issues.Add(CoherenceIssue.Error(IssueCodes.Content, at, $"{level.Name} has no journey legs, only the line of travel text.",
+                "Fill it with ContentTool geography " + level.Id + "."));
             return;
         }
 

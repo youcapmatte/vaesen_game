@@ -1,8 +1,4 @@
 {
-  "id": "level-karrtorp-november",
-  "version": 1,
-  "status": "draft",
-  "name": "Kärrtorp Junction",
   "region": "Närke, on the plain south of Örebro",
   "settlementType": "town",
   "size": 3,
@@ -16,7 +12,158 @@
   ],
   "description": "Ten years ago Kärrtorp was a parish of farms on the flat Närke plain; then the western main line came through, a junction was built where the branch to Örebro meets it, and a town of railway workers, merchants and hotels has grown up around the station. New wooden houses stand on lots between old farms, and the church bell competes with the station bell. The farmers grumble about the smoke and the newcomers but sell them milk and hay.",
   "seasonNotes": "November, the darkest and dreariest month. Low clouds lie over the plain, it rains or sleets most days, and the roads are rivers of mud. It is dark by half past three, and paraffin lamps burn around the station from mid-afternoon. Locomotives' smoke hangs in the wet air. Farmers are threshing and slaughtering; Martinmas brings goose dinners and the end of the servants' year, when hired hands change places.",
-  "travel": "From Uppsala by rail via Stockholm and the western main line, about seven hours; one of the best-connected places in the country.",
+  "travel": "From Uppsala by rail to Stockholm (about 2 hours), change stations, by the trunk line to Katrineholm (about 3 hours) and by the western main line to Kärrtorp Junction (about 2 hours): some seven hours on the rails and eight with the change, all year; the slow alternative is the post road via Enköping, Västerås and Arboga, two days.",
+  "geography": {
+    "realAnalogue": "Hallsberg (the Närke plain south of Örebro, where the western main line meets the Örebro branch)",
+    "fictional": true,
+    "province": "Närke",
+    "county": "Örebro län",
+    "parish": "Kärrtorp",
+    "knownFor": [
+      "A new railway junction where the western main line meets the branch to Örebro, and a town of railway hands and hotels that has grown up in ten years",
+      "The flat Närke plain of old freehold farms, with the great marsh east of the town that floods every autumn",
+      "Its closeness to Örebro, with its castle and county administration, and to Lake Hjälmaren and its old canal to the Mälaren"
+    ],
+    "neighbours": [
+      {
+        "name": "Hallsberg",
+        "kind": "railway town and crown sheriff's seat",
+        "distance": "about 12 km along the main line, a short train ride or half a day by cart on the autumn roads",
+        "offers": [
+          "Crown sheriff (kronolänsman) for the district",
+          "Weekly market",
+          "Station with telegraph",
+          "Carters and horses for hire"
+        ]
+      },
+      {
+        "name": "Örebro",
+        "kind": "county seat",
+        "distance": "about 35 km north by the branch line, roughly an hour by train",
+        "offers": [
+          "Governor and county administration in the castle",
+          "District court (häradsrätt) for the plain",
+          "Provincial doctor",
+          "Örebro Privatbank and a savings bank",
+          "Nerikes Allehanda newspaper",
+          "Railway from 1866 by the branch",
+          "Large market and shops, booksellers and an apothecary"
+        ]
+      },
+      {
+        "name": "Arboga",
+        "kind": "old market town on the Mälaren",
+        "distance": "about 60 km east-north-east by country road",
+        "offers": [
+          "Old market town with a long history of trade in iron",
+          "Hjälmare Canal to Lake Hjälmaren and Mälaren steamers in the open season, May to October",
+          "Savings bank",
+          "Notaries and carriers for the road west"
+        ]
+      },
+      {
+        "name": "Katrineholm",
+        "kind": "railway junction on the trunk line",
+        "distance": "about 100 km east by the main line, around two hours by train",
+        "offers": [
+          "Junction where the southern and western lines divide",
+          "Connections to Stockholm, Östergötland and Småland",
+          "Telegraph and station hotel"
+        ]
+      }
+    ],
+    "authorities": {
+      "police": "The kronolänsman of the Kärrtorp district sits at Hallsberg, about 12 km away. He is often called to the station, the navvies' barracks and the goods yard. In the town itself there are only a station constable and a night watchman.",
+      "court": "The häradsrätt for the Närke plain meets at Örebro, about 35 km north. It sits at fixed sessions through the year, and cases of railway accident, smuggling and theft from goods wagons come before it. Farmers and railway witnesses travel in by the branch line.",
+      "doctor": "The provincial doctor for the Närke plain district lives in Örebro, about an hour by train. He can be fetched by telegram and train, and signs the death certificates. The parish clerk and the old women of the farms still do most of the healing.",
+      "post": "There is a post office at the station. Mail arrives and leaves with the trains, several times a day, and the post to the outlying farms is carried on by a rural post-carrier.",
+      "telegraph": "The state telegraph office is at Kärrtorp Junction Station and open daily. Messages reach Örebro, Stockholm and Uppsala within hours.",
+      "bank": "The nearest bank is Örebro Privatbank in Örebro, about 35 km away by train, with a savings bank there too. The merchants of Kärrtorp deal with it by rail and post.",
+      "newspaper": "Nerikes Allehanda is printed in Örebro and comes by the morning train. It carries timetables, court news and reports of railway accidents."
+    }
+  },
+  "journey": {
+    "fromHeadquarters": "Uppsala",
+    "routes": [
+      {
+        "name": "By rail via Stockholm and the western main line",
+        "legs": [
+          {
+            "from": "Uppsala",
+            "to": "Stockholm",
+            "mode": "railway",
+            "lineId": "stockholm-uppsala-railway",
+            "duration": "about 2 hours",
+            "cost": "roughly 1 riksdaler 50 öre in third class",
+            "schedule": "Several trains daily, morning to evening",
+            "months": [],
+            "notes": "Stops at Knivsta, Märsta and Rotebro. Allow time at Stockholm for the change of stations, an hour at best, and by November it is dark by four."
+          },
+          {
+            "from": "Stockholm",
+            "to": "Katrineholm",
+            "mode": "railway",
+            "lineId": "stockholm-katrineholm-railway",
+            "duration": "about 3 hours",
+            "cost": "roughly 4 riksdaler in third class",
+            "schedule": "Daytime and evening trains daily, fewer on Sundays",
+            "months": [],
+            "notes": "The trunk line through Södertälje and Gnesta carries both the southern and western lines. Carriages are cold in November, so travellers bring rugs."
+          },
+          {
+            "from": "Katrineholm",
+            "to": "Kärrtorp Junction",
+            "mode": "railway",
+            "lineId": "vastra-stambanan-katrineholm-goteborg",
+            "duration": "about 2 hours",
+            "cost": "roughly 3 riksdaler in third class",
+            "schedule": "Several trains daily on the western main line, with a connection to Örebro at the junction",
+            "months": [],
+            "notes": "The line runs through Närke by way of Hallsberg. The last train in November arrives after dark, and the Railway Hotel will send a boy with a lantern if told in advance."
+          }
+        ]
+      },
+      {
+        "name": "By road via Enköping, Västerås and Arboga",
+        "legs": [
+          {
+            "from": "Uppsala",
+            "to": "Västerås",
+            "mode": "coach",
+            "lineId": null,
+            "duration": "about 12 hours with changes of horses",
+            "cost": "roughly 6 riksdaler by post-carriage, with the post-boy's tip",
+            "schedule": "Post-carriage stages along the old road through Enköping, daily with the post",
+            "months": [],
+            "notes": "In November the road is mud and ruts, and daylight is short, so most travellers lie over at the Enköping posting inn."
+          },
+          {
+            "from": "Västerås",
+            "to": "Arboga",
+            "mode": "hiredCarriage",
+            "lineId": null,
+            "duration": "about 6 hours",
+            "cost": "roughly 8 riksdaler for a hired carriage and driver",
+            "schedule": "By arrangement with the posting inn at Västerås",
+            "months": [],
+            "notes": "A slow, flat road past farms and wayside inns. Fog lies in the hollows by the Mälaren."
+          },
+          {
+            "from": "Arboga",
+            "to": "Kärrtorp Junction",
+            "mode": "hiredCarriage",
+            "lineId": null,
+            "duration": "about 9 hours",
+            "cost": "roughly 10 riksdaler for a carriage and a change of horses",
+            "schedule": "By arrangement at Arboga, with an overnight stop at the town",
+            "months": [],
+            "notes": "The southern road leads over the plain and past the edge of the marsh, with flooded stretches in the autumn. Carts and wagons are in the way close to the station, and the journey takes two days in all."
+          }
+        ]
+      }
+    ],
+    "journeyScene": "The train runs out of Stockholm into the dusk, and the lamps in the carriage shake with every joint in the rail. Outside lie flat fields and black woods, and farm lamps are few and far between. As you come nearer Kärrtorp the engine smoke lies low over the marsh. Then the station bell rings out over the sheds and the new wooden houses, and somewhere beyond them the old church bell answers faintly."
+  },
   "publicFacts": [
     "The western main line reached Kärrtorp in 1862 and the branch line to Örebro opened in 1866, making it a junction.",
     "The railway hotel by the station is the best in the district and travellers stay there between trains.",
@@ -835,5 +982,10 @@
         }
       ]
     }
-  ]
+  ],
+  "monthVariants": [],
+  "id": "level-karrtorp-november",
+  "version": 1,
+  "status": "draft",
+  "name": "Kärrtorp Junction"
 }

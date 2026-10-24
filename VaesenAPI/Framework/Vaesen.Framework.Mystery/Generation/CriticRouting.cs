@@ -44,6 +44,9 @@ public static partial class CriticRouting
             .ToList();
     }
 
+    /// <summary>The id of the one creature mind as a patch item.</summary>
+    public const string CreatureItem = "mind";
+
     /// <summary>The step that owns a target id, and the issue location that names it for a patch ("lever:r3").</summary>
     public static (string Step, string Location) Owner(string target)
     {
@@ -63,9 +66,10 @@ public static partial class CriticRouting
             return (ArcStep.StepName, t);
         }
 
-        if (t is "creatureMinds" or "creatureMind")
+        // "creatureMinds", "creatureMinds.blames", "nack creatureMinds.terms": the creature's mind, one patchable item.
+        if (t.Contains("creatureMind", StringComparison.OrdinalIgnoreCase))
         {
-            return (CreatureStep.StepName, "creatureMinds");
+            return (CreatureStep.StepName, $"creatureMinds:{CreatureItem}");
         }
 
         // A lever's deed ("r3-d1") is the lever's.

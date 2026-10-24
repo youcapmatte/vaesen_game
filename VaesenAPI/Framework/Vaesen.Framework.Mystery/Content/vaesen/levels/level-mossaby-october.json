@@ -1,8 +1,4 @@
 {
-  "id": "level-mossaby-october",
-  "version": 1,
-  "status": "draft",
-  "name": "Mossaby Parish",
   "region": "Southern Småland, in the forest uplands",
   "settlementType": "village",
   "size": 2,
@@ -17,7 +13,225 @@
   ],
   "description": "Mossaby is a poor forest parish in the Småland uplands, a scattering of small farms and crofts on stony ground between spruce forest, bogs and lakes. The fields are made by carrying stones off them for generations, piled in long walls through the woods. Since the famine years at the end of the 1860s, families have been leaving for America almost every month, and empty cottages stand with their doors nailed shut.",
   "seasonNotes": "October. The rowans are red with berries and the birches yellow against dark spruce, but the stony fields have given a thin harvest again. Mists lie over the bogs each morning and rise slowly through the trees. Potatoes are being dug and stored, and lingonberries picked in the forest. The rains come and the stream rises enough for the mill to grind. The days grow short and cold, and the first frost blackens the potato tops.",
-  "travel": "From Uppsala by rail via Stockholm and the southern main line to Nässjö, about twelve hours, then by coach or farm cart into the forest, most of a day on poor roads.",
+  "travel": "Uppsala by rail to Stockholm, then by the Stockholm-Katrineholm line and the Southern Main Line to Nässjö (about twelve hours in all, with an overnight at Nässjö), then most of a day by hired carriage or farm cart on bad forest roads to Mossaby. In October the Göta Canal (via Mem and Berg, then rail from Linköping) is a slower alternative while the season lasts.",
+  "geography": {
+    "realAnalogue": "Älmeboda (Uppvidinge härad, Kronoberg), a poor emigration parish in the forest uplands of southern Småland",
+    "fictional": true,
+    "province": "Småland",
+    "county": "Kronoberg",
+    "parish": "Mossaby",
+    "knownFor": [
+      "Poor stony forest farms, and fields made by carrying stones off the land into long walls",
+      "Heavy emigration to America since the hunger years of 1867-68",
+      "Tar, charcoal and timber from the spruce forest",
+      "The wise man of the forest, consulted by three parishes about sick cattle and lost things"
+    ],
+    "neighbours": [
+      {
+        "name": "Nässjö",
+        "kind": "railway junction",
+        "distance": "about 55 km north, most of a day by cart on poor forest roads",
+        "offers": [
+          "Southern Main Line station and the junction for Småland",
+          "Telegraph office at the station",
+          "Inns and hired horses",
+          "Timber and grain goods yards",
+          "Rail to Oskarshamn is only planned (about 1874)"
+        ]
+      },
+      {
+        "name": "Vetlanda",
+        "kind": "market town",
+        "distance": "about 30 km north-east by cart road, five or six hours",
+        "offers": [
+          "Weekly market and autumn fair",
+          "Merchants, a chemist and a saddler",
+          "Emigration agent's local correspondent",
+          "Inns, but no railway in 1872"
+        ]
+      },
+      {
+        "name": "Växjö",
+        "kind": "county seat",
+        "distance": "about 50 km south-west by road, a long day by cart",
+        "offers": [
+          "Governor's seat (landshövding) for Kronoberg",
+          "District court sittings",
+          "Cathedral and grammar school",
+          "Växjö sparbank",
+          "Smålandsposten newspaper",
+          "Provincial doctor's seat",
+          "Railway to Alvesta is not yet open"
+        ]
+      },
+      {
+        "name": "Alvesta",
+        "kind": "railway station",
+        "distance": "about 60 km south-west, reached through Växjö or by forest cart",
+        "offers": [
+          "Southern Main Line station",
+          "Telegraph at the station",
+          "Coaches and carters for the uplands"
+        ]
+      }
+    ],
+    "authorities": {
+      "police": "Kronolänsman of the Mossaby district, who is also tax collector and lives in the parish. He is the only law within a day's ride and keeps order, summons people to court and sends the reports on.",
+      "court": "Häradsrätt for the Mossaby forest district, seated in Växjö, with a judge and twelve lay assessors. It sits at fixed times of the year, and people travel a long way to attend. Poaching, boundary quarrels and timber theft are the usual cases.",
+      "doctor": "Provinsialläkare for the Småland forest district, seated in Växjö, a day or more away by farm cart. He is called only in grave cases, and he signs the death certificates.",
+      "post": "A small post office at the church village. The post comes by carrier from Nässjö or Växjö about twice a week and goes out the same way. Emigrants' letters and tickets arrive by it.",
+      "telegraph": "Nearest at Nässjö station, about 55 km north, and at Växjö. Telegrams are carried on by boy or cart, and a day is lost.",
+      "bank": "Växjö sparbank in the county town, where crofters keep small savings. Smålands Enskilda Bank of Jönköping also deals in the area. The parish has no bank of its own, and the vicar and the richer farmers lend money.",
+      "newspaper": "Smålandsposten of Växjö, founded 1865, which prints parish news, emigration notices and market prices. It reaches the parish by post a few days late."
+    }
+  },
+  "journey": {
+    "fromHeadquarters": "Uppsala",
+    "routes": [
+      {
+        "name": "By rail to Nässjö, then hired carriage",
+        "legs": [
+          {
+            "from": "Uppsala",
+            "to": "Stockholm",
+            "mode": "railway",
+            "lineId": "stockholm-uppsala-railway",
+            "duration": "about 3 hours",
+            "cost": "roughly 2 to 3 riksdaler in second class (approximate)",
+            "schedule": "several trains a day",
+            "months": [],
+            "notes": "Private standard-gauge line via Knivsta, Märsta and Rotebro. At Stockholm the passenger crosses town from the northern station to the southern one with luggage."
+          },
+          {
+            "from": "Stockholm",
+            "to": "Katrineholm",
+            "mode": "railway",
+            "lineId": "stockholm-katrineholm-railway",
+            "duration": "about 3 hours",
+            "cost": "roughly 5 riksdaler in second class (approximate)",
+            "schedule": "a few trains a day",
+            "months": [],
+            "notes": "State trunk line via Södertälje and Gnesta. Passengers change at Katrineholm for the southern line, with a wait of an hour or two."
+          },
+          {
+            "from": "Katrineholm",
+            "to": "Nässjö",
+            "mode": "railway",
+            "lineId": "sodra-stambanan-katrineholm-nassjo",
+            "duration": "about 6 hours",
+            "cost": "roughly 8 riksdaler in second class (approximate)",
+            "schedule": "one or two through trains a day",
+            "months": [],
+            "notes": "Southern Main Line via Mjölby and Linköping. The train from Stockholm usually arrives late in the evening, and travellers lodge at an inn in Nässjö. The line to Oskarshamn does not exist before 1874."
+          },
+          {
+            "from": "Nässjö",
+            "to": "Mossaby",
+            "mode": "hiredCarriage",
+            "lineId": null,
+            "duration": "most of a day, 8 to 10 hours",
+            "cost": "roughly 10 to 14 riksdaler for a hired carriage and driver (approximate)",
+            "schedule": "on demand from the inn, with an early start",
+            "months": [],
+            "notes": "A bad forest road. In October it is full of ruts and mud, and one changes horses once at a roadside inn (skjutsstation). Hired horses are fewer in autumn at the threshing, so the order must be given the night before."
+          }
+        ]
+      },
+      {
+        "name": "By the Göta Canal and rail from Linköping, then farm cart",
+        "legs": [
+          {
+            "from": "Uppsala",
+            "to": "Stockholm",
+            "mode": "railway",
+            "lineId": "stockholm-uppsala-railway",
+            "duration": "about 3 hours",
+            "cost": "roughly 2 to 3 riksdaler in second class (approximate)",
+            "schedule": "several trains a day",
+            "months": [],
+            "notes": "As on the first route."
+          },
+          {
+            "from": "Stockholm",
+            "to": "Mem",
+            "mode": "steamer",
+            "lineId": null,
+            "duration": "about a day and a night",
+            "cost": "roughly 10 riksdaler with a berth (approximate)",
+            "schedule": "a few sailings a week in the open season",
+            "months": [
+              5,
+              6,
+              7,
+              8,
+              9,
+              10
+            ],
+            "notes": "The Baltic steamer along the Södermanland and Östergötland coast to the canal's eastern mouth. No lineId is given for it in the period list, and it is a stretch of approximate canon. Autumn gales may delay it, and in October the boats thin out."
+          },
+          {
+            "from": "Mem",
+            "to": "Berg",
+            "mode": "canalBoat",
+            "lineId": "goeta-canal",
+            "duration": "about a day and a night through the locks and Lake Roxen",
+            "cost": "roughly 6 riksdaler (approximate)",
+            "schedule": "passenger steamers daily in the season, fewer in October",
+            "months": [
+              5,
+              6,
+              7,
+              8,
+              9,
+              10
+            ],
+            "notes": "The canal is closed by ice outside the season, and in late October the last sailings are uncertain. A slow, cold route, but the hold is quiet and travellers can talk freely."
+          },
+          {
+            "from": "Berg",
+            "to": "Linköping",
+            "mode": "hiredCarriage",
+            "lineId": null,
+            "duration": "about 2 hours",
+            "cost": "roughly 2 riksdaler (approximate)",
+            "schedule": "on demand at the locks",
+            "months": [
+              5,
+              6,
+              7,
+              8,
+              9,
+              10
+            ],
+            "notes": "A short drive from the canal landing to Linköping station, on a good road."
+          },
+          {
+            "from": "Linköping",
+            "to": "Nässjö",
+            "mode": "railway",
+            "lineId": "sodra-stambanan-katrineholm-nassjo",
+            "duration": "about 3 hours",
+            "cost": "roughly 4 riksdaler in second class (approximate)",
+            "schedule": "one or two trains a day",
+            "months": [],
+            "notes": "Southern Main Line via Mjölby. Travellers reach Nässjö in the evening and spend a night there."
+          },
+          {
+            "from": "Nässjö",
+            "to": "Mossaby",
+            "mode": "cart",
+            "lineId": null,
+            "duration": "a full day, 10 to 12 hours",
+            "cost": "roughly 4 to 6 riksdaler for a farmer's cart and a boy (approximate)",
+            "schedule": "farmers' carts go back on market days and after delivering goods; otherwise ask at the inn",
+            "months": [],
+            "notes": "The cheap way into the forest, slower than a hired carriage. The driver knows every farm on the road, and gossip is part of the fare. In October the road may be dark before the journey ends."
+          }
+        ]
+      }
+    ],
+    "journeyScene": "The railway carries you through the Östergötland plain, fields gold and brown and wet, until the plain breaks into low hills and the first spruce stands close to the line. At Nässjö the lamps are lit, and railway men, timber dealers and a few families with trunks and tin-bound boxes wait for the next train to the port. The road into the forest begins at the first stone wall, which runs alongside for mile after mile and disappears into the spruce wood. By the time the cart reaches Mossaby it is nearly dark, and the autumn mist lies over the bogs and the lake. Rowan trees stand red by the gates, and the smell of peat smoke hangs from the cottages. Some of them have their doors nailed shut and their windows blind.”,"
+  },
   "publicFacts": [
     "In the famine years of 1867 and 1868 the harvest failed twice and the parish went hungry; many sold their land.",
     "Some forty people have left Mossaby for America in the last three years, most for Minnesota and Illinois; their letters and tickets arrive by post.",
@@ -656,5 +870,10 @@
         }
       ]
     }
-  ]
+  ],
+  "monthVariants": [],
+  "id": "level-mossaby-october",
+  "version": 1,
+  "status": "draft",
+  "name": "Mossaby Parish"
 }

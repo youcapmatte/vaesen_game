@@ -1,8 +1,4 @@
 {
-  "id": "level-forsby-october",
-  "version": 1,
-  "status": "draft",
-  "name": "Forsby by the Rapids",
   "region": "Northern Uppland, on the river below Lake Tämnaren",
   "settlementType": "village",
   "size": 2,
@@ -16,7 +12,159 @@
   ],
   "description": "Forsby sits where the river drops over a shelf of granite in a run of white rapids before it spreads out across the Uppland plain. The rapids have turned a grain mill for three hundred years and, since 1866, a water-driven saw belonging to a timber firm in Gävle. Around them lie a dozen farms in a straggling row village, the parish church on its gravel ridge, a posting inn on the Gävle road, and spruce forest closing in on three sides.",
   "seasonNotes": "October. The harvest is in and the flails thump in the threshing barns from dawn; every farm wants its flour ground before the roads turn to mire, so carts queue at the mill. The days shorten fast: brass-coloured light at four, dark by six. Frost whitens the stubble at dawn, then days of rain blow in from the west and the river runs high and brown. Pig slaughter begins at the month's end, and the smell of singed bristle hangs over the yards.",
-  "travel": "From Uppsala by hired coach or post-carriage north on the Gävle road, about seven hours with a change of horses at the halfway posting station. The Uppsala-Gävle railway is being surveyed but is not yet built.",
+  "travel": "From the Society's headquarters by cart to Uppsala, then by hired coach or post-carriage north on the Gävle road to Forsby, about seven hours with a change of horses at the halfway posting station (alternatively by rail to Stockholm, coastal steamer to Gävle, then south by carriage, much longer; the Uppsala-Gävle railway opens only in 1874).",
+  "geography": {
+    "realAnalogue": "Tierp (Tämnarån valley, northern Uppland)",
+    "fictional": true,
+    "province": "Uppland",
+    "county": "Uppsala län",
+    "parish": "Forsby parish, in the Tämnaren district",
+    "knownFor": [
+      "Its rapids, which have driven a grain mill for three hundred years and now drive a company saw as well, a standing quarrel over water that the Uppland newspapers like to print",
+      "The Gävle road, the old post road north from Uppsala, with its posting inns, drovers and carters, and the unbuilt railway that is expected to replace it",
+      "Spruce forest and the Tämnaren river country, where timber and charcoal are floated or hauled to the old ironworks near the Dalälven coast",
+      "A farming parish drained by emigration, whose farms are being bought up by timber firms"
+    ],
+    "neighbours": [
+      {
+        "name": "Tierp",
+        "kind": "market village and crown sheriff's seat",
+        "distance": "about 15 km north-northeast by the Gävle road, two hours by cart",
+        "offers": [
+          "Crown sheriff's residence",
+          "Provincial doctor",
+          "Small weekly trade and a seasonal market",
+          "Post and carriers for the Gävle road",
+          "Railway station from 1874 (Uppsala-Gävle line, now under survey and construction)"
+        ]
+      },
+      {
+        "name": "Uppsala",
+        "kind": "county seat and university town",
+        "distance": "about 50 km south by the Gävle road, seven hours by post-carriage",
+        "offers": [
+          "Governor's seat in the castle",
+          "District court (häradsrätt)",
+          "Upsala Sparbank and Uplands Enskilda Bank",
+          "The newspaper Upsala",
+          "Telegraph office",
+          "Railway to Stockholm since 1866",
+          "The Society's headquarters lie just outside the town"
+        ]
+      },
+      {
+        "name": "Gävle",
+        "kind": "port town and timber centre",
+        "distance": "about 75 km north by road, a long day by carriage",
+        "offers": [
+          "Seat of the timber company that owns the saw",
+          "Large market and merchants",
+          "Banks",
+          "Local newspapers",
+          "Telegraph office",
+          "Harbour with the Stockholm-Härnösand coastal steamer in the open season",
+          "Railway to Falun (Gävle-Dala, 1859)"
+        ]
+      },
+      {
+        "name": "Örbyhus",
+        "kind": "manor and estate",
+        "distance": "about 20 km northeast by country road",
+        "offers": [
+          "Large estate employing many hands",
+          "Road connections to Tierp and Gävle",
+          "Station on the future railway, from 1874"
+        ]
+      }
+    ],
+    "authorities": {
+      "police": "Crown sheriff (kronolänsman) of the Tämnaren and river district, seated at Tierp, about 15 km off. In Forsby itself the only law is the parish constable (fjärdingsman), a farmer chosen for the post, and the parish meeting.",
+      "court": "District court (häradsrätt) for the Tämnaren district, seated at Uppsala, about 50 km away. The judge (häradshövding) and twelve lay assessors sit at fixed sessions a few times a year, and the autumn session is normally held after harvest.",
+      "doctor": "Provincial doctor for northern Uppland, seated at Tierp, about 15 km off. He covers a wide district, so a call to Forsby may take a day or more, and he is often summoned to the mill and the saw.",
+      "post": "The post goes by the Gävle road. Letters are left at the posting inn, and a carrier from Tierp calls about twice a week. The Gävle road post-carriages pass daily, and parcels or urgent letters can be put on one at a cost.",
+      "telegraph": "None at Forsby or Tierp. The nearest office is at Uppsala, about 50 km south, and another at Gävle, about 75 km north. A telegram must be taken there by rider or carriage.",
+      "bank": "Upsala Sparbank and Uplands Enskilda Bank, both at Uppsala, about 50 km. The mill and the saw deal with the Gävle banks and the timber company's head office.",
+      "newspaper": "Upsala, from Uppsala. A Gävle paper also reaches the inn a day or two late, and the vicar and the inn-keeper take it."
+    }
+  },
+  "journey": {
+    "fromHeadquarters": "Uppsala",
+    "routes": [
+      {
+        "name": "By road: Gävle road post-carriage (the usual way)",
+        "legs": [
+          {
+            "from": "Uppsala",
+            "to": "halfway posting station on the Gävle road",
+            "mode": "hiredCarriage",
+            "lineId": null,
+            "duration": "about 3 to 3.5 hours",
+            "cost": "about 3 to 4 riksdaler for a carriage and pair, plus the driver's tip",
+            "schedule": "post-carriages and hired carriages leave all day; order horses at the post station, and in autumn book ahead for harvest and market traffic",
+            "months": [],
+            "notes": "The road runs north through farmland and forest strips. The first change of horses is at the halfway station, where the inn serves coffee and rye bread. In October heavy rain makes the clay stretches slow."
+          },
+          {
+            "from": "halfway posting station on the Gävle road",
+            "to": "Forsby (Posting Inn)",
+            "mode": "hiredCarriage",
+            "lineId": null,
+            "duration": "about 3.5 hours",
+            "cost": "about 3 to 4 riksdaler for the second stage",
+            "schedule": "fresh horses at the halfway station; the last stage should leave by early afternoon to arrive before dark",
+            "months": [],
+            "notes": "A side road off the Gävle road leads down to the river, and the sound of the rapids carries long before the village appears. Seven hours in all, with the change. The railway is only a survey so far: rail to Tierp from 1874."
+          }
+        ]
+      },
+      {
+        "name": "By rail and coastal steamer, then road (long, only if the Gävle road is flooded or blocked)",
+        "legs": [
+          {
+            "from": "Uppsala",
+            "to": "Stockholm",
+            "mode": "railway",
+            "lineId": "stockholm-uppsala-railway",
+            "duration": "about 2.5 hours",
+            "cost": "about 1 to 2 riksdaler by class",
+            "schedule": "a few trains daily",
+            "months": [],
+            "notes": "The railway opened in 1866 and is the only line that runs from Uppsala. From the Stockholm terminus take a cab to the harbour."
+          },
+          {
+            "from": "Stockholm",
+            "to": "Gävle",
+            "mode": "steamer",
+            "lineId": "stockholm-harnosand-steamer",
+            "duration": "about 20 to 24 hours with calls on the coast",
+            "cost": "about 6 to 10 riksdaler for a berth",
+            "schedule": "sails a few times a week in the open season, and the last sailings of the year are in October",
+            "months": [
+              5,
+              6,
+              7,
+              8,
+              9,
+              10
+            ],
+            "notes": "Late-season gales and fog can delay or cancel sailings, and the steamer stops at Östhammar on the way. This detour takes you far past Forsby, so use it only if the road is closed."
+          },
+          {
+            "from": "Gävle",
+            "to": "Forsby (Posting Inn)",
+            "mode": "hiredCarriage",
+            "lineId": null,
+            "duration": "about 9 hours",
+            "cost": "about 6 to 8 riksdaler for a carriage and pair for the day",
+            "schedule": "hire at the Gävle inns; set out early",
+            "months": [],
+            "notes": "The same Gävle road run in the opposite direction, south by Örbyhus and Tierp. The Uppsala-Gävle railway is not open until 1874, so there is no train on this stretch."
+          }
+        ]
+      }
+    ],
+    "journeyScene": "The Gävle road runs out of Uppsala between wet stubble fields, and the carriage wheels throw up brown water from every rut. At the halfway station the postmaster's wife puts coffee on the table while the horses are changed, and the stable-lad says the river has been loud this week. Past the last farms the spruce closes in on both sides, the light fades early in October, and from far ahead comes a low steady roar of water over granite. Lamps are lit in the posting inn at Forsby long before you see the mill and the saw crouched beside the rapids.."
+  },
   "publicFacts": [
     "The grain mill has belonged to the Ers family for four generations; the present miller is a widower with two grown sons.",
     "The sawmill below the rapids is owned by a timber company in Gävle, which bought the water rights in 1866 after a long quarrel with the village.",
@@ -673,5 +821,10 @@
         }
       ]
     }
-  ]
+  ],
+  "monthVariants": [],
+  "id": "level-forsby-october",
+  "version": 1,
+  "status": "draft",
+  "name": "Forsby by the Rapids"
 }

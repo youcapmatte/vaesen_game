@@ -102,6 +102,22 @@ public sealed class MysteryOptions
     /// <summary>How many recent mysteries a creature is kept out of.</summary>
     public int VaesenCooldown { get; set; } = 3;
 
+    /// <summary>
+    /// Cache the system prompt and case context (review 2, item 7). Off: a step's prefix includes its schema, whose id
+    /// lists change from call to call, and the critic's second look comes after the five-minute cache has gone, so the
+    /// writes (at 1.25 times the input price) were never read.
+    /// </summary>
+    public bool PromptCache { get; set; }
+
+    /// <summary>How many times the last round tries again a fix the verifying look found did not take (review 2, item 1).</summary>
+    public int FixRetries { get; set; } = 1;
+
+    /// <summary>
+    /// A critic fix that still did not hold after the retries fails the case visibly (review 2, item 1); off, it stays a
+    /// warning marked unresolved, never "applied".
+    /// </summary>
+    public bool UnresolvedFixIsError { get; set; } = true;
+
     /// <summary>How many of a level's people a case takes as its residents when the Society has a roster there.</summary>
     public int RosterResidents { get; set; } = 4;
 

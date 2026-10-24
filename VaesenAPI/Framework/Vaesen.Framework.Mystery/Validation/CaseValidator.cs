@@ -31,6 +31,9 @@ public sealed class ValidationContext
 
     /// <summary>The level's public facts the Society's other cases there already explain (fixes 4, section 12.2).</summary>
     public List<Generation.SettledPublicFact> SettledPublicFacts { get; init; } = [];
+
+    /// <summary>The most facts a lever may require (review 2, item 8): a voice session cannot hold more.</summary>
+    public int MaxLeverFacts { get; init; } = 8;
 }
 
 /// <summary>
@@ -71,7 +74,7 @@ public enum CheckScope
 /// play, affordance fit, vocabulary and cast coherence, plus the giveaway, opening, resolution and beat rules of
 /// 7.4-7.9. Judgement the graph cannot make goes to the critic.
 /// </summary>
-public sealed class CaseValidator : ICoherenceValidator
+public sealed partial class CaseValidator : ICoherenceValidator
 {
     /// <summary>A group that only talks (or only searches) should still reach this share of the load-bearing facts.</summary>
     public const double EntryStyleCoverage = 0.5;
@@ -104,6 +107,7 @@ public sealed class CaseValidator : ICoherenceValidator
             run.CheckChannels();
             run.CheckProvenance();
             run.CheckHomes();
+            run.CheckMindsPlayable();
         }
 
         if (scope.HasFlag(CheckScope.Arc))
@@ -120,6 +124,7 @@ public sealed class CaseValidator : ICoherenceValidator
         {
             run.CheckHook();
             run.CheckGeography();
+            run.CheckHouseNames();
         }
 
         if (scope.HasFlag(CheckScope.Whole))
@@ -128,6 +133,8 @@ public sealed class CaseValidator : ICoherenceValidator
             run.CheckReachability();
             run.CheckAftermath();
             run.CheckHookGiver();
+            run.CheckOneHookGiver();
+            run.CheckCitedFacts();
             run.CheckBeatsDoNotSolve();
             run.CheckThreatsBelieved();
             run.CheckRedundancy();
@@ -140,7 +147,7 @@ public sealed class CaseValidator : ICoherenceValidator
         return run.Issues;
     }
 
-    private sealed class Run(CasePacket packet, ValidationContext context)
+    private sealed partial class Run(CasePacket packet, ValidationContext context)
     {
         private readonly FactGraph _graph = new(packet);
         private WalkResult? _walk;
@@ -338,6 +345,8 @@ public sealed class CaseValidator : ICoherenceValidator
         public void CheckCast()
         {
             CheckHolders();
+            CheckRecordsPlayable();
+            CheckPatronymics();
             if (packet.Cast.Count < 3)
             {
                 Error(IssueCodes.CastCoherence, "cast", "A case needs at least three cast members.");
@@ -487,7 +496,8 @@ public sealed class CaseValidator : ICoherenceValidator
                 for (var j = i + 1; j < people.Count; j++)
                 {
                     // A first name in another's surname is a warning: it may be a patronymic of the period (Eriksdotter).
-                    if (NameRules.Clash(people[i].Name, people[j].Name) is null && NameRules.SurnameEcho(people[i].Name, people[j].Name) is { } echo)
+                    if (NameRules.Clash(people[i].Name, people[j].Name) is null && NameRules.SurnameEcho(people[i].Name, people[j].Name) is { } echo
+                        && !Kin(people[i].At, people[j].At))
                     {
                         Warn(IssueCodes.CastCoherence, people[j].At.StartsWith("cast:", StringComparison.Ordinal) ? people[j].At : people[i].At,
                             $"'{people[i].Name}' and '{people[j].Name}': {echo}. Fine for a parent and child; otherwise players may mix them up.");
@@ -887,6 +897,200 @@ public sealed class CaseValidator : ICoherenceValidator
         /// trace left behind, a witness, gated afterBeat:&lt;beatId&gt;. Otherwise a group not there when it fired never learns it.
         /// </summary>
         /// <summary>The hook-giver is the kind of person the assignment asked for (fixes 4, section 9). A warning, sent to the hook.</summary>
+        /// <summary>
+        /// One person fetched the Society (review 2, item 3): when the hook moves to someone else, the old giver's record
+        /// must stop saying it was them.
+        /// </summary>
+        public void CheckOneHookGiver()
+        {
+            foreach (var member in packet.Cast.Where(c => c.CharacterId != packet.Hook.HookGiverId))
+            {
+                var record = string.Join(" ", new[] { member.PlotRole, member.Routine }.Concat(member.Secrets).Concat(member.Wants.PermittedActions.Select(a => a.Description)));
+                if (HookGiverClaim().Match(record) is { Success: true } claim)
+                {
+                    var giver = packet.FindCast(packet.Hook.HookGiverId);
+                    WarnOn([$"{member.CharacterId}.identity", $"{member.CharacterId}.secrets"], IssueCodes.Opening, $"cast:{member.CharacterId}",
+                        $"{member.Name}'s record says \"{claim.Value}\", but the hook-giver is {giver?.Name ?? packet.Hook.HookGiverId}. Two people would claim to have fetched the Society.",
+                        $"Rewrite {member.Name}'s plotRole, secrets and actions so they no longer bring the Society; keep what else they know and want.");
+                }
+            }
+        }
+
+        [System.Text.RegularExpressions.GeneratedRegex(@"hook[- ]giver|(fetch(ed|es)?|find|found|summon(ed)?|sent for|wrote to|telegraphed|rode to|went to|drove [\w ]{0,20}to find)\s+(the\s+)?Society", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+        private static partial System.Text.RegularExpressions.Regex HookGiverClaim();
+
+        /// <summary>
+        /// Every significant person can be played (review 2, item 4): what drives them, what they fear, their day. A
+        /// persistent person drawn in needs them for this case too.
+        /// </summary>
+        private void CheckRecordsPlayable()
+        {
+            foreach (var member in packet.Cast)
+            {
+                var at = $"cast:{member.CharacterId}";
+                if (member.Importance == CastImportance.Significant)
+                {
+                    var missing = new[]
+                    {
+                        member.Wants.Drives.Count == 0 ? "drives" : null,
+                        member.Wants.Fears.Count == 0 ? "fears" : null,
+                        string.IsNullOrWhiteSpace(member.Routine) ? "a routine" : null,
+                    }.OfType<string>().ToList();
+                    if (missing.Count > 0)
+                    {
+                        Error(IssueCodes.CastCoherence, at, $"{member.Name} has no {string.Join(", ", missing)}: the game master cannot play them.",
+                            $"Give {member.Name} {string.Join(", ", missing)} for this case.");
+                    }
+                }
+                else if (member.Wants.Drives.Count == 0)
+                {
+                    WarnOn([$"{member.CharacterId}.wants"], IssueCodes.CastCoherence, at, $"{member.Name} has no drives: a resident needs at least one thing they want.",
+                        $"Give {member.Name} one drive and one fear that fit their routine.");
+                }
+            }
+        }
+
+        /// <summary>Everyone significant knows or thinks something the case uses (review 2, item 4).</summary>
+        public void CheckMindsPlayable()
+        {
+            foreach (var member in packet.Cast.Where(c => c.Importance == CastImportance.Significant && c.Knows.Count == 0 && c.Thinks.Count == 0))
+            {
+                Error(IssueCodes.Provenance, $"cast:{member.CharacterId}", $"{member.Name} knows nothing and thinks nothing in this case.",
+                    $"Give {member.Name} the facts they know (with how they learned them) and what they believe, true or false.");
+            }
+        }
+
+        /// <summary>
+        /// Fact ids written in free text (secrets, lies, beliefs, actions) exist, and the person knows the fact
+        /// (review 2, item 4): the runtime cannot use an id in prose, and a wrong one misleads the game master.
+        /// </summary>
+        public void CheckCitedFacts()
+        {
+            foreach (var member in packet.Cast)
+            {
+                var texts = new[] { member.PlotRole, member.Routine, member.Wants.Guilt ?? "" }
+                    .Concat(member.Secrets).Concat(member.Wants.Drives).Concat(member.Wants.Fears)
+                    .Concat(member.Lies.Select(l => l.Story)).Concat(member.Thinks.Select(t => t.Belief))
+                    .Concat(member.Wants.PermittedActions.Select(a => a.Description));
+                foreach (var id in texts.SelectMany(t => CitedFact().Matches(t ?? "")).Select(m => m.Value).Distinct(StringComparer.Ordinal))
+                {
+                    var known = member.Knows.Exists(k => k.FactId == id);
+                    if (packet.FindFact(id) is null || !known)
+                    {
+                        WarnOn([$"{member.CharacterId}.secrets", $"{member.CharacterId}.wants"], IssueCodes.Provenance, $"cast:{member.CharacterId}",
+                            packet.FindFact(id) is null
+                                ? $"{member.Name}'s record cites {id}, which is no fact of the case."
+                                : $"{member.Name}'s record cites {id}, which they do not know.",
+                            $"Write {member.Name}'s record in plain words without fact ids; what they know belongs in knows.");
+                    }
+                }
+            }
+        }
+
+        [System.Text.RegularExpressions.GeneratedRegex(@"\bf\d+\b")]
+        private static partial System.Text.RegularExpressions.Regex CitedFact();
+
+        /// <summary>
+        /// Swedish names of 1872 (review 2, item 5): a son takes his father's first name and -son, a daughter -dotter,
+        /// and a wife keeps her own patronymic. Family names (Lindqvist) are inherited instead, and are left alone.
+        /// </summary>
+        private void CheckPatronymics()
+        {
+            foreach (var (a, b, nature) in Ties())
+            {
+                var (older, younger) = (a.Identity?.Age ?? 0) >= (b.Identity?.Age ?? 0) ? (a, b) : (b, a);
+                if (IsParentChild(nature) && Male(older) && NameRules.Patronymic(younger.Name) is { } suffix)
+                {
+                    var expected = NameRules.PatronymicOf(NameRules.FirstName(older.Name), suffix);
+                    if (!younger.Name.EndsWith(expected, StringComparison.OrdinalIgnoreCase))
+                    {
+                        WarnOn([$"{younger.CharacterId}.identity"], IssueCodes.CastCoherence, $"cast:{younger.CharacterId}",
+                            $"{younger.Name} is {older.Name}'s child, so in 1872 their patronymic is {expected}.",
+                            $"Rename {younger.Name} to {NameRules.FirstName(younger.Name)} {expected}, keeping the id.");
+                    }
+                }
+
+                if (IsSpouse(nature))
+                {
+                    var (wife, husband) = Male(a) ? (b, a) : (a, b);
+                    var wifeLast = NameRules.LastName(wife.Name);
+                    if (Male(husband) && !Male(wife) && wifeLast.Length > 0 && wifeLast == NameRules.LastName(husband.Name) && NameRules.Patronymic(husband.Name) == "son")
+                    {
+                        WarnOn([$"{wife.CharacterId}.identity"], IssueCodes.CastCoherence, $"cast:{wife.CharacterId}",
+                            $"{wife.Name} carries her husband's patronymic; in 1872 a wife keeps her own, from her father's first name and -dotter.",
+                            $"Give {NameRules.FirstName(wife.Name)} her own patronymic (her father's first name and -dotter), keeping the id.");
+                    }
+                }
+            }
+        }
+
+        /// <summary>Pairs of cast members tied by a relationship either records, with what both record.</summary>
+        private IEnumerable<(CastMember A, CastMember B, string Nature)> Ties() =>
+            packet.Cast
+                .SelectMany(a => a.Relationships.Select(r => (A: a, B: packet.FindCast(r.CharacterId), r.Nature)))
+                .Where(t => t.B is not null && t.B != t.A)
+                .Select(t => string.CompareOrdinal(t.A.CharacterId, t.B!.CharacterId) < 0 ? (A: t.A, B: t.B!, t.Nature) : (A: t.B!, B: t.A, t.Nature))
+                .GroupBy(t => (t.A.CharacterId, t.B.CharacterId))
+                .Select(g => (g.First().A, g.First().B, string.Join("; ", g.Select(t => t.Nature))));
+
+        private bool Kin(string atA, string atB)
+        {
+            if (!atA.StartsWith("cast:", StringComparison.Ordinal) || !atB.StartsWith("cast:", StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            var (a, b) = (atA[5..], atB[5..]);
+            return Ties().Any(t => IsParentChild(t.Nature) && ((t.A.CharacterId == a && t.B.CharacterId == b) || (t.A.CharacterId == b && t.B.CharacterId == a)));
+        }
+
+        private static bool IsParentChild(string nature) =>
+            System.Text.RegularExpressions.Regex.IsMatch(nature, @"\b(father|mother|son|daughter|parent|child|boy|girl|lad)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase)
+            && !nature.Contains("in-law", StringComparison.OrdinalIgnoreCase);
+
+        private static bool IsSpouse(string nature) =>
+            System.Text.RegularExpressions.Regex.IsMatch(nature, @"\b(wife|husband|spouse|married)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        private static bool Male(CastMember c) => (c.Identity?.Gender ?? "").Trim().ToLowerInvariant() switch
+        {
+            "male" or "man" or "m" or "boy" => true,
+            "" => NameRules.Patronymic(c.Name) == "son",
+            _ => false,
+        };
+
+        /// <summary>
+        /// A first name that only lives on in a house's name ("Old Brita's Cottage") is not a person (review 2, item 4):
+        /// event and hook text that names her sends players looking for someone who is not there.
+        /// </summary>
+        public void CheckHouseNames()
+        {
+            var people = packet.Cast.Select(c => NameRules.FirstName(c.Name)).Concat(packet.OffstagePeople.Select(o => NameRules.FirstName(o.Name))).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            foreach (var place in context.Level.Places)
+            {
+                foreach (var name in HouseOwner().Matches(place.Name).Select(m => m.Groups[1].Value).Where(n => !people.Contains(n)))
+                {
+                    var items = Items().Where(i => System.Text.RegularExpressions.Regex.IsMatch(i.Text, $@"\b{name}\b(?!'s)")).Select(i => i.Id).Distinct().ToList();
+                    if (items.Count > 0)
+                    {
+                        WarnOn(items, IssueCodes.CastCoherence, items[0], $"{string.Join(", ", items)} speak of {name} as a person, but {name} is only the name of {place.Name}.",
+                            $"Name the person who lives there now (or say \"the house\"), not {name}.");
+                    }
+                }
+            }
+        }
+
+        [System.Text.RegularExpressions.GeneratedRegex(@"\b(\p{Lu}\p{Ll}+)'s\b")]
+        private static partial System.Text.RegularExpressions.Regex HouseOwner();
+
+        /// <summary>Each item's text with the id the critic routing understands.</summary>
+        private IEnumerable<(string Id, string Text)> Items() =>
+            packet.Truth.Escalation.Select(e => (e.Id, e.Description))
+                .Concat(packet.Facts.Select(f => (f.Id, f.Statement)))
+                .Concat(packet.Channels.Select(c => (c.Id, c.Reveal)))
+                .Append(("hook", packet.Hook.Text))
+                .Concat(packet.Level.SceneDescriptions.Select(s => ($"scene:{s.Key}", s.Value)))
+                .Where(i => !string.IsNullOrEmpty(i.Item2));
+
         public void CheckHookGiver()
         {
             if (context.Pack.Setting.FindHookGiverType(packet.Brief.HookGiverType) is not { } type || packet.FindCast(packet.Hook.HookGiverId) is not { } giver)
@@ -1010,6 +1214,13 @@ public sealed class CaseValidator : ICoherenceValidator
             foreach (var lever in packet.ResolutionLevers.Where(l => !SolveDepths.All.Contains(l.SolveDepth)))
             {
                 Error(IssueCodes.Schema, $"lever:{lever.Id}", $"Unknown solve depth '{lever.SolveDepth}'.{CoherenceIssue.Allowed(SolveDepths.All)}");
+            }
+
+            // A voice session cannot gather a dozen facts for one ending (review 2, item 8).
+            foreach (var lever in packet.ResolutionLevers.Where(l => l.RequiresFactIds.Count > context.MaxLeverFacts))
+            {
+                Error(IssueCodes.Resolution, $"lever:{lever.Id}", $"{lever.Id} requires {lever.RequiresFactIds.Count} facts; at most {context.MaxLeverFacts} can be gathered at a voice table.",
+                    $"Keep the {context.MaxLeverFacts} facts the ending truly turns on; the others support it without being required.");
             }
 
             if (packet.ResolutionLevers.Count < 2)

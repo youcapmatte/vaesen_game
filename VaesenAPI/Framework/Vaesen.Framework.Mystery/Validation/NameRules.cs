@@ -88,6 +88,23 @@ public static partial class NameRules
             : null;
     }
 
+    /// <summary>The last word of a full name, or "" for a single name.</summary>
+    public static string LastName(string name) => Split(name).Last;
+
+    /// <summary>"son" or "dotter" when the surname is a patronymic, otherwise null.</summary>
+    public static string? Patronymic(string name)
+    {
+        var last = Split(name).Last;
+        return last.Length < 5 ? null
+            : last.EndsWith("dotter", StringComparison.OrdinalIgnoreCase) ? "dotter"
+            : last.EndsWith("son", StringComparison.OrdinalIgnoreCase) ? "son"
+            : null;
+    }
+
+    /// <summary>A child's patronymic from the father's first name: Erik → Eriksson, Eriksdotter; Anders → Andersson.</summary>
+    public static string PatronymicOf(string fatherFirst, string suffix) =>
+        (fatherFirst.EndsWith('s') ? fatherFirst : fatherFirst + "s") + suffix;
+
     /// <summary>The first name of a full name ("Per" for "Per Ers").</summary>
     public static string FirstName(string name) => Split(name).First;
 

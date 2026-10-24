@@ -1,8 +1,4 @@
 {
-  "id": "level-ekeby-april",
-  "version": 1,
-  "status": "draft",
-  "name": "Ekeby Manor and its Crofts",
   "region": "Östergötland, on the plain south of Lake Roxen",
   "settlementType": "estate",
   "size": 2,
@@ -17,7 +13,185 @@
   ],
   "description": "Ekeby is an old noble estate on the fertile Östergötland plain: a white manor house with two wings at the end of an avenue of limes, a home farm, its own mill, and some twenty tenant crofts scattered along the forest edge whose holders owe the estate days of labour. The present owner, a baron, spends the winters in Stockholm and has begun to replace the crofters with contract labourers (statare) paid in kind.",
   "seasonNotes": "April, the spring thaw. The snow has gone from the fields but lies grey in the forest; the roads are axle-deep in mud and almost impassable. Meltwater fills every ditch and the stream runs loud and brown over the mill weir. The first lapwings and larks return over the fields. Ploughing waits for the ground to dry; the crofters are spreading manure and mending fences. Easter falls this month.",
-  "travel": "From Uppsala by rail via Stockholm and Katrineholm to Norrköping, about eight hours, then by the newest stretch of the eastern line or by coach, and the last miles in the estate's carriage on roads deep in thaw mud.",
+  "travel": "From Uppsala by rail to Stockholm, by the trunk line to Katrineholm, by the Southern Main Line to Mjölby (or by the eastern line to Norrköping and then by coach), and the last miles in a hired carriage or the estate's carriage over the thaw-mud roads: about a long day in April.",
+  "geography": {
+    "realAnalogue": "Bjärka-Säby (Roxen plain, Östergötland)",
+    "fictional": true,
+    "province": "Östergötland",
+    "county": "Östergötlands län",
+    "parish": "Ekeby parish",
+    "knownFor": [
+      "One of the old noble estates of the fertile Östergötland plain, held by the same family since the 1600s",
+      "A fine manor library that scholars from Linköping and Uppsala sometimes ask leave to visit",
+      "A mill that grinds for the whole parish, and a large tenant system still run on days of labour"
+    ],
+    "neighbours": [
+      {
+        "name": "Mjölby",
+        "kind": "railway town and crown sheriff's seat",
+        "distance": "about 20 km south-west by road, 3 to 4 hours by carriage in thaw",
+        "offers": [
+          "railway station on the Southern Main Line",
+          "telegraph office at the station",
+          "provincial doctor",
+          "crown sheriff",
+          "weekly market",
+          "inns with hired horses"
+        ]
+      },
+      {
+        "name": "Linköping",
+        "kind": "county seat and cathedral town",
+        "distance": "about 25 km west by road, 4 to 5 hours by carriage in thaw",
+        "offers": [
+          "governor and county administration",
+          "district court",
+          "county hospital",
+          "cathedral chapter and library",
+          "Östgöta Enskilda Bank",
+          "Östgöta Correspondenten",
+          "railway on the Southern Main Line since 1872 era's established service",
+          "telegraph"
+        ]
+      },
+      {
+        "name": "Borensberg",
+        "kind": "canal village on the Göta Canal",
+        "distance": "about 12 km north, near the shore of Lake Roxen",
+        "offers": [
+          "canal locks and a small harbour",
+          "passenger steamers in the open season, May to October",
+          "grain and timber barges",
+          "a village inn and shop"
+        ]
+      },
+      {
+        "name": "Norrköping",
+        "kind": "industrial town and port",
+        "distance": "about 55 km east by road",
+        "offers": [
+          "textile mills and harbour",
+          "Norrköpings Tidningar",
+          "banks and merchants",
+          "railway connection to Katrineholm and the trunk line",
+          "booksellers and instrument makers"
+        ]
+      }
+    ],
+    "authorities": {
+      "police": "The crown sheriff (kronolänsman) of the Roxen plain district lives at Mjölby, about 20 km away; the parish has a constable (fjärdingsman) who answers to him and the vicar, and in practice to the steward.",
+      "court": "The häradsrätt for the Roxen plain sits at Linköping, with a judge and twelve lay assessors; ordinary sessions are held a few times a year, and the parish is summoned by the sheriff.",
+      "doctor": "The provincial doctor lives at Mjölby, 20 km away, and covers many parishes on bad roads; he can be sent for by the estate's rider, and often arrives a day late. He signs the death certificates.",
+      "post": "The parish post point at the inn or the parsonage has post by relay twice a week; Mjölby and Linköping have daily post by train.",
+      "telegraph": "Nearest telegraph office is at Mjölby station, 20 km away; Linköping is also reachable. Ekeby itself has no wire, so messages go on by rider or carriage.",
+      "bank": "Östgöta Enskilda Bank in Linköping lends to the estate and the mill; the parish sparbank serves the crofters and is open on fixed days at the parsonage.",
+      "newspaper": "Östgöta Correspondenten in Linköping is the local paper, read at the manor and the parsonage; Norrköpings Tidningar comes to the manor by post."
+    }
+  },
+  "journey": {
+    "fromHeadquarters": "Uppsala",
+    "routes": [
+      {
+        "name": "Rail via Katrineholm and Mjölby, then carriage",
+        "legs": [
+          {
+            "from": "Uppsala",
+            "to": "Stockholm",
+            "mode": "railway",
+            "lineId": "stockholm-uppsala-railway",
+            "duration": "about 2 hours",
+            "cost": "about 1 riksdaler third class, about 2 second class",
+            "schedule": "a few trains daily",
+            "months": [],
+            "notes": "Private line, open since 1866. Carry travelling bags by hand; heavier gear goes in the goods van and may be delayed."
+          },
+          {
+            "from": "Stockholm",
+            "to": "Katrineholm",
+            "mode": "railway",
+            "lineId": "stockholm-katrineholm-railway",
+            "duration": "about 4 to 5 hours",
+            "cost": "about 5 riksdaler third class",
+            "schedule": "daily through trains with a change at Katrineholm",
+            "months": [],
+            "notes": "State trunk line via Södertälje and Gnesta. Katrineholm is where passengers change for Östergötland."
+          },
+          {
+            "from": "Katrineholm",
+            "to": "Mjölby",
+            "mode": "railway",
+            "lineId": "sodra-stambanan-katrineholm-nassjo",
+            "duration": "about 2 to 3 hours",
+            "cost": "about 3 riksdaler third class",
+            "schedule": "daily trains on the Southern Main Line, via Linköping",
+            "months": [],
+            "notes": "Mjölby is the nearest station and the seat of the crown sheriff and the doctor. Passengers can also get off at Linköping and go by road."
+          },
+          {
+            "from": "Mjölby",
+            "to": "Ekeby Manor",
+            "mode": "hiredCarriage",
+            "lineId": null,
+            "duration": "3 to 4 hours in April mud",
+            "cost": "about 6 to 8 riksdaler for a hired carriage and driver; free if the manor sends its carriage",
+            "schedule": "hired at the station inn; the estate's carriage only if sent for by letter",
+            "months": [],
+            "notes": "The last miles run along the limes' avenue but the road is deep in thaw mud, and the carriage may stick or the horses be changed at the roadside inn."
+          }
+        ]
+      },
+      {
+        "name": "Rail to Norrköping, then coach and the estate's carriage",
+        "legs": [
+          {
+            "from": "Uppsala",
+            "to": "Stockholm",
+            "mode": "railway",
+            "lineId": "stockholm-uppsala-railway",
+            "duration": "about 2 hours",
+            "cost": "about 1 riksdaler third class",
+            "schedule": "a few trains daily",
+            "months": [],
+            "notes": "As above."
+          },
+          {
+            "from": "Stockholm",
+            "to": "Katrineholm",
+            "mode": "railway",
+            "lineId": "stockholm-katrineholm-railway",
+            "duration": "about 4 to 5 hours",
+            "cost": "about 5 riksdaler third class",
+            "schedule": "daily",
+            "months": [],
+            "notes": "As above."
+          },
+          {
+            "from": "Katrineholm",
+            "to": "Norrköping",
+            "mode": "railway",
+            "lineId": null,
+            "duration": "about 2 hours",
+            "cost": "about 3 riksdaler third class",
+            "schedule": "one or two trains a day",
+            "months": [],
+            "notes": "The newest stretch of the eastern line, not in the period list of known lines; times are uncertain and the stretch may suffer delays after the thaw."
+          },
+          {
+            "from": "Norrköping",
+            "to": "Ekeby Manor",
+            "mode": "coach",
+            "lineId": null,
+            "duration": "about 8 hours including a change of horses",
+            "cost": "about 5 riksdaler by coach, plus a tip to the driver",
+            "schedule": "post coach in the morning; otherwise hire at the town inn",
+            "months": [],
+            "notes": "Slow in April. The last miles are in the estate's carriage if sent for, otherwise on a farm cart from the parish inn."
+          }
+        ]
+      }
+    ],
+    "journeyScene": "The trains run south through a country of grey ploughland, standing water and last patches of snow in the lee of the barns. Beyond the railway station the road is a brown river of mud, the carriage wheels throw it in lumps, and lapwings tumble over the wet fields. On the far side of Lake Roxen the ice is dark and rotten, and somewhere over the water a boom sounds like a distant gun. Then the avenue of bare limes opens ahead, and the white manor and its two wings stand at the end of it, with smoke from the mill and the long barracks by the home farm."
+  },
   "publicFacts": [
     "The baron's family has owned Ekeby since the 1600s; the present baron spends winters in Stockholm and is often away.",
     "The estate's steward manages the farm and the crofts in the baron's absence and is not well liked.",
@@ -825,5 +999,10 @@
         }
       ]
     }
-  ]
+  ],
+  "monthVariants": [],
+  "id": "level-ekeby-april",
+  "version": 1,
+  "status": "draft",
+  "name": "Ekeby Manor and its Crofts"
 }

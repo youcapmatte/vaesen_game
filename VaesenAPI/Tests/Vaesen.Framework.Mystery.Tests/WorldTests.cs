@@ -62,6 +62,7 @@ public sealed class WorldTests
         packet.Cast.Add(new CastMember
         {
             CharacterId = "constable-hagg", Name = "Karl Edvard Hägg", InstanceRef = InstanceRefs.Persistent, PlotRole = "official", Importance = CastImportance.Significant,
+            Wants = new CastWants { Drives = ["to close the matter quietly"], Fears = ["a scandal in the papers"] }, Routine = "Rounds of the parish by day.",
         });
         var context = ValidatorTests.ContextFor(packet);
         var dead = new ValidationContext

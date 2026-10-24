@@ -220,6 +220,9 @@ public static class LogEntryKinds
     /// <summary>A person renamed after names existed; code replaced the old name everywhere (fixes 4, section 4).</summary>
     public const string Rename = "rename";
 
+    /// <summary>Exact text replaced by code for a mechanical fix (review 2, item 2).</summary>
+    public const string Replace = "replace";
+
     /// <summary>Taken from the Society's roster of the level, without a model call (fixes 4, section 12.1).</summary>
     public const string Roster = "roster";
 }

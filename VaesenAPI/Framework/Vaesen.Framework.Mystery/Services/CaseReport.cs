@@ -207,7 +207,7 @@ public static class CaseReport
 
         foreach (var i in p.Validation.Issues.OrderBy(i => i.IsError ? 0 : 1))
         {
-            s.AppendLine(inv, $"- {(i.IsError ? "**error**" : "warning")}{(i.Applied ? " (fix applied)" : "")} `{i.Code}` at {i.Location} ({i.Source}): {i.Explanation}{(i.SuggestedFix is null ? "" : $" *Fix:* {i.SuggestedFix}")}");
+            s.AppendLine(inv, $"- {(i.IsError ? "**error**" : "warning")}{(i.Applied ? " (fix verified)" : "")}{(i.Unresolved is null ? "" : $" (fix did not hold: {i.Unresolved})")} `{i.Code}` at {i.Location} ({i.Source}): {i.Explanation}{(i.SuggestedFix is null ? "" : $" *Fix:* {i.SuggestedFix}")}");
         }
 
         if (log is { Count: > 0 })

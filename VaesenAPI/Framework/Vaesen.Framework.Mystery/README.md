@@ -60,6 +60,31 @@ Services/      MysteryGenerator, WorldService (seeding, closing, write-back), Co
 
 The engine sets the fact weights. Colour and season facts, and what the group knows on arrival, weigh nothing, so the dial starts at its start; decoy facts weigh half, load-bearing ones double. The weights are scaled so the deep solve's path (its lever's facts and what gates them) ends 15% past the climax. A beat with a time fires when its threshold is reached and its time has come, whichever is later.
 
+### Review 2 (case 06)
+
+- **Fixes are verified.** In the last round, nothing is marked applied on trust:
+  - a structural warning must no longer be found;
+  - a replacement's old text must be gone;
+  - a critic issue must be found gone by a verifying look (`FixVerifier`, prompt `verify.md`: the critic model at low effort).
+
+  What did not take is tried again (`FixRetries`, 1) with what still stands. A fix that still does not hold fails the case visibly (`UnresolvedFixIsError`, on); with the option off, it stays a warning marked `unresolved`. The report and the case file say "fix verified" or "fix did not hold".
+- **Mechanical fixes in code.** The critic gives a rename, a date or a wrong id as `replacements` (exact old and new text, `everywhere` or only inside the targets). `TextReplacements` applies them to the packet and every kept output, and logs a `replace` entry; no model is asked.
+- **Judgement fixes are patches.**
+  - The last round patches on the patch model, never the small one.
+  - It never rewrites a whole step: what cannot be a patch is left as it is.
+  - The creature's mind is one patchable item, and a target like `nack creatureMinds.blames` is routed to the creature step.
+- **One hook-giver.** Another person whose record says they fetched the Society is flagged for a fix to their record. A channel can fix the kind of giver: `old-world-visit` carries a being or its messenger (`oldWorld`).
+- **Playable records.**
+  - Significant people need drives, fears, a routine, and something they know or think.
+  - Residents need a drive; the roster now writes one.
+  - Fact ids in prose must exist and be known; the prompts keep them out of prose and turn clues in secrets into facts.
+- **Names of 1872.**
+  - A son takes his father's first name and -son, a daughter -dotter, and a wife keeps her own patronymic: these are warned on.
+  - A parent and child are not warned on for sounding alike.
+  - A first name that lives only in a house name ("Old Brita's") is flagged where the case speaks of it as a person. Storskog's cottage is renamed.
+- **A lever requires at most eight facts** (`ValidationContext.MaxLeverFacts`).
+- **Prompt caching is off** (`PromptCache`). Each step's prefix includes its schema with that call's ids, and the critic's second look comes after the five-minute cache has gone: 69k tokens were written to the cache and none read.
+
 ### Fixes 4, part C: geography and travel
 
 - **Geography** (`LevelDefinition.Geography`): the real place a level is modelled on (`realAnalogue`, grounding only, never named in a case), province, county, parish, what an educated Swede of the period knows of it, neighbouring towns with rough distances and what they offer, and where the authorities are (sheriff, district court, provincial doctor, post, telegraph, bank, newspaper).

@@ -67,8 +67,10 @@ export interface CoherenceIssue {
   source: "structural" | "critic";
   /** The critic's issues: the ids they touch, for routing to the step that owns them. */
   targets?: string[] | null;
-  /** A critic warning whose suggested fix was applied in the last round. */
+  /** A fix that was tried and verified to hold: the check no longer finds it, or a verifying look found it gone. */
   applied?: boolean;
+  /** A fix that was tried and did not hold: what still stands. */
+  unresolved?: string | null;
 }
 
 export interface EscalationEvent {

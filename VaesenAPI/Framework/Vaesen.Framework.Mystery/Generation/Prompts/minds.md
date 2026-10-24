@@ -4,6 +4,7 @@ Put the facts into the world: what every person knows, thinks and lies about, an
 
 Minds
 - A person under a threat thinks why it is real (one of their thinks): "No one in the parish would take a stoker's word over the master of Östansjö, and the strap is the only proof."
+- Every significant person knows or thinks something in this case. Fact ids go only in knows (and channels), never in prose: secrets, lies, beliefs and actions are plain words.
 - For every cast member: what they know, as fact ids (f1, f2…) from the facts list given above, never a title or description, each with source and when. What they think (beliefs, true or false) and what they lie about and the story they tell.
 - Every testimony or overheard channel is backed by a knows entry of its source. Anyone who was told something was told by someone who knows it.
 - Knowledge told by a named person who never appears (in offstagePeople) is told:offstage:<id>.

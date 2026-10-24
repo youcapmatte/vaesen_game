@@ -288,6 +288,27 @@ public sealed class CreatureOutput
     public List<CreatureMind> CreatureMinds { get; set; } = [];
 }
 
+/// <summary>A verifying look at fixes (review 2, item 1): for each issue, whether the problem is now gone.</summary>
+public sealed class VerifyOutput
+{
+    [JsonProperty("results")]
+    public List<VerifyResult> Results { get; set; } = [];
+}
+
+public sealed class VerifyResult
+{
+    /// <summary>The issue's number as listed (1, 2, ...).</summary>
+    [JsonProperty("issue")]
+    public int Issue { get; set; }
+
+    [JsonProperty("resolved")]
+    public bool Resolved { get; set; }
+
+    /// <summary>When not resolved: what still stands, item by item, in a sentence.</summary>
+    [JsonProperty("remaining")]
+    public string Remaining { get; set; } = "";
+}
+
 /// <summary>Sub-step 6d, the hook and the scenes.</summary>
 public sealed class HookOutput
 {
@@ -362,6 +383,14 @@ public sealed class CriticCheck
 
     [JsonProperty("suggestedFix")]
     public string? SuggestedFix { get; set; }
+
+    /// <summary>For a mechanical fix (a rename, a date, a wrong id): exact old text and new text; the engine applies them.</summary>
+    [JsonProperty("replacements")]
+    public List<TextReplacement> Replacements { get; set; } = [];
+
+    /// <summary>The replacements hold everywhere in the case (a rename), not only in the targets.</summary>
+    [JsonProperty("everywhere")]
+    public bool Everywhere { get; set; }
 
     /// <summary>Every id the issue touches, so it is routed to the step that owns each (see the critic prompt).</summary>
     [JsonProperty("targets")]

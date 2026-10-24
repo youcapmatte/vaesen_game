@@ -10,6 +10,8 @@ Give a concrete suggestedFix for every warning too: what to change, item by item
 
 When a person is called by two names, the cast's name is the right one: target the items that use the other name, never the cast member's identity. Never suggest a name that breaks the name rules.{{usedNames}}
 
+Mechanical fixes are done by the engine, not rewritten: for a rename, a date, a number or a wrong id, give replacements (the exact old text as it stands in the case, and the new text), and set everywhere true for a rename that holds across the case; otherwise the replacements apply only inside the targets. Use replacements only where exact text swaps fix it; anything that needs rewording is a suggestedFix.
+
 Keep explanation and suggestedFix to about 60 words each: the items and the change, nothing else. When a date or a detail disagrees, say which version every item should use.
 
 - deepLoreTrail: the solution trail rests on the creature's deep lore, not the obvious folklore answer.

@@ -268,11 +268,20 @@ public static class Assignment
 
         brief.HookChannelId = channels.Count == 0 ? "" : WeightedPick(channels, c => c.Weight, random).Id;
 
+        // A channel that only one kind of giver can carry takes that kind; the others are drawn from the rest.
+        if (setting.FindHookChannel(brief.HookChannelId)?.GiverType is { Length: > 0 } only)
+        {
+            brief.HookGiverType = only;
+            return;
+        }
+
+        var reserved = setting.HookChannels.Select(c => c.GiverType).Where(t => t.Length > 0).ToHashSet();
         var recentGivers = history.Mysteries.TakeLast(2).Select(m => m.HookGiverType).ToHashSet();
-        var givers = setting.HookGiverTypes.Select(g => g.Id).Where(g => !recentGivers.Contains(g)).ToList();
+        var all = setting.HookGiverTypes.Select(g => g.Id).Where(g => !reserved.Contains(g)).ToList();
+        var givers = all.Where(g => !recentGivers.Contains(g)).ToList();
         if (givers.Count == 0)
         {
-            givers = setting.HookGiverTypes.Select(g => g.Id).ToList();
+            givers = all;
         }
 
         brief.HookGiverType = givers.Count == 0 ? "" : givers[random.Next(givers.Count)];

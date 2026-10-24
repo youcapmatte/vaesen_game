@@ -23,9 +23,13 @@ public sealed class AnthropicMysteryModel : IMysteryModel
     private readonly AnthropicClient _client;
     private readonly ILogger<AnthropicMysteryModel> _logger;
 
+    /// <summary>Whether a request may ask for its prefix to be cached (<see cref="MysteryOptions.PromptCache"/>).</summary>
+    private readonly bool _cache = true;
+
     public AnthropicMysteryModel(IOptions<MysteryOptions> options, ILogger<AnthropicMysteryModel> logger)
     {
         _logger = logger;
+        _cache = options.Value.PromptCache;
         var key = options.Value.AnthropicApiKey;
         _client = string.IsNullOrWhiteSpace(key) ? new AnthropicClient() : new AnthropicClient { ApiKey = key };
     }
@@ -132,6 +136,7 @@ public sealed class AnthropicMysteryModel : IMysteryModel
     {
         var stopwatch = Stopwatch.StartNew();
         var schema = StructuredSchema.For(typeof(T), request.Ids);
+        request = request with { Cache = request.Cache && _cache };
 
         var content = new List<BetaContentBlockParam>();
         if (!string.IsNullOrWhiteSpace(request.Context))

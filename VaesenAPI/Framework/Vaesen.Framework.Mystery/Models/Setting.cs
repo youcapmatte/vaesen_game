@@ -84,6 +84,13 @@ public sealed class HookChannel
     /// <summary>Relative weight when choosing; the contact-network letter is common but never the only route.</summary>
     [JsonProperty("weight")]
     public double Weight { get; set; } = 1;
+
+    /// <summary>
+    /// The only kind of hook-giver this channel can carry (review 2, item 3): a visit from the old world comes from a
+    /// being or its messenger, never a human's plea. Empty: any.
+    /// </summary>
+    [JsonProperty("giverType")]
+    public string GiverType { get; set; } = "";
 }
 
 public static class HookScales

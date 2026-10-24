@@ -226,7 +226,7 @@ public sealed class PipelineTests
 
         // The objection is split: the motive to the conflict, the channel to minds and channels, the warning on r1 to the
         // arc, in pipeline order. Nothing downstream is regenerated. The second review's warning goes to the arc, light.
-        Assert.Equal(["world", "roster", "conflict", "escalation", "humans", "facts", "minds", "arc", "creature", "hook", "critic", "conflict", "minds", "arc", "critic", "arc"], model.Calls);
+        Assert.Equal(["world", "roster", "conflict", "escalation", "humans", "facts", "minds", "arc", "creature", "hook", "critic", "conflict", "minds", "arc", "critic", "arc", "verify"], model.Calls);
         var log = result.Result!.Case.Log;
         var afterReview = log.SkipWhile(e => e.Step != "critic").Skip(1).Where(e => e.Kind != LogEntryKinds.Check).ToList();
         Assert.Equal([LogEntryKinds.Fix, LogEntryKinds.Patch, LogEntryKinds.Patch], afterReview.Take(3).Select(e => e.Kind));
@@ -236,7 +236,9 @@ public sealed class PipelineTests
         var reviews = log.Where(e => e.Step == "critic").ToList();
         Assert.DoesNotContain("# Your last review", reviews[0].Instruction, StringComparison.Ordinal);
         Assert.Contains("# Your last review", reviews[1].Instruction, StringComparison.Ordinal);
-        Assert.Equal(options.LightModel, model.Models[^1]);
+        // The last round patches on the patch model, never the small one, and a verifying look confirms the fix took.
+        Assert.Equal(options.CreativeModel, model.Models[^2]);
+        Assert.Equal(options.CriticModel, model.Models[^1]);
         var packet = result.Result.Case.Packet;
         Assert.True(packet.Validation.Passed);
         Assert.True(Assert.Single(packet.Validation.Issues, i => i.Code == "critic." + CriticChecks.Solves).Applied);
@@ -320,6 +322,7 @@ public sealed class PipelineTests
                     SceneDescriptions = sample.Level.SceneDescriptions.Select(p => new SceneDescription { PlaceId = p.Key, Text = p.Value }).ToList(),
                 },
                 "critic" => Critic(),
+                FixVerifier.StepName => Verify(request.Instruction),
                 _ => throw new InvalidOperationException(request.Step),
             };
 
@@ -336,6 +339,7 @@ public sealed class PipelineTests
             RosterPerson Person(string id, string name, string place, string role, string occupation, string? hook = null) => new()
             {
                 Id = id, Name = name, PlaceId = place, Role = role, Age = 45, Gender = "man", Occupation = occupation, Rank = "worker", Line = occupation + " here", LatentHook = hook,
+                Drive = "to keep the " + occupation + "'s trade going",
             };
 
             return new RosterOutput
@@ -353,6 +357,17 @@ public sealed class PipelineTests
                 ],
             };
         }
+
+        /// <summary>Every fix took, unless <see cref="FixesDoNotTake"/>: one result per numbered issue in the instruction.</summary>
+        private VerifyOutput Verify(string instruction) => new()
+        {
+            Results = System.Text.RegularExpressions.Regex.Matches(instruction, @"(?m)^(\d+)\. ")
+                .Select(m => new VerifyResult { Issue = int.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture), Resolved = !FixesDoNotTake, Remaining = FixesDoNotTake ? "Still there." : "" })
+                .ToList(),
+        };
+
+        /// <summary>The verifying look finds every critic fix not taken.</summary>
+        public bool FixesDoNotTake { get; set; }
 
         private WorldSeedOutput TakeSeed()
         {
@@ -459,9 +474,28 @@ public sealed class PipelineTests
             return output;
         }
 
+        /// <summary>The critic's only issue is a warning that is a rename, given as a replacement for code to apply.</summary>
+        public bool RenameWarning { get; set; }
+
         private CriticOutput Critic()
         {
             _criticCalls++;
+            if (RenameWarning)
+            {
+                return new CriticOutput
+                {
+                    Overall = "Fine but for a name.",
+                    Checks = CriticChecks.All.Select(name => name == CriticChecks.Timeline
+                        ? new CriticCheck
+                        {
+                            Check = name, Passed = false, Severity = IssueSeverities.Warning, Location = "f1", Targets = ["f1"],
+                            Explanation = "The mill race is called two things.", SuggestedFix = "Call it the millrace everywhere.",
+                            Replacements = [new TextReplacement { From = "mill race", To = "millrace" }], Everywhere = true,
+                        }
+                        : new CriticCheck { Check = name, Passed = true }).ToList(),
+                };
+            }
+
             if (TargetedCritic)
             {
                 CriticCheck Check(string name, bool passed, string severity, List<string> targets) => new()

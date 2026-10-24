@@ -2,6 +2,7 @@
 
 Write what the creature (or the hand behind it) has concretely done so far: the events players will meet as symptoms. Five to eight events, in order, each with when it happened relative to the Society's arrival, where (a place id of the level, or null for out in the terrain), and the register it is noticed in (physical, animal, weather, sound, behaviour, health, dream, atmosphere, social).
 
+- Name people, not houses: a house named for someone long dead is a place, not a person who set a bone or said a word.
 - Refer to people by role only (the elder son, the dairymaid, the company agent), never by name: names are given later, when the cast is created, and a name given here would have to change if it clashes.
 - Mark as opening the events that the hook can report and that justify the journey: {{openingRule}}
 - Opening events are each deniable alone and inexplicable together, spread over different registers, and described in the plainest terms their mundane reading allows.

@@ -58,6 +58,10 @@ public sealed class RosterPerson
     [JsonProperty("voice")]
     public string Voice { get; set; } = "";
 
+    /// <summary>What they want most in their ordinary life, so a case can play them (review 2, item 4).</summary>
+    [JsonProperty("drive")]
+    public string Drive { get; set; } = "";
+
     /// <summary>For residents and some others: a thread a later case may pull.</summary>
     [JsonProperty("latentHook")]
     public string? LatentHook { get; set; }
@@ -167,6 +171,11 @@ public sealed class RosterBuilder(IMysteryModel model, MysteryOptions options)
                 issues.Add(CoherenceIssue.Error(IssueCodes.Schema, at, $"The id '{p.Id}' must start with npc-, be unique and not be anyone's in the Society's world.", "Use npc- and a slug of the name."));
             }
 
+            if (string.IsNullOrWhiteSpace(p.Drive))
+            {
+                issues.Add(CoherenceIssue.Error(IssueCodes.Schema, at, $"{p.Name} has no drive.", "Give one line of what they want most in their ordinary life."));
+            }
+
             if (level.FindPlace(p.PlaceId) is null)
             {
                 issues.Add(CoherenceIssue.Error(IssueCodes.UnknownReference, at, $"{p.Name}: no place '{p.PlaceId}' in {level.Name}."));
@@ -240,6 +249,7 @@ public sealed class RosterBuilder(IMysteryModel model, MysteryOptions options)
                 Home = level.FindPlace(p.PlaceId)?.Name ?? p.PlaceId,
             },
             Voice = new CharacterVoice { Register = string.IsNullOrWhiteSpace(p.Voice) ? "plain speech" : p.Voice },
+            Drives = string.IsNullOrWhiteSpace(p.Drive) ? [] : [new Drive { Id = $"{p.Id}-drive-1", Text = p.Drive, Strength = 2 }],
             Background = p.Line,
             LatentHooks = string.IsNullOrWhiteSpace(p.LatentHook) ? [] : [new LatentHook { Id = $"{p.Id}-hook-1", Kind = LatentHookKinds.Secret, Text = p.LatentHook }],
             Relationships = head is null ? [] : [new WorldRelationship { CharacterId = head.Id, Nature = p.Relation, Sentiment = 1 }],
