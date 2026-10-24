@@ -20,6 +20,12 @@
 #include "Weapons/VaesenWeaponActor.h"
 #include "Animation/AnimMontage.h"
 #include "PhysicalMaterials/PhysicalMaterial.h"
+#include "AbilitySystemGlobals.h"
+#include "AIController.h"
+#include "Camera/PlayerCameraManager.h"
+#include "EngineUtils.h"
+#include "GameFramework/PlayerController.h"
+#include "Net/UnrealNetwork.h"
 
 AVaesenBaseCharacter::AVaesenBaseCharacter()
 {
@@ -181,7 +187,7 @@ bool AVaesenBaseCharacter::WantsToFaceAim() const
 {
 	static const FGameplayTagContainer FacingStates = FGameplayTagContainer::CreateFromArray(TArray<FGameplayTag>{
 		VaesenTags::State_Aiming, VaesenTags::State_Blocking, VaesenTags::State_DrawingBow, VaesenTags::State_Throwing });
-	return AbilitySystem && AbilitySystem->HasAnyMatchingGameplayTags(FacingStates);
+	return LockTarget || (AbilitySystem && AbilitySystem->HasAnyMatchingGameplayTags(FacingStates));
 }
 
 void AVaesenBaseCharacter::UpdateRotationMode()
@@ -380,6 +386,22 @@ void AVaesenBaseCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
+	// A lock lets go when it can't hold: the target fell or got away, or a gun or bow was drawn.
+	if (LockTarget && (HasAuthority() || IsLocallyControlled()) && (!IsValid(LockTarget) || !CanLockOnto(LockTarget, LockBreakRange)))
+	{
+		SetLockTarget(nullptr);
+	}
+
+	// Locked: a player's view turns to the target (the camera, and with it the strafing body). An AI looks at it (focus).
+	if (const APlayerController* Player = LockTarget && IsLocallyControlled() ? Cast<APlayerController>(Controller) : nullptr)
+	{
+		const FVector From = Player->PlayerCameraManager ? Player->PlayerCameraManager->GetCameraLocation() : GetPawnViewLocation();
+		FRotator Desired = (GetLockPoint(LockTarget) - From).Rotation();
+		// A little above the target, so the fighter stays in view below it.
+		Desired.Pitch = FMath::Clamp(Desired.Pitch - 8.0f, -35.0f, 20.0f);
+		Controller->SetControlRotation(FMath::RInterpTo(Controller->GetControlRotation(), Desired, DeltaSeconds, 10.0f));
+	}
+
 	// Gear rattle without footstep notifies: by distance walked on the ground.
 	if (GetNetMode() == NM_DedicatedServer || !GetCharacterMovement()->IsMovingOnGround())
 	{
@@ -419,5 +441,140 @@ void AVaesenBaseCharacter::PlayGearRattle()
 		{
 			UGameplayStatics::SpawnSoundAttached(Rattle, Actor->GetRootComponent(), NAME_None, FVector::ZeroVector, EAttachLocation::KeepRelativeOffset, true, Volume);
 		}
+	}
+}
+
+// --- Target lock ---
+
+void AVaesenBaseCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+	DOREPLIFETIME(AVaesenBaseCharacter, LockTarget);
+}
+
+FVector AVaesenBaseCharacter::GetLockPoint(const AActor* Target)
+{
+	if (!Target)
+	{
+		return FVector::ZeroVector;
+	}
+	// The chest: a little above the middle of what it's made of.
+	const FBox Bounds = Target->GetComponentsBoundingBox(true);
+	return Bounds.IsValid ? Bounds.GetCenter() + FVector(0.0, 0.0, Bounds.GetExtent().Z * 0.3) : Target->GetActorLocation();
+}
+
+bool AVaesenBaseCharacter::CanLockOnto(const AActor* Target, float Range) const
+{
+	const UAbilitySystemComponent* TargetASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Target);
+	if (!Target || Target == this || !TargetASC || TargetASC->HasMatchingGameplayTag(VaesenTags::State_Dead))
+	{
+		return false;
+	}
+	if (FVector::Dist(GetActorLocation(), Target->GetActorLocation()) > Range)
+	{
+		return false;
+	}
+	// Melee weapons and bare hands only: a gun or bow aims instead.
+	const UVaesenWeaponItem* Weapon = Equipment ? Equipment->GetDrawnWeapon() : nullptr;
+	return !Weapon || !Weapon->IsRanged();
+}
+
+AActor* AVaesenBaseCharacter::FindLockTarget(const FVector& ViewOrigin, const FVector& ViewDirection) const
+{
+	AActor* Best = nullptr;
+	float BestScore = TNumericLimits<float>::Max();
+	const FVector Forward = ViewDirection.GetSafeNormal();
+	for (TActorIterator<AActor> It(GetWorld()); It; ++It)
+	{
+		AActor* Candidate = *It;
+		if (!CanLockOnto(Candidate, LockRange))
+		{
+			continue;
+		}
+		const FVector Point = GetLockPoint(Candidate);
+		const FVector ToIt = Point - ViewOrigin;
+		const float Angle = FMath::RadiansToDegrees(FMath::Acos(FMath::Clamp(FVector::DotProduct(ToIt.GetSafeNormal(), Forward), -1.0f, 1.0f)));
+		if (Angle > LockAngle)
+		{
+			continue;
+		}
+		// In sight: nothing else in the way.
+		FHitResult Blocker;
+		FCollisionQueryParams Params(SCENE_QUERY_STAT(VaesenLockSight), false, this);
+		if (GetWorld()->LineTraceSingleByChannel(Blocker, ViewOrigin, Point, ECC_Visibility, Params) && Blocker.GetActor() != Candidate)
+		{
+			continue;
+		}
+		// Nearest the middle of the view first, then the nearest (a degree weighs as much as a metre and a half).
+		const float Score = Angle + ToIt.Size() / 150.0f;
+		if (Score < BestScore)
+		{
+			Best = Candidate;
+			BestScore = Score;
+		}
+	}
+	return Best;
+}
+
+void AVaesenBaseCharacter::ToggleTargetLock()
+{
+	AActor* Target = nullptr;
+	if (!LockTarget)
+	{
+		FVector ViewOrigin;
+		FRotator ViewRotation;
+		GetActorEyesViewPoint(ViewOrigin, ViewRotation);
+		if (const APlayerController* Player = Cast<APlayerController>(GetController()); Player && Player->PlayerCameraManager)
+		{
+			ViewOrigin = Player->PlayerCameraManager->GetCameraLocation();
+			ViewRotation = Player->PlayerCameraManager->GetCameraRotation();
+		}
+		Target = FindLockTarget(ViewOrigin, ViewRotation.Vector());
+		if (!Target)
+		{
+			return;
+		}
+	}
+	SetLockTarget(Target);
+	if (!HasAuthority())
+	{
+		ServerSetLockTarget(Target);
+	}
+}
+
+void AVaesenBaseCharacter::ServerSetLockTarget_Implementation(AActor* Target)
+{
+	// The server's own check (a little further: the client saw it a moment ago).
+	SetLockTarget(Target && CanLockOnto(Target, LockRange * 1.2f) ? Target : nullptr);
+}
+
+void AVaesenBaseCharacter::SetLockTarget(AActor* Target)
+{
+	if (LockTarget == Target)
+	{
+		return;
+	}
+	LockTarget = Target;
+	OnRep_LockTarget();
+}
+
+void AVaesenBaseCharacter::OnRep_LockTarget()
+{
+	// Facing the target (strafing) or the way it walks; the weapon's stance follows (it may have a locked layer).
+	UpdateRotationMode();
+	if (AAIController* AI = HasAuthority() ? Cast<AAIController>(Controller) : nullptr)
+	{
+		if (LockTarget)
+		{
+			AI->SetFocus(LockTarget);
+		}
+		else
+		{
+			AI->ClearFocus(EAIFocusPriority::Gameplay);
+		}
+	}
+	if (Equipment)
+	{
+		Equipment->RefreshDrawnLook();
 	}
 }

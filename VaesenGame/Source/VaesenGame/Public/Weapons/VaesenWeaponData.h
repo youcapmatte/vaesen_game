@@ -172,6 +172,13 @@ struct FVaesenCategoryDefaults
 	TSubclassOf<UAnimInstance> AnimLayer;
 
 	/**
+	 * Its own anim layer while locked onto a target (a fighting stance and set). Empty = AnimLayer, which can square up
+	 * itself (bTargetLocked, bRelaxed): the sword's does, into the pack's fighting stance.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Category")
+	TSubclassOf<UAnimInstance> LockedAnimLayer;
+
+	/**
 	 * Motion matching (later): the pose search database (or chooser) for locomotion with this category drawn. Read by
 	 * the anim instance (UVaesenAnimInstance::LocomotionDatabase); empty = the character's default locomotion.
 	 */

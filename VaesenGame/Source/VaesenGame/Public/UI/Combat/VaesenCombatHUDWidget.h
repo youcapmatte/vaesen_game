@@ -74,6 +74,10 @@ private:
 
 	// What to draw, worked out in NativeTick.
 	bool bShowCrosshair = false;
+
+	/** Locked onto a target: where its marker goes on screen. */
+	bool bShowLockMarker = false;
+	FVector2D LockMarker = FVector2D::ZeroVector;
 	float SpreadPixels = 0.0f;
 	FText AmmoText;
 	FText WarningText;

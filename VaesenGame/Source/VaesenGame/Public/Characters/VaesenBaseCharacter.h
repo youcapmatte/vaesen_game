@@ -90,9 +90,34 @@ public:
 	void OnFootstep();
 
 	virtual void Tick(float DeltaSeconds) override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	/** Faces where it aims (strafes) rather than where it walks: aiming, blocking, drawing a bow, throwing. */
+	/** Faces where it aims (strafes) rather than where it walks: aiming, blocking, drawing a bow, throwing, locked on. */
 	virtual bool WantsToFaceAim() const;
+
+	// --- Target lock (melee and bare hands) ---
+
+	/**
+	 * Locks onto the best fighter ahead (or lets go if locked). Only with a melee weapon or bare hands: a gun or bow
+	 * in hand lets go. Locked, the character faces the target and strafes (its weapon's fighting stance), and the
+	 * player's camera turns to it. Seen at once by the owner; the server agrees and tells everyone.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "Combat|Target Lock")
+	void ToggleTargetLock();
+
+	UFUNCTION(BlueprintPure, Category = "Combat|Target Lock")
+	AActor* GetLockTarget() const { return LockTarget; }
+
+	bool IsTargetLocked() const { return LockTarget != nullptr; }
+
+	/** The best fighter to lock onto, looking from ViewOrigin along ViewDirection: in range, near the middle of the view, in sight. */
+	AActor* FindLockTarget(const FVector& ViewOrigin, const FVector& ViewDirection) const;
+
+	/** Whether Target can be (or stay) locked onto: alive, near enough, and a melee weapon or bare hands drawn. */
+	bool CanLockOnto(const AActor* Target, float Range) const;
+
+	/** Where a lock looks at on Target (its chest). */
+	static FVector GetLockPoint(const AActor* Target);
 
 #if WITH_EDITOR
 	/** For the asset commandlet: grants To instead of From (a GA_ Blueprint instead of its C++ class), and To if it has neither. True if it changed. */
@@ -120,6 +145,18 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Combat", meta = (ClampMin = "0", ClampMax = "1"))
 	float StaggeredSpeedScale = 0.2f;
+
+	/** How far away a target can be locked onto. */
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Target Lock", meta = (ClampMin = "0", Units = "cm"))
+	float LockRange = 1500.0f;
+
+	/** How far from the middle of the view a target can be to lock onto it. */
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Target Lock", meta = (ClampMin = "0", ClampMax = "90", Units = "Degrees"))
+	float LockAngle = 35.0f;
+
+	/** A lock lets go when the target gets this far away. */
+	UPROPERTY(EditDefaultsOnly, Category = "Combat|Target Lock", meta = (ClampMin = "0", Units = "cm"))
+	float LockBreakRange = 2000.0f;
 
 	/** Grunt on heavy attacks and throws. Empty = silent. */
 	UPROPERTY(EditDefaultsOnly, Category = "Combat|Voice")
@@ -185,6 +222,19 @@ private:
 	float BaseWalkSpeed = 0.0f;
 
 	bool bAbilitiesGranted = false;
+
+	/** Locked onto (null = not); the owner sets it at once, the server agrees and tells everyone. */
+	UPROPERTY(ReplicatedUsing = OnRep_LockTarget)
+	TObjectPtr<AActor> LockTarget;
+
+	UFUNCTION()
+	void OnRep_LockTarget();
+
+	UFUNCTION(Server, Reliable)
+	void ServerSetLockTarget(AActor* Target);
+
+	/** Locks onto Target (null lets go): faces it or not, and the weapon's stance follows. */
+	void SetLockTarget(AActor* Target);
 
 	/** Sheathed weapons rattle (this machine). */
 	void PlayGearRattle();

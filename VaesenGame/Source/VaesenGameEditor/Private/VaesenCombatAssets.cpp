@@ -677,6 +677,7 @@ namespace VaesenCombatAssets
 		UInputAction* Crouch = GetOrCreateAction(TEXT("IA_Crouch"));
 		UInputAction* SwitchGrip = GetOrCreateAction(TEXT("IA_SwitchGrip"));
 		UInputAction* Dodge = GetOrCreateAction(TEXT("IA_Dodge"));
+		UInputAction* LockOn = GetOrCreateAction(TEXT("IA_LockOn"));
 
 		bool bChanged = false;
 		bChanged |= MapOnce(Mappings, HeavyModifier, EKeys::LeftShift);
@@ -716,6 +717,8 @@ namespace VaesenCombatAssets
 		bChanged |= MapOnce(Mappings, SwitchGrip, EKeys::Gamepad_DPad_Down);
 		bChanged |= MapOnce(Mappings, Dodge, EKeys::LeftAlt);
 		bChanged |= MapOnce(Mappings, Dodge, EKeys::Gamepad_RightThumbstick);
+		bChanged |= MapOnce(Mappings, LockOn, EKeys::MiddleMouseButton);
+		bChanged |= MapOnce(Mappings, LockOn, EKeys::Gamepad_DPad_Up);
 		if (bChanged)
 		{
 			Save(Mappings);
@@ -730,6 +733,7 @@ namespace VaesenCombatAssets
 			{ TEXT("CrouchAction"), Crouch },
 			{ TEXT("SwitchGripAction"), SwitchGrip },
 			{ TEXT("DodgeAction"), Dodge },
+			{ TEXT("LockOnAction"), LockOn },
 		};
 		for (const TPair<const TCHAR*, UInputAction*>& Property : Properties)
 		{

@@ -43,8 +43,13 @@ const FVaesenCategoryDefaults& UVaesenWeaponItem::GetCategoryDefaults() const
 	return UVaesenWeaponCategoryDefaults::Get()->GetCategory(Category);
 }
 
-TSubclassOf<UAnimInstance> UVaesenWeaponItem::GetAnimLayer() const
+TSubclassOf<UAnimInstance> UVaesenWeaponItem::GetAnimLayer(bool bTargetLocked) const
 {
+	// Locked on: the category's fighting set, if it has one of its own.
+	if (bTargetLocked && GetCategoryDefaults().LockedAnimLayer)
+	{
+		return GetCategoryDefaults().LockedAnimLayer;
+	}
 	if (IsInTwoHandedGrip() && GetCategoryDefaults().TwoHanded.AnimLayer)
 	{
 		return GetCategoryDefaults().TwoHanded.AnimLayer;

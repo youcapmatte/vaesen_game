@@ -160,9 +160,9 @@ public:
 	/** Its category's defaults (DA_WeaponCategoryDefaults, or the built-in ones). */
 	const FVaesenCategoryDefaults& GetCategoryDefaults() const;
 
-	/** The anim layer while drawn: its own, else the category's; in both hands, the category's two-handed one if set. */
+	/** The anim layer while drawn: its own, else the category's; in both hands, the category's two-handed one if set; locked onto a target, the category's locked one if set. */
 	UFUNCTION(BlueprintPure, Category = "Weapon")
-	TSubclassOf<UAnimInstance> GetAnimLayer() const;
+	TSubclassOf<UAnimInstance> GetAnimLayer(bool bTargetLocked = false) const;
 
 	/** One of its montages: its own override, else the category's (two-handed first, in both hands; may be null). */
 	UAnimMontage* GetMontage(TObjectPtr<UAnimMontage> FVaesenWeaponMontages::* Which) const;

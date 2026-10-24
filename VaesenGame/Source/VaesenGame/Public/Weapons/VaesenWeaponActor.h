@@ -105,6 +105,14 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon|Melee", meta = (ClampMin = "1", ClampMax = "16"))
 	int32 MaxSubSteps = 8;
 
+	/**
+	 * How far ahead the blade is looked for contact (s): it carries on along its current motion this long, and what it
+	 * is about to strike counts now. The hit (and its sound, which takes a moment to reach the speakers) then lands as
+	 * the blade meets the target on screen, not a frame or two after.
+	 */
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon|Melee", meta = (ClampMin = "0", ClampMax = "0.2", Units = "s"))
+	float ContactLead = 0.06f;
+
 	/** Impact sound and effect where a hit landed on something without an ability system (a wall), on every machine. */
 	UFUNCTION(NetMulticast, Unreliable)
 	void MulticastImpact(const FHitResult& Hit, FGameplayTag DamageType, bool bBullet);
@@ -154,6 +162,7 @@ private:
 	FVaesenMeleeAttack ActiveAttack;
 	FVector LastStrikeStart = FVector::ZeroVector;
 	FVector LastStrikeEnd = FVector::ZeroVector;
+	double LastSweepTime = 0.0;
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<AActor>> StruckThisSwing;

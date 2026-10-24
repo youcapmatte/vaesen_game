@@ -114,6 +114,7 @@ Dummy protections: `BP_TrainingDummy` has none. `BP_TrainingDummy_Armored` has S
 | Crouch (toggle) | C | B / Circle |
 | Sword, axe, club or warhammer in both hands or one (off hand free) | V | D-pad down |
 | Dodge (with a sword drawn: the way you move, back when standing still) | Left Alt | Right stick click |
+| Lock onto the fighter ahead / let go (melee weapons and bare hands) | Middle mouse | D-pad up |
 
 ### 0.5 Debug tools
 
@@ -175,7 +176,7 @@ In a running game (PIE with a dedicated server is fine), open the console and ty
 
 It first checks that the interaction trace finds every pickup in the map and picks up a rifle through its interaction. It then runs the test Blueprints: revolver (draw, reload, fire, armored target), Krag (left hand on LeftGrip from the hip and aimed, shouldered, the bolt worked by hand at the shoulder, the case out as the bolt comes back), punch, sword (stamina, block, parry, wear), stone throw, and bow.
 
-Every check prints PASS or FAIL on screen and in the log, and everything it spawned is removed at the end. In `L_CombatTest` it reported **62 passed, 0 failed** (with the sword animations: the swing hits by root motion, the combo, the stab and the dodge).
+Every check prints PASS or FAIL on screen and in the log, and everything it spawned is removed at the end. In `L_CombatTest` it reported **66 passed, 0 failed** (with the sword animations: the swing hits by root motion, the combo, the stab and the dodge).
 
 It checks what the C++ tests can't: the generated assets, the Blueprints and the map's collision together. Both clients should see the fighter do everything. The sword swing is reported as INFO until an attack montage exists, because without one the blade stays where the hand hangs.
 
@@ -219,6 +220,16 @@ UnrealEditor.exe VaesenGame.uproject /Game/Vaesen/Maps/L_CombatTest -game -windo
 ```
 
 It photographs the fighter side-on (idle, two slashes, a stab, the guard, a dodge) into `Saved/Screenshots/SelfTest`, with the pack's swordsman behind him in the same pose. It also logs both blades' directions: they match.
+
+### 0.7d Target lock (melee)
+
+**Middle mouse** (D-pad up) locks onto the best fighter ahead: within 15 m, nearest the middle of the view, in sight; press again to let go. Only with a melee weapon or bare hands: drawing a gun or bow lets go, and so do the target dying or getting more than 20 m away. Locked:
+
+- The camera turns to the target (a little above it) and the character faces it and strafes. With the sword that is the pack's fighting stance (right foot forward); relaxed (not locked, not guarding) it's the plain mannequin stance.
+- Dodges go relative to the target (forward, back, left, right); swings face it.
+- A diamond marks the target on the HUD.
+
+A category can have its own **Locked Anim Layer** (`DA_WeaponCategoryDefaults` → category): a separate animation set while locked. Empty = its normal layer, which sees `bTargetLocked` (and `bRelaxed` false) and can square up itself, as the sword's does. Range, angle and break distance are on the character (Combat → Target Lock).
 
 ### 0.8 How weapons are held (sockets), and the Weapon Fit rig
 

@@ -862,8 +862,11 @@ void UVaesenEquipmentComponent::ApplyDrawnLook()
 		return;
 	}
 	const UVaesenWeaponItem* Weapon = GetDrawnWeapon();
-	const TSubclassOf<UAnimInstance> Layer = Weapon ? Weapon->GetAnimLayer()
-		: UVaesenWeaponCategoryDefaults::Get()->GetCategory(EVaesenWeaponCategory::Unarmed).AnimLayer;
+	// Locked onto a target: the fighting set, where the category has one of its own.
+	const bool bLocked = Character->IsTargetLocked();
+	const FVaesenCategoryDefaults& UnarmedDefaults = UVaesenWeaponCategoryDefaults::Get()->GetCategory(EVaesenWeaponCategory::Unarmed);
+	const TSubclassOf<UAnimInstance> Layer = Weapon ? Weapon->GetAnimLayer(bLocked)
+		: (bLocked && UnarmedDefaults.LockedAnimLayer ? UnarmedDefaults.LockedAnimLayer : UnarmedDefaults.AnimLayer);
 	if (Layer == LinkedAnimLayer)
 	{
 		return;

@@ -1,4 +1,5 @@
 #include "Weapons/VaesenWeaponActor.h"
+#include "AbilitySystemGlobals.h"
 #include "Anim/VaesenAnimInstance.h"
 #include "Animation/AnimInstance.h"
 
@@ -323,6 +324,7 @@ void AVaesenWeaponActor::BeginHitWindow(const FVaesenMeleeAttack& Attack)
 	StruckThisSwing.Reset();
 	bHitWindowOpen = true;
 	GetStrikeLine(LastStrikeStart, LastStrikeEnd);
+	LastSweepTime = GetWorld()->GetTimeSeconds();
 	SetActorTickEnabled(true);
 	SweepHitWindow();
 }
@@ -448,8 +450,36 @@ void AVaesenWeaponActor::SweepHitWindow()
 		}
 	}
 
+	// Looking ahead: the blade carried on along its motion for ContactLead; what it's about to strike counts now.
+	const double Now = GetWorld()->GetTimeSeconds();
+	const float Since = static_cast<float>(Now - LastSweepTime);
+	if (ContactLead > 0.0f && Since > KINDA_SMALL_NUMBER && Moved > 0.0f)
+	{
+		const float Ahead = ContactLead / Since;
+		const FVector AheadStart = Start + (Start - LastStrikeStart) * Ahead;
+		const FVector AheadEnd = End + (End - LastStrikeEnd) * Ahead;
+		const int32 AheadSteps = FMath::Clamp(FMath::CeilToInt(Moved * Ahead / FMath::Max(StrikeRadius * 1.5f, 1.0f)), 1, MaxSubSteps);
+		for (int32 Step = 1; Step <= AheadSteps; ++Step)
+		{
+			const float Alpha = static_cast<float>(Step) / AheadSteps;
+			TArray<FHitResult> Hits;
+			GetWorld()->SweepMultiByChannel(Hits, FMath::Lerp(Start, AheadStart, Alpha), FMath::Lerp(End, AheadEnd, Alpha), FQuat::Identity, ECC_Pawn,
+				FCollisionShape::MakeSphere(StrikeRadius), Params);
+			for (const FHitResult& Hit : Hits)
+			{
+				// Only fighters: the blade slows before the ground or a wall it's heading for, so those count when it
+				// gets there.
+				if (UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Hit.GetActor()))
+				{
+					StrikeTarget(Hit);
+				}
+			}
+		}
+	}
+
 	LastStrikeStart = Start;
 	LastStrikeEnd = End;
+	LastSweepTime = Now;
 }
 
 void AVaesenWeaponActor::StrikeTarget(const FHitResult& Hit)
@@ -460,6 +490,12 @@ void AVaesenWeaponActor::StrikeTarget(const FHitResult& Hit)
 		return;
 	}
 	StruckThisSwing.Add(Target);
+	if (const ACharacter* Swinger = Cast<ACharacter>(GetOwner()); Swinger && Swinger->GetMesh()->GetAnimInstance())
+	{
+		const UAnimInstance* Anim = Swinger->GetMesh()->GetAnimInstance();
+		const UAnimMontage* Swing = Anim->GetCurrentActiveMontage();
+		UE_LOG(LogVaesenCombat, Verbose, TEXT("Struck %s at %.3f s (swing %s at %.2f s)"), *Target->GetName(), GetWorld()->GetTimeSeconds(), *GetNameSafe(Swing), Swing ? Anim->Montage_GetPosition(Swing) : -1.0f);
+	}
 
 	if (!UVaesenCombatLibrary::ApplyDamagePacket(GetOwner(), Target, ActiveAttack.Damage, Hit, WeaponItem, ActiveAttack.bCanBeBlocked, false, ActiveAttack.Knockback))
 	{

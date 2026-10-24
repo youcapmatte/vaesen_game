@@ -64,6 +64,7 @@ void UVaesenCombatHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDel
 	WarningText = FText::GetEmpty();
 	NoticeText = FText::GetEmpty();
 	ThrowArc.Reset();
+	bShowLockMarker = false;
 
 	const AVaesenPlayerCharacter* Player = Cast<AVaesenPlayerCharacter>(GetOwningPlayerPawn());
 	APlayerController* Controller = GetOwningPlayer();
@@ -71,6 +72,12 @@ void UVaesenCombatHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDel
 	if (!Player || !Controller || !ASC)
 	{
 		return;
+	}
+
+	// The lock's marker, on the target's chest.
+	if (const AActor* Locked = Player->GetLockTarget())
+	{
+		bShowLockMarker = UWidgetLayoutLibrary::ProjectWorldLocationToWidgetPosition(Controller, AVaesenBaseCharacter::GetLockPoint(Locked), LockMarker, false);
 	}
 
 	const UVaesenWeaponItem* Weapon = Player->GetEquipment()->GetDrawnWeapon();
@@ -194,6 +201,16 @@ int32 UVaesenCombatHUDWidget::NativePaint(const FPaintArgs& Args, const FGeometr
 		{
 			Line(Centre + Corner * Inner, Centre + Corner * Outer, Color, 2.0f);
 		}
+	}
+
+	if (bShowLockMarker)
+	{
+		// A small diamond, outlined like the crosshair.
+		const float Radius = 9.0f;
+		const TArray<FVector2D> Diamond = { LockMarker + FVector2D(0, -Radius), LockMarker + FVector2D(Radius, 0), LockMarker + FVector2D(0, Radius),
+			LockMarker + FVector2D(-Radius, 0), LockMarker + FVector2D(0, -Radius) };
+		FSlateDrawElement::MakeLines(OutDrawElements, LayerId + 1, Geometry, Diamond, ESlateDrawEffect::None, FLinearColor(0.0f, 0.0f, 0.0f, 0.6f), true, 4.0f);
+		FSlateDrawElement::MakeLines(OutDrawElements, LayerId + 2, Geometry, Diamond, ESlateDrawEffect::None, CrosshairColor, true, 2.0f);
 	}
 
 	if (ThrowArc.Num() > 1)

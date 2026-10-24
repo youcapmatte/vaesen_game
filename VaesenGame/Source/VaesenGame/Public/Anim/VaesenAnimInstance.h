@@ -188,6 +188,10 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Locomotion")
 	bool bRelaxed = false;
 
+	/** Locked onto a target (melee): the weapon's locked stance. Locked also means strafing, so not relaxed. */
+	UPROPERTY(BlueprintReadOnly, Category = "Locomotion")
+	bool bTargetLocked = false;
+
 	/** The drawn category's locomotion database for motion matching (null = the default locomotion). */
 	UPROPERTY(BlueprintReadOnly, Category = "Locomotion")
 	TObjectPtr<UObject> LocomotionDatabase;

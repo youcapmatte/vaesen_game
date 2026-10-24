@@ -853,6 +853,24 @@ void UVaesenCombatSelfTest::BuildSteps()
 		return 0.5f;
 	} });
 
+	// --- Target lock: onto the dummy ahead, squared up in the sword's fighting stance, and let go ---
+	Steps.Add({ TEXT("Target lock"), [this]()
+	{
+		ResetAll();
+		Fighter->ToggleTargetLock();
+		Check(Fighter->GetLockTarget() != nullptr, FString::Printf(TEXT("locks onto the fighter ahead (%s)"), *GetNameSafe(Fighter->GetLockTarget())));
+		Check(Fighter->WantsToFaceAim(), TEXT("locked: faces the target (strafes)"));
+		return 0.5f;
+	} });
+	Steps.Add({ FString(), [this]()
+	{
+		const UVaesenAnimInstance* Anim = Cast<UVaesenAnimInstance>(Fighter->GetMesh()->GetAnimInstance());
+		Check(Anim && !Anim->IsRelaxed(), TEXT("locked: the sword's fighting stance"));
+		Fighter->ToggleTargetLock();
+		Check(!Fighter->IsTargetLocked() && !Fighter->WantsToFaceAim(), TEXT("pressed again: lets go"));
+		return 0.3f;
+	} });
+
 	Steps.Add({ TEXT("Block and parry"), [this, ASC, Tap, AimOrBlock]()
 	{
 		ResetAll();

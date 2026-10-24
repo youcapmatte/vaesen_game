@@ -144,6 +144,10 @@ void AVaesenPlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerIn
 	{
 		EnhancedInput->BindAction(SwitchGripAction, ETriggerEvent::Started, this, &AVaesenPlayerCharacter::ToggleGrip);
 	}
+	if (LockOnAction)
+	{
+		EnhancedInput->BindAction(LockOnAction, ETriggerEvent::Started, this, &AVaesenBaseCharacter::ToggleTargetLock);
+	}
 	if (TriggerAttackAction)
 	{
 		EnhancedInput->BindAction(TriggerAttackAction, ETriggerEvent::Started, this, &AVaesenPlayerCharacter::PressTriggerAttack);

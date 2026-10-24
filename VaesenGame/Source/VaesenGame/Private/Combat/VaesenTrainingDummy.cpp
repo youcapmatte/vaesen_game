@@ -192,6 +192,7 @@ void AVaesenTrainingDummy::HandleGameplayCue(AActor* Self, FGameplayTag Gameplay
 		Hit.ImpactNormal = Parameters.Normal;
 		Hit.PhysMaterial = SurfaceMaterial;
 		const FGameplayTag DamageType = Parameters.AggregatedSourceTags.Num() > 0 ? Parameters.AggregatedSourceTags.First() : FGameplayTag();
+		UE_LOG(LogVaesenCombat, Verbose, TEXT("%s hit cue at %.3f s"), *GetName(), GetWorld()->GetTimeSeconds());
 		UVaesenCombatLibrary::PlayImpactEffects(this, DamageType, Hit, Parameters.AggregatedTargetTags.HasTagExact(VaesenTags::Data_Projectile)
 			? EVaesenImpactDelivery::Shot : EVaesenImpactDelivery::ByHand);
 	}

@@ -87,6 +87,7 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		// Not squared up to fight (not strafing: no block or aim, later no target lock): weapon stances use the plain
 		// locomotion then, standing, running and jumping. The fighting stance is for squaring up.
 		bRelaxed = !bStrafing;
+		bTargetLocked = Character->IsTargetLocked();
 
 		const UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Character);
 		const auto HasTag = [ASC](const FGameplayTag& Tag) { return ASC && ASC->HasMatchingGameplayTag(Tag); };
@@ -114,6 +115,7 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		Direction = Rig->Direction;
 		bStrafing = true;
 		bRelaxed = false;
+		bTargetLocked = false;
 		bCrouching = Rig->IsCrouchPose();
 		bAiming = bShouldering = Rig->IsAimPose();
 		bFalling = bBlocking = bReloading = bStaggered = false;
