@@ -60,6 +60,13 @@ public sealed class CasePacket
     [JsonProperty("offstagePeople")]
     public List<OffstagePerson> OffstagePeople { get; set; } = [];
 
+    /// <summary>
+    /// The level's public facts this case explains or changes (fixes 4, section 12.2): once played, the explanation joins
+    /// the Society's overlay, and later cases there must keep to it.
+    /// </summary>
+    [JsonProperty("publicFactsExplained")]
+    public List<PublicFactExplanation> PublicFactsExplained { get; set; } = [];
+
     [JsonProperty("beats")]
     public List<CaseBeat> Beats { get; set; } = [];
 
@@ -112,6 +119,17 @@ public sealed class CaseBrief
 
     [JsonProperty("month")]
     public int Month { get; set; }
+
+    /// <summary>The in-world year (fixes 4, section 11); 0 in cases from before the calendar.</summary>
+    [JsonProperty("year")]
+    public int Year { get; set; }
+
+    /// <summary>A deliberate return to a level the Society has been to, with its earlier mysteries there.</summary>
+    [JsonProperty("returnVisit")]
+    public bool ReturnVisit { get; set; }
+
+    [JsonProperty("previousMysteryIds")]
+    public List<string> PreviousMysteryIds { get; set; } = [];
 
     [JsonProperty("conflictArchetypeId")]
     public string ConflictArchetypeId { get; set; } = "";
@@ -463,6 +481,10 @@ public sealed class CastMember
     [JsonProperty("homeAffordanceId")]
     public string? HomeAffordanceId { get; set; }
 
+    /// <summary>The place of the level they keep or own as its head, if any; checked against the Society's roster.</summary>
+    [JsonProperty("keeps")]
+    public string? Keeps { get; set; }
+
     [JsonProperty("knows")]
     public List<CastKnowledge> Knows { get; set; } = [];
 
@@ -513,6 +535,23 @@ public static class CastImportance
 }
 
 /// <summary>A named person in the story who is not in the cast: a wife far away, the drowned man, a son in America.</summary>
+/// <summary>A level's public fact ("three men drowned in the 1871 flood") and what this case says lay behind it.</summary>
+public sealed class PublicFactExplanation
+{
+    /// <summary>pf1, pf2... in the order of the level's public facts.</summary>
+    [IdsOf(IdKinds.PublicFact)]
+    [JsonProperty("publicFactId")]
+    public string PublicFactId { get; set; } = "";
+
+    /// <summary>The fact's text, copied from the level by the engine.</summary>
+    [JsonProperty("fact")]
+    public string Fact { get; set; } = "";
+
+    /// <summary>What really lay behind it, or how it changed, in one or two sentences.</summary>
+    [JsonProperty("explanation")]
+    public string Explanation { get; set; } = "";
+}
+
 public sealed class OffstagePerson
 {
     /// <summary>A short id for knowledge sources: told:offstage:&lt;id&gt;.</summary>

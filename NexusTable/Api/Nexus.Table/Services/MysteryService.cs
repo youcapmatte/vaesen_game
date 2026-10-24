@@ -643,11 +643,7 @@ public sealed class MysteryService(
             SocietyId = current.Result.Id,
             SocietyName = current.Result.Name,
             Investigators = (roster.Result ?? []).Select(c => $"{c.Name} ({c.Archetype}, {c.Age})").ToList(),
-            Mysteries = (past.Result ?? [])
-                .Where(s => s.Passed && s.Status != CaseStatuses.Rejected)
-                .OrderBy(s => s.GeneratedAt)
-                .Select(s => new PastMystery { MysteryId = s.MysteryId, LevelId = s.LevelId, VaesenIds = s.VaesenIds, HookChannelId = s.HookChannelId, HookGiverType = s.HookGiverType })
-                .ToList(),
+            Mysteries = CaseSummary.History(past.Result ?? []),
         });
     }
 

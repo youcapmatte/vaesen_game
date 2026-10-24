@@ -9,7 +9,7 @@ import {
   FocusNames,
   ReasonNames,
   levelName,
-  MonthNames,
+  InWorldDate,
   MysteryApi,
   type CaseChannel,
   type CaseFact,
@@ -70,7 +70,7 @@ function SpoilerGate({ packet, playable, onReveal }: { packet: CasePacket; playa
       <Stack align="center" gap="sm">
         <IconAlertTriangle size={30} color="var(--nx-blood)" />
         <Title order={2}>{packet.title || "Untitled"}</Title>
-        <Text fz="sm" c="var(--nx-ink-soft)">{levelName(packet.brief.levelId)} · {MonthNames[packet.brief.month - 1]}</Text>
+        <Text fz="sm" c="var(--nx-ink-soft)">{levelName(packet.brief.levelId)} · {InWorldDate(packet.brief.month, packet.brief.year)}</Text>
         <Text className="nx-flourish" maw={480}>
           This is the hidden case file: the creature, the truth, who lies and where every clue lies. If you mean to play
           this mystery yourself, close it now.
@@ -100,7 +100,7 @@ function CaseFile({ stored, onChanged }: { stored: StoredCase; onChanged: (next:
   return (
     <Stack gap="lg">
       <Stack gap={4} align="center" ta="center">
-        <Text className="nx-kicker">Case file · {levelName(p.brief.levelId)} · {MonthNames[p.brief.month - 1]}</Text>
+        <Text className="nx-kicker">Case file · {levelName(p.brief.levelId)} · {InWorldDate(p.brief.month, p.brief.year)}{p.brief.returnVisit ? " · a return visit" : ""}</Text>
         <Title order={1}>{p.title || "Untitled"}</Title>
         <Group gap={6} justify="center" mt={4}>
           {p.brief.vaesenIds.map((v) => <Badge key={v} color="blood">{v}</Badge>)}
@@ -179,6 +179,11 @@ function TruthTab({ p }: { p: CasePacket }) {
         {p.truth.decoyReading && <Field label="What folk will think">{p.truth.decoyReading}</Field>}
         {p.truth.origin && <Field label="Origin">{p.truth.origin}</Field>}
         <Field label="Conflict">{p.brief.conflictArchetypeId}</Field>
+        {(p.publicFactsExplained ?? []).map((e) => (
+          <Field key={e.publicFactId} label={`Explains a public fact · ${e.publicFactId}`}>
+            {e.fact} {e.explanation}
+          </Field>
+        ))}
       </SimpleGrid>
     </Sheet>
   );

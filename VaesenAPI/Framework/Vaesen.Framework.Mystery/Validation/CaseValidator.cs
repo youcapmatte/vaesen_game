@@ -22,6 +22,15 @@ public sealed class ValidationContext
 
     /// <summary>The Society's persistent characters (id, name), whose first names a new significant person must not echo.</summary>
     public List<(string Id, string Name)> WorldNames { get; init; } = [];
+
+    /// <summary>
+    /// From the Society's roster of the level (fixes 4, section 12.1): who holds each place (its keeper, owner, vicar or
+    /// wise woman), by place id. A case may not give the place someone else.
+    /// </summary>
+    public Dictionary<string, (string Id, string Name)> Holders { get; init; } = [];
+
+    /// <summary>The level's public facts the Society's other cases there already explain (fixes 4, section 12.2).</summary>
+    public List<Generation.SettledPublicFact> SettledPublicFacts { get; init; } = [];
 }
 
 /// <summary>
@@ -157,8 +166,60 @@ public sealed class CaseValidator : ICoherenceValidator
 
         // ---- Conflict step ------------------------------------------------------------------------------------
 
+        /// <summary>Explained public facts are the level's, and not ones another case already explains (fixes 4, 12.2).</summary>
+        private void CheckPublicFacts()
+        {
+            var ids = context.Level.PublicFactsWithIds.Select(f => f.Id).ToHashSet(StringComparer.Ordinal);
+            foreach (var e in packet.PublicFactsExplained)
+            {
+                if (!ids.Contains(e.PublicFactId))
+                {
+                    Error(IssueCodes.UnknownReference, "publicFactsExplained", $"'{e.PublicFactId}' is not one of the level's public facts.",
+                        $"Use the id of a public fact (pf1 to pf{ids.Count}), or leave it out.");
+                }
+                else if (context.SettledPublicFacts.Find(s => s.PublicFactId == e.PublicFactId) is { } settled)
+                {
+                    Warn(IssueCodes.Consistency, "publicFactsExplained",
+                        $"{e.PublicFactId} is already explained for this Society by {settled.MysteryId}{(settled.Played ? "" : " (queued)")}: {settled.Explanation}",
+                        "Keep to that explanation in the truth, and drop it from publicFactsExplained.");
+                }
+            }
+        }
+
+        /// <summary>
+        /// A place the Society's roster gives a keeper or owner keeps them (fixes 4, section 12.1): a case may promote,
+        /// kill or move them as its own events, but not replace them with a new person.
+        /// </summary>
+        private void CheckHolders()
+        {
+            foreach (var member in packet.Cast.Where(c => c.Keeps is not null))
+            {
+                if (context.Level.FindPlace(member.Keeps) is not { } place)
+                {
+                    Error(IssueCodes.UnknownReference, $"cast:{member.CharacterId}", $"{member.Name} keeps '{member.Keeps}', which is no place of the level.");
+                }
+                else if (context.Holders.TryGetValue(place.Id, out var holder) && holder.Id != member.CharacterId)
+                {
+                    Error(IssueCodes.CastCoherence, $"cast:{member.CharacterId}",
+                        $"{member.Name} is given as the holder of {place.Name}, but in this Society's world {holder.Name} ({holder.Id}) holds it.",
+                        $"Cast {holder.Name} (instanceRef persistent, id {holder.Id}) in that part, or make {member.Name} someone who does not hold {place.Name}.");
+                }
+            }
+
+            foreach (var member in packet.Cast.Where(c => c.InstanceRef is InstanceRefs.Persistent or InstanceRefs.Promoted))
+            {
+                var known = context.WorldNames.Find(w => w.Id == member.CharacterId);
+                if (known.Name is { Length: > 0 } name && !string.Equals(name, member.Name, StringComparison.Ordinal))
+                {
+                    Error(IssueCodes.CastCoherence, $"cast:{member.CharacterId}", $"{member.CharacterId} is {name} in the Society's world, not {member.Name}.",
+                        $"Use the name {name}; a persistent character keeps their name.");
+                }
+            }
+        }
+
         public void CheckConflict()
         {
+            CheckPublicFacts();
             var truth = packet.Truth;
             var conflict = context.Conflict;
             if (conflict is null)
@@ -275,6 +336,7 @@ public sealed class CaseValidator : ICoherenceValidator
 
         public void CheckCast()
         {
+            CheckHolders();
             if (packet.Cast.Count < 3)
             {
                 Error(IssueCodes.CastCoherence, "cast", "A case needs at least three cast members.");

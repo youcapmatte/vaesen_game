@@ -9,8 +9,13 @@ namespace Vaesen.Framework.Mystery.Generation;
 /// </summary>
 public static class Assignment
 {
-    /// <summary>Picks a level, a creature, a fitting conflict, the case's shape and the hook for a new mystery.</summary>
-    public static AssignmentBrief Assign(ContentPack pack, SocietyHistory history, int month, int seed, MysteryOptions options)
+    /// <summary>
+    /// Picks the in-world date, a level, a creature, a fitting conflict, the case's shape and the hook for a new mystery.
+    /// The date comes after the Society's last case (fixes 4, section 11); <paramref name="month"/> pins its month,
+    /// otherwise the calendar moves on to the first month with a level and creature that fit. A level the Society used
+    /// recently, queued cases included, is on cooldown unless <paramref name="returnLevelId"/> asks to go back to it.
+    /// </summary>
+    public static AssignmentBrief Assign(ContentPack pack, SocietyHistory history, int? month, int seed, MysteryOptions options, string? returnLevelId = null)
     {
         if (month is < 1 or > 12)
         {
@@ -18,29 +23,70 @@ public static class Assignment
         }
 
         var random = new Random(seed);
-        var brief = new AssignmentBrief { SocietyId = history.SocietyId, Month = month, Seed = seed, RedHerringDensity = options.RedHerringDensity };
+        var brief = new AssignmentBrief { SocietyId = history.SocietyId, Seed = seed, RedHerringDensity = options.RedHerringDensity };
+        var dates = Dates(pack.Setting, history, month, options);
 
-        var monthLevels = pack.Levels.Where(l => l.Month == month).ToList();
-        var candidates = VaesenCandidates(pack, history, month, options, random, brief.Notes);
-        var choice = Choose(pack, candidates, monthLevels, random);
-        if (choice is null)
+        List<LevelDefinition> levels;
+        if (returnLevelId is not null)
         {
-            // Re-roll the level only when no eligible creature fits any level of the month.
-            brief.Notes.Add($"No level for month {month} fits any eligible creature; levels of other months were allowed.");
-            choice = Choose(pack, candidates, pack.Levels, random);
+            var back = pack.FindLevel(returnLevelId)
+                ?? throw new InvalidOperationException($"There is no level '{returnLevelId}' to return to.");
+            levels = [back];
+            brief.ReturnVisit = true;
+            brief.PreviousMysteryIds = history.Mysteries.Where(m => m.LevelId == back.Id).Select(m => m.MysteryId).ToList();
+        }
+        else
+        {
+            levels = pack.Levels;
+        }
+
+        (VaesenDefinition, LevelDefinition, List<ConflictArchetype>)? choice = null;
+        var date = dates[0];
+        foreach (var candidate in dates)
+        {
+            var notes = new List<string>();
+            var vaesen = VaesenCandidates(pack, history, candidate.Month, options, random, notes);
+            var open = levels.Where(l => l.Months.Contains(candidate.Month) && (brief.ReturnVisit || LevelCooldown(l.Id, history, candidate, pack.Setting, options) is null)).ToList();
+            choice = Choose(pack, vaesen, open, random);
+            if (choice is not null)
+            {
+                date = candidate;
+                brief.Notes.AddRange(notes);
+                break;
+            }
         }
 
         if (choice is null)
         {
-            throw new InvalidOperationException(
-                "No creature, level and conflict fit together. Add levels or conflicts that offer what the creatures require.");
+            // Relax what is relaxed least harmfully first: the level's cooldown, then the month the level is written for.
+            var candidates = VaesenCandidates(pack, history, date.Month, options, random, brief.Notes);
+            var monthLevels = levels.Where(l => l.Months.Contains(date.Month)).ToList();
+            choice = Choose(pack, candidates, monthLevels, random);
+            if (choice is not null)
+            {
+                brief.Notes.Add($"Every level for {date} that fits is on cooldown; the cooldown was ignored.");
+            }
+            else
+            {
+                brief.Notes.Add($"No level for {date} fits any eligible creature; levels of other months were allowed.");
+                choice = Choose(pack, candidates, levels, random);
+            }
         }
 
-        var (vaesen, level, conflicts) = choice.Value;
+        if (choice is null)
+        {
+            throw new InvalidOperationException(brief.ReturnVisit
+                ? $"No eligible creature and conflict fit a return to {levels[0].Name}."
+                : "No creature, level and conflict fit together. Add levels or conflicts that offer what the creatures require.");
+        }
+
+        var (chosenVaesen, level, conflicts) = choice.Value;
+        brief.Year = date.Year;
+        brief.Month = date.Month;
         brief.LevelId = level.Id;
-        brief.VaesenId = vaesen.Id;
+        brief.VaesenId = chosenVaesen.Id;
 
-        ChoosePlotCentre(vaesen, conflicts, random, brief);
+        ChoosePlotCentre(chosenVaesen, conflicts, random, brief);
         brief.ConflictArchetypeIds = conflicts
             .Where(c => c.ReasonKinds.Contains(brief.ReasonKind))
             .Select(c => c.Id)
@@ -49,6 +95,46 @@ public static class Assignment
         ChooseHook(pack.Setting, history, random, brief);
         brief.PersistentCastIds = pack.Characters.Select(c => c.Id).ToList();
         return brief;
+    }
+
+    /// <summary>When a past case is set: its own date, or for cases from before the calendar the setting's start year.</summary>
+    public static InWorldDate DateOf(PastMystery m, Setting setting) => new(m.Year > 0 ? m.Year : setting.StartYear, m.Month is >= 1 and <= 12 ? m.Month : 1);
+
+    /// <summary>
+    /// The dates a new case may be set on, earliest first: the month after the Society's latest case (or the setting's
+    /// start), then onwards; with a month pinned, only the first date in that month.
+    /// </summary>
+    public static List<InWorldDate> Dates(Setting setting, SocietyHistory history, int? month, MysteryOptions options)
+    {
+        var latest = history.Mysteries.Count == 0 ? (InWorldDate?)null : history.Mysteries.Select(m => DateOf(m, setting)).Max();
+        var earliest = latest?.AddMonths(Math.Max(1, options.MonthsBetweenCases))
+            ?? new InWorldDate(setting.StartYear > 0 ? setting.StartYear : 1870, month ?? options.DefaultMonth);
+        if (month is not null)
+        {
+            var date = new InWorldDate(earliest.Year, month.Value);
+            return [date < earliest ? date.AddMonths(12) : date];
+        }
+
+        return Enumerable.Range(0, Math.Max(1, options.MonthsToSearch)).Select(earliest.AddMonths).ToList();
+    }
+
+    /// <summary>
+    /// Why a level is on cooldown for a case on <paramref name="date"/>, or null: after a Society's case on a level,
+    /// queued or played, it needs that many other finished mysteries and that many in-world months before the next.
+    /// </summary>
+    public static string? LevelCooldown(string levelId, SocietyHistory history, InWorldDate date, Setting setting, MysteryOptions options)
+    {
+        var last = history.Mysteries.FindLastIndex(m => m.LevelId == levelId);
+        if (last < 0)
+        {
+            return null;
+        }
+
+        var finished = history.Mysteries.Skip(last + 1).Count(m => m.Finished);
+        var months = date.Index - DateOf(history.Mysteries[last], setting).Index;
+        return finished >= options.LevelCooldownMysteries && months >= options.LevelCooldownMonths
+            ? null
+            : $"used by {history.Mysteries[last].MysteryId}; {finished} mysteries finished and {months} months passed since";
     }
 
     /// <summary>Creatures allowed this month, the never-faced first, the most recently faced last and on cooldown dropped.</summary>

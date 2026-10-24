@@ -46,6 +46,8 @@ export interface CaseSummary {
   generatedAt: string;
   levelId: string;
   month: number;
+  /** The in-world year; 0 for cases from before the calendar. */
+  year?: number;
   passed: boolean;
   vaesenIds: string[];
   hookChannelId: string;
@@ -126,7 +128,19 @@ export interface CasePacket {
   title: string;
   generatedAt: string;
   models: { creative: string; critic: string };
-  brief: { levelId: string; vaesenIds: string[]; month: number; conflictArchetypeId: string; hookChannelId: string; hookGiverType: string; seed: number };
+  brief: {
+    levelId: string;
+    vaesenIds: string[];
+    month: number;
+    year?: number;
+    /** A deliberate return to a level the Society has been to, with its earlier mysteries there. */
+    returnVisit?: boolean;
+    previousMysteryIds?: string[];
+    conflictArchetypeId: string;
+    hookChannelId: string;
+    hookGiverType: string;
+    seed: number;
+  };
   truth: {
     summary: string;
     reasonKind: string;
@@ -164,6 +178,8 @@ export interface CasePacket {
   creatureMinds?: { vaesenId: string; wants: string[]; terms: string[]; termDeedIds: string[]; redLines: string[]; voice: string; blames?: { characterId: string; why: string }[] }[];
   /** Named people in the story who never appear. */
   offstagePeople?: { id: string; name: string; relation: string; note: string }[];
+  /** The level's public facts this case explains; they join the Society's world when it is played. */
+  publicFactsExplained?: { publicFactId: string; fact: string; explanation: string }[];
   tension: { start: number };
   validation: { passed: boolean; issues: CoherenceIssue[]; runs: number };
 }
@@ -172,7 +188,7 @@ export interface GenerationLogEntry {
   caseAttempt: number;
   step: string;
   /** full: the whole step; fresh: a restart after it gave up; patch: only the items with problems; check: the whole-case checks. */
-  kind: "full" | "fresh" | "patch" | "fix" | "check" | "rename";
+  kind: "full" | "fresh" | "patch" | "fix" | "check" | "rename" | "roster";
   /** The call's cost in USD at list prices. */
   costUsd?: number;
   attempt: number;
@@ -300,6 +316,7 @@ export const MysteryApi = {
 export const GenerationSteps = [
   { id: "world", label: "Seeding the Society's world (first time only)" },
   { id: "assignment", label: "Choosing the place and the creature" },
+  { id: "roster", label: "The people of the place (first visit only)" },
   { id: "conflict", label: "The conflict" },
   { id: "escalation", label: "What has happened" },
   { id: "humans", label: "The people" },
@@ -314,6 +331,12 @@ export const GenerationSteps = [
 ] as const;
 
 export const MonthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+/** "October 1872", or the month alone for cases from before the in-world calendar. */
+export function InWorldDate(month: number, year?: number): string {
+  const name = MonthNames[month - 1] ?? `month ${month}`;
+  return year ? `${name} ${year}` : name;
+}
 
 export const FocusNames: Record<string, string> = {
   what: "What is it?",

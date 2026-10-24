@@ -284,8 +284,57 @@ public static class ContentValidator
 
                 CheckTags([affordance.Tag], pack.Vocabulary, $"{placeAt}:{affordance.Id}", issues);
             }
+
+            if (string.IsNullOrWhiteSpace(place.OwnerRole) && HeldTemplates.Contains(place.TemplateId))
+            {
+                issues.Add(CoherenceIssue.Warning(IssueCodes.Content, placeAt, $"{place.Name} has no ownerRole.",
+                    "Say who owns or keeps it (\"a bergsman family\", \"the innkeeper\"), so a Society's people of the place can fill it."));
+            }
+
+            if (WorkTemplates.Contains(place.TemplateId) && !place.AllAffordances().Any(a => a.Tag == Dwellings.WorkersCottages || a.Tag == "bunkhouse"))
+            {
+                issues.Add(CoherenceIssue.Warning(IssueCodes.Content, placeAt, $"{place.Name} has nowhere for its workers to live.", "Add a workers-cottages affordance."));
+            }
+        }
+
+        // Room for several cases (fixes 4, section 12.3): a farm-bound creature the second time needs another farm.
+        var holdings = level.Places.Count(p => p.TemplateId is "farm" or "croft" or "manor");
+        var needed = level.Size >= 3 ? 3 : level.Size >= 2 ? 2 : 1;
+        if (holdings < needed)
+        {
+            issues.Add(CoherenceIssue.Warning(IssueCodes.Content, at, $"{level.Name} (size {level.Size}) has {holdings} farm(s), croft(s) or manor(s); it should have at least {needed}.",
+                "Add farms or crofts, so cases on the level need not all use the same one."));
+        }
+
+        var months = new HashSet<int> { level.Month };
+        foreach (var variant in level.MonthVariants)
+        {
+            var variantAt = $"{at}:month-{variant.Month}";
+            if (variant.Month is < 1 or > 12 || !months.Add(variant.Month))
+            {
+                issues.Add(CoherenceIssue.Error(IssueCodes.Content, variantAt, $"A month variant's month must be 1-12 and not repeat the level's own or another variant's ({variant.Month})."));
+            }
+
+            if (string.IsNullOrWhiteSpace(variant.SeasonNotes))
+            {
+                issues.Add(CoherenceIssue.Error(IssueCodes.Content, variantAt, "A month variant needs its season notes."));
+            }
+
+            foreach (var placeId in variant.PlaceDescriptions.Keys.Where(id => level.FindPlace(id) is null))
+            {
+                issues.Add(CoherenceIssue.Error(IssueCodes.UnknownReference, variantAt, $"A description for '{placeId}', which is no place of the level."));
+            }
         }
     }
+
+    /// <summary>Templates whose places someone owns or keeps.</summary>
+    private static readonly HashSet<string> HeldTemplates = new(StringComparer.Ordinal)
+    {
+        "farm", "croft", "manor", "inn", "smithy", "mill", "sawmill", "railway-station", "herbalist-cottage", "parsonage", "logging-camp", "library", "mine",
+    };
+
+    /// <summary>Works whose workers live on site (fixes 3, section 6).</summary>
+    private static readonly HashSet<string> WorkTemplates = new(StringComparer.Ordinal) { "mine", "sawmill", "logging-camp" };
 
     private static void CheckConflict(ConflictArchetype c, AffordanceVocabulary vocab, List<CoherenceIssue> issues)
     {

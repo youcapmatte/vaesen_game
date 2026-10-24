@@ -80,7 +80,7 @@ public sealed class PipelineTests
         Assert.DoesNotContain("\"reveal\"", model.Instructions[model.Calls.IndexOf("hook")], StringComparison.Ordinal);
 
         // Order is fixed, and the critic's objection to the hook sent back only the hook sub-step.
-        Assert.Equal(["world", "conflict", "escalation", "humans", "residents", "facts", "minds", "arc", "creature", "hook", "critic", "hook", "critic"], model.Calls);
+        Assert.Equal(["world", "roster", "conflict", "escalation", "humans", "facts", "minds", "arc", "creature", "hook", "critic", "hook", "critic"], model.Calls);
         Assert.Contains(result.Result.Case.Log, e => e.Step == "critic" && !e.Passed);
         Assert.Contains(packet.Facts, f => f.Giveaway && f.Id == "f8");
         Assert.Contains(packet.Facts, f => f.DeepLore && f.Id == "f7");
@@ -109,7 +109,7 @@ public sealed class PipelineTests
         Assert.True(result.Success, result.ErrorMessage);
 
         // The whole-case check found the missing channel and sent back only minds and channels.
-        Assert.Equal(["world", "conflict", "escalation", "humans", "residents", "facts", "minds", "arc", "creature", "hook", "minds"], model.Calls);
+        Assert.Equal(["world", "roster", "conflict", "escalation", "humans", "facts", "minds", "arc", "creature", "hook", "minds"], model.Calls);
         Assert.Contains("redundancy", model.Instructions[^1], StringComparison.Ordinal);
         var failed = result.Result!.Case.Log.Single(e => e.Step == MysteryGenerator.CheckStepName && !e.Passed);
         Assert.Equal(LogEntryKinds.Check, failed.Kind);
@@ -157,7 +157,7 @@ public sealed class PipelineTests
         });
 
         Assert.True(result.Success, result.ErrorMessage);
-        Assert.Equal(["world", "conflict", "escalation", "humans", "residents", "facts", "facts", "minds", "arc", "creature", "hook"], model.Calls);
+        Assert.Equal(["world", "roster", "conflict", "escalation", "humans", "facts", "facts", "minds", "arc", "creature", "hook"], model.Calls);
         var patch = result.Result!.Case.Log.Single(e => e.Step == "facts" && e.Kind == LogEntryKinds.Patch);
         Assert.True(patch.Passed);
         Assert.Contains("# Patch", patch.Instruction, StringComparison.Ordinal);
@@ -179,9 +179,9 @@ public sealed class PipelineTests
         });
 
         // The same brief with another focus: the conflict ran again, nothing was re-rolled.
-        Assert.Equal(["world", "conflict", "conflict", "escalation", "humans", "residents", "facts", "minds", "arc", "creature", "hook"], model.Calls);
-        Assert.Contains("- Focus: what", model.Contexts[1], StringComparison.Ordinal);
-        Assert.Contains("- Focus: how", model.Contexts[2], StringComparison.Ordinal);
+        Assert.Equal(["world", "roster", "conflict", "conflict", "escalation", "humans", "facts", "minds", "arc", "creature", "hook"], model.Calls);
+        Assert.Contains("- Focus: what", model.Contexts[2], StringComparison.Ordinal);
+        Assert.Contains("- Focus: how", model.Contexts[3], StringComparison.Ordinal);
         Assert.Equal(CaseFocus.How, result.Result!.Case.Brief.Focus);
         Assert.Equal([0], result.Result.Case.Log.Select(e => e.CaseAttempt).Distinct());
     }
@@ -201,7 +201,7 @@ public sealed class PipelineTests
 
         // One rework of the clues, never back to the conflict although the critic names the truth; then the case passes.
         Assert.True(result.Success, result.ErrorMessage);
-        Assert.Equal(["world", "conflict", "escalation", "humans", "residents", "facts", "minds", "arc", "creature", "hook", "critic", "minds", "critic"], model.Calls);
+        Assert.Equal(["world", "roster", "conflict", "escalation", "humans", "facts", "minds", "arc", "creature", "hook", "critic", "minds", "critic"], model.Calls);
         var packet = result.Result!.Case.Packet;
         Assert.True(packet.Validation.Passed);
         var kept = Assert.Single(packet.Validation.Issues, i => i.Code == "critic." + CriticChecks.WorldConsistency);
@@ -226,7 +226,7 @@ public sealed class PipelineTests
 
         // The objection is split: the motive to the conflict, the channel to minds and channels, the warning on r1 to the
         // arc, in pipeline order. Nothing downstream is regenerated. The second review's warning goes to the arc, light.
-        Assert.Equal(["world", "conflict", "escalation", "humans", "residents", "facts", "minds", "arc", "creature", "hook", "critic", "conflict", "minds", "arc", "critic", "arc"], model.Calls);
+        Assert.Equal(["world", "roster", "conflict", "escalation", "humans", "facts", "minds", "arc", "creature", "hook", "critic", "conflict", "minds", "arc", "critic", "arc"], model.Calls);
         var log = result.Result!.Case.Log;
         var afterReview = log.SkipWhile(e => e.Step != "critic").Skip(1).Where(e => e.Kind != LogEntryKinds.Check).ToList();
         Assert.Equal([LogEntryKinds.Fix, LogEntryKinds.Patch, LogEntryKinds.Patch], afterReview.Take(3).Select(e => e.Kind));
@@ -286,7 +286,7 @@ public sealed class PipelineTests
             Instructions.Add(request.Instruction);
             Contexts.Add(request.Context);
             Assert.False(string.IsNullOrWhiteSpace(request.System));
-            if (request.Step != WorldSeeder.StepName)
+            if (request.Step is not (WorldSeeder.StepName or RosterBuilder.StepName))
             {
                 Assert.Contains("# The assignment", request.Context, StringComparison.Ordinal);
             }
@@ -294,6 +294,7 @@ public sealed class PipelineTests
             object value = request.Step switch
             {
                 WorldSeeder.StepName => TakeSeed(),
+                RosterBuilder.StepName => Roster(),
                 "conflict" => Conflict(),
                 "escalation" => new EscalationOutput
                 {
@@ -327,6 +328,30 @@ public sealed class PipelineTests
             {
                 Value = JsonConvert.DeserializeObject<T>(json)!, RawJson = json, Model = "scripted",
             }));
+        }
+
+        /// <summary>Forsby's people: a holder for every place, and the sample's two residents with threads to pull.</summary>
+        public static RosterOutput Roster()
+        {
+            RosterPerson Person(string id, string name, string place, string role, string occupation, string? hook = null) => new()
+            {
+                Id = id, Name = name, PlaceId = place, Role = role, Age = 45, Gender = "man", Occupation = occupation, Rank = "worker", Line = occupation + " here", LatentHook = hook,
+            };
+
+            return new RosterOutput
+            {
+                People =
+                [
+                    Person("npc-viktor-strom", "Viktor Strömberg", "mill", RosterRoles.Keeper, "miller"),
+                    Person("npc-fredrik-sund", "Fredrik Sund", "sawmill", RosterRoles.Keeper, "sawmill foreman"),
+                    Person("npc-ivar-storgard", "Ivar Storgård", "farm", RosterRoles.Owner, "farmer"),
+                    Person("npc-mattias-rosen", "Mattias Rosén", "church", RosterRoles.Clergy, "vicar"),
+                    Person("npc-mans-bergqvist", "Måns Bergqvist", "inn", RosterRoles.Keeper, "innkeeper"),
+                    Person("npc-erik-smed", "Erik the smith", "smithy", RosterRoles.Keeper, "smith", "owes the sawmill for charcoal"),
+                    Person("npc-ruben-granlund", "Ruben Granlund", "croft", RosterRoles.Owner, "crofter"),
+                    Person("npc-greta-forsberg", "Greta Forsberg", "inn", RosterRoles.Resident, "serving woman", "hears everything said over the ale"),
+                ],
+            };
         }
 
         private WorldSeedOutput TakeSeed()

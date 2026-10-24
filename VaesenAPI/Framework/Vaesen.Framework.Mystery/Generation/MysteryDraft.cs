@@ -26,6 +26,12 @@ public sealed class MysteryDraft
     /// <summary>The Society's world (persistent cast and overlay); null when worlds are off.</summary>
     public SocietyWorld? World { get; init; }
 
+    /// <summary>
+    /// The level's public facts the Society's other cases there already explain (fixes 4, section 12.2): those played
+    /// are in the overlay; queued ones are here too, so two cases do not explain one fact two ways.
+    /// </summary>
+    public List<SettledPublicFact> SettledPublicFacts { get; set; } = [];
+
     public CasePacket Packet { get; set; } = new();
 
     public List<GenerationLogEntry> Log { get; } = [];
@@ -57,11 +63,18 @@ public sealed class MysteryDraft
         Vaesen = [Vaesen],
         Conflict = Pack.FindConflict(Packet.Brief.ConflictArchetypeId),
         SocietyCharacterIds = World?.Characters.Select(c => c.Id).ToHashSet() ?? [],
-        WorldNames = World?.Characters.Select(c => (c.Id, c.Name)).ToList() ?? [],
+        WorldNames = World?.NamesThatMatter(Level.Id).Select(c => (c.Id, c.Name)).ToList() ?? [],
         UnavailableCharacterIds = World?.Characters
             .Where(c => c.Status is CharacterStatuses.Dead or CharacterStatuses.Departed)
             .Select(c => c.Id)
             .ToHashSet() ?? [],
+        Holders = World is null || World.RosterFor(Level.Id) is null
+            ? []
+            : World.PeopleOf(Level.Id)
+                .Where(c => c.Status is CharacterStatuses.Alive or CharacterStatuses.Absent && c.HomePlaceId is not null && RosterRoles.Holds(c.RosterRole ?? ""))
+                .GroupBy(c => c.HomePlaceId!, StringComparer.Ordinal)
+                .ToDictionary(g => g.Key, g => (g.First().Id, g.First().Name), StringComparer.Ordinal),
+        SettledPublicFacts = SettledPublicFacts,
     };
 
     /// <summary>A deep copy of the packet, for a step to work on without touching the draft until it passes.</summary>
@@ -122,6 +135,9 @@ public sealed class CluesStage : DraftStage
 }
 
 /// <summary>One model call or validator run during generation, for the generation log (spec 7.10: every run is logged).</summary>
+/// <summary>A level's public fact another of the Society's cases explains, and how.</summary>
+public sealed record SettledPublicFact(string PublicFactId, string Fact, string Explanation, string MysteryId, bool Played);
+
 public sealed class GenerationLogEntry
 {
     [JsonProperty("at")]
@@ -203,4 +219,7 @@ public static class LogEntryKinds
 
     /// <summary>A person renamed after names existed; code replaced the old name everywhere (fixes 4, section 4).</summary>
     public const string Rename = "rename";
+
+    /// <summary>Taken from the Society's roster of the level, without a model call (fixes 4, section 12.1).</summary>
+    public const string Roster = "roster";
 }

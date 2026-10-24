@@ -4,7 +4,7 @@ import { Anchor, Badge, Box, Button, Container, Group, Loader, SimpleGrid, Stack
 import { IconAlertTriangle, IconCandle, IconCheck, IconFeather, IconFlask, IconLock, IconScript } from "@tabler/icons-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { GenerationSteps, levelName, MonthNames, MysteryApi, type CaseStatus, type CaseSummary, type MysteryJob } from "@/common/api/mystery";
+import { GenerationSteps, InWorldDate, levelName, MysteryApi, type CaseStatus, type CaseSummary, type MysteryJob } from "@/common/api/mystery";
 import { Http, useApi, useApiData } from "@/common/client/core/Api";
 import { useMe, useSociety } from "@/common/client/components/hooks";
 import { Corners, SightMark } from "@/common/client/components/Ornament";
@@ -134,7 +134,7 @@ export function CaseCard({ summary, atTable = false, href }: { summary: CaseSumm
         </Group>
         <Title order={4}>{summary.title || "Untitled"}</Title>
         <Text fz="sm" c="var(--nx-ink-soft)">
-          {levelName(summary.levelId)} · {MonthNames[summary.month - 1] ?? `month ${summary.month}`}
+          {levelName(summary.levelId)} · {InWorldDate(summary.month, summary.year)}
         </Text>
         <Text fz="xs" c="var(--nx-ink-soft)" mt="auto">
           Written {new Date(summary.generatedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}

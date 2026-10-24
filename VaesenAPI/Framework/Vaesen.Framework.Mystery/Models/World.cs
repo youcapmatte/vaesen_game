@@ -41,6 +41,13 @@ public sealed class SocietyWorld
     [JsonProperty("closedMysteryIds")]
     public List<string> ClosedMysteryIds { get; set; } = [];
 
+    /// <summary>
+    /// The levels whose people this Society has met (fixes 4, section 12.1): written the first time a case uses the
+    /// level, and drawn on by every later case there. The people themselves are in <see cref="Characters"/>.
+    /// </summary>
+    [JsonProperty("levelRosters")]
+    public List<LevelRoster> LevelRosters { get; set; } = [];
+
     /// <summary>How the world was seeded (model, tokens), for review.</summary>
     [JsonProperty("seedLog")]
     public List<string> SeedLog { get; set; } = [];
@@ -48,6 +55,75 @@ public sealed class SocietyWorld
     public CharacterInstance? Find(string? id) => Characters.Find(c => c.Id == id);
 
     public IEnumerable<CharacterInstance> Available => Characters.Where(c => c.Status is CharacterStatuses.Alive or CharacterStatuses.Absent);
+
+    public LevelRoster? RosterFor(string? levelId) => LevelRosters.Find(r => r.LevelId == levelId);
+
+    /// <summary>The people who live on a level: its roster and the residents earlier cases left there.</summary>
+    public IEnumerable<CharacterInstance> PeopleOf(string levelId) => Characters.Where(c => c.Tier == WorldTiers.LocationResident && c.LivesOn(levelId));
+
+    /// <summary>
+    /// The names a new person in a case on this level must not echo: everyone but the people of other levels, whom the
+    /// Society meets only there.
+    /// </summary>
+    public IEnumerable<CharacterInstance> NamesThatMatter(string levelId) =>
+        Characters.Where(c => c.Tier != WorldTiers.LocationResident || c.LivesOn(levelId));
+}
+
+/// <summary>A level's people for one Society, from its first case there (fixes 4, section 12.1).</summary>
+public sealed class LevelRoster
+{
+    [JsonProperty("levelId")]
+    public string LevelId { get; set; } = "";
+
+    /// <summary>The case the roster was written for. Deleting it unplayed discards the roster, if no other case used it.</summary>
+    [JsonProperty("firstMysteryId")]
+    public string FirstMysteryId { get; set; } = "";
+
+    /// <summary>Every case on the level that drew on the roster.</summary>
+    [JsonProperty("mysteryIds")]
+    public List<string> MysteryIds { get; set; } = [];
+
+    [JsonProperty("createdAt")]
+    public DateTime CreatedAt { get; set; }
+
+    /// <summary>The people's ids, as written (later cases may add residents of their own).</summary>
+    [JsonProperty("characterIds")]
+    public List<string> CharacterIds { get; set; } = [];
+
+    /// <summary>The model call that wrote it, for review.</summary>
+    [JsonProperty("log")]
+    public string Log { get; set; } = "";
+}
+
+/// <summary>What a roster person is to their place.</summary>
+public static class RosterRoles
+{
+    /// <summary>Keeps a business (inn, smithy, shop, station, mill).</summary>
+    public const string Keeper = "keeper";
+
+    /// <summary>Head of the household that owns a farm or manor.</summary>
+    public const string Owner = "owner";
+
+    /// <summary>Spouse, child or servant of an owner's or keeper's household.</summary>
+    public const string Household = "household";
+
+    public const string Clergy = "clergy";
+
+    /// <summary>The constable, the sheriff's man, the station master as the crown's man.</summary>
+    public const string Official = "official";
+
+    public const string Teacher = "teacher";
+
+    /// <summary>The wise woman or cunning man.</summary>
+    public const string OldWays = "oldWays";
+
+    /// <summary>Anyone else who lives here, with a latent hook.</summary>
+    public const string Resident = "resident";
+
+    public static readonly IReadOnlyList<string> All = [Keeper, Owner, Household, Clergy, Official, Teacher, OldWays, Resident];
+
+    /// <summary>The roles that hold a place: no case may give the place someone else in that role.</summary>
+    public static bool Holds(string role) => role is Keeper or Owner or Clergy or OldWays;
 }
 
 /// <summary>
@@ -83,6 +159,19 @@ public sealed class CharacterInstance
     /// <summary>Where they live: a town or a level and place ("Uppsala", "level-forsby-october/mill").</summary>
     [JsonProperty("home")]
     public string Home { get; set; } = "";
+
+    /// <summary>The level they live on, for a location resident; they stay with it (spec 9.4).</summary>
+    [JsonProperty("homeLevelId")]
+    public string? HomeLevelId { get; set; }
+
+    /// <summary>Their place on that level.</summary>
+    [JsonProperty("homePlaceId")]
+    public string? HomePlaceId { get; set; }
+
+    /// <summary>What they are to their place (<see cref="RosterRoles"/>): its keeper, its owner, of the household...</summary>
+    [OneOf(typeof(RosterRoles))]
+    [JsonProperty("rosterRole")]
+    public string? RosterRole { get; set; }
 
     [JsonProperty("identity")]
     public CharacterIdentity Identity { get; set; } = new();
@@ -131,6 +220,10 @@ public sealed class CharacterInstance
     /// <summary>The mysteries they appeared in.</summary>
     [JsonProperty("mysteryIds")]
     public List<string> MysteryIds { get; set; } = [];
+
+    /// <summary>Whether they live on a level: by their level, or for older residents by the level their home names.</summary>
+    public bool LivesOn(string levelId) =>
+        HomeLevelId == levelId || (HomeLevelId is null && (Home == levelId || Home.StartsWith(levelId + "/", StringComparison.Ordinal)));
 }
 
 public static class WorldTiers
@@ -208,6 +301,10 @@ public sealed class WorldOverlayEntry
 {
     [JsonProperty("mysteryId")]
     public string? MysteryId { get; set; }
+
+    /// <summary>The level's public fact this explains (pf1, pf2...), when a case explained one (fixes 4, section 12.2).</summary>
+    [JsonProperty("publicFactId")]
+    public string? PublicFactId { get; set; }
 
     /// <summary>Where it holds: a level id, or null for the wider world.</summary>
     [JsonProperty("levelId")]

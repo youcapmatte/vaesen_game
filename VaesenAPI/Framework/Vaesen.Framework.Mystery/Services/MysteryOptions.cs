@@ -102,6 +102,24 @@ public sealed class MysteryOptions
     /// <summary>How many recent mysteries a creature is kept out of.</summary>
     public int VaesenCooldown { get; set; } = 3;
 
+    /// <summary>How many of a level's people a case takes as its residents when the Society has a roster there.</summary>
+    public int RosterResidents { get; set; } = 4;
+
+    /// <summary>
+    /// A level is not used again until the Society has finished this many other mysteries since (fixes 4, section 11);
+    /// queued cases count as uses but not as finished.
+    /// </summary>
+    public int LevelCooldownMysteries { get; set; } = 3;
+
+    /// <summary>...and this many in-world months have passed since.</summary>
+    public int LevelCooldownMonths { get; set; } = 3;
+
+    /// <summary>In-world months from one case to the next: the calendar only moves forward.</summary>
+    public int MonthsBetweenCases { get; set; } = 1;
+
+    /// <summary>How far ahead the calendar may skip looking for a month with a level and creature that fit.</summary>
+    public int MonthsToSearch { get; set; } = 12;
+
     /// <summary>low, medium or high: how much misdirection a case carries (spec 7.7).</summary>
     public string RedHerringDensity { get; set; } = "low";
 

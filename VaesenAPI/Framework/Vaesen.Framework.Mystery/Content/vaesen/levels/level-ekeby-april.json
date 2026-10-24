@@ -33,6 +33,7 @@
       "id": "manor",
       "templateId": "manor",
       "name": "Ekeby Manor",
+      "ownerRole": "the estate's owners, a family of the lesser nobility",
       "description": "The manor stands white and severe at the end of a lime avenue whose trees are still bare, with crows building in the tops. Meltwater gurgles in the gutters and the gravel forecourt is soft with mud. In the windows the shutters are still half closed against the winter. Inside, the house smells of wax polish, stove heat and old wood.",
       "tags": [
         "manor",
@@ -225,6 +226,7 @@
       "id": "farm",
       "templateId": "farm",
       "name": "Ekeby Home Farm",
+      "ownerRole": "the estate's bailiff (inspektor), who runs the home farm for the owners",
       "description": "The home farm stands behind the manor, a big quadrangle of red-painted barns, stables and cowsheds enclosing a muddy yard. The statare barracks is a long low building at one side, with children playing in the slush. Dung heaps steam in the cold morning. The steward's voice carries across the yard.",
       "tags": [
         "farm",
@@ -353,6 +355,7 @@
       "id": "croft-lyckan",
       "templateId": "croft",
       "name": "Lyckan Croft",
+      "ownerRole": "a crofter family who pay their rent in days' work on the estate",
       "description": "Lyckan is a red croft on a rise at the forest edge, with a lilac bush beside the door still bare of leaves. The thaw has made a pond of the yard and planks are laid across it. A cow and a pig shift in the byre. The crofter's wife is boiling washing in a pot over a fire outside.",
       "tags": [
         "croft",
@@ -430,6 +433,7 @@
       "id": "croft-karret",
       "templateId": "croft",
       "name": "Kärret Croft",
+      "ownerRole": "a crofter family who pay their rent in days' work on the estate",
       "description": "Kärret lies in a wet hollow by the forest, half its potato field under meltwater. The cottage is grey and needs a new roof, patched with birch bark. Smoke struggles out of the chimney in the damp air. A path leads into the forest, where the estate's woodcutters are working.",
       "tags": [
         "croft",
@@ -508,6 +512,7 @@
       "id": "mill",
       "templateId": "mill",
       "name": "Ekeby Mill",
+      "ownerRole": "the miller, who leases the mill from the estate",
       "description": "The estate mill is a solid stone building on the stream below the manor, roaring with the spring flood. The weir is hidden under a curtain of brown water, and spray fogs the air. The miller has opened every sluice to spare the dam. Inside, the floor trembles with the wheel.",
       "tags": [
         "mill",
@@ -606,6 +611,7 @@
       "id": "church",
       "templateId": "church",
       "name": "Ekeby Church",
+      "ownerRole": "",
       "description": "The parish church is a white medieval building on a mound in the fields, with the baron's family chapel built onto the north side. Snowdrops have come up in the churchyard among the old stones. Inside, the family's coats of arms hang on the walls. The bell rings for Easter with a sound that carries across the wet fields.",
       "tags": [
         "church",
@@ -667,6 +673,7 @@
       "id": "parsonage",
       "templateId": "parsonage",
       "name": "Ekeby Parsonage",
+      "ownerRole": "the vicar of the parish, who lives here and serves the church",
       "description": "The parsonage is a comfortable yellow house a short walk from the church, its garden bare and wet. The vicar is a scholar who corresponds with the university in Uppsala. Crows walk in the ploughed glebe land. Inside, a fire is lit in every room against the spring damp.",
       "tags": [
         "parsonage",
@@ -769,6 +776,7 @@
       "id": "smithy",
       "templateId": "smithy",
       "name": "The Estate Smithy",
+      "ownerRole": "the estate's smith",
       "description": "The estate smithy stands by the road at the edge of the home farm, busy with ploughshares and harrow teeth for the coming spring work. Mud is trodden in and out of the open door. The smith is a crofter who pays his rent in iron work. The forge glow is warm in the grey April day.",
       "tags": [
         "smithy"

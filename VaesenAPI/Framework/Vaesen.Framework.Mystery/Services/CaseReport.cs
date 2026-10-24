@@ -29,7 +29,7 @@ public static class CaseReport
 
         s.AppendLine(inv, $"> Spoilers: this is the hidden GM file. `{p.MysteryId}`, generated {p.GeneratedAt:yyyy-MM-dd HH:mm} UTC by {p.Models.Creative}{(string.IsNullOrEmpty(p.Models.Critic) ? "" : $", critic {p.Models.Critic}")}.");
         s.AppendLine();
-        s.AppendLine(inv, $"- **Level:** {p.Brief.LevelId}, month {p.Brief.Month}");
+        s.AppendLine(inv, $"- **Level:** {p.Brief.LevelId}, {(p.Brief.Year > 0 ? new InWorldDate(p.Brief.Year, p.Brief.Month).ToString() : $"month {p.Brief.Month}")}{(p.Brief.ReturnVisit ? $"; a return visit after {string.Join(", ", p.Brief.PreviousMysteryIds)}" : "")}");
         s.AppendLine(inv, $"- **Creature:** {string.Join(", ", p.Brief.VaesenIds)}; reason {p.Truth.ReasonKind}{(p.Truth.Origin is null ? "" : $", origin {p.Truth.Origin}")}");
         s.AppendLine(inv, $"- **Shape:** focus {p.Truth.Focus}, plot centre {p.Truth.PlotCentre.Kind}{(p.Truth.PlotCentre.CharacterId is null ? "" : $" ({p.Truth.PlotCentre.CharacterId})")}, conflict {p.Brief.ConflictArchetypeId}");
         s.AppendLine(inv, $"- **Hook:** {p.Hook.Channel} from {Name(p, p.Hook.HookGiverId)}");
@@ -42,6 +42,17 @@ public static class CaseReport
         Section(s, "The truth");
         s.AppendLine(p.Truth.Summary);
         s.AppendLine();
+        if (p.PublicFactsExplained.Count > 0)
+        {
+            s.AppendLine("**Public facts this case explains** (they join the Society's world when it is played; a later case on the level must keep to them):");
+            foreach (var e in p.PublicFactsExplained)
+            {
+                s.AppendLine(inv, $"- {e.PublicFactId} \"{e.Fact}\": {e.Explanation}");
+            }
+
+            s.AppendLine();
+        }
+
         s.AppendLine(inv, $"**Provocation** ({p.Truth.ProvocationPlaceId}, {p.Truth.ProvocationAffordanceTag}): {p.Truth.Provocation}");
         if (p.Truth.HiddenHandMotive is not null)
         {
@@ -102,7 +113,7 @@ public static class CaseReport
         foreach (var c in p.Cast)
         {
             var who = c.Identity is null ? "" : $"{c.Identity.Age}, {c.Identity.Occupation}. ";
-            s.AppendLine(inv, $"- **{c.Name}**{(c.Handle is null ? "" : $", \"{c.Handle}\"")} (`{c.CharacterId}`, {c.InstanceRef}, {c.Importance}, {c.PlotRole}): {who}Wants {string.Join("; ", c.Wants.Drives)}.{(c.Wants.Guilt is null ? "" : $" Guilt: {c.Wants.Guilt}")}");
+            s.AppendLine(inv, $"- **{c.Name}**{(c.Handle is null ? "" : $", \"{c.Handle}\"")} (`{c.CharacterId}`, {c.InstanceRef}, {c.Importance}, {c.PlotRole}{(c.Keeps is null ? "" : $", keeps {c.Keeps}")}): {who}Wants {string.Join("; ", c.Wants.Drives)}.{(c.Wants.Guilt is null ? "" : $" Guilt: {c.Wants.Guilt}")}");
             if (c.Knows.Count > 0)
             {
                 s.AppendLine(inv, $"  - knows {string.Join(", ", c.Knows.Select(k => $"{k.FactId} ({k.Source})"))}");

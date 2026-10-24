@@ -32,6 +32,7 @@
       "id": "railway-station",
       "templateId": "railway-station",
       "name": "Kärrtorp Junction Station",
+      "ownerRole": "the station master of the junction",
       "description": "The station is a large brick building with a tower clock and a long covered platform, the busiest place for many miles. Trains arrive in clouds of steam and sparks, the bell rings, and porters push trolleys of luggage through the puddles. The telegraph clatters in the office day and night. Coal smoke, wet iron and the smell of paraffin lamps fill the dark afternoon.",
       "tags": [
         "railway-station",
@@ -128,6 +129,7 @@
       "id": "inn",
       "templateId": "inn",
       "name": "The Railway Hotel",
+      "ownerRole": "the keeper of the Railway Hotel",
       "description": "The railway hotel faces the station, a new three-storey building with plaster ornaments and a dining room with white tablecloths. Travellers wait there between trains, reading newspapers by the stove. The smell of coffee, cigars and roasting goose fills the lobby at Martinmas. Through the windows the lamps of the trains pass slowly in the rain.",
       "tags": [
         "inn",
@@ -317,6 +319,7 @@
       "id": "church",
       "templateId": "church",
       "name": "Kärrtorp Church",
+      "ownerRole": "",
       "description": "The old church stands on a slight rise among the farms, a quarter of an hour's walk from the station, its tower visible across the flat fields. The churchyard is muddy and the lime trees drip. Inside, the old box pews are full of farming families, the railway families in the new benches at the back. Damp has stained the plaster around the windows.",
       "tags": [
         "church",
@@ -378,6 +381,7 @@
       "id": "parsonage",
       "templateId": "parsonage",
       "name": "Kärrtorp Parsonage",
+      "ownerRole": "the vicar of the parish, who lives here and serves the church",
       "description": "The parsonage is an old red farmhouse beside the church, larger than the farms around it. Sleet blows against its windows. In the yard the glebe farm's hands are threshing. The vicar's study is crowded with visitors at Martinmas, coming to collect their moving certificates.",
       "tags": [
         "parsonage",
@@ -480,6 +484,7 @@
       "id": "smithy",
       "templateId": "smithy",
       "name": "Lindqvist's Smithy",
+      "ownerRole": "the smith of the Lindqvist family, who gave the smithy its name",
       "description": "The smithy is on the old road where it crosses the railway, busier than ever with carts, wagons and the railway's small jobs. Two hearths burn and the smith has an apprentice and a striker. The light of the forge spills out onto the wet road. The clang of the hammer is drowned out every time a train passes.",
       "tags": [
         "smithy"
@@ -532,6 +537,7 @@
       "id": "library",
       "templateId": "library",
       "name": "Kärrtorp Lending Library",
+      "ownerRole": "the keeper of the lending library, the schoolmaster",
       "description": "The lending library occupies two rooms in a new wooden building near the station, warm and lamplit on its open evenings. Railway workers and clerks sit at the long table with newspapers and books. Rain drums on the window. The librarian, a retired schoolmaster, peers over his spectacles at everyone who enters.",
       "tags": [
         "library"
@@ -625,6 +631,7 @@
       "id": "farm",
       "templateId": "farm",
       "name": "Kärrtorp Gård",
+      "ownerRole": "a freeholder farming family, the oldest in the parish",
       "description": "The old farm that gave the town its name now stands with railway sidings at the bottom of its fields. The house is a solid two-storey building with old outbuildings, and the family refuses to sell to the railway company. The threshing goes on in the barn and the sound mixes with the trains. Geese are being fattened in a pen for Martinmas.",
       "tags": [
         "farm",
@@ -753,6 +760,7 @@
       "id": "croft",
       "templateId": "croft",
       "name": "The Cottage on the Marsh",
+      "ownerRole": "a crofter family on the marsh",
       "description": "A small grey cottage stands at the edge of the marsh where the embankment cuts across it, the trains thundering past within a stone's throw. The ground around it is waterlogged every autumn. A family of railway navvies lives there now, with the cow sold. The windows rattle at every train.",
       "tags": [
         "croft",

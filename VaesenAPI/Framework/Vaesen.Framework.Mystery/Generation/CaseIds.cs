@@ -12,7 +12,11 @@ public static class CaseIds
     {
         var packet = draft.Packet;
         var places = draft.Level.Places.Select(p => p.Id).ToList();
-        var ids = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal) { [IdKinds.Place] = places };
+        var ids = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal)
+        {
+            [IdKinds.Place] = places,
+            [IdKinds.PublicFact] = draft.Level.PublicFactsWithIds.Select(f => f.Id).ToList(),
+        };
         if (step is HumansStep.StepName or ResidentsStep.StepName)
         {
             ids[IdKinds.Affordance] = draft.Level.Places.SelectMany(p => p.AllAffordances()).Where(a => Dwellings.Tags.Contains(a.Tag)).Select(a => a.Id).ToList();

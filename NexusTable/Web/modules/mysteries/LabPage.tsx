@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   LabMaxCount,
   levelName,
-  MonthNames,
+  InWorldDate,
   MysteryApi,
   type CaseSummary,
   type ExportFormat,
@@ -261,7 +261,7 @@ function CaseTable({ cases }: { cases: CaseSummary[] }) {
                 <Table.Td>
                   <Anchor component={Link} href={`/mysteries/${c.mysteryId}`} c="var(--nx-ink)" fw={600}>{c.title || "Untitled"}</Anchor>
                 </Table.Td>
-                <Table.Td>{levelName(c.levelId)} · {MonthNames[c.month - 1] ?? c.month}</Table.Td>
+                <Table.Td>{levelName(c.levelId)} · {InWorldDate(c.month, c.year)}</Table.Td>
                 <Table.Td><StatusBadge status={c.passed ? c.status : "rejected"} /></Table.Td>
                 <Table.Td c="var(--nx-ink-soft)">{new Date(c.generatedAt).toLocaleString(undefined, { dateStyle: "short", timeStyle: "short" })}</Table.Td>
               </Table.Tr>

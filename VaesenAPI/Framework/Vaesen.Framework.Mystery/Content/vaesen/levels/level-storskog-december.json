@@ -31,6 +31,7 @@
       "id": "logging-camp",
       "templateId": "logging-camp",
       "name": "The Camp at Svartberget",
+      "ownerRole": "the logging boss, who runs the camp for a timber company",
       "description": "The camp is a pair of low log huts half buried in snow at the foot of a black ridge, smoke rising straight up in the frozen air. Inside, a long fire burns down the middle and wet socks and mittens steam on poles above it. Outside the horses stand blanketed, breath freezing in their manes, beside sleds loaded with logs. The ring of axes and the shouts of the fellers carry a long way in the silence.",
       "tags": [
         "logging-camp",
@@ -93,6 +94,7 @@
       "id": "croft",
       "templateId": "croft",
       "name": "Nybygget",
+      "ownerRole": "a settler family clearing new land",
       "description": "A new settler's cabin stands in a raw clearing of stumps, its logs still pale, with snow banked to the windowsills for warmth. A single cow lows in the byre built against the house. The family burns birch, and the smell carries far through the trees. Ski tracks lead off in three directions into the forest.",
       "tags": [
         "croft",
@@ -162,6 +164,7 @@
       "id": "farm",
       "templateId": "farm",
       "name": "Storskog Farm",
+      "ownerRole": "the farming family of Storskog, the oldest in the valley",
       "description": "The old farm stands on a rise above the river, a long two-storey house with outbuildings forming a closed yard against the wind. Lamps burn in the windows through the short day. The farm's women are baking flatbread for Christmas, and the warmth and smell drift out whenever the door opens. Below, the river is a white road through the forest.",
       "tags": [
         "farm",
@@ -265,6 +268,7 @@
       "id": "inn",
       "templateId": "inn",
       "name": "The Ferry Posting Farm",
+      "ownerRole": "the ferryman, who keeps the posting farm at the ferry",
       "description": "At the ferry crossing a posting farm keeps a fire and a few horses, with a single guest room up a ladder. In winter the ferry is drawn up on the bank and the road runs straight across the ice, marked with spruce branches. The taproom is the farm's kitchen, where loggers sit with their caps on. A wolfskin is nailed to the barn wall.",
       "tags": [
         "inn",
@@ -328,6 +332,7 @@
       "id": "church",
       "templateId": "church",
       "name": "Storskog Chapel",
+      "ownerRole": "the verger (klockare), who keeps the chapel between the comminister's visits",
       "description": "A small wooden chapel, tarred black and roofed with shingles, stands on a knoll with a few snow-covered graves around it. The bell hangs in an open frame and its rope is stiff with frost. Inside, the pews are rough planks and the altar painting is the work of a travelling painter. On the Sundays without a priest the lay reader's voice sounds thin in the cold.",
       "tags": [
         "church",
@@ -381,6 +386,7 @@
       "id": "herbalist-cottage",
       "templateId": "herbalist-cottage",
       "name": "Old Brita's Cottage",
+      "ownerRole": "old Brita, the wise woman the cottage is named for",
       "description": "A tiny cottage stands where the forest meets a frozen bog, so snowed in that only the chimney and a trodden path mark it. Inside, the air is thick with smoke and the smell of tar salve and dried yarrow. Reindeer hides cover the bench. The old woman who lives there sets bones for the loggers, who pay her in coffee and salt pork.",
       "tags": [
         "herbalist-cottage",
@@ -461,6 +467,7 @@
       "id": "smithy",
       "templateId": "smithy",
       "name": "The Camp Smith",
+      "ownerRole": "the camp's smith",
       "description": "A rough forge in a lean-to at the foot of the river bank, where the company smith mends chains, sled runners and horseshoes for the camps. The fire's glow is the only colour in the blue noon twilight. Iron frozen to the anvil has to be warmed before it will move. Horses wait in a row to have studs fitted for the ice.",
       "tags": [
         "smithy"

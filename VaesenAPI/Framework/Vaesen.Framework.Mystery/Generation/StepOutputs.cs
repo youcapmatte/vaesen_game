@@ -52,6 +52,21 @@ public sealed class ConflictOutput
 
     [JsonProperty("focusUnsuitableReason")]
     public string? FocusUnsuitableReason { get; set; }
+
+    /// <summary>The level's public facts this case explains or changes (fixes 4, section 12.2); usually none or one.</summary>
+    [JsonProperty("publicFactsExplained")]
+    public List<PublicFactNote> PublicFactsExplained { get; set; } = [];
+}
+
+public sealed class PublicFactNote
+{
+    [IdsOf(IdKinds.PublicFact)]
+    [JsonProperty("publicFactId")]
+    public string PublicFactId { get; set; } = "";
+
+    /// <summary>What really lay behind it, or how it changes, in one or two sentences.</summary>
+    [JsonProperty("explanation")]
+    public string Explanation { get; set; } = "";
 }
 
 /// <summary>Step 4, escalation: what has concretely happened.</summary>
@@ -137,6 +152,11 @@ public sealed class CastDraft
     [IdsOf(IdKinds.Place)]
     [JsonProperty("homePlaceId")]
     public string? HomePlaceId { get; set; }
+
+    /// <summary>The place of the level this person keeps or owns as its head (the inn they keep, the farm they own), if any.</summary>
+    [IdsOf(IdKinds.Place)]
+    [JsonProperty("keeps")]
+    public string? Keeps { get; set; }
 
     /// <summary>The dwelling in their home place where they live (a cottage, the barracks, a farmhouse kitchen), if any.</summary>
     [IdsOf(IdKinds.Affordance)]

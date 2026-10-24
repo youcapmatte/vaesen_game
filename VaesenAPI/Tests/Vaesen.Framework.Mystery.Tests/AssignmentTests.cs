@@ -106,7 +106,7 @@ public sealed class AssignmentTests
     {
         var brief = Assignment.Assign(Pack, History(), 2, 1, Options);
 
-        Assert.Contains(brief.Notes, n => n.Contains("month 2", StringComparison.Ordinal));
+        Assert.Contains(brief.Notes, n => n.Contains("No level for February", StringComparison.Ordinal));
     }
 
     [Fact]

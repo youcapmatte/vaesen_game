@@ -126,7 +126,48 @@ public sealed class LevelDefinition : ContentRecord
     [JsonProperty("places")]
     public List<LevelPlace> Places { get; set; } = [];
 
+    /// <summary>
+    /// The same place in other months (fixes 4, section 12.4): the places, owners and history are shared; only the
+    /// season, the travel, the work of the season and the scene descriptions differ.
+    /// </summary>
+    [JsonProperty("monthVariants")]
+    public List<LevelMonthVariant> MonthVariants { get; set; } = [];
+
+    /// <summary>Every month the level can be used in: its own and its variants'.</summary>
+    public IEnumerable<int> Months => MonthVariants.Select(v => v.Month).Prepend(Month).Distinct();
+
     public LevelPlace? FindPlace(string? id) => Places.Find(p => p.Id == id);
+
+    /// <summary>The public facts with the ids prompts and cases use for them: pf1, pf2 and so on.</summary>
+    public IEnumerable<(string Id, string Text)> PublicFactsWithIds => PublicFacts.Select((f, i) => ($"pf{i + 1}", f));
+
+    /// <summary>
+    /// A copy of the level as it is in the given month: the month's variant applied, or the level unchanged when it is
+    /// written for that month or has no variant for it.
+    /// </summary>
+    public LevelDefinition ForMonth(int month)
+    {
+        var copy = JsonConvert.DeserializeObject<LevelDefinition>(JsonConvert.SerializeObject(this))!;
+        var variant = copy.MonthVariants.Find(v => v.Month == month);
+        if (month == Month || variant is null)
+        {
+            return copy;
+        }
+
+        copy.Month = month;
+        copy.SeasonNotes = variant.SeasonNotes;
+        copy.Travel = string.IsNullOrWhiteSpace(variant.Travel) ? copy.Travel : variant.Travel;
+        copy.PublicFacts.AddRange(variant.PublicFacts);
+        foreach (var place in copy.Places)
+        {
+            if (variant.PlaceDescriptions.TryGetValue(place.Id, out var description) && !string.IsNullOrWhiteSpace(description))
+            {
+                place.Description = description;
+            }
+        }
+
+        return copy;
+    }
 
     /// <summary>A copy of this level as a case uses it: with the homes the case added for its people.</summary>
     public LevelDefinition ForCase(CaseLevel caseLevel)
@@ -161,6 +202,29 @@ public sealed class LevelDefinition : ContentRecord
     }
 }
 
+/// <summary>A level in another month: what changes with the season. Places, owners and history stay the level's.</summary>
+public sealed class LevelMonthVariant
+{
+    [JsonProperty("month")]
+    public int Month { get; set; }
+
+    /// <summary>Weather, light and the work of the month here.</summary>
+    [JsonProperty("seasonNotes")]
+    public string SeasonNotes { get; set; } = "";
+
+    /// <summary>The journey in this month; empty: as in the level's own month.</summary>
+    [JsonProperty("travel")]
+    public string Travel { get; set; } = "";
+
+    /// <summary>Things everyone knows in this month only ("the lake road is closed until the ice holds").</summary>
+    [JsonProperty("publicFacts")]
+    public List<string> PublicFacts { get; set; } = [];
+
+    /// <summary>A place's description in this month, by place id; places left out keep theirs.</summary>
+    [JsonProperty("placeDescriptions")]
+    public Dictionary<string, string> PlaceDescriptions { get; set; } = [];
+}
+
 public sealed class LevelPlace
 {
     [JsonProperty("id")]
@@ -171,6 +235,13 @@ public sealed class LevelPlace
 
     [JsonProperty("name")]
     public string Name { get; set; } = "";
+
+    /// <summary>
+    /// Who owns or keeps it, as a role ("a bergsman family with an old share in the mine", "the innkeeper"); empty for
+    /// places nobody keeps (the mine's galleries, the forest). A Society's roster names the person (fixes 4, 12.1).
+    /// </summary>
+    [JsonProperty("ownerRole")]
+    public string OwnerRole { get; set; } = "";
 
     /// <summary>A short sensory description, read out on arrival.</summary>
     [JsonProperty("description")]

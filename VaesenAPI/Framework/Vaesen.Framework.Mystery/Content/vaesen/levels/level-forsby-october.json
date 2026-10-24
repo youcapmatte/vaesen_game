@@ -31,6 +31,7 @@
       "id": "mill",
       "templateId": "mill",
       "name": "Forsby Mill",
+      "ownerRole": "the miller, whose family has owned the mill for generations",
       "description": "The mill stands on the rock at the head of the rapids, its timber walls grey and furred with flour dust. The great wheel turns with a heavy wet thud you feel through the floorboards, and spray from the race hangs in the cold air. Inside, the stones grumble and the room is warm and smells of meal and wet wood. Farm carts wait in the yard in the drizzle, their horses steaming under sacking.",
       "tags": [
         "mill",
@@ -128,6 +129,7 @@
       "id": "sawmill",
       "templateId": "sawmill",
       "name": "The Company Saw",
+      "ownerRole": "the foreman who runs the saw for a Gävle timber company",
       "description": "Below the rapids the company saw shrieks from first light, two frame saws rising and falling in an open-sided hall. Sawdust drifts on the water and lies in yellow banks along the shore, sodden with rain. Rafts of logs jostle in the boom, and the sawyers, most of them hired from Hälsingland, shout over the noise in their own dialect. Stacks of fresh planks smell sharply of resin.",
       "tags": [
         "sawmill",
@@ -215,6 +217,14 @@
               "contains": []
             }
           ]
+        },
+        {
+          "id": "sawmill-workers-cottages",
+          "tag": "workers-cottages",
+          "name": "Sawyers' cottages",
+          "description": "Three company cottages on the bank below the saw, each shared by two families of sawyers and log drivers.",
+          "lockable": false,
+          "contains": []
         }
       ]
     },
@@ -222,6 +232,7 @@
       "id": "farm",
       "templateId": "farm",
       "name": "Storgården",
+      "ownerRole": "the village's largest freeholder farming family",
       "description": "The biggest farm in Forsby is a red-painted two-storey house, its windows framed in white, facing a yard of mud churned by carts. Threshing goes on in the barn with the flails beating in pairs, and chaff blows out of the door in gusts. A dog on a chain watches every stranger. Beyond the outbuildings the stubble fields run down, wet and silver, to the river.",
       "tags": [
         "farm",
@@ -350,6 +361,7 @@
       "id": "church",
       "templateId": "church",
       "name": "Forsby Church",
+      "ownerRole": "the vicar of the parish",
       "description": "The medieval church sits on the gravel ridge above the village, whitewashed walls streaked grey by the rain. A separate tarred bell frame stands beside it, and the churchyard birches have dropped their leaves in yellow drifts on the graves. Inside it is colder than outdoors and smells of damp stone and tallow. Painted saints in faded red and ochre look down from the vaults.",
       "tags": [
         "church",
@@ -411,6 +423,7 @@
       "id": "inn",
       "templateId": "inn",
       "name": "Forsby Posting Inn",
+      "ownerRole": "the keeper of the posting inn",
       "description": "The posting inn stands where the Gävle road crosses the river, a long low house with a lantern burning by the door from mid-afternoon. In the taproom the stove ticks and travellers' coats steam on pegs, and the landlady keeps coffee on the boil. The posting horses stamp in the stable across the yard. The posting book lies open on a shelf for every traveller to sign.",
       "tags": [
         "inn",
@@ -533,6 +546,7 @@
       "id": "smithy",
       "templateId": "smithy",
       "name": "The Smithy at the Bridge",
+      "ownerRole": "the village smith",
       "description": "The smithy is a soot-black log house by the bridge, its door open to let out the heat, so the forge glows orange against the grey afternoon. The ring of the hammer carries across the water. A horse waits patiently to be shod, tied to a ring in the wall. Inside it smells of hot iron, coal and singed hoof.",
       "tags": [
         "smithy"
@@ -585,6 +599,7 @@
       "id": "croft",
       "templateId": "croft",
       "name": "Granbacken",
+      "ownerRole": "a crofter family on the farm's land",
       "description": "A grey one-room croft stands at the forest edge on a stony slope a mile above the village, its turf roof sprouting withered grass. Smoke leaks from the chimney and the potato patch is dug over and black. The spruce stand dark and dripping just behind the byre. A path of roots and stones leads down through the trees to the river.",
       "tags": [
         "croft",

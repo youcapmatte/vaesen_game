@@ -27,6 +27,7 @@ return command switch
     "approve" => SetStatus(ContentStatus.Approved),
     "retire" => SetStatus(ContentStatus.Retired),
     "generate" => await Generate(),
+    "variant" => await Variant(),
     _ => Help(),
 };
 
@@ -42,6 +43,9 @@ int Help()
           retire <id>                    Take a record out of use.
           generate <vaesen|conflict|character> "<what you want>"
                                          Have the model write a new draft record (needs ANTHROPIC_API_KEY).
+          variant <levelId> <month>      Have the model write the level as it is in another month: same places,
+                                         owners and history; new season, travel and scenes. The level goes back
+                                         to draft until approved again.
 
           --content <path>   the Content folder (default: found in the source tree)
           --setting <id>     the setting (default: vaesen)
@@ -145,6 +149,53 @@ async Task<int> Generate()
     }
 
     Console.WriteLine("Review it, edit it if needed, then: approve " + record.Id);
+    return 0;
+}
+
+async Task<int> Variant()
+{
+    var levelId = a.Positional.ElementAtOrDefault(1);
+    if (levelId is null || !int.TryParse(a.Positional.ElementAtOrDefault(2), out var month) || month is < 1 or > 12)
+    {
+        Console.Error.WriteLine("Usage: variant <levelId> <month 1-12>");
+        return 1;
+    }
+
+    var pack = ContentLoader.Load(dir);
+    var level = pack.FindLevel(levelId);
+    if (level is null)
+    {
+        Console.Error.WriteLine($"No level '{levelId}'.");
+        return 1;
+    }
+
+    if (level.Month == month)
+    {
+        Console.Error.WriteLine($"{level.Name} is already written for month {month}.");
+        return 1;
+    }
+
+    using var services = MysteryToolHost.Build();
+    Console.WriteLine($"Writing {level.Name} in month {month}...");
+    var result = await services.GetRequiredService<ContentGenerator>().GenerateVariantAsync(pack, level, month);
+    if (!result.Success)
+    {
+        Console.Error.WriteLine(result.ErrorMessage);
+        return 1;
+    }
+
+    level.MonthVariants.RemoveAll(v => v.Month == month);
+    level.MonthVariants.Add(result.Result!);
+    level.MonthVariants.Sort((x, y) => x.Month.CompareTo(y.Month));
+    level.Status = ContentStatus.Draft;
+    var path = ContentLoader.Write(dir, level);
+    Console.WriteLine($"Written to {path}");
+    foreach (var issue in ContentValidator.Validate(pack).Where(i => i.Location.StartsWith($"level:{level.Id}", StringComparison.Ordinal)))
+    {
+        Console.WriteLine(issue);
+    }
+
+    Console.WriteLine("Review it, edit it if needed, then: approve " + level.Id);
     return 0;
 }
 

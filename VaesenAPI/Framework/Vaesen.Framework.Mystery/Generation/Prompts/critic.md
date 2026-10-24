@@ -27,4 +27,5 @@ Keep explanation and suggestedFix to about 60 words each: the items and the chan
 - mindsAgree: no mind (a person's or the creature's) believes something that contradicts the facts it knows, unless the case explains why (denial, misreading, loyalty).
 - npcRecords: each person's permitted actions, secrets, lies and beliefs state nothing that contradicts a fact or the truth, and nothing specific that no fact supports (a date, a place, an object). The runtime speaks the people from these records. Target the person's part: npc-x.wants for actions, .secrets, .lies, .thinks.
 - leverage: every threat, blackmail or bargain states why the threatened party believes it; mutual exposure is addressed (who would be believed, and why).
+- worldConsistency also covers this place's past for the Society: nothing contradicts the level's public facts or what is settled about the place, and its keepers and owners are the people of the place listed.
 - timeline: the facts, what each person knows and when, their secrets and the channels' reveals agree on when things happened.

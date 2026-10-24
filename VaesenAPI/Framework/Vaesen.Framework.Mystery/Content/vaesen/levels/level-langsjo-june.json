@@ -31,6 +31,7 @@
       "id": "church",
       "templateId": "church",
       "name": "Långsjö Church",
+      "ownerRole": "",
       "description": "The white stone church stands on a headland reaching into the lake, with the church boat landing and its row of boathouses below. The lake glitters blue in the endless light and the churchyard grass is high with buttercups. Inside, the walls are painted with bright Dalarna flowers and biblical figures in local dress. Swallows dart in and out of the bell tower.",
       "tags": [
         "church",
@@ -86,6 +87,7 @@
       "id": "parsonage",
       "templateId": "parsonage",
       "name": "Långsjö Parsonage",
+      "ownerRole": "the vicar of the parish, who lives here and serves the church",
       "description": "The parsonage is a long yellow manor-like house among lilacs and apple trees, its windows thrown open to the summer air. Bees hum in the garden and a maid is beating rugs on the line. The vicar's study looks out over the lake. Even in June the room where the parish registers are kept smells cold and of old paper.",
       "tags": [
         "parsonage",
@@ -188,6 +190,7 @@
       "id": "farm",
       "templateId": "farm",
       "name": "Olsgården in Västbyn",
+      "ownerRole": "the Ols family, freeholders of the farm in Västbyn",
       "description": "A farm in the crowded west village, its grey log buildings pressed so close to the neighbours' that you can step from one yard to the next. Flowers have been tucked above the doors for midsummer. The yard is quiet; the cattle are away at the summer pasture and the men are off at work. The old grandmother sits on the step carding wool in the sun.",
       "tags": [
         "farm",
@@ -315,6 +318,7 @@
       "id": "croft",
       "templateId": "croft",
       "name": "The Fäbod at Björnberget",
+      "ownerRole": "the dairymaid who keeps the shieling for the village farms through the summer",
       "description": "High on a forest hill three hours' walk from the village, a cluster of small grey huts stands in a clearing of rich grass, ringed by spruce. Cowbells clank in the trees and goats climb on the roofs. The women's herding calls echo off the slopes, and smoke rises from the hut where milk is boiled down into whey cheese. A clear stream runs past the huts, cold as winter.",
       "tags": [
         "croft",
@@ -394,6 +398,7 @@
       "id": "mill",
       "templateId": "mill",
       "name": "The Stream Mills",
+      "ownerRole": "the miller who grinds for the village farms at the stream mills",
       "description": "Along a steep stream that tumbles down to the lake, a row of tiny mill huts perch on stilts over the water, one for each group of farms. Each has a small horizontal wheel that rattles when the water is let onto it, the old skvaltkvarn sound. In summer the stream is low and only one mill is grinding. Ferns and moss grow thick on the wet stones.",
       "tags": [
         "mill",
@@ -465,6 +470,7 @@
       "id": "smithy",
       "templateId": "smithy",
       "name": "The Village Smithy",
+      "ownerRole": "the village smith",
       "description": "The smithy is at the edge of the meadow, its door wide open, and the smith is making nails and hinges for the new barns the land redistribution demands. Boys gather to watch the sparks. The forge smoke drifts across the meadow where the midsummer pole stands. Inside, the light is a dark orange compared with the white glare outside.",
       "tags": [
         "smithy"
@@ -517,6 +523,7 @@
       "id": "herbalist-cottage",
       "templateId": "herbalist-cottage",
       "name": "Kerstin's Cottage",
+      "ownerRole": "Kerstin, the wise woman the cottage is named for",
       "description": "A small red cottage stands alone by a marshy inlet of the lake, with a garden of tall flowering plants fenced against the goats. Midsummer is the night to gather herbs, and bunches of fresh plants are laid out to dry on cloths everywhere. Dragonflies hover over the reeds. The woman who lives here is known to everyone and visited by many after dark.",
       "tags": [
         "herbalist-cottage",

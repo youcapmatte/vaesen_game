@@ -30,6 +30,7 @@
       "id": "croft",
       "templateId": "croft",
       "name": "The Harbour Cottages",
+      "ownerRole": "the fishermen's families; the eldest fisherman speaks for them",
       "description": "Small fishermen's cottages huddle on the rock above the harbour, each with its boathouse below and nets hanging to dry on poles. Children jump into the cold water from the jetty. The smell of tar, fish and seaweed is everywhere. Gulls scream over the gutting tables, where the women work fast with short knives.",
       "tags": [
         "croft",
@@ -109,6 +110,7 @@
       "id": "farm",
       "templateId": "farm",
       "name": "Bergsgården",
+      "ownerRole": "a farming and fishing family, freeholders of Bergsgården",
       "description": "The only real farm in Skärvik lies inland in a hollow of the heath where enough soil has gathered for fields. Low stone walls divide the small pastures, and the house is painted white with a slate roof weighted with stones. Sheep graze among the heather and juniper. From the hill behind, you can see the whole sea and the line of the skerries.",
       "tags": [
         "farm",
@@ -237,6 +239,7 @@
       "id": "church",
       "templateId": "church",
       "name": "Skärvik Church",
+      "ownerRole": "",
       "description": "The church stands on a bare rock above the village, white walls blinding in the sun, a landmark for boats coming home. The graves are cut into thin soil among the rocks, and many stones remember men lost at sea. Inside, a model ship hangs from the ceiling, given by sailors after a rescue. The wind never stops whistling through the bell tower.",
       "tags": [
         "church",
@@ -290,6 +293,7 @@
       "id": "parsonage",
       "templateId": "parsonage",
       "name": "The Parsonage",
+      "ownerRole": "the vicar of the parish, who lives here and serves the church",
       "description": "The parsonage is a solid house sheltered behind the church hill, with a walled garden that is the only green trees in the village. The vicar's boat is pulled up on the slip below. Roses grow against the south wall in defiance of the salt wind. Inside, the study is lined with books and smells of pipe smoke and sea damp.",
       "tags": [
         "parsonage",
@@ -392,6 +396,7 @@
       "id": "inn",
       "templateId": "inn",
       "name": "The Harbour Inn",
+      "ownerRole": "the keeper of the Harbour Inn",
       "description": "The inn is a big old house at the harbour that was once a herring merchant's salting house, now with rooms for passengers waiting for the steamer. The taproom has a view of the boats through small windows and a stove for cold evenings. Fishermen gather in the evening to argue about the weather. The floor is scattered with sand and smells of the sea.",
       "tags": [
         "inn",
@@ -506,6 +511,7 @@
       "id": "smithy",
       "templateId": "smithy",
       "name": "The Boat Smithy",
+      "ownerRole": "the boat smith",
       "description": "A small stone smithy by the slipway makes anchors, boat nails and hooks. The smith also repairs the iron rings on the jetty and the moorings. The open door looks out over the bright water. Rust and tar mix with the smell of the forge.",
       "tags": [
         "smithy"
@@ -558,6 +564,7 @@
       "id": "herbalist-cottage",
       "templateId": "herbalist-cottage",
       "name": "The Cottage on the Heath",
+      "ownerRole": "the wise woman on the heath",
       "description": "An old woman's cottage stands alone on the open heath, sheltered by a single twisted rowan. Heather and wild thyme grow right up to the walls, and a few sheep wander round it. Seaweed and herbs dry on the rocks in the sun. From the door you can see both the village below and the sea beyond.",
       "tags": [
         "herbalist-cottage",

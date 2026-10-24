@@ -7,6 +7,7 @@ Build the skeleton of the dispute behind this case.
 - {{handLine}}
 - The obvious folklore reading of why the creature turned may be kept as a decoy (decoyReading); then build the real cause from its deep lore.
 - Refer to people by role only (the elder son, the dairymaid, the company agent), never by name: names are given later, when the cast is created, and a name given here would have to change if it clashes.
+- The level's public facts (pf1, pf2...) are true. If this case explains one or changes it (the cause of a drowning everyone remembers, who owns a farm now), list it in publicFactsExplained with the explanation in a sentence or two; usually none or one. Never contradict a public fact or anything settled about this place for the Society, and do not explain a fact already explained.
 - truthSummary tells the whole hidden truth in one or two paragraphs: what happened, who did what and why, and what the creature is doing about it.
 - When a person tampers with machinery, a building, a boat, a weapon or anything else that works by physical rules, state the mechanism and its real consequence in 1870s terms. If the consequence is not what the person intends (they want a pump stopped, but the act risks a boiler explosion), say so, and decide whether they know it. Either can be a strong plot point, but the case must say which.
 - If nothing plausible fits this creature, level and conflict, set impossible to true and say why; the case will be re-rolled. Do not force it.

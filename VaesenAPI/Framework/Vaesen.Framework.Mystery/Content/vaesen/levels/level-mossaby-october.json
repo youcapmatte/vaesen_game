@@ -33,6 +33,7 @@
       "id": "church",
       "templateId": "church",
       "name": "Mossaby Church",
+      "ownerRole": "",
       "description": "The church is a small white building with a tarred wooden tower, standing on a hill of glacial gravel above the lake. The churchyard wall is built of the same grey stones as every field wall in the parish. Yellow birch leaves blow across the graves. Inside it smells of damp, and the plaster on the walls is cracked.",
       "tags": [
         "church",
@@ -86,6 +87,7 @@
       "id": "parsonage",
       "templateId": "parsonage",
       "name": "Mossaby Parsonage",
+      "ownerRole": "the vicar of the parish, who lives here and serves the church",
       "description": "The parsonage is a plain red house with white corners, the best building in the parish though its roof leaks. Lingonberries are spread on cloths in the kitchen. The vicar works by lamplight early in the afternoon, adding notes of 'moved to North America' to the registers. The glebe fields around it are as stony as everyone else's.",
       "tags": [
         "parsonage",
@@ -180,6 +182,7 @@
       "id": "farm",
       "templateId": "farm",
       "name": "Ingeborgs gård",
+      "ownerRole": "a freeholder farming family; the farm is named for a great-grandmother, Ingeborg",
       "description": "A small farm on a slope above the lake, its grey timber house surrounded by birches and stone walls. The farmer and his sons are digging potatoes in the wet field. Smoke rises from the bathhouse where malt is drying. A pig is fattening in a pen for the slaughter.",
       "tags": [
         "farm",
@@ -283,6 +286,7 @@
       "id": "croft-stenbacken",
       "templateId": "croft",
       "name": "Stenbacken",
+      "ownerRole": "a crofter family preparing to leave for America",
       "description": "A tiny croft on a stony hill among the spruces, with a grey cottage and a byre for one cow. The family is preparing to leave for America in the spring, and the chest is already packed in the corner. Mist drips from the trees. The potato patch has been dug and only stones remain.",
       "tags": [
         "croft",
@@ -360,6 +364,7 @@
       "id": "croft-ravmossen",
       "templateId": "croft",
       "name": "Rävmossen",
+      "ownerRole": "a crofter family on the bog",
       "description": "The cottage stands at the edge of a wide bog, its windows dark, its door nailed shut since the family left for America last year. Nobody has bought it, and the meadow is going back to heather and birch scrub. The mist rolls in from the bog in the morning. A path of logs leads across the bog to the forest beyond.",
       "tags": [
         "croft",
@@ -438,6 +443,7 @@
       "id": "mill",
       "templateId": "mill",
       "name": "Bäckakvarn",
+      "ownerRole": "the miller of Bäckakvarn",
       "description": "A small grey mill stands where the stream falls through a rocky gorge in the forest, its wheel turning now that the autumn rains have come. The water foams white over the stones and the noise fills the narrow valley. Moss and ferns cover every surface. The miller is an old man who grinds for half the parish in the few weeks the water lasts.",
       "tags": [
         "mill",
@@ -511,6 +517,7 @@
       "id": "herbalist-cottage",
       "templateId": "herbalist-cottage",
       "name": "The Wise Man's Cottage",
+      "ownerRole": "the wise man, a cunning man the parish both fears and needs",
       "description": "Deep in the forest, an hour's walk from any farm, a small cottage stands by a spring among old spruces. Bundles of plants and bark hang from every beam. A cat watches from the window. People come here from far away, though they rarely speak of it.",
       "tags": [
         "herbalist-cottage",
@@ -598,6 +605,7 @@
       "id": "smithy",
       "templateId": "smithy",
       "name": "The Parish Smithy",
+      "ownerRole": "the parish smith",
       "description": "The smithy stands at the crossroads in the middle of the parish, an old building of stone and timber. The smith makes scythes and axes for the forest farms and repairs the emigrants' trunks. The forge glows red in the grey autumn afternoon. Farmers stop there to talk and exchange news from America.",
       "tags": [
         "smithy",

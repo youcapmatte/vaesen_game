@@ -15,8 +15,11 @@ public sealed class GenerationRequest
 {
     public required SocietyHistory History { get; init; }
 
-    /// <summary>The in-world month; null: <see cref="MysteryOptions.DefaultMonth"/>.</summary>
+    /// <summary>Pin the in-world month; null: the Society's calendar moves on to the next month that fits (fixes 4, section 11).</summary>
     public int? Month { get; init; }
+
+    /// <summary>A deliberate return visit to this level: its cooldown is waived and its earlier cases are the backstory.</summary>
+    public string? ReturnLevelId { get; init; }
 
     /// <summary>Fixes the deterministic choices; null: random.</summary>
     public int? Seed { get; init; }
@@ -32,6 +35,12 @@ public sealed class GenerationRequest
 
     /// <summary>Store the case when it passes (off for dry runs).</summary>
     public bool Store { get; init; } = true;
+
+    /// <summary>
+    /// Keep a level's new roster in the Society's world when the stored case passes (fixes 4, section 12.1). Off for
+    /// throwaway experiments, so they do not fix a town's people for good.
+    /// </summary>
+    public bool KeepRoster { get; init; } = true;
 }
 
 public sealed class GenerationResult
@@ -84,7 +93,7 @@ public sealed class MysteryGenerator(
 
         try
         {
-            return ret.Ok(Assignment.Assign(pack.Result!, request.History, request.Month ?? Options.DefaultMonth, request.Seed ?? Random.Shared.Next(), Options));
+            return ret.Ok(Assignment.Assign(pack.Result!, request.History, request.Month, request.Seed ?? Random.Shared.Next(), Options, request.ReturnLevelId));
         }
         catch (InvalidOperationException ex)
         {
@@ -115,9 +124,11 @@ public sealed class MysteryGenerator(
             world = seeded.Result;
         }
 
-        var month = request.Month ?? Options.DefaultMonth;
         var baseSeed = request.Seed ?? Random.Shared.Next();
         var log = new List<GenerationLogEntry>();
+
+        // Rosters written during this generation, by level: a re-rolled brief on the same level reuses its roster.
+        var newRosters = new Dictionary<string, (LevelRoster Roster, List<CharacterInstance> People)>(StringComparer.Ordinal);
         StoredCase? last = null;
         string lastError = "";
 
@@ -127,7 +138,7 @@ public sealed class MysteryGenerator(
             AssignmentBrief brief;
             try
             {
-                brief = Assignment.Assign(pack, request.History, month, unchecked(baseSeed + caseAttempt * 7919), Options);
+                brief = Assignment.Assign(pack, request.History, request.Month, unchecked(baseSeed + caseAttempt * 7919), Options, request.ReturnLevelId);
             }
             catch (InvalidOperationException ex)
             {
@@ -139,9 +150,33 @@ public sealed class MysteryGenerator(
                 brief.PersistentCastIds = PersistentCast(world);
             }
 
-            var draft = NewDraft(pack, request.History, brief, world);
+            var rosterLog = new List<GenerationLogEntry>();
+            var caseWorld = world;
+            if (world is not null && world.RosterFor(brief.LevelId) is null)
+            {
+                if (!newRosters.ContainsKey(brief.LevelId))
+                {
+                    var level = pack.FindLevel(brief.LevelId)!.ForMonth(brief.Month);
+                    progress?.Report(new GenerationProgress(caseAttempt, RosterBuilder.StepName, "Meeting the people of the place."));
+                    var built = await new RosterBuilder(model, Options).BuildAsync(pack, level, world, rosterLog, caseAttempt, cancellationToken);
+                    if (!built.Success)
+                    {
+                        log.AddRange(rosterLog);
+                        lastError = built.ErrorMessage;
+                        break;
+                    }
+
+                    newRosters[brief.LevelId] = built.Result;
+                }
+
+                caseWorld = WithRoster(world, newRosters[brief.LevelId]);
+            }
+
+            var draft = NewDraft(pack, request.History, brief, caseWorld);
+            draft.Log.AddRange(rosterLog);
+            draft.SettledPublicFacts = await SettledPublicFactsAsync(request.History, brief.LevelId, world, cancellationToken);
             progress?.Report(new GenerationProgress(caseAttempt, "assignment",
-                $"{draft.Vaesen.Name} at {draft.Level.Name}, focus {brief.Focus}{(brief.HiddenHand ? ", with a hidden hand" : "")}."));
+                $"{draft.Vaesen.Name} at {draft.Level.Name}, {new InWorldDate(brief.Year, brief.Month)}, focus {brief.Focus}{(brief.HiddenHand ? ", with a hidden hand" : "")}{(brief.ReturnVisit ? ", a return visit" : "")}."));
 
             var outcome = await RunStepsAsync(draft, caseAttempt, progress, cancellationToken);
             log.AddRange(draft.Log);
@@ -162,6 +197,16 @@ public sealed class MysteryGenerator(
                     if (!saved.Success)
                     {
                         return ret.Fail(saved.ErrorMessage, saved.ErrorCode);
+                    }
+
+                    if (world is not null && request.KeepRoster)
+                    {
+                        var roster = newRosters.TryGetValue(brief.LevelId, out var made) ? made : ((LevelRoster, List<CharacterInstance>)?)null;
+                        var kept = await worlds.RecordRosterAsync(world.SocietyId, brief.LevelId, draft.Packet.MysteryId, roster, cancellationToken);
+                        if (!kept.Success)
+                        {
+                            logger.LogWarning("The roster of {LevelId} was not kept: {Error}", brief.LevelId, kept.ErrorMessage);
+                        }
                     }
                 }
 
@@ -235,8 +280,46 @@ public sealed class MysteryGenerator(
         return ret.Ok(pack);
     }
 
-    /// <summary>The persistent characters a case is offered: the living, canonical and core first, then by importance.</summary>
+    /// <summary>
+    /// The level's public facts the Society's cases already explain (fixes 4, section 12.2): from the overlay for cases
+    /// played, and from the stored packets of cases queued on the level.
+    /// </summary>
+    private async Task<List<SettledPublicFact>> SettledPublicFactsAsync(SocietyHistory history, string levelId, SocietyWorld? world, CancellationToken ct)
+    {
+        var settled = (world?.Overlay ?? [])
+            .Where(o => o.LevelId == levelId && o.PublicFactId is not null)
+            .Select(o => new SettledPublicFact(o.PublicFactId!, "", o.Text, o.MysteryId ?? "", Played: true))
+            .ToList();
+        foreach (var queued in history.Mysteries.Where(m => m.LevelId == levelId && !m.Finished))
+        {
+            var stored = await cases.GetAsync(history.SocietyId, queued.MysteryId, ct);
+            foreach (var e in stored.Result?.Packet.PublicFactsExplained ?? [])
+            {
+                if (!settled.Exists(s => s.PublicFactId == e.PublicFactId))
+                {
+                    settled.Add(new SettledPublicFact(e.PublicFactId, e.Fact, e.Explanation, queued.MysteryId, Played: false));
+                }
+            }
+        }
+
+        return settled;
+    }
+
+    /// <summary>A copy of the world with a level's new roster in it, for a case to draw on before the roster is kept.</summary>
+    private static SocietyWorld WithRoster(SocietyWorld world, (LevelRoster Roster, List<CharacterInstance> People) roster)
+    {
+        var copy = Newtonsoft.Json.JsonConvert.DeserializeObject<SocietyWorld>(Newtonsoft.Json.JsonConvert.SerializeObject(world))!;
+        copy.LevelRosters.Add(roster.Roster);
+        copy.Characters.AddRange(roster.People);
+        return copy;
+    }
+
+    /// <summary>
+    /// The persistent characters a case is offered: the living, canonical and core first, then by importance. A level's
+    /// own people come in their own section (fixes 4, section 12.1), and other levels' people stay home.
+    /// </summary>
     private List<string> PersistentCast(SocietyWorld world) => world.Available
+        .Where(c => c.Tier != WorldTiers.LocationResident)
         .OrderBy(c => c.Tier switch { WorldTiers.Canonical => 0, WorldTiers.Core => 1, WorldTiers.Background => 2, _ => 3 })
         .ThenByDescending(c => c.Importance)
         .ThenBy(c => c.Id, StringComparer.Ordinal)
@@ -246,8 +329,9 @@ public sealed class MysteryGenerator(
 
     private MysteryDraft NewDraft(ContentPack pack, SocietyHistory history, AssignmentBrief brief, SocietyWorld? world)
     {
-        // The case's own copy: it may add homes for its people (fixes 3, section 6) without touching the content pack.
-        var level = Newtonsoft.Json.JsonConvert.DeserializeObject<LevelDefinition>(Newtonsoft.Json.JsonConvert.SerializeObject(pack.FindLevel(brief.LevelId)!))!;
+        // The case's own copy, as the level is in the case's month (fixes 4, section 12.4): it may add homes for its
+        // people (fixes 3, section 6) without touching the content pack.
+        var level = pack.FindLevel(brief.LevelId)!.ForMonth(brief.Month);
         var vaesen = pack.FindVaesen(brief.VaesenId)!;
         var draft = new MysteryDraft
         {
@@ -270,6 +354,9 @@ public sealed class MysteryGenerator(
                 LevelId = level.Id,
                 VaesenIds = [vaesen.Id],
                 Month = brief.Month,
+                Year = brief.Year,
+                ReturnVisit = brief.ReturnVisit,
+                PreviousMysteryIds = brief.PreviousMysteryIds,
                 HookChannelId = brief.HookChannelId,
                 HookGiverType = brief.HookGiverType,
                 Seed = brief.Seed,
@@ -413,9 +500,19 @@ public sealed class MysteryGenerator(
     {
         var o = Options;
         var people = await RunStepAsync(new HumansStep(model, validator, o), new EscalationStage(draft), feedback, caseAttempt, "Casting the people.", progress, ct);
-        return people.Success
-            ? await RunStepAsync(new ResidentsStep(model, validator, o), new CastStage(draft), [], caseAttempt, "Adding the residents.", progress, ct)
-            : people;
+        if (!people.Success)
+        {
+            return people;
+        }
+
+        // The place's people are the Society's roster: the residents are taken from it, without a model call.
+        if (ResidentsStep.FromRoster(draft, o.RosterResidents))
+        {
+            progress?.Report(new GenerationProgress(caseAttempt, ResidentsStep.StepName, "Adding residents from the place's people."));
+            return people;
+        }
+
+        return await RunStepAsync(new ResidentsStep(model, validator, o), new CastStage(draft), [], caseAttempt, "Adding the residents.", progress, ct);
     }
 
     private async Task<ResultBase> RunCluesAsync(MysteryDraft draft, IReadOnlyList<CoherenceIssue> feedback, int caseAttempt, IProgress<GenerationProgress>? progress, CancellationToken ct)

@@ -150,6 +150,9 @@ public sealed class CaseSummary
     [JsonProperty("month")]
     public int Month { get; set; }
 
+    [JsonProperty("year")]
+    public int Year { get; set; }
+
     [JsonProperty("passed")]
     public bool Passed { get; set; }
 
@@ -167,6 +170,26 @@ public sealed class CaseSummary
     [JsonProperty("status")]
     public string Status { get; set; } = CaseStatuses.Generated;
 
+    /// <summary>
+    /// A Society's past mysteries for the assignment, oldest first: every case that passed and was not rejected, queued
+    /// ones included, so cooldowns count cases that are generated but not yet played (fixes 4, section 11).
+    /// </summary>
+    public static List<PastMystery> History(IEnumerable<CaseSummary> summaries) => summaries
+        .Where(s => s.Passed && s.Status != CaseStatuses.Rejected)
+        .OrderBy(s => s.GeneratedAt)
+        .Select(s => new PastMystery
+        {
+            MysteryId = s.MysteryId,
+            LevelId = s.LevelId,
+            VaesenIds = s.VaesenIds,
+            HookChannelId = s.HookChannelId,
+            HookGiverType = s.HookGiverType,
+            Year = s.Year,
+            Month = s.Month,
+            Finished = s.Status is CaseStatuses.Solved or CaseStatuses.Failed,
+        })
+        .ToList();
+
     public static CaseSummary From(CasePacket p) => new()
     {
         MysteryId = p.MysteryId,
@@ -175,6 +198,7 @@ public sealed class CaseSummary
         GeneratedAt = p.GeneratedAt,
         LevelId = p.Brief.LevelId,
         Month = p.Brief.Month,
+        Year = p.Brief.Year,
         Passed = p.Validation.Passed,
         VaesenIds = p.Brief.VaesenIds,
         HookChannelId = p.Brief.HookChannelId,

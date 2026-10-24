@@ -32,6 +32,7 @@
       "id": "mine",
       "templateId": "mine",
       "name": "Storgruvan",
+      "ownerRole": "the mine foreman (gruvfogde), who answers to the shareholders and the Stockholm company",
       "description": "The great pit opens in the hillside like a wound, its walls stepped and rust-streaked, dropping into fog. A horse-whim creaks in its timber house as a pair of horses walk endless circles, winding up the ore buckets. Water drips everywhere and the clang of hammers on drills echoes up from below. The air smells of wet rock, powder smoke and the steam pump's coal.",
       "tags": [
         "mine",
@@ -135,6 +136,14 @@
               "contains": []
             }
           ]
+        },
+        {
+          "id": "mine-workers-cottages",
+          "tag": "workers-cottages",
+          "name": "Miners' cottages",
+          "description": "A row of low red cottages below the spoil heaps, two rooms each, where the hired miners live with their families around a shared well. Washing hangs grey with ore dust.",
+          "lockable": false,
+          "contains": []
         }
       ]
     },
@@ -142,6 +151,7 @@
       "id": "smithy",
       "templateId": "smithy",
       "name": "The Bergsman's Forge",
+      "ownerRole": "the smith who forges the bergsmen's tools",
       "description": "A stone smithy at the top of the town where the mine's drills are sharpened by the dozen. Two hearths burn and a boy works the bellows without stopping. Sparks fly into the fog through the open door. Bar iron from the works is stacked under the eaves, still faintly warm from the wagon.",
       "tags": [
         "smithy"
@@ -194,6 +204,7 @@
       "id": "church",
       "templateId": "church",
       "name": "Gruvbo Church",
+      "ownerRole": "the vicar of the parish",
       "description": "The church is a big plain building of plastered stone, enlarged twice for the mining population, with a squat tower. Around it the churchyard is crowded with iron grave crosses made at the works, rusting in the wet. Inside, a pew is reserved for the mine company's director, cushioned in red. The air smells of wet wool and candle smoke.",
       "tags": [
         "church",
@@ -255,6 +266,7 @@
       "id": "inn",
       "templateId": "inn",
       "name": "The Ore Wagon",
+      "ownerRole": "the innkeeper of the Ore Wagon",
       "description": "The inn faces the station across a square of mud and cinders, two storeys of yellow-painted timber with its sign creaking in the wind. The taproom is loud with miners off shift, their faces grey-streaked, and a fiddler plays on Saturdays. Pipe smoke and the smell of wet boots fill the low room. The windows run with condensation.",
       "tags": [
         "inn",
@@ -410,6 +422,7 @@
       "id": "farm",
       "templateId": "farm",
       "name": "Östansjö Bergsmansgård",
+      "ownerRole": "a bergsman family with an old share in the mine",
       "description": "An old mining farmer's homestead on the lakeshore, its timber house grey with age and its yard paved with slag. The family still holds a share in the mine and the master smelts nothing now but keeps his title with pride. Cattle low in the cowshed and the root harvest lies in heaps by the cellar. The lake beyond is the colour of pewter under the rain.",
       "tags": [
         "farm",
@@ -538,6 +551,7 @@
       "id": "library",
       "templateId": "library",
       "name": "The Reading Society",
+      "ownerRole": "the reading society's librarian, a clerk at the mine office",
       "description": "Up a steep stair above the apothecary, the reading society's room is warm, quiet and smells of paper, lamp oil and the apothecary's camphor below. Newspapers hang on poles, a week old from Stockholm. A clock ticks over shelves of bound volumes. The rain patters on the roof window.",
       "tags": [
         "library"
@@ -623,6 +637,7 @@
       "id": "railway-station",
       "templateId": "railway-station",
       "name": "Gruvbo Station",
+      "ownerRole": "the station master of the ore railway",
       "description": "The new station is a neat painted building at the end of the line, with ore wagons standing in a siding stained red. The telegraph clicks in the office and the stationmaster in his peaked cap watches who comes and goes. Coal smoke and the smell of wet ballast hang over the platform. Lamps are lit by half past four.",
       "tags": [
         "railway-station",
@@ -709,6 +724,7 @@
       "id": "herbalist-cottage",
       "templateId": "herbalist-cottage",
       "name": "The Cottage by the Tarn",
+      "ownerRole": "the wise woman by the tarn",
       "description": "A crooked grey cottage stands among birches by a black forest tarn, half an hour's walk from the town. Smoke from the chimney smells of juniper. Bunches of dried plants hang under the eaves where the rain cannot reach. The path is trodden smooth by people who say they never come here.",
       "tags": [
         "herbalist-cottage",
@@ -792,6 +808,349 @@
           "contains": []
         }
       ]
+    },
+    {
+      "id": "farm-hyttbacken",
+      "templateId": "farm",
+      "name": "Hyttbacken Bergsmansgård",
+      "ownerRole": "a bergsman family that sold half its mine share to the Stockholm company",
+      "description": "A red-painted bergsman's farm on the slope above the old smelting hut, whose fallen chimney still stands in the nettles. Half the family's share in the mine went to the Stockholm company two winters ago, and the new roof shows it. Slag from three centuries crunches underfoot in the yard. The stream below runs brown with rust.",
+      "tags": [
+        "farm",
+        "fields",
+        "stream"
+      ],
+      "affordances": [
+        {
+          "id": "farm-hyttbacken-yard",
+          "tag": "yard",
+          "name": "Farmyard",
+          "description": "The yard between the buildings, trodden mud and a woodpile.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-hyttbacken-kitchen",
+          "tag": "kitchen",
+          "name": "Main room",
+          "description": "The everyday room: open hearth, long table, wall beds and the loom in the corner.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "farm-hyttbacken-kitchen-hearth",
+              "tag": "hearth",
+              "name": "Open hearth",
+              "description": "The whitewashed corner hearth with its iron pot-hook.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "farm-hyttbacken-parlour",
+          "tag": "parlour",
+          "name": "Best room",
+          "description": "The cold best room, painted furniture, the family Bible and a clock from Mora.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "farm-hyttbacken-parlour-chest",
+              "tag": "chest",
+              "name": "Dowry chest",
+              "description": "A painted chest with the wife's linen and the year of her wedding on the lid.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "farm-hyttbacken-servants-quarters",
+          "tag": "servants-quarters",
+          "name": "Farmhands' chamber",
+          "description": "A bare chamber with two beds and the hands' own chests.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-hyttbacken-cowshed",
+          "tag": "cowshed",
+          "name": "Cowshed",
+          "description": "A low dark byre, warm with cattle breath.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-hyttbacken-stable",
+          "tag": "stable",
+          "name": "Stable",
+          "description": "A stable for the farm horse or horses.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-hyttbacken-barn",
+          "tag": "barn",
+          "name": "Barn",
+          "description": "A timber barn for the harvest.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "farm-hyttbacken-barn-hayloft",
+              "tag": "hayloft",
+              "name": "Hayloft",
+              "description": "The hay store over the barn floor, reached by a ladder.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "farm-hyttbacken-drying-shed",
+          "tag": "drying-shed",
+          "name": "Threshing barn",
+          "description": "A threshing barn (loge) where the grain is threshed with flails through the autumn.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-hyttbacken-cellar",
+          "tag": "cellar",
+          "name": "Root cellar",
+          "description": "A root cellar dug into the slope, holding potatoes, turnips and the milk.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-hyttbacken-well",
+          "tag": "well",
+          "name": "Well",
+          "description": "A well with a sweep pole and a wooden bucket.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-hyttbacken-bathhouse",
+          "tag": "bathhouse",
+          "name": "Bathhouse",
+          "description": "A small log bastu with a stone oven, also used for drying malt and flax.",
+          "lockable": false,
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "farm-norrgarden",
+      "templateId": "farm",
+      "name": "Norrgården",
+      "ownerRole": "a tenant family who farm the company's land and cart its charcoal",
+      "description": "A plain farm at the edge of the forest north of the town, held on lease from the mining company. The fields are thin and stony; the family earns more carting charcoal from the forest stacks to the furnace than from its rye. The spruce wood begins where the last fence ends.",
+      "tags": [
+        "farm",
+        "fields",
+        "forest"
+      ],
+      "affordances": [
+        {
+          "id": "farm-norrgarden-yard",
+          "tag": "yard",
+          "name": "Farmyard",
+          "description": "The yard between the buildings, trodden mud and a woodpile.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-norrgarden-kitchen",
+          "tag": "kitchen",
+          "name": "Main room",
+          "description": "The everyday room: open hearth, long table, wall beds and the loom in the corner.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "farm-norrgarden-kitchen-hearth",
+              "tag": "hearth",
+              "name": "Open hearth",
+              "description": "The whitewashed corner hearth with its iron pot-hook.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "farm-norrgarden-parlour",
+          "tag": "parlour",
+          "name": "Best room",
+          "description": "The cold best room, painted furniture, the family Bible and a clock from Mora.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "farm-norrgarden-parlour-chest",
+              "tag": "chest",
+              "name": "Dowry chest",
+              "description": "A painted chest with the wife's linen and the year of her wedding on the lid.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "farm-norrgarden-servants-quarters",
+          "tag": "servants-quarters",
+          "name": "Farmhands' chamber",
+          "description": "A bare chamber with two beds and the hands' own chests.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-norrgarden-cowshed",
+          "tag": "cowshed",
+          "name": "Cowshed",
+          "description": "A low dark byre, warm with cattle breath.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-norrgarden-stable",
+          "tag": "stable",
+          "name": "Stable",
+          "description": "A stable for the farm horse or horses.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-norrgarden-barn",
+          "tag": "barn",
+          "name": "Barn",
+          "description": "A timber barn for the harvest.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "farm-norrgarden-barn-hayloft",
+              "tag": "hayloft",
+              "name": "Hayloft",
+              "description": "The hay store over the barn floor, reached by a ladder.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "farm-norrgarden-drying-shed",
+          "tag": "drying-shed",
+          "name": "Threshing barn",
+          "description": "A threshing barn (loge) where the grain is threshed with flails through the autumn.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-norrgarden-cellar",
+          "tag": "cellar",
+          "name": "Root cellar",
+          "description": "A root cellar dug into the slope, holding potatoes, turnips and the milk.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "farm-norrgarden-well",
+          "tag": "well",
+          "name": "Well",
+          "description": "A well with a sweep pole and a wooden bucket.",
+          "lockable": false,
+          "contains": []
+        }
+      ]
+    },
+    {
+      "id": "croft-kolarbacken",
+      "templateId": "croft",
+      "name": "Kolarbacken",
+      "description": "A charcoal burner's croft deep in the spruce forest, a low cottage and a turf hut beside the clearing where the stacks are built. In October the first kilns smoulder under their skins of earth and moss, and someone must watch them day and night. Everything smells of smoke and resin.",
+      "tags": [
+        "croft",
+        "forest"
+      ],
+      "affordances": [
+        {
+          "id": "croft-kolarbacken-kitchen",
+          "tag": "kitchen",
+          "name": "Cottage room",
+          "description": "One room: hearth, a box bed for the parents, a pull-out bench for the children, a table under the window.",
+          "lockable": false,
+          "contains": [
+            {
+              "id": "croft-kolarbacken-kitchen-hearth",
+              "tag": "hearth",
+              "name": "Hearth",
+              "description": "The hearth, smoke-blackened, a pot simmering.",
+              "lockable": false,
+              "contains": []
+            },
+            {
+              "id": "croft-kolarbacken-kitchen-chest",
+              "tag": "chest",
+              "name": "Clothes chest",
+              "description": "The family's one chest for Sunday clothes and papers.",
+              "lockable": false,
+              "contains": []
+            },
+            {
+              "id": "croft-kolarbacken-kitchen-hiding-place",
+              "tag": "hiding-place",
+              "name": "Loose board",
+              "description": "A loose floorboard by the bed where a few coins can be kept.",
+              "lockable": false,
+              "contains": []
+            }
+          ]
+        },
+        {
+          "id": "croft-kolarbacken-cowshed",
+          "tag": "cowshed",
+          "name": "Byre",
+          "description": "A byre built against the cottage for one cow and a few sheep.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "croft-kolarbacken-cellar",
+          "tag": "cellar",
+          "name": "Earth cellar",
+          "description": "A turf-roofed earth cellar for potatoes.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "croft-kolarbacken-well",
+          "tag": "well",
+          "name": "Well",
+          "description": "A shallow well or a spring-fed pit with a bucket.",
+          "lockable": false,
+          "contains": []
+        },
+        {
+          "id": "croft-kolarbacken-garden",
+          "tag": "garden",
+          "name": "Potato patch",
+          "description": "A stony patch of potatoes, kale and tobacco plants.",
+          "lockable": false,
+          "contains": []
+        }
+      ],
+      "ownerRole": "a charcoal burner and his family, crofters on the company's forest land"
+    }
+  ],
+  "monthVariants": [
+    {
+      "month": 1,
+      "seasonNotes": "January. The lakes are frozen hard and the winter roads run across the ice, staked with spruce boughs. Daylight lasts from nine to three; the shift change at the mine is in darkness both ways. Charcoal and ore go by sledge now, and the carters work every hour the frost allows. Snow lies to the windowsills, and the spoil heaps are white humps with rust bleeding through.",
+      "travel": "From Uppsala by sleigh west to Sala along the post road, most of a day if the snow is packed, then on the ore railway when the line is clear; a day and a half in all, two if it snows.",
+      "publicFacts": [
+        "In winter the ore railway is often closed by drifts for a day or two, and the sledge road over the lakes is used instead."
+      ],
+      "placeDescriptions": {
+        "mine": "The great pit is rimmed with ice and its stepped walls hang with frozen waterfalls. Steam from the pump house rises straight up in the still cold, and the horse-whim's horses wear sacking against the frost. Lanterns move far below in the dark.",
+        "farm": "The old bergsman's homestead stands deep in snow on the lakeshore, a path shovelled from the door to the byre. Smoke rises from every chimney. The lake beyond is a white plain, crossed by the staked winter road.",
+        "inn": "The Ore Wagon is crowded and steaming: carters warming themselves between loads, their sledges and horses packed into the yard under blankets. The windows are thick with frost flowers."
+      }
     }
   ]
 }

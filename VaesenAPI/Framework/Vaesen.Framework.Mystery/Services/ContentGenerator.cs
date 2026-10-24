@@ -67,6 +67,49 @@ public sealed class ContentGenerator(IMysteryModel model, IOptions<MysteryOption
         return ret.Ok(record);
     }
 
+    /// <summary>
+    /// A level in another month (fixes 4, section 12.4): the same places, owners and history, with the season, the
+    /// journey, the work of the month and the scenes as they are then.
+    /// </summary>
+    public async Task<ResultBase<LevelMonthVariant>> GenerateVariantAsync(ContentPack pack, LevelDefinition level, int month, CancellationToken cancellationToken = default)
+    {
+        var ret = new ResultBase<LevelMonthVariant>();
+        var monthName = System.Globalization.CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(month);
+        var context = new StringBuilder();
+        context.AppendLine($"# The level, as written for month {level.Month}");
+        context.AppendLine(PromptBuilder.Json(new
+        {
+            level.Name,
+            level.Region,
+            level.SettlementType,
+            level.Terrain,
+            level.Description,
+            level.SeasonNotes,
+            level.Travel,
+            level.PublicFacts,
+            places = level.Places.Select(p => new { p.Id, p.Name, p.OwnerRole, p.Description }),
+        }));
+        var instruction = $"""
+            # Write the level as it is in {monthName}
+
+            The places, their owners, the people and the history stay exactly as they are; only what the season changes is new.
+            - seasonNotes: the weather, the light and the work of {monthName} here, in the same voice and length as the level's own.
+            - travel: the journey from Uppsala in {monthName} (roads, ice, snow, boats or railway as the period and the season allow); empty if unchanged.
+            - publicFacts: only what everyone knows in this month and not otherwise (a closed road, a fair, a hiring day); often none.
+            - placeDescriptions: by place id, a new description for each place the season changes visibly, in the length of the original.
+            Set month to {month}.
+            """;
+        var reply = await model.GenerateAsync<LevelMonthVariant>(Request(options.Value, BuildSystem(pack), context.ToString(), instruction), cancellationToken);
+        if (!reply.Success)
+        {
+            return ret.Fail(reply.ErrorMessage, reply.ErrorCode);
+        }
+
+        var variant = reply.Result!.Value;
+        variant.Month = month;
+        return ret.Ok(variant);
+    }
+
     /// <summary>Checks a new record against the pack it would join; returns only its own issues.</summary>
     public static List<CoherenceIssue> Check(ContentPack pack, ContentRecord record)
     {

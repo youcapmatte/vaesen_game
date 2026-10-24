@@ -19,6 +19,9 @@ public static class IdKinds
     public const string Event = "event";
     public const string Cast = "cast";
     public const string Place = "place";
+
+    /// <summary>A level's public fact: pf1, pf2...</summary>
+    public const string PublicFact = "publicFact";
     public const string Affordance = "affordance";
 
     /// <summary>Who carries out a deed: a cast member, or "players".</summary>

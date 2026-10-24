@@ -39,6 +39,19 @@ public interface IWorldService
 
     /// <summary>Closes a stored mystery and writes it back to the Society's world (spec 9.5). Stores the case's new status.</summary>
     Task<ResultBase<StoredCase>> CloseMysteryAsync(string societyId, string mysteryId, CloseMysteryRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// A stored case drew on a level's people (fixes 4, section 12.1): keeps the roster written for it, if it is new, and
+    /// records that the case used it. The only thing an unplayed case writes to the world.
+    /// </summary>
+    Task<ResultBase<SocietyWorld>> RecordRosterAsync(
+        string societyId, string levelId, string mysteryId, (LevelRoster Roster, List<CharacterInstance> People)? newRoster, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// A case deleted without being played: a roster no other case has drawn on goes too, with its people, so lab
+    /// experiments do not fix a town's people for good. Returns whether one was discarded.
+    /// </summary>
+    Task<ResultBase<bool>> DiscardRosterAsync(string societyId, string mysteryId, CancellationToken cancellationToken = default);
 }
 
 public sealed class WorldService(
@@ -163,6 +176,71 @@ public sealed class WorldService(
         };
         return await cases.SaveAsync(storedCase, cancellationToken);
     }
+
+    public async Task<ResultBase<SocietyWorld>> RecordRosterAsync(
+        string societyId, string levelId, string mysteryId, (LevelRoster Roster, List<CharacterInstance> People)? newRoster, CancellationToken cancellationToken = default)
+    {
+        var ret = new ResultBase<SocietyWorld>();
+        var loaded = await worlds.GetAsync(societyId, cancellationToken);
+        if (!loaded.Success)
+        {
+            return ret.Fail(loaded.ErrorMessage, loaded.ErrorCode);
+        }
+
+        var world = loaded.Result!;
+        var roster = world.RosterFor(levelId);
+        if (roster is null)
+        {
+            if (newRoster is not { } made)
+            {
+                return ret.Ok(world);
+            }
+
+            roster = made.Roster;
+            roster.FirstMysteryId = mysteryId;
+            world.LevelRosters.Add(roster);
+            world.Characters.AddRange(made.People.Where(p => world.Find(p.Id) is null));
+            logger.LogInformation("Kept the people of {LevelId} for {SocietyId}: {Count}", levelId, societyId, made.People.Count);
+        }
+
+        if (!roster.MysteryIds.Contains(mysteryId))
+        {
+            roster.MysteryIds.Add(mysteryId);
+        }
+
+        return await worlds.SaveAsync(world, cancellationToken);
+    }
+
+    public async Task<ResultBase<bool>> DiscardRosterAsync(string societyId, string mysteryId, CancellationToken cancellationToken = default)
+    {
+        var ret = new ResultBase<bool>();
+        var loaded = await worlds.GetAsync(societyId, cancellationToken);
+        if (!loaded.Success)
+        {
+            return loaded.ErrorCode == ErrorCodes.NotFound ? ret.Ok(false) : ret.Fail(loaded.ErrorMessage, loaded.ErrorCode);
+        }
+
+        var world = loaded.Result!;
+        LevelRoster? discard = null;
+        foreach (var roster in world.LevelRosters.Where(r => r.MysteryIds.Remove(mysteryId) || r.FirstMysteryId == mysteryId))
+        {
+            // The last case that drew on it is gone, and none was played (a played case is never discarded).
+            if (roster.MysteryIds.Count == 0 && !world.ClosedMysteryIds.Contains(mysteryId))
+            {
+                discard = roster;
+            }
+        }
+
+        if (discard is not null)
+        {
+            world.LevelRosters.Remove(discard);
+            var ids = discard.CharacterIds.ToHashSet(StringComparer.Ordinal);
+            world.Characters.RemoveAll(c => ids.Contains(c.Id) && c.MysteryIds.Count == 0);
+        }
+
+        var saved = await worlds.SaveAsync(world, cancellationToken);
+        return saved.Success ? ret.Ok(discard is not null) : ret.Fail(saved.ErrorMessage, saved.ErrorCode);
+    }
 }
 
 /// <summary>
@@ -177,7 +255,7 @@ public static class WorldWriteBack
         var p = stored.Packet;
         var changes = new List<string>();
         var solved = request.Outcome == CaseStatuses.Solved;
-        var when = $"{MonthName(p.Brief.Month)}, {p.Title}";
+        var when = $"{MonthName(p.Brief.Month)}{(p.Brief.Year > 0 ? $" {p.Brief.Year}" : "")}, {p.Title}";
         var ending = solved
             ? lever is null ? "The Society solved it." : $"The Society ended it: {lever.Description}"
             : "The Society did not resolve it.";
@@ -271,6 +349,14 @@ public static class WorldWriteBack
             }
         }
 
+        // What the case explained of the level's public facts is now true for this Society (fixes 4, section 12.2).
+        foreach (var explained in p.PublicFactsExplained.Where(e => !world.Overlay.Exists(o => o.LevelId == p.Brief.LevelId && o.PublicFactId == e.PublicFactId)))
+        {
+            var text = $"{explained.Fact} The truth of it: {explained.Explanation}";
+            world.Overlay.Add(new WorldOverlayEntry { MysteryId = p.MysteryId, LevelId = p.Brief.LevelId, PublicFactId = explained.PublicFactId, Text = text, At = DateTime.UtcNow });
+            changes.Add($"The world: {text}");
+        }
+
         world.ClosedMysteryIds.Add(p.MysteryId);
         return changes;
     }
@@ -287,6 +373,9 @@ public static class WorldWriteBack
             Tier = resident ? WorldTiers.LocationResident : pivotal ? WorldTiers.Core : WorldTiers.Background,
             Importance = 0,
             Home = member.HomePlaceId is null ? p.Brief.LevelId : $"{p.Brief.LevelId}/{member.HomePlaceId}",
+            HomeLevelId = resident ? p.Brief.LevelId : null,
+            HomePlaceId = resident ? member.HomePlaceId : null,
+            RosterRole = resident ? RosterRoles.Resident : null,
             Identity = member.Identity ?? new CharacterIdentity(),
             Drives = (member.Wants.Drives.Count > 0 ? member.Wants.Drives : [$"to get on with life after {p.Title}"])
                 .Select((d, i) => new Drive { Id = $"{member.CharacterId}-drive-{i + 1}", Text = d, Strength = 2 })

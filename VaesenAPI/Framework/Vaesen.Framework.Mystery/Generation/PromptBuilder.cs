@@ -107,7 +107,7 @@ public static class PromptBuilder
         var text = new StringBuilder();
         text.AppendLine("# The assignment");
         text.AppendLine($"- Society: {draft.History.SocietyName} ({draft.History.SocietyId}). Investigators: {(draft.History.Investigators.Count == 0 ? "not known yet" : string.Join("; ", draft.History.Investigators))}.");
-        text.AppendLine($"- Month: {brief.Month} (in-world year {draft.Pack.Setting.StartYear}).");
+        text.AppendLine($"- Month: {brief.Month} (in-world year {(brief.Year > 0 ? brief.Year : draft.Pack.Setting.StartYear)}).");
         text.AppendLine($"- Level: {draft.Level.Name} ({draft.Level.Id}).");
         text.AppendLine($"- Creature: {draft.Vaesen.Name} ({draft.Vaesen.Id}).");
         text.AppendLine($"- Reason kind: {brief.ReasonKind}.");
@@ -152,6 +152,35 @@ public static class PromptBuilder
             text.AppendLine();
         }
 
+        var settled = SettledAbout(draft);
+        if (settled.Count > 0 && For(ConflictStep.StepName, EscalationStep.StepName, HumansStep.StepName, FactsStep.StepName))
+        {
+            text.AppendLine("# What is already settled about this place for this Society (keep to it)");
+            text.AppendLine(string.Join("\n", settled));
+            text.AppendLine();
+        }
+
+        var locals = draft.World?.RosterFor(draft.Level.Id) is null ? [] : draft.World.PeopleOf(draft.Level.Id).Where(c => c.Status is CharacterStatuses.Alive or CharacterStatuses.Absent).ToList();
+        if (locals.Count > 0 && For(HumansStep.StepName))
+        {
+            text.AppendLine("# The people of this place (this Society's world: the same people every case here)");
+            text.AppendLine(Json(locals.Select(c => new
+            {
+                id = c.Id,
+                name = c.Name,
+                role = c.RosterRole,
+                place = c.HomePlaceId,
+                c.Identity.Age,
+                c.Identity.Occupation,
+                who = c.Background,
+                status = c.Status == CharacterStatuses.Alive ? null : c.Status,
+                attitudeToSociety = c.Attitude == 0 ? (int?)null : c.Attitude,
+                remembers = c.Memories.Count == 0 ? null : c.Memories.TakeLast(2).Select(m => $"{m.When}: {m.Text}"),
+                ties = c.Relationships.Count == 0 ? null : c.Relationships.Select(r => $"{r.CharacterId}: {r.Nature}"),
+            })));
+            text.AppendLine();
+        }
+
         if (For(HumansStep.StepName))
         {
             text.AppendLine("# Persistent characters who may be drawn in (the Society's world, most relevant to this place first)");
@@ -185,6 +214,23 @@ public static class PromptBuilder
     }
 
     /// <summary>
+    /// What the Society's other cases on this level settled about it (fixes 4, section 12.2): public facts explained by
+    /// cases played (the overlay) or queued, and for a return visit the cases before.
+    /// </summary>
+    private static List<string> SettledAbout(MysteryDraft draft)
+    {
+        var lines = draft.SettledPublicFacts
+            .Select(s => $"- {s.PublicFactId} ({s.Fact}) is explained{(s.Played ? "" : " in a case not yet played")}: {s.Explanation}")
+            .ToList();
+        if (draft.Brief.ReturnVisit && draft.Brief.PreviousMysteryIds.Count > 0)
+        {
+            lines.Insert(0, $"- This is a return visit: the Society has been here before ({string.Join(", ", draft.Brief.PreviousMysteryIds)}). Its people remember them, and time has passed.");
+        }
+
+        return lines;
+    }
+
+    /// <summary>
     /// The level as a step needs it. Only minds and channels place things in rooms and furniture, so only they (and the
     /// critic) get the affordances, as one line each; the others get the places' names and descriptions.
     /// </summary>
@@ -207,11 +253,12 @@ public static class PromptBuilder
             level.Description,
             level.SeasonNotes,
             level.Travel,
-            level.PublicFacts,
+            publicFacts = level.PublicFactsWithIds.Select(f => $"{f.Id}: {f.Text}"),
             places = level.Places.Select(p => new
             {
                 p.Id,
                 p.Name,
+                ownerRole = string.IsNullOrWhiteSpace(p.OwnerRole) ? null : p.OwnerRole,
                 p.Description,
                 p.Tags,
                 affordances = withAffordances ? Affordances(p.Affordances).ToList()
@@ -244,9 +291,10 @@ public static class PromptBuilder
     /// The first names the Society's world already holds (fixes 3, section 7), for the humans step: a new significant
     /// person must not echo one of them across cases.
     /// </summary>
-    public static string UsedNames(SocietyWorld? world)
+    /// <param name="levelId">The level of the case: the people of other levels do not count (fixes 4, section 12.1).</param>
+    public static string UsedNames(SocietyWorld? world, string levelId)
     {
-        var names = (world?.Characters ?? [])
+        var names = (world?.NamesThatMatter(levelId) ?? [])
             .Select(c => Validation.NameRules.FirstName(c.Name))
             .Where(n => n.Length > 0)
             .Distinct(StringComparer.OrdinalIgnoreCase)

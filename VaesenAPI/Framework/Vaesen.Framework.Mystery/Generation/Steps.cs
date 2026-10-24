@@ -217,6 +217,8 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
                 UnavailableCharacterIds = context.UnavailableCharacterIds,
                 SocietyCharacterIds = context.SocietyCharacterIds,
                 WorldNames = context.WorldNames,
+                Holders = context.Holders,
+                SettledPublicFacts = context.SettledPublicFacts,
             };
             var found = repairs.Concat(applyIssues).Concat(validator.Validate(packet, checkContext, Scope)).ToList();
             if (keptIds is not null)
@@ -301,6 +303,11 @@ public sealed class ConflictStep(IMysteryModel model, ICoherenceValidator valida
         truth.ProvocationAffordanceTag = output.ProvocationAffordanceTag;
         truth.HiddenHandMotive = draft.Brief.HiddenHand ? output.HiddenHandMotive : null;
         truth.DecoyReading = output.DecoyReading;
+        var publicFacts = draft.Level.PublicFactsWithIds.ToDictionary(f => f.Id, f => f.Text, StringComparer.Ordinal);
+        packet.PublicFactsExplained = output.PublicFactsExplained
+            .Where(e => !string.IsNullOrWhiteSpace(e.Explanation))
+            .Select(e => new PublicFactExplanation { PublicFactId = e.PublicFactId, Fact = publicFacts.GetValueOrDefault(e.PublicFactId, ""), Explanation = e.Explanation })
+            .ToList();
 
         return draft.Brief.ConflictArchetypeIds.Contains(output.ConflictArchetypeId)
             ? []
@@ -367,7 +374,7 @@ public sealed class HumansStep(IMysteryModel model, ICoherenceValidator validato
         {
             ["handLine"] = PromptBuilder.HandLineForHumans(draft.Brief),
             ["hookGiverType"] = draft.Pack.Setting.FindHookGiverType(draft.Brief.HookGiverType) is { } giver ? $"{giver.Id}: {giver.Meaning}" : draft.Brief.HookGiverType,
-            ["usedNames"] = PromptBuilder.UsedNames(draft.World),
+            ["usedNames"] = PromptBuilder.UsedNames(draft.World, draft.Level.Id),
         });
 
     protected override List<CoherenceIssue> Apply(MysteryDraft draft, CasePacket packet, HumansOutput output)
@@ -404,6 +411,7 @@ public sealed class HumansStep(IMysteryModel model, ICoherenceValidator validato
                 : null),
             HomePlaceId = string.IsNullOrWhiteSpace(c.HomePlaceId) ? null : c.HomePlaceId,
             HomeAffordanceId = string.IsNullOrWhiteSpace(c.HomeAffordanceId) ? null : c.HomeAffordanceId,
+            Keeps = string.IsNullOrWhiteSpace(c.Keeps) ? null : c.Keeps,
             Wants = c.Wants,
             Secrets = c.Secrets,
             Routine = c.Routine,
@@ -473,10 +481,64 @@ public sealed class ResidentsStep(IMysteryModel model, ICoherenceValidator valid
         PromptBuilder.Fill(PromptBuilder.Template("residents"), new Dictionary<string, string>
         {
             ["names"] = string.Join(", ", draft.Packet.Cast.Where(c => c.Importance == CastImportance.Significant).Select(c => c.Name)),
-            ["usedNames"] = PromptBuilder.UsedNames(draft.World),
+            ["usedNames"] = PromptBuilder.UsedNames(draft.World, draft.Level.Id),
         });
 
+    /// <summary>
+    /// Residents from the place's people (fixes 4, section 12.1): up to <paramref name="count"/> of the level's roster not
+    /// already in the case, those with a thread to pull first. False when the Society has no roster for the level.
+    /// </summary>
+    public static bool FromRoster(MysteryDraft draft, int count)
+    {
+        if (draft.World?.RosterFor(draft.Level.Id) is null)
+        {
+            return false;
+        }
+
+        var taken = draft.Packet.Cast.Select(c => c.CharacterId).ToHashSet(StringComparer.Ordinal);
+        var chosen = draft.World.PeopleOf(draft.Level.Id)
+            .Where(c => c.Status == CharacterStatuses.Alive && !taken.Contains(c.Id))
+            .OrderByDescending(c => c.LatentHooks.Count > 0)
+            .ThenBy(c => RosterRoles.Holds(c.RosterRole ?? "") ? 1 : 0)
+            .ThenBy(c => c.Id, StringComparer.Ordinal)
+            .Take(count)
+            .Select(c => new CastDraft
+            {
+                CharacterId = c.Id,
+                Name = c.Name,
+                InstanceRef = InstanceRefs.Persistent,
+                PlotRole = $"{c.Identity.Occupation}: {c.Background}",
+                Importance = CastImportance.Resident,
+                Identity = c.Identity,
+                HomePlaceId = c.HomePlaceId,
+                Wants = new CastWants { Drives = c.Drives.Select(d => d.Text).ToList() },
+                Secrets = c.LatentHooks.Select(h => h.Text).ToList(),
+                Routine = c.Background,
+                VoiceNotes = c.Voice.Register,
+            })
+            .ToList();
+        var output = new ResidentsOutput { Residents = chosen };
+        AddResidents(draft, draft.Packet, output);
+        draft.Outputs[StepName] = output;
+        draft.Log.Add(new GenerationLogEntry
+        {
+            CaseAttempt = draft.Log.LastOrDefault()?.CaseAttempt ?? 0,
+            Step = StepName,
+            Kind = LogEntryKinds.Roster,
+            Passed = true,
+            Instruction = $"No model call: up to {count} residents from the Society's people of {draft.Level.Name}.",
+            Output = string.Join(", ", chosen.Select(c => c.Name)),
+        });
+        return true;
+    }
+
     protected override List<CoherenceIssue> Apply(MysteryDraft draft, CasePacket packet, ResidentsOutput output)
+    {
+        AddResidents(draft, packet, output);
+        return [];
+    }
+
+    private static void AddResidents(MysteryDraft draft, CasePacket packet, ResidentsOutput output)
     {
         var previous = draft.Outputs.TryGetValue(StepName, out var kept) && kept is ResidentsOutput r
             ? r.Residents.Select(c => c.CharacterId).ToHashSet(StringComparer.Ordinal)
@@ -488,7 +550,6 @@ public sealed class ResidentsStep(IMysteryModel model, ICoherenceValidator valid
 
         var residents = HumansStep.ToCast(draft, packet, output.Residents);
         packet.Cast = packet.Cast.Where(c => !previous.Contains(c.CharacterId) && !residents.Exists(n => n.CharacterId == c.CharacterId)).Concat(residents).ToList();
-        return [];
     }
 
     protected override void OnPassed(MysteryDraft draft, CasePacket before, int caseAttempt) => Renames.AfterPass(draft, before, caseAttempt, Name);
@@ -742,7 +803,7 @@ public sealed class CriticStep(IMysteryModel model, MysteryOptions options)
             ["focus"] = $"{draft.Brief.Focus}: {PromptBuilder.FocusMeaning(draft.Brief.Focus)}",
             ["focusRule"] = PromptBuilder.FocusRuleForCritic(draft.Brief.Focus),
             ["solveRule"] = PromptBuilder.SolveRuleForCritic(draft.Brief),
-            ["usedNames"] = PromptBuilder.UsedNames(draft.World) is { Length: > 0 } used ? " " + used.TrimStart('-', ' ') : "",
+            ["usedNames"] = PromptBuilder.UsedNames(draft.World, draft.Level.Id) is { Length: > 0 } used ? " " + used.TrimStart('-', ' ') : "",
         });
 
         entry.Instruction = PromptBuilder.WithCaseAndFeedback(instruction, draft.Packet, [], null) + Earlier(earlier);

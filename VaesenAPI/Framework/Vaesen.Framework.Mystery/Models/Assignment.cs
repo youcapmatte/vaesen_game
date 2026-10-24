@@ -36,6 +36,40 @@ public sealed class PastMystery
 
     [JsonProperty("hookGiverType")]
     public string HookGiverType { get; set; } = "";
+
+    /// <summary>The in-world year it is set in; 0 for cases from before the calendar (the setting's start year).</summary>
+    [JsonProperty("year")]
+    public int Year { get; set; }
+
+    [JsonProperty("month")]
+    public int Month { get; set; }
+
+    /// <summary>Played to the end (solved or failed); a queued case is not.</summary>
+    [JsonProperty("finished")]
+    public bool Finished { get; set; }
+}
+
+/// <summary>An in-world month: the Society's calendar only moves forward (fixes 4, section 11).</summary>
+public readonly record struct InWorldDate(int Year, int Month) : IComparable<InWorldDate>
+{
+    /// <summary>Months since year 0, for differences.</summary>
+    public int Index => (Year * 12) + Month - 1;
+
+    public InWorldDate AddMonths(int months) => From(Index + months);
+
+    public static InWorldDate From(int index) => new(index / 12, (index % 12) + 1);
+
+    public int CompareTo(InWorldDate other) => Index.CompareTo(other.Index);
+
+    public static bool operator <(InWorldDate a, InWorldDate b) => a.Index < b.Index;
+
+    public static bool operator >(InWorldDate a, InWorldDate b) => a.Index > b.Index;
+
+    public static bool operator <=(InWorldDate a, InWorldDate b) => a.Index <= b.Index;
+
+    public static bool operator >=(InWorldDate a, InWorldDate b) => a.Index >= b.Index;
+
+    public override string ToString() => $"{System.Globalization.CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(Month)} {Year}";
 }
 
 /// <summary>Output of the assignment stage (spec 7.1, 7.2): everything decided before the model writes anything.</summary>
@@ -47,11 +81,23 @@ public sealed class AssignmentBrief
     [JsonProperty("month")]
     public int Month { get; set; }
 
+    /// <summary>The in-world year: later than (or the same year as, in a later month) the Society's last case.</summary>
+    [JsonProperty("year")]
+    public int Year { get; set; }
+
     [JsonProperty("seed")]
     public int Seed { get; set; }
 
     [JsonProperty("levelId")]
     public string LevelId { get; set; } = "";
+
+    /// <summary>A deliberate return to a level the Society has been to (fixes 4, section 11): the level's cooldown is waived.</summary>
+    [JsonProperty("returnVisit")]
+    public bool ReturnVisit { get; set; }
+
+    /// <summary>For a return visit: the Society's earlier mysteries on this level, oldest first.</summary>
+    [JsonProperty("previousMysteryIds")]
+    public List<string> PreviousMysteryIds { get; set; } = [];
 
     [JsonProperty("vaesenId")]
     public string VaesenId { get; set; } = "";
