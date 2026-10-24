@@ -524,6 +524,21 @@ namespace VaesenAnimSetup
 					*(Hand.GetLocation() - Root).ToCompactString(), *Blade.ToCompactString(), *(Hand.TransformPosition(GripLocal) + Blade * 80.0 - Root).ToCompactString());
 			}
 		}
+		// The draw from the hip, frame by frame: where the hand and the pack's blade are.
+		FVector BladeLocal, EdgeLocal, GripLocal;
+		const UAnimSequence* Equip = LoadObject<UAnimSequence>(nullptr, TEXT("/Game/1HM_Sword_Attacks_Finishers/Animations/1HM_Idle/1HM_Idle_Equip.1HM_Idle_Equip"));
+		if (Equip && BladeInHand(BladeLocal, EdgeLocal, GripLocal))
+		{
+			for (float Time = 0.0f; Time <= Equip->GetPlayLength(); Time += 0.1f)
+			{
+				FAnimPose Pose;
+				UAnimPoseExtensions::GetAnimPoseAtTime(Equip, Time, FAnimPoseEvaluationOptions(), Pose);
+				const FTransform Hand = UAnimPoseExtensions::GetBonePose(Pose, TEXT("hand_r"), EAnimPoseSpaces::World);
+				const FVector Root = UAnimPoseExtensions::GetBonePose(Pose, TEXT("root"), EAnimPoseSpaces::World).GetLocation();
+				UE_LOG(LogVaesenAnimSetup, Display, TEXT("Equip %.1f: grip %s blade %s"), Time, *(Hand.TransformPosition(GripLocal) - Root).ToCompactString(),
+					*Hand.TransformVectorNoScale(BladeLocal).ToCompactString());
+			}
+		}
 		if (const UStaticMesh* Sword = LoadObject<UStaticMesh>(nullptr, TEXT("/Game/1HM_Sword_Attacks_Finishers/Weapons/OneHandSword_Mesh.OneHandSword_Mesh")))
 		{
 			const FBox Box = Sword->GetBoundingBox();
@@ -1681,33 +1696,15 @@ namespace VaesenAnimSetup
 		});
 		UEdGraphNode* Stance = ByBool(Builder, -1250, 100, TEXT("bFalling"), Air, Walking, 0.15f);
 
-		// Running freely (not strafing): the plain run (ABP_Manny), the right arm carrying the sword as the pack's
-		// sprint does. The pack's footwork is a fencer's, for standing, strafing and guarding.
+		// Running or jumping freely (not strafing): the plain run and jump (ABP_Manny), arms and all; the character
+		// graph's hand node turns the wrist so the blade stays clear of the body. The pack's footwork is a fencer's,
+		// for standing, strafing and guarding.
 		UClass* Plain = LoadObject<UClass>(nullptr, UnarmedGraphPath);
-		UAnimGraphNode_LinkedAnimGraph* Running = Builder.Add<UAnimGraphNode_LinkedAnimGraph>(-1600, -350, [Plain](UAnimGraphNode_LinkedAnimGraph* Node)
+		UAnimGraphNode_LinkedAnimGraph* Running = Builder.Add<UAnimGraphNode_LinkedAnimGraph>(-1600, -300, [Plain](UAnimGraphNode_LinkedAnimGraph* Node)
 		{
 			Node->Node.InstanceClass = Plain;
 		});
-		UAnimSequence* Sprint = SwordAnim(TEXT("1HM_Run_SprintForward"));
-		UAnimGraphNode_SequencePlayer* SwordArm = Builder.Add<UAnimGraphNode_SequencePlayer>(-1600, -200, [Sprint](UAnimGraphNode_SequencePlayer* Node)
-		{
-			Node->Node.SetSequence(Sprint);
-		});
-		UAnimGraphNode_LayeredBoneBlend* Carried = Builder.Add<UAnimGraphNode_LayeredBoneBlend>(-1250, -300, [](UAnimGraphNode_LayeredBoneBlend* Node)
-		{
-			Node->Node.bMeshSpaceRotationBlend = true;
-			if (Node->Node.LayerSetup.Num() == 0)
-			{
-				Node->Node.LayerSetup.AddDefaulted();
-			}
-			FBranchFilter Filter;
-			Filter.BoneName = TEXT("clavicle_r");
-			Filter.BlendDepth = 0;
-			Node->Node.LayerSetup[0].BranchFilters = { Filter };
-		});
-		Builder.Pose(Running, Carried, TEXT("BasePose"));
-		Builder.Pose(SwordArm, Carried, TEXT("BlendPoses_0"));
-		UEdGraphNode* Moving = ByBool(Builder, -1100, 0, TEXT("bFreeRunning"), Carried, Stance, 0.3f);
+		UEdGraphNode* Moving = ByBool(Builder, -1100, 0, TEXT("bFreeRunning"), Running, Stance, 0.3f);
 		UAnimGraphNode_SaveCachedPose* Cache = Builder.Add<UAnimGraphNode_SaveCachedPose>(-1000, 100, [](UAnimGraphNode_SaveCachedPose* Node)
 		{
 			Node->CacheName = TEXT("SwordLocomotion");
@@ -1932,6 +1929,26 @@ namespace VaesenAnimSetup
 		if (ComputeSwordInHand(Skeleton, InHand))
 		{
 			Sword.InHand = InHand;
+		}
+
+		// The left-hip sheath where the draw takes the hilt: at the grab, the sword as the hand holds it is where the
+		// sheath has it (on the pelvis, so it rides the hips). The drawing hand then meets the hilt. Only over the
+		// grey-box guess (a socket tuned by hand stays; -resetsockets works it out again).
+		const USkeletalMeshSocket* Hip = Skeleton->FindSocket(TEXT("Sheath_HipLeft"));
+		const bool bGreyBoxHip = !Hip || (Hip->BoneName == TEXT("pelvis") && Hip->RelativeLocation.Equals(FVector(0.0, 0.0, 18.0), 0.1));
+		const USkeletalMeshSocket* Palm = Skeleton->FindSocket(UVaesenWeaponCategoryDefaults::Get()->MainHandSocket);
+		if (EquipAnim && Palm && (bGreyBoxHip || FParse::Param(FCommandLine::Get(), TEXT("resetsockets"))))
+		{
+			const FAnimPose AtGrab = PoseAt(EquipAnim, Grab);
+			const FTransform Hand = UAnimPoseExtensions::GetBonePose(AtGrab, TEXT("hand_r"), EAnimPoseSpaces::World);
+			const FTransform Pelvis = UAnimPoseExtensions::GetBonePose(AtGrab, TEXT("pelvis"), EAnimPoseSpaces::World);
+			FTransform Sheathed = (Sword.InHand * Palm->GetSocketLocalTransform() * Hand).GetRelativeTransform(Pelvis);
+			Sheathed.SetScale3D(FVector::OneVector);
+			SetSkeletonSocket(Skeleton, TEXT("Sheath_HipLeft"), TEXT("pelvis"), Sheathed, true);
+			const FTransform Hilt = Sword.InHand * Palm->GetSocketLocalTransform() * Hand;
+			UE_LOG(LogVaesenAnimSetup, Display, TEXT("Left-hip sheath: hilt at %s, blade points %s (mesh space; Manny faces +Y, his left is +X)"),
+				*Hilt.GetLocation().ToCompactString(), *Hilt.GetUnitAxis(EAxis::X).ToCompactString());
+			Save(Skeleton);
 		}
 		Save(Defaults);
 	}

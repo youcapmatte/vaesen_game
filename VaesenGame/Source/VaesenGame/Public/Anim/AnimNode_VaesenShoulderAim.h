@@ -59,6 +59,13 @@ struct FVaesenShoulderAimInput
 	float RecoilPitch = 0.0f;
 	float RecoilBodyPitch = 0.0f;
 
+	/**
+	 * Carrying a one-handed weapon at a run, 0..1: the wrist turns so the weapon's X (the blade) points along
+	 * CarryDirection (component space), clear of the body and the other arm, whatever the arm is doing.
+	 */
+	float CarryBlend = 0.0f;
+	FVector CarryDirection = FVector(0.0, 1.0, 0.0);
+
 	/** A shot's kick, 1 easing to 0. */
 	float Kick = 0.0f;
 };

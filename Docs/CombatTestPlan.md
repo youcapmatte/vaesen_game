@@ -193,7 +193,7 @@ The Fab pack **One Hand Sword Attacks And Finishers** (RamsterZ) is in `Content/
 
 | What | From the pack | Notes |
 | --- | --- | --- |
-| Stance (`ABP_SwordLocomotion`) | Idle, walk and run in 8 directions, jump loop | Standing, strafing and guarding: `BS_1HM_Locomotion`, each animation at its own speed (a fencer's footwork, kept for strafing and a later target lock). **Running freely** (turned by your movement): the plain run (`ABP_Manny`), with the right arm carrying the sword as the pack's sprint does. No crouch animation (crouching shows the standing stance). |
+| Stance (`ABP_SwordLocomotion`) | Idle, walk and run in 8 directions, jump loop | Standing, strafing and guarding: `BS_1HM_Locomotion`, each animation at its own speed (a fencer's footwork, kept for strafing and a later target lock). **Running or jumping freely** (turned by your movement): the plain run and jump (`ABP_Manny`), arms and all; the hand node turns the wrist so the blade points forward, down and out, clear of the body and the other arm. No crouch animation (crouching shows the standing stance). |
 | Light attack (left mouse) | Slash 01 → 02 → 03 → 04 | A combo: attacking again within 0.6 s of a swing ending plays the next one, and after the fourth it starts over. Full body, **root motion**: the animation moves you (about 40 cm of footwork over a combo), not your input. You turn to where you steer as each swing starts, then you're committed; a dodge can cut the follow-through once the swing is over. |
 | Heavy attack (Shift + left mouse) | Stab 01 → 02 → 03 | A combo the same way. Effort grunt. |
 | Hit window | — | Worked out from each animation: where the sword hand moves fastest, plus a little either side (`ANS_MeleeHitWindow` in each `AM_1HM_*`). Slash 01 is live 0.24–0.43 s. The whoosh plays as it opens. A swing is over (the next can start) 0.2 s after its window closes; the follow-through plays out unless you cut it short. |
@@ -203,7 +203,7 @@ The Fab pack **One Hand Sword Attacks And Finishers** (RamsterZ) is in `Content/
 | Parried | Hit React 02 | The stagger. |
 | Hit | Hit React 01, 02; Hit React Behind 01 | Unless swinging, guarding or dodging. From behind gets its own. |
 | Dodge (Left Alt) | Evade Forward, Back, Left, Right | Root motion carries you, about 1.3–1.6 m. The way you're steering, relative to where you face; back when standing still. 15 stamina. Drops a block. |
-| Draw / sheathe from the left hip | Idle Equip / Unequip | `Sheath_HipLeft` (every weapon carried there). The hand takes the hilt at 0.93 s, at 1.4× speed. |
+| Draw / sheathe from the left hip | Idle Equip / Unequip | `Sheath_HipLeft` (every weapon carried there) is worked out from the draw: where the sword is in the hand as it takes the hilt (0.93 s), so the hand meets the hilt. It replaces the grey-box guess only; a socket tuned in the Skeleton editor stays (`-resetsockets` works it out again). 1.4× speed. |
 
 How the sword sits in the hand comes from the pack's own `1HMBladeMan`. The pack's `WeaponSocket` doesn't match its animations: a sword there points out sideways in every pose. The result is the category's **In Hand** (`DA_WeaponCategoryDefaults` → OneHandedSword → In Hand). Our swords' meshes keep the usual convention (blade along X, edges along Z, held by `Grip`). A weapon's own `Hold.InHand` still fine-tunes it on top.
 

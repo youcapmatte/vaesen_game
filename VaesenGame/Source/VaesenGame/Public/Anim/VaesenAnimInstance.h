@@ -47,6 +47,9 @@ class VAESENGAME_API UVaesenAnimInstance : public UAnimInstance
 public:
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
 
+	/** Running freely (the weapon stance uses the plain run). */
+	bool IsFreeRunning() const { return bFreeRunning; }
+
 	/** A shot: the trigger finger curls and lets go (and a shouldered weapon kicks). */
 	void PulseTriggerFinger();
 
@@ -181,7 +184,7 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Locomotion")
 	bool bStrafing = false;
 
-	/** Running freely: turned by its movement (not strafing), faster than a slow walk. */
+	/** Running freely: turned by its movement (not strafing), faster than a slow walk or in the air. */
 	UPROPERTY(BlueprintReadOnly, Category = "Locomotion")
 	bool bFreeRunning = false;
 
@@ -191,6 +194,12 @@ protected:
 
 private:
 	float RecoilKick = 0.0f;
+
+	/** The wrist turning a carried blade clear at a run, 0..1. */
+	float CarryBlend = 0.0f;
+
+	/** Where a carried blade points at a run, in component space (Manny faces +Y; his right is -X). */
+	FVector CarryDirection = FVector(-0.35, 0.45, -0.82);
 
 	/** When the last shot was fired (world seconds; negative: none yet). */
 	double ShotTime = -100.0;

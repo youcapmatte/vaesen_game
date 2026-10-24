@@ -127,6 +127,15 @@ void FAnimNode_VaesenShoulderAim::EvaluateSkeletalControl_AnyThread(FComponentSp
 	FTransform UpperL = Pose(UpperArmL);
 	FTransform LowerL = Pose(LowerArmL);
 	FTransform HandLeft = Pose(HandL);
+
+	// Carried at a run: the wrist turns the blade along the carry direction (about the hand, the arm swings on).
+	const float Carry = Input.bShoulder ? 0.0f : FMath::Clamp(Input.CarryBlend, 0.0f, 1.0f);
+	if (Carry > 0.0f)
+	{
+		const FVector Blade = (Input.GripOnWeaponBone * WeaponBoneInHand * Hand).GetUnitAxis(EAxis::X);
+		const FQuat Turn = FQuat::Slerp(FQuat::Identity, FQuat::FindBetweenNormals(Blade, Input.CarryDirection.GetSafeNormal()), Carry);
+		Hand.SetRotation((Turn * Hand.GetRotation()).GetNormalized());
+	}
 	const FTransform InHand = Input.GripOnWeaponBone * WeaponBoneInHand * Hand;
 
 	FTransform Weapon = InHand;
@@ -249,6 +258,10 @@ void FAnimNode_VaesenShoulderAim::EvaluateSkeletalControl_AnyThread(FComponentSp
 	{
 		Emit(UpperArmR, Upper);
 		Emit(LowerArmR, Lower);
+		Emit(HandR, Hand);
+	}
+	else if (Carry > 0.0f)
+	{
 		Emit(HandR, Hand);
 	}
 

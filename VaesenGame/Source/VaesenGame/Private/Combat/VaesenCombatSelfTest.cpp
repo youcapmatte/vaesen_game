@@ -4,6 +4,7 @@
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimMontage.h"
 #include "Camera/CameraActor.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Animation/AnimSequence.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -703,7 +704,13 @@ void UVaesenCombatSelfTest::BuildSteps()
 		Check(GiveAndEquip(*Path(Weapons, TEXT("BP_Weapon_OldSword"))), TEXT("sword equipped (replaces the rifle)"));
 		Tap(Holster);
 		// The draw from the hip takes its montage's time.
-		return 1.8f;
+		return 0.62f;
+	} });
+	Steps.Add({ FString(), [this]()
+	{
+		// The hand at the hilt in the sheath (the draw takes it about now).
+		Shot(TEXT("0_DrawGrab"));
+		return 1.2f;
 	} });
 	Steps.Add({ FString(), [this, Equipment, ASC, Tap, Attack]()
 	{
@@ -807,6 +814,38 @@ void UVaesenCombatSelfTest::BuildSteps()
 		return 0.3f;
 	} });
 
+	// Running with the sword drawn (the plain run, the blade turned clear): steered away from the dummies for a moment.
+	const TSharedRef<FTimerHandle> RunTimer = MakeShared<FTimerHandle>();
+	Steps.Add({ FString(), [this, RunTimer, StandAt]()
+	{
+		*StandAt = Fighter->GetActorTransform();
+		const FVector Away = -Fighter->GetActorForwardVector();
+		Fighter->GetWorldTimerManager().SetTimer(*RunTimer, FTimerDelegate::CreateWeakLambda(Fighter.Get(), [Fighter = Fighter.Get(), Away]()
+		{
+			Fighter->AddMovementInput(Away);
+		}), 0.01f, true);
+		return 0.9f;
+	} });
+	Steps.Add({ FString(), [this]()
+	{
+		const UVaesenAnimInstance* Anim = Cast<UVaesenAnimInstance>(Fighter->GetMesh()->GetAnimInstance());
+		Check(Anim && Anim->IsFreeRunning(), FString::Printf(TEXT("running with the sword uses the plain run (%.0f cm/s)"), Fighter->GetVelocity().Size2D()));
+		Shot(TEXT("8_Running"));
+		return 0.25f;
+	} });
+	Steps.Add({ FString(), [this]() { Shot(TEXT("9_Running")); return 0.3f; } });
+	Steps.Add({ FString(), [this, RunTimer, StandAt]()
+	{
+		Fighter->GetWorldTimerManager().ClearTimer(*RunTimer);
+		Fighter->GetCharacterMovement()->StopMovementImmediately();
+		Fighter->SetActorTransform(*StandAt);
+		if (APlayerController* Viewer = ShotCamera ? Fighter->GetWorld()->GetFirstPlayerController() : nullptr)
+		{
+			Viewer->SetViewTarget(Viewer->GetPawn());
+		}
+		return 0.5f;
+	} });
+
 	Steps.Add({ TEXT("Block and parry"), [this, ASC, Tap, AimOrBlock]()
 	{
 		ResetAll();
@@ -840,6 +879,8 @@ void UVaesenCombatSelfTest::BuildSteps()
 		Equipment->RequestSheathe();
 		return 2.0f;
 	} });
+
+	Steps.Add({ FString(), [this]() { Shot(TEXT("7_Sheathed")); return 0.3f; } });
 
 	// --- Throwing a stone ---
 	Steps.Add({ TEXT("Throw"), [this, Inventory]()

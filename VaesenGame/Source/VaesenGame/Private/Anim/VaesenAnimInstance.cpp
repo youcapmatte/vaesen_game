@@ -73,11 +73,12 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		const FVector Velocity = Character->GetVelocity();
 		Speed = Velocity.Size2D();
 		Direction = Speed > 1.0f ? UKismetAnimationLibrary::CalculateDirection(Velocity, Character->GetActorRotation()) : 0.0f;
-		// Running where it's going (not strafing): weapon stances use the plain run then (a little hysteresis, so it doesn't flicker).
-		bFreeRunning = !bStrafing && Speed > (bFreeRunning ? 60.0f : 120.0f);
 		bStrafing = !Character->GetCharacterMovement()->bOrientRotationToMovement;
 		bCrouching = Character->bIsCrouched;
 		bFalling = Character->GetCharacterMovement()->IsFalling();
+		// Running (or jumping) where it's going, not strafing: weapon stances use the plain run then (a little
+		// hysteresis, so it doesn't flicker).
+		bFreeRunning = !bStrafing && (bFalling || Speed > (bFreeRunning ? 60.0f : 120.0f));
 
 		const UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Character);
 		const auto HasTag = [ASC](const FGameplayTag& Tag) { return ASC && ASC->HasMatchingGameplayTag(Tag); };
@@ -204,6 +205,13 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	In.bLeftHandTurns = bLeftGrip;
 	In.LeftHandInWeapon = HandInWeapon;
 	In.Kick = RecoilKick;
+
+	// A one-handed weapon carried at a run (the plain run's arm swing): the blade forward, down and out to the right,
+	// clear of the body and the other arm. Not while a montage (a swing, a dodge, a draw) has the arm.
+	const bool bCarry = bFreeRunning && In.bHeld && bHandsFree && Weapon && !Weapon->IsRanged() && !Weapon->IsHeldTwoHanded() && !IsAnyMontagePlaying();
+	CarryBlend = FMath::FInterpTo(CarryBlend, bCarry ? 1.0f : 0.0f, DeltaSeconds, 8.0f);
+	In.CarryBlend = CarryBlend;
+	In.CarryDirection = CarryDirection;
 
 	// Working a bolt by hand: how far through it (the right hand goes to the Bolt socket and back).
 	const UVaesenRangedWeaponItem* RangedItem = Cast<UVaesenRangedWeaponItem>(Weapon);
