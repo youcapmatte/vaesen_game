@@ -1,8 +1,4 @@
 {
-  "id": "level-gruvbo-october",
-  "version": 1,
-  "status": "draft",
-  "name": "Gruvbo in Bergslagen",
   "region": "Bergslagen, northern Västmanland",
   "settlementType": "town",
   "size": 3,
@@ -14,13 +10,252 @@
     "stream",
     "underground"
   ],
-  "description": "Gruvbo is an old mining settlement grown into a small town among forested ridges and lakes, where iron ore has been dug since the Middle Ages. The mine is worked in shares by the mining farmers (bergsmän) and, increasingly, by a Stockholm company buying them out. Smoke from charcoal stacks and the blast furnace at the works stains the sky, and the new railway carries ore and bar iron to Lake Mälaren.",
+  "description": "Gruvbo is an old mining settlement grown into a small town among forested ridges and lakes, where iron ore has been dug since the Middle Ages. The mine is worked in shares by the mining farmers (bergsmän) and, increasingly, by a Stockholm company buying them out. Smoke from charcoal stacks and the blast furnace at the works stains the sky, and the little ore railway carries ore down to the landing on the lake, where canal barges take it on towards Lake Mälaren.",
   "seasonNotes": "October. Charcoal burners are building their stacks in the forest for the winter's hauling, and the blue smoke of the kilns hangs in every valley. Rain and fog roll in off the lakes; the spoil heaps run with rust-red water. It is dark by six, and the shift change at the mine happens by lantern. The first ice skins the puddles at dawn. Farmers are bringing in turnips and potatoes between shifts.",
-  "travel": "From Uppsala by coach west to Sala, most of a day, then on the small ore railway that links the mines with the lake landing; a day and a half in all.",
+  "travel": "From Uppsala by post-coach (sleigh in winter) west to Sala, about nine hours; sleep there, then by road to Gruvbo, about five hours. In the open season one can also go by rail to Stockholm, Mälaren steamer to Västerås, the Strömsholm Canal to Ängelsberg landing and the ore railway up. A day and a half in all.",
+  "geography": {
+    "realAnalogue": "Norberg (Bergslagen, northern Västmanland)",
+    "fictional": true,
+    "province": "Västmanland",
+    "county": "Västmanlands län",
+    "parish": "Gruvbo parish",
+    "knownFor": [
+      "Bergslagen iron ore, dug here since the Middle Ages and worked in shares by the bergsmän",
+      "Charcoal and bar iron sent down to Lake Mälaren, once by sled and barge, now by the ore railway",
+      "Old Swedish mining ways: fire-setting, shares and bergsman farms, and a mining office with powers over the mines"
+    ],
+    "neighbours": [
+      {
+        "name": "Sala",
+        "kind": "market and mining town",
+        "distance": "about 45 km south-east by road",
+        "offers": [
+          "district court and crown sheriff",
+          "provincial doctor",
+          "savings bank",
+          "old silver mine",
+          "coach road to Uppsala",
+          "post-horses and an inn"
+        ]
+      },
+      {
+        "name": "Västerås",
+        "kind": "county seat",
+        "distance": "about 80 km south-east by road or by lake and rail",
+        "offers": [
+          "governor and county administration",
+          "mining office (Bergmästare)",
+          "Westmanlands Enskilda Bank",
+          "Westmanlands Läns Tidning",
+          "Mälaren steamers",
+          "cathedral school and county hospital"
+        ]
+      },
+      {
+        "name": "Ängelsberg landing",
+        "kind": "lake landing and canal port",
+        "distance": "about 20 km south by the ore railway",
+        "offers": [
+          "the ore railway's terminus",
+          "Strömsholm Canal barges and boats in the open season",
+          "ore and charcoal quays",
+          "a plain inn"
+        ]
+      },
+      {
+        "name": "Smedjebacken",
+        "kind": "ironworks village and canal head",
+        "distance": "about 45 km west by cart road",
+        "offers": [
+          "ironworks and forges",
+          "head of the Strömsholm Canal on Lake Barken",
+          "a smith, a postmaster and a rail line planned from 1873 (Frövi-Ludvika)"
+        ]
+      }
+    ],
+    "authorities": {
+      "police": "The kronolänsman of the Gruvbo district sits in Sala, most of a day away by road; a parish constable and the mine's own watchmen keep order in the town between his visits.",
+      "court": "Häradsrätt for the Bergslagen mining district at Sala, with sessions a few times a year (the dates are approximate). Ore-claim, wage and mine-accident cases come here.",
+      "doctor": "The provinsialläkare for the Sala/Bergslagen district lives in Sala and drives out to Gruvbo when sent for or to sign death certificates. Between times people go to the apothecary or the wise woman.",
+      "post": "Post office at Gruvbo Station; the mail comes by the road from Sala twice a week, and by the ore railway from the landing in the open season.",
+      "telegraph": "State telegraph office in the station at Gruvbo, wired through Sala to the national network. It is closed at night and on Sundays except for urgent messages.",
+      "bank": "Nearest bank is the savings bank in Sala (30 km); the Westmanlands Enskilda Bank in Västerås (80 km) finances the works and the Stockholm company.",
+      "newspaper": "Westmanlands Läns Tidning, Västerås, comes with the post two or three times a week; the reading society also takes the Stockholm papers."
+    }
+  },
+  "journey": {
+    "fromHeadquarters": "Uppsala",
+    "routes": [
+      {
+        "name": "Coach to Sala, then by road",
+        "legs": [
+          {
+            "from": "Uppsala",
+            "to": "Sala",
+            "mode": "coach",
+            "lineId": null,
+            "duration": "about 9 hours with changes of horses at the post-stations",
+            "cost": "about 4 riksdaler riksmynt for a seat and post-horse fees",
+            "schedule": "Post-coach daily from Uppsala in the morning; a hired carriage can be had at any hour",
+            "months": [
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ],
+            "notes": "Rutted and muddy in the autumn rains, and the horses are slow after dark. Expect to reach Sala after nightfall and sleep at the inn."
+          },
+          {
+            "from": "Sala",
+            "to": "Gruvbo",
+            "mode": "hiredCarriage",
+            "lineId": null,
+            "duration": "about 5 hours",
+            "cost": "about 3 riksdaler for a carriage and driver",
+            "schedule": "Hired at the inn in Sala; the mail cart goes twice a week",
+            "months": [
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11
+            ],
+            "notes": "North-west into the forest ridges on a gravel road past charcoal stacks and lakes."
+          }
+        ]
+      },
+      {
+        "name": "By rail, steamer and canal, then the ore railway (open season only)",
+        "legs": [
+          {
+            "from": "Uppsala",
+            "to": "Stockholm",
+            "mode": "railway",
+            "lineId": "stockholm-uppsala-railway",
+            "duration": "about 3 hours",
+            "cost": "about 3 riksdaler second class",
+            "schedule": "Several trains a day",
+            "months": [],
+            "notes": "Via Knivsta, Märsta and Rotebro."
+          },
+          {
+            "from": "Stockholm",
+            "to": "Västerås",
+            "mode": "steamer",
+            "lineId": "malaren-steamer",
+            "duration": "about 8 hours",
+            "cost": "about 3 riksdaler on deck, more with a cabin",
+            "schedule": "Several sailings a week",
+            "months": [
+              5,
+              6,
+              7,
+              8,
+              9,
+              10
+            ],
+            "notes": "Autumn gales can delay it, and the last sailings stop before the ice."
+          },
+          {
+            "from": "Västerås",
+            "to": "Strömsholm",
+            "mode": "hiredCarriage",
+            "lineId": null,
+            "duration": "about 2 hours",
+            "cost": "about 1 riksdaler",
+            "schedule": "Hired in Västerås",
+            "months": [
+              5,
+              6,
+              7,
+              8,
+              9,
+              10
+            ],
+            "notes": "To the foot of the canal."
+          },
+          {
+            "from": "Strömsholm",
+            "to": "Ängelsberg landing",
+            "mode": "canalBoat",
+            "lineId": "stromsholm-canal",
+            "duration": "a long day through the locks",
+            "cost": "about 2 riksdaler as a passenger on a canal boat",
+            "schedule": "Barges and the odd passenger boat most days",
+            "months": [
+              5,
+              6,
+              7,
+              8,
+              9,
+              10
+            ],
+            "notes": "Slow, through many locks, with iron and charcoal for company."
+          },
+          {
+            "from": "Ängelsberg landing",
+            "to": "Gruvbo",
+            "mode": "railway",
+            "lineId": "gruvbo-ore-railway",
+            "duration": "about an hour",
+            "cost": "about 75 öre third class",
+            "schedule": "One or two mixed ore and passenger trains a day",
+            "months": [],
+            "notes": "Up from the lake through the forest to the mine; passengers ride on hard benches behind the ore wagons."
+          }
+        ]
+      },
+      {
+        "name": "Sleigh to Sala, then by road (winter)",
+        "legs": [
+          {
+            "from": "Uppsala",
+            "to": "Sala",
+            "mode": "sleigh",
+            "lineId": null,
+            "duration": "about 10 hours with horse changes, longer in drifts",
+            "cost": "about 5 riksdaler for sleigh, driver and fees",
+            "schedule": "Daily post-sleigh when the road is beaten; hired sleigh otherwise",
+            "months": [
+              12,
+              1,
+              2,
+              3
+            ],
+            "notes": "Travel in furs and stop at the post-stations to warm up. In January darkness comes by mid-afternoon."
+          },
+          {
+            "from": "Sala",
+            "to": "Gruvbo",
+            "mode": "sleigh",
+            "lineId": null,
+            "duration": "about 5 hours, more after snow",
+            "cost": "about 3 riksdaler",
+            "schedule": "Hired at the inn in Sala",
+            "months": [
+              12,
+              1,
+              2,
+              3
+            ],
+            "notes": "Over the packed winter road and, where it is shorter, across the frozen lakes on roads staked with spruce boughs."
+          }
+        ]
+      }
+    ],
+    "journeyScene": "The post-road west runs through spruce and birch, then thickens into forest ridges where the farms thin out and the first charcoal stacks smoke blue. At Sala the inn is full of mining talk and the smell of tallow, and in the morning the hired carriage climbs into the hills past lakes and smouldering stacks. Near Gruvbo the road crosses the ore railway, where a little engine drags its wagons down towards the lake. Then the forest opens on the town, with its furnace glow and the black headframe above the old workings, and the smell of sulphur in the cold air."
+  },
   "publicFacts": [
     "The Storgruvan mine has been worked for at least five hundred years; its oldest galleries are said to be dug by fire-setting alone.",
     "A Stockholm mining company has bought up more than half of the old bergsmän shares in the last ten years, and many shareholders resent it.",
-    "Two years ago the ore railway was extended to Gruvbo, and ore now goes by train instead of by sled across the lakes in winter.",
+    "The ore railway has run from the mines down to Ängelsberg landing for twenty years; canal barges take the ore on to the Mälaren, and in winter it piles up at the landing until the ice breaks.",
     "The mine pumps were flooded in the spring of 1871 and three men drowned; the company installed a steam pump afterwards.",
     "The Gruvbo reading society keeps a library above the apothecary and takes the Stockholm papers.",
     "Hired miners from Värmland and Finland live in the company barracks and drink at the inn on paydays.",
@@ -638,7 +873,7 @@
       "templateId": "railway-station",
       "name": "Gruvbo Station",
       "ownerRole": "the station master of the ore railway",
-      "description": "The new station is a neat painted building at the end of the line, with ore wagons standing in a siding stained red. The telegraph clicks in the office and the stationmaster in his peaked cap watches who comes and goes. Coal smoke and the smell of wet ballast hang over the platform. Lamps are lit by half past four.",
+      "description": "The station is a neat painted building at the top of the ore line, with ore wagons standing in a siding stained red. The telegraph clicks in the office and the stationmaster in his peaked cap watches who comes and goes. Coal smoke and the smell of wet ballast hang over the platform. Lamps are lit by half past four.",
       "tags": [
         "railway-station",
         "telegraph"
@@ -1063,6 +1298,7 @@
       "id": "croft-kolarbacken",
       "templateId": "croft",
       "name": "Kolarbacken",
+      "ownerRole": "a charcoal burner and his family, crofters on the company's forest land",
       "description": "A charcoal burner's croft deep in the spruce forest, a low cottage and a turf hut beside the clearing where the stacks are built. In October the first kilns smoulder under their skins of earth and moss, and someone must watch them day and night. Everything smells of smoke and resin.",
       "tags": [
         "croft",
@@ -1134,17 +1370,16 @@
           "lockable": false,
           "contains": []
         }
-      ],
-      "ownerRole": "a charcoal burner and his family, crofters on the company's forest land"
+      ]
     }
   ],
   "monthVariants": [
     {
       "month": 1,
       "seasonNotes": "January. The lakes are frozen hard and the winter roads run across the ice, staked with spruce boughs. Daylight lasts from nine to three; the shift change at the mine is in darkness both ways. Charcoal and ore go by sledge now, and the carters work every hour the frost allows. Snow lies to the windowsills, and the spoil heaps are white humps with rust bleeding through.",
-      "travel": "From Uppsala by sleigh west to Sala along the post road, most of a day if the snow is packed, then on the ore railway when the line is clear; a day and a half in all, two if it snows.",
+      "travel": "From Uppsala by sleigh west to Sala along the post road, most of a day if the snow is packed, then by sleigh into the hills to Gruvbo; a day and a half in all, two if it snows.",
       "publicFacts": [
-        "In winter the ore railway is often closed by drifts for a day or two, and the sledge road over the lakes is used instead."
+        "In winter the ore railway is often closed by drifts for a day or two, and the canal is frozen, so the ore waits at the landing until spring."
       ],
       "placeDescriptions": {
         "mine": "The great pit is rimmed with ice and its stepped walls hang with frozen waterfalls. Steam from the pump house rises straight up in the still cold, and the horse-whim's horses wear sacking against the frost. Lanterns move far below in the dark.",
@@ -1152,5 +1387,9 @@
         "inn": "The Ore Wagon is crowded and steaming: carters warming themselves between loads, their sledges and horses packed into the yard under blankets. The windows are thick with frost flowers."
       }
     }
-  ]
+  ],
+  "id": "level-gruvbo-october",
+  "version": 1,
+  "status": "draft",
+  "name": "Gruvbo in Bergslagen"
 }

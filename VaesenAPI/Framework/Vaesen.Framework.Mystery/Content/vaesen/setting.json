@@ -14,40 +14,1043 @@
     "No one in authority admits that vaesen exist. Officials explain everything in natural terms, even when strained."
   ],
   "hookChannels": [
-    { "id": "contact-letter", "name": "A letter through the Society's contacts", "description": "A letter from someone who knows of the Society, or who was told to write to it by a friend of a friend.", "scales": [ "private", "local", "regional" ], "weight": 3 },
-    { "id": "newspaper", "name": "A newspaper item", "description": "A short item in a provincial paper, or in Uppsala's own Fyrisposten (edited by Blom), that reads wrong to anyone with the Sight.", "scales": [ "local", "regional", "national" ], "weight": 2 },
-    { "id": "official-request", "name": "An official request", "description": "A discreet request from a parish, a county office or the police, who want the matter settled quietly.", "scales": [ "local", "regional", "national" ], "weight": 1 },
-    { "id": "telegram", "name": "A telegram", "description": "A short, urgent telegram, often from someone the Society has helped before.", "scales": [ "private", "local", "regional" ], "weight": 1 },
-    { "id": "in-person", "name": "An in-person plea", "description": "Someone arrives at the headquarters in person, having travelled far to ask for help.", "scales": [ "private", "local" ], "weight": 1.5 },
-    { "id": "old-world-visit", "name": "A visit from the old world", "description": "A being of the old world, or a messenger it sends, comes to the Society. Rare.", "scales": [ "private", "local", "regional" ], "weight": 0.3 }
+    {
+      "id": "contact-letter",
+      "name": "A letter through the Society's contacts",
+      "description": "A letter from someone who knows of the Society, or who was told to write to it by a friend of a friend.",
+      "scales": [
+        "private",
+        "local",
+        "regional"
+      ],
+      "weight": 3
+    },
+    {
+      "id": "newspaper",
+      "name": "A newspaper item",
+      "description": "A short item in a provincial paper, or in Uppsala's own Fyrisposten (edited by Blom), that reads wrong to anyone with the Sight.",
+      "scales": [
+        "local",
+        "regional",
+        "national"
+      ],
+      "weight": 2
+    },
+    {
+      "id": "official-request",
+      "name": "An official request",
+      "description": "A discreet request from a parish, a county office or the police, who want the matter settled quietly.",
+      "scales": [
+        "local",
+        "regional",
+        "national"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "telegram",
+      "name": "A telegram",
+      "description": "A short, urgent telegram, often from someone the Society has helped before.",
+      "scales": [
+        "private",
+        "local",
+        "regional"
+      ],
+      "weight": 1
+    },
+    {
+      "id": "in-person",
+      "name": "An in-person plea",
+      "description": "Someone arrives at the headquarters in person, having travelled far to ask for help.",
+      "scales": [
+        "private",
+        "local"
+      ],
+      "weight": 1.5
+    },
+    {
+      "id": "old-world-visit",
+      "name": "A visit from the old world",
+      "description": "A being of the old world, or a messenger it sends, comes to the Society. Rare.",
+      "scales": [
+        "private",
+        "local",
+        "regional"
+      ],
+      "weight": 0.3
+    }
   ],
   "hookGiverTypes": [
-    {"id": "relative", "meaning": "a relative of someone in trouble: a mother, a brother, a widow", "matches": []},
-    {"id": "official", "meaning": "a crown or parish official: sheriff, constable, länsman, bailiff, clerk, customs or post officer", "matches": ["sheriff", "länsman", "constable", "bailiff", "clerk", "official", "officer", "postmaster", "stationmaster", "magistrate", "fogde"]},
-    {"id": "clergy", "meaning": "a vicar, curate, chaplain, comminister or sexton", "matches": ["vicar", "curate", "chaplain", "comminister", "priest", "pastor", "clergy", "sexton", "dean"]},
-    {"id": "landowner", "meaning": "the owner of a farm, manor or estate", "matches": ["owner", "landowner", "farmer", "bergsman", "squire", "baron", "count", "estate", "manor", "freeholder"]},
-    {"id": "worker", "meaning": "a miner, sawyer, farmhand, smith or other working person", "matches": ["miner", "sawyer", "farmhand", "smith", "worker", "labourer", "laborer", "maid", "hand", "teamster", "carter", "fisher", "stoker", "crofter"]},
-    {"id": "scholar", "meaning": "a teacher, student, scientist or learned person", "matches": ["teacher", "student", "docent", "professor", "scholar", "scientist", "librarian", "tutor"]},
-    {"id": "physician", "meaning": "a doctor, surgeon, midwife or apothecary", "matches": ["doctor", "physician", "surgeon", "midwife", "apothecary"]},
-    {"id": "merchant", "meaning": "a merchant, shopkeeper, innkeeper, agent or trader", "matches": ["merchant", "shopkeeper", "innkeeper", "agent", "trader", "dealer", "landlady", "landlord"]},
-    {"id": "servant", "meaning": "a servant, maid, groom or housekeeper in someone else's household", "matches": ["servant", "maid", "groom", "housekeeper", "valet", "cook", "coachman", "steward"]},
-    {"id": "press", "meaning": "a journalist or editor; in Uppsala, Fyrisposten and its editor Blom", "matches": ["journalist", "editor", "reporter", "newspaper", "printer"]},
-    {"id": "oldWays", "meaning": "a person who keeps the old ways: a wise woman, cunning man or old farmhand", "matches": ["wise", "cunning", "healer", "herbal", "klok"]}
+    {
+      "id": "relative",
+      "meaning": "a relative of someone in trouble: a mother, a brother, a widow",
+      "matches": []
+    },
+    {
+      "id": "official",
+      "meaning": "a crown or parish official: sheriff, constable, länsman, bailiff, clerk, customs or post officer",
+      "matches": [
+        "sheriff",
+        "länsman",
+        "constable",
+        "bailiff",
+        "clerk",
+        "official",
+        "officer",
+        "postmaster",
+        "stationmaster",
+        "magistrate",
+        "fogde"
+      ]
+    },
+    {
+      "id": "clergy",
+      "meaning": "a vicar, curate, chaplain, comminister or sexton",
+      "matches": [
+        "vicar",
+        "curate",
+        "chaplain",
+        "comminister",
+        "priest",
+        "pastor",
+        "clergy",
+        "sexton",
+        "dean"
+      ]
+    },
+    {
+      "id": "landowner",
+      "meaning": "the owner of a farm, manor or estate",
+      "matches": [
+        "owner",
+        "landowner",
+        "farmer",
+        "bergsman",
+        "squire",
+        "baron",
+        "count",
+        "estate",
+        "manor",
+        "freeholder"
+      ]
+    },
+    {
+      "id": "worker",
+      "meaning": "a miner, sawyer, farmhand, smith or other working person",
+      "matches": [
+        "miner",
+        "sawyer",
+        "farmhand",
+        "smith",
+        "worker",
+        "labourer",
+        "laborer",
+        "maid",
+        "hand",
+        "teamster",
+        "carter",
+        "fisher",
+        "stoker",
+        "crofter"
+      ]
+    },
+    {
+      "id": "scholar",
+      "meaning": "a teacher, student, scientist or learned person",
+      "matches": [
+        "teacher",
+        "student",
+        "docent",
+        "professor",
+        "scholar",
+        "scientist",
+        "librarian",
+        "tutor"
+      ]
+    },
+    {
+      "id": "physician",
+      "meaning": "a doctor, surgeon, midwife or apothecary",
+      "matches": [
+        "doctor",
+        "physician",
+        "surgeon",
+        "midwife",
+        "apothecary"
+      ]
+    },
+    {
+      "id": "merchant",
+      "meaning": "a merchant, shopkeeper, innkeeper, agent or trader",
+      "matches": [
+        "merchant",
+        "shopkeeper",
+        "innkeeper",
+        "agent",
+        "trader",
+        "dealer",
+        "landlady",
+        "landlord"
+      ]
+    },
+    {
+      "id": "servant",
+      "meaning": "a servant, maid, groom or housekeeper in someone else's household",
+      "matches": [
+        "servant",
+        "maid",
+        "groom",
+        "housekeeper",
+        "valet",
+        "cook",
+        "coachman",
+        "steward"
+      ]
+    },
+    {
+      "id": "press",
+      "meaning": "a journalist or editor; in Uppsala, Fyrisposten and its editor Blom",
+      "matches": [
+        "journalist",
+        "editor",
+        "reporter",
+        "newspaper",
+        "printer"
+      ]
+    },
+    {
+      "id": "oldWays",
+      "meaning": "a person who keeps the old ways: a wise woman, cunning man or old farmhand",
+      "matches": [
+        "wise",
+        "cunning",
+        "healer",
+        "herbal",
+        "klok"
+      ]
+    }
   ],
   "institutions": [
-    { "id": "police", "name": "Police and county constables", "description": "Town police and rural constables (länsman) answering to the county governor." },
-    { "id": "parish", "name": "The parish and the Church of Sweden", "description": "The vicar, the parish register, the household examinations and the church council." },
-    { "id": "physician", "name": "District physicians", "description": "Doctors with a district, who report deaths and disease to the authorities." },
-    { "id": "press", "name": "The press", "description": "Provincial and city papers, hungry for sensations and eager to mock superstition." },
-    { "id": "landowner", "name": "Landowners and estates", "description": "Manor families and large farmers who own the land and the tenants on it." },
-    { "id": "company", "name": "Mine and mill companies", "description": "Mining, timber and milling companies, with foremen, investors and contracts." },
-    { "id": "university", "name": "Uppsala University", "description": "Scholars and students, rational and modern, but some quietly curious about folklore." }
+    {
+      "id": "police",
+      "name": "Police and county constables",
+      "description": "Town police and rural constables (länsman) answering to the county governor."
+    },
+    {
+      "id": "parish",
+      "name": "The parish and the Church of Sweden",
+      "description": "The vicar, the parish register, the household examinations and the church council."
+    },
+    {
+      "id": "physician",
+      "name": "District physicians",
+      "description": "Doctors with a district, who report deaths and disease to the authorities."
+    },
+    {
+      "id": "press",
+      "name": "The press",
+      "description": "Provincial and city papers, hungry for sensations and eager to mock superstition."
+    },
+    {
+      "id": "landowner",
+      "name": "Landowners and estates",
+      "description": "Manor families and large farmers who own the land and the tenants on it."
+    },
+    {
+      "id": "company",
+      "name": "Mine and mill companies",
+      "description": "Mining, timber and milling companies, with foremen, investors and contracts."
+    },
+    {
+      "id": "university",
+      "name": "Uppsala University",
+      "description": "Scholars and students, rational and modern, but some quietly curious about folklore."
+    }
   ],
   "periodConventions": {
-    "travel": [ "Rail along the trunk lines, slow and coal-smoky", "Coach and post-horse along the main roads", "Horse and cart on country tracks", "Steamboat on lakes and along the coast", "Rowing boat, ski and foot in the wilds" ],
-    "communication": [ "Post, a few days between towns", "Telegraph from towns and railway stations", "Word of mouth, the fastest in the countryside", "Notices read out after church" ],
+    "travel": [
+      "Rail along the trunk lines, slow and coal-smoky",
+      "Coach and post-horse along the main roads",
+      "Horse and cart on country tracks",
+      "Steamboat on lakes and along the coast",
+      "Rowing boat, ski and foot in the wilds"
+    ],
+    "communication": [
+      "Post, a few days between towns",
+      "Telegraph from towns and railway stations",
+      "Word of mouth, the fastest in the countryside",
+      "Notices read out after church"
+    ],
     "money": "Riksdaler (the krona replaces it in 1873). A farmhand earns a few riksdaler a month; a night at a country inn costs about one.",
-    "socialRanks": [ "nobility", "clergy", "burgher", "officer", "freeholder farmer", "tenant farmer", "crofter", "farmhand or maid", "worker", "vagrant" ],
-    "notes": [ "Paraffin lamps and candles; no electric light outside a few city experiments.", "Emigration to America empties whole parishes after the famine years of 1867-69.", "Revival movements and the free churches challenge the state church." ]
-  }
+    "socialRanks": [
+      "nobility",
+      "clergy",
+      "burgher",
+      "officer",
+      "freeholder farmer",
+      "tenant farmer",
+      "crofter",
+      "farmhand or maid",
+      "worker",
+      "vagrant"
+    ],
+    "notes": [
+      "Paraffin lamps and candles; no electric light outside a few city experiments.",
+      "Emigration to America empties whole parishes after the famine years of 1867-69.",
+      "Revival movements and the free churches challenge the state church."
+    ]
+  },
+  "periodTransport": [
+    {
+      "id": "stockholm-uppsala-railway",
+      "name": "Stockholm-Uppsala Railway",
+      "kind": "railway",
+      "from": "Stockholm",
+      "to": "Uppsala",
+      "via": [
+        "Rotebro",
+        "Märsta",
+        "Knivsta"
+      ],
+      "opened": 1866,
+      "months": [],
+      "region": "Uppsala (Society headquarters)",
+      "notes": "Private standard-gauge line. Carries passengers, mail and goods, and is the first leg for every journey south from the Society's headquarters. Stop list is from memory and may be incomplete."
+    },
+    {
+      "id": "stockholm-katrineholm-railway",
+      "name": "Stockholm-Södertälje-Katrineholm trunk line",
+      "kind": "railway",
+      "from": "Stockholm",
+      "to": "Katrineholm",
+      "via": [
+        "Södertälje",
+        "Gnesta"
+      ],
+      "opened": 1862,
+      "months": [],
+      "region": "Ekeby Manor and its Crofts",
+      "notes": "State standard-gauge trunk shared by the southern and western main lines. The year is approximate: the Stockholm-Södertälje stretch dates from about 1860 and the full run to Katrineholm from the early 1860s. Passengers change here for Östergötland, Närke and Småland."
+    },
+    {
+      "id": "sodra-stambanan-katrineholm-nassjo",
+      "name": "Southern Main Line (Södra stambanan), Katrineholm-Nässjö",
+      "kind": "railway",
+      "from": "Katrineholm",
+      "to": "Nässjö",
+      "via": [
+        "Mjölby",
+        "Linköping"
+      ],
+      "opened": 1864,
+      "months": [],
+      "region": "Mossaby Parish",
+      "notes": "State standard-gauge line that continues to Alvesta, Hässleholm and Malmö. Opened in stages ending in 1864. Linköping and Mjölby are the railheads for Ekeby Manor south of Lake Roxen. Nässjö is the junction for Småland and the forest uplands around Mossaby. Carried timber, grain, and passengers."
+    },
+    {
+      "id": "vastra-stambanan-katrineholm-goteborg",
+      "name": "Western Main Line (Västra stambanan)",
+      "kind": "railway",
+      "from": "Katrineholm",
+      "to": "Gothenburg",
+      "via": [
+        "Hallsberg",
+        "Skövde",
+        "Falköping",
+        "Herrljunga",
+        "Alingsås"
+      ],
+      "opened": 1862,
+      "months": [],
+      "region": "Kärrtorp Junction",
+      "notes": "State standard-gauge line. Hallsberg, in Närke, is the junction nearest Örebro and the plain south of it. It serves Kärrtorp Junction, and Gothenburg is the port for the Bohuslän coast steamers. Opened 1862, though some stretches may have opened a little earlier. Carried passengers, mail, iron and grain."
+    },
+    {
+      "id": "uppsala-gavle-railway",
+      "name": "Uppsala-Gävle Railway",
+      "kind": "railway",
+      "from": "Uppsala",
+      "to": "Gävle",
+      "via": [
+        "Tierp",
+        "Örbyhus"
+      ],
+      "opened": 1874,
+      "months": [],
+      "region": "Forsby by the Rapids",
+      "notes": "Private standard-gauge line, under survey and construction in 1872 and opened 1874. Until then the Gävle road is travelled by coach or post-carriage. Afterwards Tierp and Örbyhus become the stations for the river country below Tämnaren. Carried passengers, timber, iron and grain."
+    },
+    {
+      "id": "gavle-dala-railway",
+      "name": "Gävle-Dala Railway",
+      "kind": "railway",
+      "from": "Gävle",
+      "to": "Falun",
+      "via": [
+        "Sandviken",
+        "Storvik"
+      ],
+      "opened": 1859,
+      "months": [],
+      "region": "Långsjö Parish",
+      "notes": "Private line. It is the only railway into Dalarna in 1872 and links the coast at Gävle with the copper town of Falun. The stop list is incomplete. Carried copper, iron, timber and passengers. The rest of the journey to Siljan is by coach and lake steamer."
+    },
+    {
+      "id": "frovi-ludvika-railway",
+      "name": "Frövi-Ludvika Railway (Bergslagen)",
+      "kind": "railway",
+      "from": "Frövi",
+      "to": "Ludvika",
+      "via": [
+        "Nora",
+        "Grängesberg"
+      ],
+      "opened": 1873,
+      "months": [],
+      "region": "Gruvbo in Bergslagen",
+      "notes": "Private Bergslagen line, one of the lines of the Bergslagernas Järnvägar company, which later extends to Falun and Gothenburg. The year and the stop list are approximate. It carries iron ore, pig iron and charcoal, and links the mining district with the main line near Närke."
+    },
+    {
+      "id": "nassjo-oskarshamn-railway",
+      "name": "Nässjö-Oskarshamn Railway",
+      "kind": "railway",
+      "from": "Nässjö",
+      "to": "Oskarshamn",
+      "via": [],
+      "opened": 1874,
+      "months": [],
+      "region": "Mossaby Parish",
+      "notes": "Private line across northern Småland to the Baltic coast. The opening year is approximate and the stops are not listed. It carries timber, tar, granite and emigrants bound for the harbour. It serves the eastern edge of the forest uplands."
+    },
+    {
+      "id": "goeta-canal",
+      "name": "Göta Canal",
+      "kind": "canal",
+      "from": "Sjötorp (Lake Vänern)",
+      "to": "Mem (Baltic)",
+      "via": [
+        "Motala",
+        "Borensberg",
+        "Norsholm",
+        "Lake Roxen",
+        "Berg"
+      ],
+      "opened": 1832,
+      "months": [
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "region": "Ekeby Manor and its Crofts",
+      "notes": "Locked canal and lake route linking Gothenburg and Stockholm. It passes Lake Roxen, north of Ekeby Manor. Steamers carry passengers, and barges carry timber, grain, iron and lime. It is closed by ice outside the season, and the months given are approximate."
+    },
+    {
+      "id": "stromsholm-canal",
+      "name": "Strömsholm Canal",
+      "kind": "canal",
+      "from": "Smedjebacken",
+      "to": "Strömsholm (Lake Mälaren)",
+      "via": [
+        "Lake Barken",
+        "Hallstahammar"
+      ],
+      "opened": 1795,
+      "months": [
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "region": "Gruvbo in Bergslagen",
+      "notes": "Locked canal that long carried Bergslagen iron and charcoal to the Mälaren. Railways are taking its freight, but barges still use it in the open season. The stop list and months are approximate."
+    },
+    {
+      "id": "hjalmare-canal",
+      "name": "Hjälmare Canal",
+      "kind": "canal",
+      "from": "Lake Hjälmaren",
+      "to": "Arboga (Lake Mälaren)",
+      "via": [
+        "Arboga"
+      ],
+      "opened": 1639,
+      "months": [
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "region": "Kärrtorp Junction",
+      "notes": "Old locked canal connecting Närke's great lake with the Mälaren. It carries bulk goods by barge, such as iron, grain and timber, and is much slower than the railways. The months are approximate."
+    },
+    {
+      "id": "stockholm-harnosand-steamer",
+      "name": "Stockholm-Härnösand coastal steamer",
+      "kind": "steamer",
+      "from": "Stockholm",
+      "to": "Härnösand",
+      "via": [
+        "Östhammar",
+        "Gävle",
+        "Hudiksvall",
+        "Sundsvall"
+      ],
+      "opened": 1850,
+      "months": [
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "region": "Storskog Logging District",
+      "notes": "Summer steamer route along the Norrland coast. Year and stops are approximate and the route changed over the decades. It is stopped by ice in winter, when travellers use the sleigh road. Carried passengers, post, supplies and, going south, timber and tar."
+    },
+    {
+      "id": "angermanalven-river-boat",
+      "name": "Ångermanälven river steamers",
+      "kind": "steamer",
+      "from": "Härnösand",
+      "to": "Sollefteå",
+      "via": [
+        "Nordingrå",
+        "Kramfors"
+      ],
+      "opened": 1865,
+      "months": [
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "region": "Storskog Logging District",
+      "notes": "Small river steamers and tow-boats on the lower river, used to reach the logging district in summer. The year, route and stops are approximate and based on typical river traffic of the period. Closed when the river freezes. Timber is floated down the river."
+    },
+    {
+      "id": "gothenburg-bohuslan-coastal-steamer",
+      "name": "Gothenburg-Bohuslän coastal steamers",
+      "kind": "steamer",
+      "from": "Gothenburg",
+      "to": "Strömstad",
+      "via": [
+        "Marstrand",
+        "Uddevalla",
+        "Lysekil",
+        "Smögen",
+        "Fjällbacka",
+        "Grebbestad"
+      ],
+      "opened": 1872,
+      "months": [],
+      "region": "Skärvik Fishing Village",
+      "notes": "Small steamers call at the fishing harbours of the Bohuslän skerries. The opened year simply marks the start of the period, as the service was already running, and the stop list is approximate. Steamers mostly run all year, but winter ice and gales often delay them. Carried passengers, post, herring barrels and stone from the quarries."
+    },
+    {
+      "id": "siljan-lake-steamer",
+      "name": "Siljan lake steamers",
+      "kind": "steamer",
+      "from": "Leksand",
+      "to": "Mora",
+      "via": [
+        "Rättvik"
+      ],
+      "opened": 1860,
+      "months": [
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "region": "Långsjö Parish",
+      "notes": "Small steamers on Lake Siljan, linking the parishes around the lake in summer. The year and route are approximate. Ice closes the lake in winter, when people cross by sleigh. Carried passengers, church-goers, post and goods."
+    },
+    {
+      "id": "telegraph-stockholm-uppsala",
+      "name": "State telegraph, Stockholm-Uppsala",
+      "kind": "telegraph",
+      "from": "Stockholm",
+      "to": "Uppsala",
+      "via": [],
+      "opened": 1853,
+      "months": [],
+      "region": "Uppsala (Society headquarters)",
+      "notes": "One of the first lines of the state telegraph. A telegram from the Society's headquarters can reach the capital within hours, and from there the national network. All year. Telegraph offices are mostly at railway stations and in towns."
+    },
+    {
+      "id": "telegraph-stockholm-goteborg",
+      "name": "State telegraph, Stockholm-Gothenburg",
+      "kind": "telegraph",
+      "from": "Stockholm",
+      "to": "Gothenburg",
+      "via": [],
+      "opened": 1853,
+      "months": [],
+      "region": "Skärvik Fishing Village",
+      "notes": "State telegraph line that serves the western main line and the port of Gothenburg. Stops and exact opening year are approximate. Fishing villages on the Bohuslän coast have no telegraph office; messages go on by steamer or post."
+    },
+    {
+      "id": "telegraph-norrland-coast",
+      "name": "State telegraph, Stockholm-Gävle-Härnösand coast line",
+      "kind": "telegraph",
+      "from": "Stockholm",
+      "to": "Härnösand",
+      "via": [
+        "Uppsala",
+        "Gävle",
+        "Hudiksvall",
+        "Sundvall"
+      ],
+      "opened": 1860,
+      "months": [],
+      "region": "Storskog Logging District",
+      "notes": "Telegraph route along the Norrland coast, built in stages in the 1850s and 1860s. The year is approximate and the stop list is incomplete. The inland logging district has no wire, so telegrams must be carried onward by sleigh or river boat."
+    },
+    {
+      "id": "gruvbo-ore-railway",
+      "name": "Gruvbo ore railway",
+      "kind": "railway",
+      "from": "Gruvbo",
+      "to": "Ängelsberg landing",
+      "via": [],
+      "opened": 1853,
+      "months": [],
+      "region": "Västmanland (Bergslagen)",
+      "notes": "Small private ore line from the mines down to the landing on Lake Åmänningen, where the Strömsholm Canal takes ore and iron on to the Mälaren in the open season. Modelled on the Norberg railway; the opening year is approximate. Mixed ore and passenger trains, one or two a day, all year."
+    },
+    {
+      "id": "malaren-steamer",
+      "name": "Mälaren steamers, Stockholm–Västerås",
+      "kind": "steamer",
+      "from": "Stockholm",
+      "to": "Västerås",
+      "via": [
+        "Strängnäs"
+      ],
+      "opened": 1840,
+      "months": [
+        5,
+        6,
+        7,
+        8,
+        9,
+        10
+      ],
+      "region": "Lake Mälaren",
+      "notes": "Passenger and goods steamers across the Mälaren, several a week in the open season; stopped by the ice in winter. Services ran from the 1830s; the year is approximate."
+    }
+  ],
+  "regionalInstitutions": [
+    {
+      "id": "ostergotland-county-seat",
+      "kind": "countySeat",
+      "name": "Östergötland County (länsresidens)",
+      "seat": "Linköping",
+      "region": "Ekeby Manor and its Crofts",
+      "notes": "Seat of the governor (landshövding) of Östergötland. The governor's name is left to the case. The county administration, the cathedral chapter and the county hospital are here."
+    },
+    {
+      "id": "ostergotland-district-court",
+      "kind": "districtCourt",
+      "name": "Häradsrätt for the Roxen plain (Dals/Lösings area)",
+      "seat": "Linköping",
+      "region": "Ekeby Manor and its Crofts",
+      "notes": "District court (häradsrätt) with a judge (häradshövding) and twelve lay assessors (nämndemän). Sessions are held at the court seat for the hundred. The exact hundred is approximate for the fictional locale."
+    },
+    {
+      "id": "ostergotland-crown-sheriff",
+      "kind": "crownSheriff",
+      "name": "Kronolänsman of the Roxen plain district",
+      "seat": "Mjölby",
+      "region": "Ekeby Manor and its Crofts",
+      "notes": "Crown sheriff for the district around Ekeby, responsible for order, tax collection and summoning to the court. He is under the governor in Linköping. The name is left to the case."
+    },
+    {
+      "id": "ostergotland-provincial-doctor",
+      "kind": "provincialDoctor",
+      "name": "Provinsialläkare for the Roxen plain district",
+      "seat": "Mjölby",
+      "region": "Ekeby Manor and its Crofts",
+      "notes": "Provincial doctor for a rural district of many parishes, who travels far on bad roads. He is the official who signs death certificates and gives natural explanations. The name is left to the case."
+    },
+    {
+      "id": "ostergotland-bank",
+      "kind": "bank",
+      "name": "Östgöta Enskilda Bank",
+      "seat": "Linköping",
+      "region": "Ekeby Manor and its Crofts",
+      "notes": "Private note-issuing bank, founded in the 1830s. It lends to estates and mills. A parish savings bank (sparbank) also serves the crofters."
+    },
+    {
+      "id": "ostergotland-newspaper-correspondenten",
+      "kind": "newspaper",
+      "name": "Östgöta Correspondenten",
+      "seat": "Linköping",
+      "region": "Ekeby Manor and its Crofts",
+      "notes": "Provincial newspaper, founded 1838, liberal in outlook. It prints estate sales, court notices and railway news."
+    },
+    {
+      "id": "ostergotland-newspaper-norrkoping",
+      "kind": "newspaper",
+      "name": "Norrköpings Tidningar",
+      "seat": "Norrköping",
+      "region": "Ekeby Manor and its Crofts",
+      "notes": "Old newspaper of the industrial town, founded in the 18th century. It reports on the textile mills, the harbour and the eastern railways."
+    },
+    {
+      "id": "uppsala-county-seat",
+      "kind": "countySeat",
+      "name": "Uppsala County (länsresidens)",
+      "seat": "Uppsala",
+      "region": "Forsby by the Rapids",
+      "notes": "The seat of the governor (landshövding) is in Uppsala, the same town as the Society's headquarters, and the governor's name is left to the case. The county administration is housed in the castle."
+    },
+    {
+      "id": "uppsala-district-court",
+      "kind": "districtCourt",
+      "name": "Häradsrätt for the Tämnaren district (Norunda area)",
+      "seat": "Uppsala",
+      "region": "Forsby by the Rapids",
+      "notes": "District court covering the parishes below Lake Tämnaren. The hundred name and the court place are approximate, as the locale is fictional."
+    },
+    {
+      "id": "uppsala-crown-sheriff",
+      "kind": "crownSheriff",
+      "name": "Kronolänsman of the Tämnaren and river district",
+      "seat": "Tierp",
+      "region": "Forsby by the Rapids",
+      "notes": "Crown sheriff who deals with the mill-owners and the rapids, floaters and drovers on the river. The seat is approximate, and the name is left to the case."
+    },
+    {
+      "id": "uppsala-provincial-doctor",
+      "kind": "provincialDoctor",
+      "name": "Provinsialläkare for the northern Uppland district",
+      "seat": "Tierp",
+      "region": "Forsby by the Rapids",
+      "notes": "Provincial doctor who travels widely, often to the mill's hands. The seat is approximate, and the name is left to the case."
+    },
+    {
+      "id": "uppsala-bank-sparbank",
+      "kind": "bank",
+      "name": "Upsala Sparbank",
+      "seat": "Uppsala",
+      "region": "Forsby by the Rapids",
+      "notes": "Savings bank in the university town, founded around 1850 (approximate). Mill workers, farmers and students keep small deposits here."
+    },
+    {
+      "id": "uppsala-bank-enskilda",
+      "kind": "bank",
+      "name": "Uplands Enskilda Bank",
+      "seat": "Uppsala",
+      "region": "Forsby by the Rapids",
+      "notes": "Private bank of the province, founded in the 1860s (approximate). It lends to mills and estates."
+    },
+    {
+      "id": "uppsala-newspaper",
+      "kind": "newspaper",
+      "name": "Upsala (Uppsala newspaper)",
+      "seat": "Uppsala",
+      "region": "Forsby by the Rapids",
+      "notes": "Newspaper of the university town. The title form and founding year are approximate, as titles changed. It prints university news and sale notices."
+    },
+    {
+      "id": "vastmanland-county-seat",
+      "kind": "countySeat",
+      "name": "Västmanland County (länsresidens)",
+      "seat": "Västerås",
+      "region": "Gruvbo in Bergslagen",
+      "notes": "Seat of the governor (landshövding) of Västmanland. The governor's name is left to the case. The county administration and the mining office (Bergmästare) are the powers over the mines."
+    },
+    {
+      "id": "vastmanland-district-court",
+      "kind": "districtCourt",
+      "name": "Häradsrätt for the Bergslagen mining district",
+      "seat": "Sala",
+      "region": "Gruvbo in Bergslagen",
+      "notes": "District court for the mining parishes. The hundred name and the court place are approximate, as the locale is fictional. Cases about ore-claims and mine accidents come here."
+    },
+    {
+      "id": "vastmanland-crown-sheriff",
+      "kind": "crownSheriff",
+      "name": "Kronolänsman of the Gruvbo district",
+      "seat": "Sala",
+      "region": "Gruvbo in Bergslagen",
+      "notes": "Crown sheriff for the mining parishes, who deals with accidents, wages disputes and drunkenness. The seat is approximate, and the name is left to the case."
+    },
+    {
+      "id": "vastmanland-provincial-doctor",
+      "kind": "provincialDoctor",
+      "name": "Provinsialläkare for the Sala/Bergslagen district",
+      "seat": "Sala",
+      "region": "Gruvbo in Bergslagen",
+      "notes": "Provincial doctor who treats lung disease and mine injuries and often must attend deaths in the shafts. The seat is approximate, and the name is left to the case."
+    },
+    {
+      "id": "vastmanland-bank",
+      "kind": "bank",
+      "name": "Westmanlands Enskilda Bank",
+      "seat": "Västerås",
+      "region": "Gruvbo in Bergslagen",
+      "notes": "Private bank of the province, founded in the early 1830s (approximate). It finances the ironworks and mines. There is also a savings bank in Sala, whose founding year is approximate."
+    },
+    {
+      "id": "vastmanland-newspaper",
+      "kind": "newspaper",
+      "name": "Westmanlands Läns Tidning",
+      "seat": "Västerås",
+      "region": "Gruvbo in Bergslagen",
+      "notes": "Provincial newspaper. The title form and year are approximate. It reports mine news, court sittings and iron prices."
+    },
+    {
+      "id": "orebro-county-seat",
+      "kind": "countySeat",
+      "name": "Örebro County (länsresidens)",
+      "seat": "Örebro",
+      "region": "Kärrtorp Junction",
+      "notes": "Seat of the governor (landshövding) of Örebro län, which includes Närke. The governor's name is left to the case. The county administration is housed in the castle."
+    },
+    {
+      "id": "orebro-district-court",
+      "kind": "districtCourt",
+      "name": "Häradsrätt for the Närke plain south of Örebro",
+      "seat": "Örebro",
+      "region": "Kärrtorp Junction",
+      "notes": "District court for the plain around the railway junction. The hundred name and the court place are approximate, as the locale is fictional. Cases about railway accidents, smuggling and theft from goods wagons come here."
+    },
+    {
+      "id": "orebro-crown-sheriff",
+      "kind": "crownSheriff",
+      "name": "Kronolänsman of the Kärrtorp district",
+      "seat": "Hallsberg",
+      "region": "Kärrtorp Junction",
+      "notes": "Crown sheriff who is often called to the railway, the navvies' barracks and the station. The seat is approximate, and the name is left to the case."
+    },
+    {
+      "id": "orebro-provincial-doctor",
+      "kind": "provincialDoctor",
+      "name": "Provinsialläkare for the Närke plain district",
+      "seat": "Örebro",
+      "region": "Kärrtorp Junction",
+      "notes": "Provincial doctor, among the best-reached in the country thanks to the railway. The seat is approximate, and the name is left to the case."
+    },
+    {
+      "id": "orebro-bank",
+      "kind": "bank",
+      "name": "Örebro Privatbank",
+      "seat": "Örebro",
+      "region": "Kärrtorp Junction",
+      "notes": "Private note-issuing bank founded in the 1830s (approximate). It lends to merchants and ironworks. Örebro also has a savings bank."
+    },
+    {
+      "id": "orebro-newspaper",
+      "kind": "newspaper",
+      "name": "Nerikes Allehanda",
+      "seat": "Örebro",
+      "region": "Kärrtorp Junction",
+      "notes": "Provincial newspaper founded 1843. It prints timetables, court news and reports of accidents on the railway."
+    },
+    {
+      "id": "kopparberg-county-seat",
+      "kind": "countySeat",
+      "name": "Kopparberg County (länsresidens)",
+      "seat": "Falun",
+      "region": "Långsjö Parish",
+      "notes": "Seat of the governor (landshövding) of Kopparbergs län, which covers Dalarna. The governor's name is left to the case. The great copper mine is just outside the town."
+    },
+    {
+      "id": "kopparberg-district-court",
+      "kind": "districtCourt",
+      "name": "Häradsrätt for the parishes north of Siljan (Ovansiljan area)",
+      "seat": "Mora",
+      "region": "Långsjö Parish",
+      "notes": "District court for the parishes above the lake. The name and the court place are approximate, as the locale is fictional. Sessions are held at fixed times and farmers travel far to attend."
+    },
+    {
+      "id": "kopparberg-crown-sheriff",
+      "kind": "crownSheriff",
+      "name": "Kronolänsman of the Långsjö district",
+      "seat": "Rättvik",
+      "region": "Långsjö Parish",
+      "notes": "Crown sheriff over a large forest and lake district, who travels by boat, sleigh and on foot. The seat is approximate, and the name is left to the case."
+    },
+    {
+      "id": "kopparberg-provincial-doctor",
+      "kind": "provincialDoctor",
+      "name": "Provinsialläkare for the Siljan district",
+      "seat": "Leksand",
+      "region": "Långsjö Parish",
+      "notes": "Provincial doctor with a huge district and few roads. People often prefer the wise-woman or the parish clerk. The seat is approximate, and the name is left to the case."
+    },
+    {
+      "id": "kopparberg-bank",
+      "kind": "bank",
+      "name": "Stora Kopparbergs läns Enskilda Bank",
+      "seat": "Falun",
+      "region": "Långsjö Parish",
+      "notes": "Private bank of the county, founded in the 1830s (approximate), tied to the copper mining and ironworks. Parish savings banks serve the farmers."
+    },
+    {
+      "id": "kopparberg-newspaper",
+      "kind": "newspaper",
+      "name": "Fahlu Weckoblad",
+      "seat": "Falun",
+      "region": "Långsjö Parish",
+      "notes": "Old newspaper of Falun. The title form and years are approximate. It prints copper-mine news, parish and court notices and sale announcements."
+    },
+    {
+      "id": "kronoberg-county-seat",
+      "kind": "countySeat",
+      "name": "Kronoberg County (länsresidens)",
+      "seat": "Växjö",
+      "region": "Mossaby Parish",
+      "notes": "Seat of the governor (landshövding) of Kronobergs län, in the Småland uplands. The governor's name is left to the case. The cathedral and the grammar school are here. The parish may in fact lie in a neighbouring county, so check the case."
+    },
+    {
+      "id": "kronoberg-district-court",
+      "kind": "districtCourt",
+      "name": "Häradsrätt for the Mossaby forest district",
+      "seat": "Växjö",
+      "region": "Mossaby Parish",
+      "notes": "District court for the forest parishes. The hundred name and the court place are approximate, as the locale is fictional. Cases of poaching, boundary disputes and theft of timber are common."
+    },
+    {
+      "id": "kronoberg-crown-sheriff",
+      "kind": "crownSheriff",
+      "name": "Kronolänsman of the Mossaby district",
+      "seat": "Mossaby",
+      "region": "Mossaby Parish",
+      "notes": "Crown sheriff for a poor forest district, who is also the tax collector. The seat is approximate, and the name is left to the case."
+    },
+    {
+      "id": "kronoberg-provincial-doctor",
+      "kind": "provincialDoctor",
+      "name": "Provinsialläkare for the Småland forest district",
+      "seat": "Växjö",
+      "region": "Mossaby Parish",
+      "notes": "Provincial doctor with a very large district, reached by farm cart. The seat is approximate, and the name is left to the case."
+    },
+    {
+      "id": "kronoberg-bank",
+      "kind": "bank",
+      "name": "Växjö sparbank",
+      "seat": "Växjö",
+      "region": "Mossaby Parish",
+      "notes": "Savings bank of the town. The founding year is approximate. The farmers and crofters of the uplands keep small savings here. Smålands Enskilda Bank, seated in Jönköping, also has dealings in the area."
+    },
+    {
+      "id": "kronoberg-newspaper",
+      "kind": "newspaper",
+      "name": "Smålandsposten",
+      "seat": "Växjö",
+      "region": "Mossaby Parish",
+      "notes": "Provincial newspaper, founded 1865. It prints parish news, emigration notices and market prices."
+    },
+    {
+      "id": "goteborg-county-seat",
+      "kind": "countySeat",
+      "name": "Göteborg and Bohus County (länsresidens)",
+      "seat": "Gothenburg",
+      "region": "Skärvik Fishing Village",
+      "notes": "Seat of the governor (landshövding) of Göteborgs och Bohus län, which includes Bohuslän. The governor's name is left to the case. The county administration is far from the northern skerries."
+    },
+    {
+      "id": "goteborg-district-court",
+      "kind": "districtCourt",
+      "name": "Häradsrätt for northern Bohuslän (Tanum area)",
+      "seat": "Tanum",
+      "region": "Skärvik Fishing Village",
+      "notes": "District court for the coast around Skärvik. The hundred name and the court place are approximate, as the locale is fictional. Cases include wreck-salvage, smuggling and brawling."
+    },
+    {
+      "id": "goteborg-crown-sheriff",
+      "kind": "crownSheriff",
+      "name": "Kronolänsman of the Skärvik district",
+      "seat": "Fjällbacka",
+      "region": "Skärvik Fishing Village",
+      "notes": "Crown sheriff for the skerry district, who travels by boat. The seat is approximate, and the name is left to the case."
+    },
+    {
+      "id": "goteborg-provincial-doctor",
+      "kind": "provincialDoctor",
+      "name": "Provinsialläkare for northern Bohuslän",
+      "seat": "Strömstad",
+      "region": "Skärvik Fishing Village",
+      "notes": "Provincial doctor whose district stretches over islands and fishing hamlets. The seat is approximate, and the name is left to the case."
+    },
+    {
+      "id": "goteborg-bank",
+      "kind": "bank",
+      "name": "Bohuslän savings banks (sparbank)",
+      "seat": "Uddevalla",
+      "region": "Skärvik Fishing Village",
+      "notes": "The fishing parishes use small savings banks in the coastal towns. The name and the seat are approximate. Herring merchants and shipowners deal with the Gothenburg banks."
+    },
+    {
+      "id": "goteborg-newspaper",
+      "kind": "newspaper",
+      "name": "Göteborgs Handels- och Sjöfartstidning",
+      "seat": "Gothenburg",
+      "region": "Skärvik Fishing Village",
+      "notes": "The great trade and shipping newspaper, founded 1832. It reports on the herring fishery, wrecks and ship arrivals. A local Bohuslän paper in Uddevalla also exists, whose title is not given here."
+    },
+    {
+      "id": "vasternorrland-county-seat",
+      "kind": "countySeat",
+      "name": "Västernorrland County (länsresidens)",
+      "seat": "Härnösand",
+      "region": "Storskog Logging District",
+      "notes": "Seat of the governor (landshövding) of Västernorrlands län, which covers Ångermanland. The governor's name is left to the case. The cathedral, the grammar school and the county hospital are here."
+    },
+    {
+      "id": "vasternorrland-district-court",
+      "kind": "districtCourt",
+      "name": "Häradsrätt for inland Ångermanland (northern domsaga)",
+      "seat": "Sollefteå",
+      "region": "Storskog Logging District",
+      "notes": "District court for the river valley and forests. The name and the court place are approximate, as the locale is fictional. Cases concern timber contracts, floating disputes and wage fights."
+    },
+    {
+      "id": "vasternorrland-crown-sheriff",
+      "kind": "crownSheriff",
+      "name": "Kronolänsman of the Storskog district",
+      "seat": "Sollefteå",
+      "region": "Storskog Logging District",
+      "notes": "Crown sheriff over a vast, thinly peopled forest district, much of it reached by sleigh in winter. The seat is approximate, and the name is left to the case."
+    },
+    {
+      "id": "vasternorrland-provincial-doctor",
+      "kind": "provincialDoctor",
+      "name": "Provinsialläkare for inland Ångermanland",
+      "seat": "Sollefteå",
+      "region": "Storskog Logging District",
+      "notes": "Provincial doctor over a very large district. Camp injuries, frostbite and fevers are his work. The seat is approximate, and the name is left to the case."
+    },
+    {
+      "id": "vasternorrland-bank",
+      "kind": "bank",
+      "name": "Hernösands Enskilda Bank",
+      "seat": "Härnösand",
+      "region": "Storskog Logging District",
+      "notes": "Private bank of the province, which finances sawmills and timber merchants. The founding year is approximate, around the 1860s. Parish savings banks exist in the valley."
+    },
+    {
+      "id": "vasternorrland-newspaper",
+      "kind": "newspaper",
+      "name": "Hernösands-Posten",
+      "seat": "Härnösand",
+      "region": "Storskog Logging District",
+      "notes": "Provincial newspaper. The title form and the years are approximate. It prints timber prices, shipping, court news and notices of the logging firms."
+    }
+  ]
 }
