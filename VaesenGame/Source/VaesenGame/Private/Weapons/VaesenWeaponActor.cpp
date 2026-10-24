@@ -375,13 +375,12 @@ void AVaesenWeaponActor::UpdateHang(float DeltaSeconds)
 	LastPivot = Pivot;
 	bPivotKnown = true;
 
-	// At rest the blade hangs HangAngle below level, heading back the way the socket points it.
+	// At rest the blade hangs HangAngle below level, heading back and a little out from the side it's worn on (clear
+	// of the legs).
 	const FVector Blade = Rest.GetUnitAxis(EAxis::X);
-	FVector Heading = Blade.GetSafeNormal2D();
-	if (Heading.IsNearlyZero())
-	{
-		Heading = -Character->GetActorForwardVector();
-	}
+	const FVector Right = Character->GetActorRightVector();
+	const float Side = FVector::DotProduct(Pivot - Character->GetActorLocation(), Right) >= 0.0f ? 1.0f : -1.0f;
+	const FVector Heading = (-Character->GetActorForwardVector() + Right * (Side * 0.3f)).GetSafeNormal();
 	const float Angle = FMath::DegreesToRadians(HangAngle);
 	const FVector Hang = (Heading * FMath::Cos(Angle) - FVector::UpVector * FMath::Sin(Angle)).GetSafeNormal();
 

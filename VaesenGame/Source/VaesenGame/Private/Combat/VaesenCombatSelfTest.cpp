@@ -321,7 +321,7 @@ void UVaesenCombatSelfTest::ResetAll()
 	Controller->SetControlRotation(FRotator::ZeroRotator);
 }
 
-void UVaesenCombatSelfTest::Shot(const TCHAR* Name, const TCHAR* PackAnim, float PackTime)
+void UVaesenCombatSelfTest::Shot(const TCHAR* Name, const TCHAR* PackAnim, float PackTime, bool bFromFront)
 {
 	UWorld* Here = Fighter ? Fighter->GetWorld() : nullptr;
 	APlayerController* Viewer = Here ? Here->GetFirstPlayerController() : nullptr;
@@ -342,10 +342,13 @@ void UVaesenCombatSelfTest::Shot(const TCHAR* Name, const TCHAR* PackAnim, float
 			}
 		}
 	}
-	// From the fighter's left, at chest height: him in front, the pack's swordsman behind him.
+	// From the fighter's left, at chest height: him in front, the pack's swordsman behind him. Or close, from ahead
+	// and a little to his left, at the hips.
 	const FVector Forward = Fighter->GetActorForwardVector();
-	const FVector Body = Fighter->GetActorLocation() - Forward * 90.0 + FVector(0.0, 0.0, 20.0);
-	const FVector Eye = Body - Fighter->GetActorRightVector() * 420.0 + FVector(0.0, 0.0, 20.0);
+	const FVector Body = bFromFront ? Fighter->GetActorLocation() - FVector(0.0, 0.0, 15.0)
+		: Fighter->GetActorLocation() - Forward * 90.0 + FVector(0.0, 0.0, 20.0);
+	const FVector Eye = bFromFront ? Body + Forward * 200.0 - Fighter->GetActorRightVector() * 70.0 + FVector(0.0, 0.0, 10.0)
+		: Body - Fighter->GetActorRightVector() * 420.0 + FVector(0.0, 0.0, 20.0);
 	ShotCamera->SetActorLocationAndRotation(Eye, (Body - Eye).Rotation());
 	Viewer->SetViewTarget(ShotCamera);
 
@@ -892,6 +895,8 @@ void UVaesenCombatSelfTest::BuildSteps()
 			Sheathed && Sheathed->IsActorTickEnabled() ? 1 : 0));
 		return 0.3f;
 	} });
+
+	Steps.Add({ FString(), [this]() { Shot(TEXT("7b_SheathedFront"), nullptr, 0.0f, true); return 0.3f; } });
 
 	// --- Throwing a stone ---
 	Steps.Add({ TEXT("Throw"), [this, Inventory]()

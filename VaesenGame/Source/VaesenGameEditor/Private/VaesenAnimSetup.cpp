@@ -1933,23 +1933,32 @@ namespace VaesenAnimSetup
 			Sword.InHand = InHand;
 		}
 
-		// The left-hip sheath where the draw takes the hilt: at the grab, the sword as the hand holds it is where the
-		// sheath has it (on the pelvis, so it rides the hips). The drawing hand then meets the hilt. Only over the
-		// grey-box guess (a socket tuned by hand stays; -resetsockets works it out again).
+		// The left-hip sheath: the hilt at the left hip by the standing body's own layout (beside the left hip joint, a
+		// little out and forward), on the pelvis so it rides the hips; turned as the draw holds the sword when it takes
+		// it (so the hang lifts it to meet the hand), measured in the body's frame (the draw twists the hips: measured on
+		// the pelvis, the hilt would end up between the legs). The draw's hand IK reaches it. Only over the grey-box
+		// guess or our own earlier one (-resetsockets or -resetsheath work it out again; a socket tuned by hand stays).
 		const USkeletalMeshSocket* Hip = Skeleton->FindSocket(TEXT("Sheath_HipLeft"));
 		const bool bGreyBoxHip = !Hip || (Hip->BoneName == TEXT("pelvis") && Hip->RelativeLocation.Equals(FVector(0.0, 0.0, 18.0), 0.1));
 		const USkeletalMeshSocket* Palm = Skeleton->FindSocket(UVaesenWeaponCategoryDefaults::Get()->MainHandSocket);
-		if (EquipAnim && Palm && (bGreyBoxHip || FParse::Param(FCommandLine::Get(), TEXT("resetsockets"))))
+		const FReferenceSkeleton& Reference = Skeleton->GetReferenceSkeleton();
+		const int32 PelvisIndex = Reference.FindBoneIndex(TEXT("pelvis"));
+		const int32 ThighIndex = Reference.FindBoneIndex(TEXT("thigh_l"));
+		const bool bReset = FParse::Param(FCommandLine::Get(), TEXT("resetsockets")) || FParse::Param(FCommandLine::Get(), TEXT("resetsheath"));
+		if (EquipAnim && Palm && PelvisIndex != INDEX_NONE && ThighIndex != INDEX_NONE && (bGreyBoxHip || bReset))
 		{
 			const FAnimPose AtGrab = PoseAt(EquipAnim, Grab);
 			const FTransform Hand = UAnimPoseExtensions::GetBonePose(AtGrab, TEXT("hand_r"), EAnimPoseSpaces::World);
-			const FTransform Pelvis = UAnimPoseExtensions::GetBonePose(AtGrab, TEXT("pelvis"), EAnimPoseSpaces::World);
-			FTransform Sheathed = (Sword.InHand * Palm->GetSocketLocalTransform() * Hand).GetRelativeTransform(Pelvis);
+			const FTransform Root = UAnimPoseExtensions::GetBonePose(AtGrab, TEXT("root"), EAnimPoseSpaces::World);
+			const FQuat HeldAtGrab = (Sword.InHand * Palm->GetSocketLocalTransform() * Hand).GetRelativeTransform(Root).GetRotation();
+			// Manny faces +Y; his left is +X.
+			const FVector HipJoint = FAnimationRuntime::GetComponentSpaceTransformRefPose(Reference, ThighIndex).GetLocation();
+			const FTransform Hilt(HeldAtGrab, HipJoint + FVector(12.0, 4.0, 8.0));
+			FTransform Sheathed = Hilt.GetRelativeTransform(FAnimationRuntime::GetComponentSpaceTransformRefPose(Reference, PelvisIndex));
 			Sheathed.SetScale3D(FVector::OneVector);
 			SetSkeletonSocket(Skeleton, TEXT("Sheath_HipLeft"), TEXT("pelvis"), Sheathed, true);
-			const FTransform Hilt = Sword.InHand * Palm->GetSocketLocalTransform() * Hand;
-			UE_LOG(LogVaesenAnimSetup, Display, TEXT("Left-hip sheath: hilt at %s, blade points %s (mesh space; Manny faces +Y, his left is +X)"),
-				*Hilt.GetLocation().ToCompactString(), *Hilt.GetUnitAxis(EAxis::X).ToCompactString());
+			UE_LOG(LogVaesenAnimSetup, Display, TEXT("Left-hip sheath: hilt at %s (hip joint %s), blade points %s (mesh space; Manny faces +Y, his left is +X)"),
+				*Hilt.GetLocation().ToCompactString(), *HipJoint.ToCompactString(), *Hilt.GetUnitAxis(EAxis::X).ToCompactString());
 			Save(Skeleton);
 		}
 		Save(Defaults);
