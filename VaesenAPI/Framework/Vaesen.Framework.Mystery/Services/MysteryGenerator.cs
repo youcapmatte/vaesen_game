@@ -775,6 +775,10 @@ public sealed class MysteryGenerator(
         // What the case already fails is not any fix's fault: only new errors count against a fix.
         var baseline = ErrorKeys(Errors(draft));
 
+        // The items as they were when the round began: a patch is judged against these, so an item a code part of the
+        // same issue already changed (a rank set, then the identity patched) counts as changed.
+        var roundStart = CaseItems.Tree(draft.Packet);
+
         // Code parts: each pair and field on its own, so one that matched nothing or broke a check costs only itself.
         foreach (var issue in issues)
         {
@@ -892,7 +896,8 @@ public sealed class MysteryGenerator(
             {
                 var changed = part.Target.Length == 0
                     ? beforeOutput != afterOutput
-                    : CaseItems.Json(beforeTree, part.Target) != CaseItems.Json(afterTree, part.Target);
+                    : CaseItems.Json(beforeTree, part.Target) != CaseItems.Json(afterTree, part.Target)
+                        || CaseItems.Json(roundStart, part.Target) != CaseItems.Json(afterTree, part.Target);
                 part.Status = changed ? FixPartStatuses.Done : FixPartStatuses.Failed;
                 part.Note = changed ? null : $"The {step} patch left {(part.Target.Length == 0 ? "the step" : part.Target)} as it was.";
             }
