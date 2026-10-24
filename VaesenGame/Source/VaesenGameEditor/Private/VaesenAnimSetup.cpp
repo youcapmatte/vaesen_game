@@ -8,6 +8,8 @@
 #include "Animation/Skeleton.h"
 #include "AssetRegistry/AssetRegistryModule.h"
 #include "Engine/SkeletalMesh.h"
+#include "MeshDescription.h"
+#include "SkeletalMeshAttributes.h"
 #include "Engine/SkeletalMeshSocket.h"
 #include "Engine/StaticMesh.h"
 #include "Engine/StaticMeshSocket.h"
@@ -2603,10 +2605,89 @@ namespace VaesenAnimSetup
 		const UAnimSequence* PlainIdle = LoadObject<UAnimSequence>(nullptr, TEXT("/Game/Characters/Mannequins/Animations/Manny/MM_Idle.MM_Idle"));
 		if (bHold && StandIdle && PlainIdle && (bGreyBoxHolster || bResetHolster))
 		{
-			const FQuat Held = (GunInHand * UAnimPoseExtensions::GetBonePose(PoseAt(StandIdle, HolsterGrab), TEXT("hand_r"), EAnimPoseSpaces::World)).GetRotation();
+			FQuat Held = (GunInHand * UAnimPoseExtensions::GetBonePose(PoseAt(StandIdle, HolsterGrab), TEXT("hand_r"), EAnimPoseSpaces::World)).GetRotation();
 			const FTransform Thigh = UAnimPoseExtensions::GetBonePose(PoseAt(PlainIdle, 0.0), TEXT("thigh_r"), EAnimPoseSpaces::World);
-			// Manny faces +Y; his right is -X.
-			const FTransform Grip(Held, Thigh.GetLocation() + FVector(-13.0, -2.0, 6.0));
+			// Manny faces +Y; his right is -X. The gun lies flat against the outside of the hip and thigh: skin the mesh
+			// into the idle (where he stands with it holstered), find the skin there (the outermost point to his right
+			// of the hips and the right thigh; not the arm, which hangs alongside), and put the grip a centimetre out from it
+			// (where a holster's leather would be), the barrel along the thigh. A little behind the hip joint, as a holster
+			// rides, so the hanging hand is beside it rather than over it.
+			FVector GripAt = Thigh.GetLocation() + FVector(-13.0, -5.0, 7.0);
+			const USkeletalMesh* Manny = LoadObject<USkeletalMesh>(nullptr, MannyMesh);
+			const FMeshDescription* Mesh = Manny ? Manny->GetMeshDescription(0) : nullptr;
+			if (Mesh)
+			{
+				const FReferenceSkeleton& Ref = Manny->GetRefSkeleton();
+				const FAnimPose IdlePose = PoseAt(PlainIdle, 0.0);
+				TArray<FTransform> Skinning;
+				TArray<bool> OnHipOrThigh;
+				TArray<FTransform> RefWorld;
+				for (int32 Bone = 0; Bone < Ref.GetNum(); ++Bone)
+				{
+					const int32 Parent = Ref.GetParentIndex(Bone);
+					RefWorld.Add(Parent == INDEX_NONE ? Ref.GetRefBonePose()[Bone] : Ref.GetRefBonePose()[Bone] * RefWorld[Parent]);
+					const FName Name = Ref.GetBoneName(Bone);
+					Skinning.Add(RefWorld[Bone].Inverse() * UAnimPoseExtensions::GetBonePose(IdlePose, Name, EAnimPoseSpaces::World));
+					const FString Text = Name.ToString();
+					OnHipOrThigh.Add(Text == TEXT("pelvis") || (Text.StartsWith(TEXT("thigh")) && Text.EndsWith(TEXT("_r"))) || Text.StartsWith(TEXT("spine_01")));
+				}
+				// The skin in the idle: every vertex of the hips and the right thigh, skinned.
+				TArray<FVector> Skin;
+				const FSkeletalMeshConstAttributes Attributes(*Mesh);
+				const FSkinWeightsVertexAttributesConstRef Weights = Attributes.GetVertexSkinWeights();
+				const TVertexAttributesConstRef<FVector3f> Positions = Mesh->GetVertexPositions();
+				for (const FVertexID Vertex : Mesh->Vertices().GetElementIDs())
+				{
+					FVector At = FVector::ZeroVector;
+					float Strongest = 0.0f;
+					bool bHipOrThigh = false;
+					for (const UE::AnimationCore::FBoneWeight Weight : Weights.Get(Vertex))
+					{
+						const int32 Bone = Weight.GetBoneIndex();
+						if (!Skinning.IsValidIndex(Bone))
+						{
+							continue;
+						}
+						At += Skinning[Bone].TransformPosition(FVector(Positions[Vertex])) * Weight.GetWeight();
+						if (Weight.GetWeight() > Strongest)
+						{
+							Strongest = Weight.GetWeight();
+							bHipOrThigh = OnHipOrThigh[Bone];
+						}
+					}
+					if (bHipOrThigh)
+					{
+						Skin.Add(At);
+					}
+				}
+				// The outermost point (to his right) over a band of heights below the grip.
+				auto SkinAt = [&](double Below, double Above)
+				{
+					double Outermost = 0.0;
+					for (const FVector& P : Skin)
+					{
+						if (P.Z >= GripAt.Z - Below && P.Z <= GripAt.Z - Above && FMath::Abs(P.Y - GripAt.Y) <= 5.0)
+						{
+							Outermost = FMath::Min(Outermost, P.X);
+						}
+					}
+					return Outermost;
+				};
+				// The gun is some 20 cm from the grip to the muzzle; it follows the thigh rather than standing out from it.
+				const double Top = SkinAt(6.0, 0.0);
+				const double Bottom = SkinAt(24.0, 16.0);
+				if (Top < -5.0 && Bottom < -5.0)
+				{
+					GripAt.X = Top - 1.0;
+					const FVector Lean = FVector(Bottom - Top, 0.0, -18.0).GetSafeNormal();
+					const FVector Barrel = Held.GetAxisX();
+					const FVector BarrelSide = (Barrel - FVector::DotProduct(Barrel, FVector::YAxisVector) * FVector::YAxisVector).GetSafeNormal();
+					Held = FQuat::FindBetweenNormals(BarrelSide, Lean) * Held;
+				}
+				UE_LOG(LogVaesenAnimSetup, Display, TEXT("Right-hip holster: in the idle the skin is %.1f cm to his right at the grip, %.1f cm at the muzzle (%d hip and thigh vertices)"),
+					-Top, -Bottom, Skin.Num());
+			}
+			const FTransform Grip(Held, GripAt);
 			FTransform OnThigh = Grip.GetRelativeTransform(Thigh);
 			OnThigh.SetScale3D(FVector::OneVector);
 			SetSkeletonSocket(Skeleton, TEXT("Sheath_HipRight"), TEXT("thigh_r"), OnThigh, true);

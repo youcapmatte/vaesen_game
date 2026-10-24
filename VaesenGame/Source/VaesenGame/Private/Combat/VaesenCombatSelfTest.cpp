@@ -351,10 +351,9 @@ void UVaesenCombatSelfTest::Shot(const TCHAR* Name, const TCHAR* PackAnim, float
 		: Body - Fighter->GetActorRightVector() * 420.0 + FVector(0.0, 0.0, 20.0);
 	if (bFromBehind)
 	{
-		// Close, from behind and to his right, a little above the hips: the right arm, hip and holster.
-		const FVector Right = Fighter->GetActorRightVector();
-		const FVector Back = Fighter->GetActorLocation() + Right * 15.0 + FVector(0.0, 0.0, 10.0);
-		const FVector BackEye = Back - Forward * 170.0 + Right * 70.0 + FVector(0.0, 0.0, 40.0);
+		// Close, from straight behind at the hips: how far the holster stands out from the hip, against the hanging arm.
+		const FVector Back = Fighter->GetActorLocation() + FVector(0.0, 0.0, -5.0);
+		const FVector BackEye = Back - Forward * 120.0 + FVector(0.0, 0.0, 10.0);
 		ShotCamera->SetActorLocationAndRotation(BackEye, (Back - BackEye).Rotation());
 	}
 	else
