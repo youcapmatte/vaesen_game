@@ -1953,7 +1953,7 @@ namespace VaesenAnimSetup
 			const FQuat HeldAtGrab = (Sword.InHand * Palm->GetSocketLocalTransform() * Hand).GetRelativeTransform(Root).GetRotation();
 			// Manny faces +Y; his left is +X.
 			const FVector HipJoint = FAnimationRuntime::GetComponentSpaceTransformRefPose(Reference, ThighIndex).GetLocation();
-			const FTransform Hilt(HeldAtGrab, HipJoint + FVector(9.5, 4.0, 8.0));
+			const FTransform Hilt(HeldAtGrab, HipJoint + FVector(10.75, 4.0, 8.0));
 			FTransform Sheathed = Hilt.GetRelativeTransform(FAnimationRuntime::GetComponentSpaceTransformRefPose(Reference, PelvisIndex));
 			Sheathed.SetScale3D(FVector::OneVector);
 			SetSkeletonSocket(Skeleton, TEXT("Sheath_HipLeft"), TEXT("pelvis"), Sheathed, true);

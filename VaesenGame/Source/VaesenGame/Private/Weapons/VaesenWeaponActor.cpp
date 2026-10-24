@@ -380,7 +380,7 @@ void AVaesenWeaponActor::UpdateHang(float DeltaSeconds)
 	const FVector Blade = Rest.GetUnitAxis(EAxis::X);
 	const FVector Right = Character->GetActorRightVector();
 	const float Side = FVector::DotProduct(Pivot - Character->GetActorLocation(), Right) >= 0.0f ? 1.0f : -1.0f;
-	const FVector Heading = (-Character->GetActorForwardVector() + Right * (Side * 0.21f)).GetSafeNormal();
+	const FVector Heading = (-Character->GetActorForwardVector() + Right * (Side * 0.255f)).GetSafeNormal();
 	const float Angle = FMath::DegreesToRadians(HangAngle);
 	const FVector Hang = (Heading * FMath::Cos(Angle) - FVector::UpVector * FMath::Sin(Angle)).GetSafeNormal();
 
