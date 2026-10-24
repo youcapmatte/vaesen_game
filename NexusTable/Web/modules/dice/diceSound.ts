@@ -2,8 +2,8 @@
 
 /**
  * The sound of bone dice on a wooden table, made in the browser (Web Audio), so no recording is fetched or licensed.
- * Each impact is a short bright click (the die's edge) over a soft low knock (the table), and a die rolling to rest
- * is a run of small clicks. Each die schedules its own impacts at its own bounces, so a handful of dice clatter.
+ * Each impact is a sharp tick (the die's edge) with a short woody ring and a faint tap from the table, and a die
+ * rolling to rest is a run of small clicks. Each die schedules its own impacts at its own bounces, so a handful of dice clatter.
  */
 
 const STORAGE_KEY = "nx-dice-sound";
@@ -51,36 +51,59 @@ function audio(): AudioContext | null {
 
 const rand = (min: number, max: number) => min + Math.random() * (max - min);
 
-/** One impact at <paramref name="at"/> (AudioContext time) with a strength of 0-1. */
-function knock(ctx: AudioContext, at: number, strength: number): AudioScheduledSourceNode[] {
-  // The click: a few milliseconds of noise through a bright band-pass, as bone edges on wood.
-  const click = ctx.createBufferSource();
-  click.buffer = noise;
-  click.playbackRate.value = rand(0.85, 1.25);
-  const band = ctx.createBiquadFilter();
-  band.type = "bandpass";
-  band.frequency.value = rand(2200, 4800);
-  band.Q.value = rand(1.2, 2.4);
-  const clickGain = ctx.createGain();
-  clickGain.gain.setValueAtTime(0.0001, at);
-  clickGain.gain.exponentialRampToValueAtTime(0.9 * strength, at + 0.002);
-  clickGain.gain.exponentialRampToValueAtTime(0.0001, at + rand(0.03, 0.06));
-  click.connect(band).connect(clickGain).connect(output!);
-  click.start(at, rand(0, 0.8), 0.08);
+/** A burst of noise from the shared buffer, shaped by a gain envelope that starts at <paramref name="at"/>. */
+function burst(ctx: AudioContext, at: number, length: number, rate: number): AudioBufferSourceNode {
+  const source = ctx.createBufferSource();
+  source.buffer = noise;
+  source.playbackRate.value = rate;
+  source.start(at, rand(0, 0.9), length);
+  return source;
+}
 
-  // The table answering: a short low knock that dies fast.
-  const body = ctx.createOscillator();
-  body.type = "sine";
-  body.frequency.setValueAtTime(rand(150, 210), at);
-  body.frequency.exponentialRampToValueAtTime(rand(80, 110), at + 0.08);
-  const bodyGain = ctx.createGain();
-  bodyGain.gain.setValueAtTime(0.0001, at);
-  bodyGain.gain.exponentialRampToValueAtTime(0.5 * strength, at + 0.003);
-  bodyGain.gain.exponentialRampToValueAtTime(0.0001, at + 0.1);
-  body.connect(bodyGain).connect(output!);
-  body.start(at);
-  body.stop(at + 0.12);
-  return [click, body];
+function envelope(ctx: AudioContext, at: number, peak: number, decay: number): GainNode {
+  const gain = ctx.createGain();
+  gain.gain.setValueAtTime(0.0001, at);
+  gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, peak), at + 0.0008);
+  gain.gain.exponentialRampToValueAtTime(0.0001, at + decay);
+  return gain;
+}
+
+/**
+ * One impact at <paramref name="at"/> (AudioContext time) with a strength of 0-1, for a die of the given
+ * <paramref name="pitch"/>. A die on wood is a sharp click with a short, bright, woody ring and almost no low end:
+ * a falling low tone is what makes a thrown thing sound like a rubber ball.
+ */
+function knock(ctx: AudioContext, at: number, strength: number, pitch: number): AudioScheduledSourceNode[] {
+  const sources: AudioScheduledSourceNode[] = [];
+
+  // The edge: a millisecond-short, very bright tick.
+  const tick = burst(ctx, at, 0.01, rand(1.2, 1.6));
+  const highpass = ctx.createBiquadFilter();
+  highpass.type = "highpass";
+  highpass.frequency.value = 3500;
+  tick.connect(highpass).connect(envelope(ctx, at, 0.7 * strength, rand(0.008, 0.014))).connect(output!);
+  sources.push(tick);
+
+  // Bone and board: a few narrow resonances that ring for a few dozen milliseconds, no pitch sweep.
+  const modes = [1250, 2350, 3900].map((f) => f * pitch * rand(0.97, 1.03));
+  const excite = burst(ctx, at, 0.012, 1);
+  modes.forEach((frequency, i) => {
+    const band = ctx.createBiquadFilter();
+    band.type = "bandpass";
+    band.frequency.value = frequency;
+    band.Q.value = rand(14, 24);
+    excite.connect(band).connect(envelope(ctx, at, [2.6, 1.8, 1.1][i] * strength, rand(0.035, 0.07) / (1 + i * 0.3))).connect(output!);
+  });
+  sources.push(excite);
+
+  // The table: a faint, dull tap, low-passed and gone at once.
+  const tap = burst(ctx, at, 0.02, 0.6);
+  const lowpass = ctx.createBiquadFilter();
+  lowpass.type = "lowpass";
+  lowpass.frequency.value = 700;
+  tap.connect(lowpass).connect(envelope(ctx, at, 0.35 * strength, 0.025)).connect(output!);
+  sources.push(tap);
+  return sources;
 }
 
 /**
@@ -93,12 +116,20 @@ export function playDieThrow(delay: number, duration: number, impacts: { offset:
   const ctx = audio();
   if (!ctx || !output || !noise) return silence;
   const start = ctx.currentTime + delay / 1000;
+  // Each die rings a little higher or lower than the next, as no two bones are alike.
+  const pitch = rand(0.85, 1.18);
   const sources: AudioScheduledSourceNode[] = [];
   for (const { offset, strength } of impacts) {
     const at = start + (offset * duration) / 1000;
-    sources.push(...knock(ctx, at, strength));
-    // A die rarely lands flat: the second edge touches a moment later.
-    if (strength > 0.3) sources.push(...knock(ctx, at + rand(0.008, 0.02), strength * rand(0.25, 0.45)));
+    sources.push(...knock(ctx, at, strength, pitch));
+    // A die rarely lands flat: its other corners touch a moment later, quieter each time.
+    if (strength > 0.3) {
+      let corner = at;
+      for (let i = 0; i < 1 + Math.floor(Math.random() * 2); i++) {
+        corner += rand(0.007, 0.022);
+        sources.push(...knock(ctx, corner, strength * rand(0.2, 0.4) / (i + 1), pitch));
+      }
+    }
   }
 
   // Stops what has not sounded yet: the throw was replaced, or the die left the page.
