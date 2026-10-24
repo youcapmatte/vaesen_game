@@ -5,10 +5,9 @@ import { IconArrowBackUp, IconDice5 } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
 import { Corners } from "@/common/client/components/Ornament";
 import { PageFrame, PageTitle } from "@/common/client/components/PageFrame";
-import { Die, DieFace } from "./Die";
+import { Die, DieFace, TUMBLE_MS } from "./Die";
 
 const MAX_DICE = 15;
-const TUMBLE_MS = 1100;
 const STAGGER_MS = 70;
 
 /** A fair d6 from the browser's crypto source: this is a demo, the table's rolls come from the server. */

@@ -10,7 +10,7 @@ import type { VaesenRules } from "@/common/api/rules";
 import { Http, useApi } from "@/common/client/core/Api";
 import { ruleNames } from "@/common/client/components/hooks";
 import { ErrorNote } from "@/common/client/components/PageFrame";
-import { Die, DieFace } from "./Die";
+import { Die, DieFace, TUMBLE_MS } from "./Die";
 import { canPush, finalDice, MAX_MODIFIER, previewPool, pushConditions } from "./pool";
 
 function rollTitle(rules: VaesenRules, roll: Roll) {
@@ -131,7 +131,7 @@ export function RollOnStage({ roll, rules }: { roll: Roll; rules: VaesenRules })
           />
         ))}
       </Group>
-      <Group gap="xs" style={{ animation: "nx-fade-in 400ms 1300ms both" }}>
+      <Group gap="xs" style={{ animation: `nx-fade-in 400ms ${TUMBLE_MS + 70 * dice.length}ms both` }}>
         <Outcome roll={roll} />
       </Group>
     </Stack>
