@@ -416,7 +416,7 @@ namespace VaesenSoundSetup
 
 	void AnalyzeCombatPack()
 	{
-		for (const TCHAR* Group : { TEXT("Sword_Hits_Blocks"), TEXT("Combat_Sounds_Weapons_And_Spells") })
+		for (const TCHAR* Group : { TEXT("Sword_Hits_Blocks"), TEXT("Combat_Sounds_Weapons_And_Spells"), TEXT("Blood") })
 		{
 			IAssetRegistry& Registry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
 			TArray<FAssetData> Found;
@@ -426,7 +426,7 @@ namespace VaesenSoundSetup
 			{
 				const FString Name = Data.AssetName.ToString();
 				if (!Name.Contains(TEXT("Whoosh")) && !Name.Contains(TEXT("Take")) && !Name.Contains(TEXT("Pack_Away")) && !Name.Contains(TEXT("VS_Sword"))
-					&& !Name.Contains(TEXT("Parry")) && !Name.Contains(TEXT("To_Body")))
+					&& !Name.Contains(TEXT("Parry")) && !Name.Contains(TEXT("Impact")) && !Name.Contains(TEXT("Hit_Then_Blood")) && !Name.Contains(TEXT("Pierce")) && !Name.StartsWith(TEXT("Stab_0")) && !Name.Contains(TEXT("Sword_Stab")))
 				{
 					continue;
 				}
@@ -456,6 +456,25 @@ namespace VaesenSoundSetup
 		}
 		UE_LOG(LogVaesenSoundSetup, Display, TEXT("Quickest take: %s (peaks at %.2f s)"), *FPackageName::GetShortName(Best), BestPeak);
 		return Best.IsEmpty() ? TArray<FString>() : TArray<FString>{ Best };
+	}
+
+	/** Only the takes that hit at once (peak within MaxPeak): an impact must land with the blow, not after it. */
+	TArray<FString> Snappy(const TArray<FString>& Paths, float MaxPeak = 0.12f)
+	{
+		TArray<FString> Kept;
+		for (const FString& Path : Paths)
+		{
+			float Onset = 0.0f, Peak = 0.0f;
+			if (MeasureOnset(LoadAt<USoundWave>(Path), Onset, Peak) && Peak <= MaxPeak)
+			{
+				Kept.Add(Path);
+			}
+			else
+			{
+				UE_LOG(LogVaesenSoundSetup, Display, TEXT("Left out (peaks late, at %.2f s): %s"), Peak, *FPackageName::GetShortName(Path));
+			}
+		}
+		return Kept;
 	}
 
 	TArray<FString> operator+(TArray<FString> A, const TArray<FString>& B)
@@ -490,8 +509,8 @@ namespace VaesenSoundSetup
 				Takes(Blades, TEXT("Whoosh_Standard_Sword"), 3) + Takes(Weapons, TEXT("Whoosh_Sword"), 2) + Takes(Weapons, TEXT("Whoosh"), 7)) },
 			{ EVaesenWeaponSound::SwingHeavy, RandomTakes(TEXT("SC_Sword_SwingHeavy"),
 				Takes(Blades, TEXT("Whoosh_Big_Sword"), 4) + Takes(Weapons, TEXT("BigSword_Whoosh"), 2)) },
-			{ EVaesenWeaponSound::Block, RandomTakes(TEXT("SC_Sword_Block"), Takes(Blades, TEXT("Sword_VS_Sword_Hit"), 10) + Takes(Blades, TEXT("Impact_On_Other_Sword"), 3)) },
-			{ EVaesenWeaponSound::Parry, RandomTakes(TEXT("SC_Sword_Parry"), Takes(Weapons, TEXT("Impact_Sword_Parry"), 5) + Takes(Blades, TEXT("Special_Crit_Sword_VS_Sword"), 3)) },
+			{ EVaesenWeaponSound::Block, RandomTakes(TEXT("SC_Sword_Block"), Snappy(Takes(Blades, TEXT("Sword_VS_Sword_Hit"), 10) + Takes(Blades, TEXT("Impact_On_Other_Sword"), 3))) },
+			{ EVaesenWeaponSound::Parry, RandomTakes(TEXT("SC_Sword_Parry"), Snappy(Takes(Weapons, TEXT("Impact_Sword_Parry"), 5) + Takes(Blades, TEXT("Special_Crit_Sword_VS_Sword"), 3))) },
 		});
 		FVaesenCategoryDefaults& SwordCategory = Defaults->Categories.FindOrAdd(EVaesenWeaponCategory::OneHandedSword);
 		if (Sword && SwordCategory.Sounds != Sword)
@@ -507,17 +526,18 @@ namespace VaesenSoundSetup
 		{
 			return;
 		}
-		USoundBase* SlashFlesh = RandomTakes(TEXT("SC_Hit_Slash_Flesh"), Takes(Weapons, TEXT("Impact_Sword_To_Body"), 5) + Takes(Blood, TEXT("Hit_Then_Blood"), 5));
-		USoundBase* StabFlesh = RandomTakes(TEXT("SC_Hit_Stab_Flesh"), Takes(Blades, TEXT("Pierce_Enemy"), 10) + Takes(Blood, TEXT("Sword_Stab_With_Blood"), 2)
-			+ Takes(Blood, TEXT("Stab"), 3));
-		USoundBase* BluntFlesh = RandomTakes(TEXT("SC_Hit_Blunt_Flesh"), Takes(Weapons, TEXT("Impact_Punch"), 5) + Takes(Weapons, TEXT("Impact_Punch_Soft"), 4)
-			+ Takes(Weapons, TEXT("Impact_Punch_With_Blood"), 7));
-		USoundBase* BladeWood = RandomTakes(TEXT("SC_Hit_Blade_Wood"), Takes(Blades, TEXT("Impact_Sword_Wood"), 6) + Takes(Weapons, TEXT("Impact_Sword_To_Wood"), 4));
-		USoundBase* BladeStone = RandomTakes(TEXT("SC_Hit_Blade_Stone"), Takes(Weapons, TEXT("Impact_Sword_To_Stone"), 4));
-		USoundBase* BladeMetal = RandomTakes(TEXT("SC_Hit_Blade_Metal"), Takes(Weapons, TEXT("Impact_Sword_To_PlateArmour"), 5)
-			+ Takes(Weapons, TEXT("Impact_Sword_To_Armour_Chain"), 5) + Takes(Blades, TEXT("Impact_Armour"), 2));
-		USoundBase* BluntHard = RandomTakes(TEXT("SC_Hit_Blunt_Hard"), Takes(Weapons, TEXT("BigHammer_Impact"), 3));
-		USoundBase* BluntMetal = RandomTakes(TEXT("SC_Hit_Blunt_Metal"), Takes(Blades, TEXT("Impact_Metal"), 6));
+		// Only takes that land with the blow (Snappy): the slow "hit, then blood" and drawn-out stabs peak too late.
+		USoundBase* SlashFlesh = RandomTakes(TEXT("SC_Hit_Slash_Flesh"), Snappy(Takes(Weapons, TEXT("Impact_Sword_To_Body"), 5) + Takes(Blood, TEXT("Hit_Then_Blood"), 5)));
+		USoundBase* StabFlesh = RandomTakes(TEXT("SC_Hit_Stab_Flesh"), Snappy(Takes(Blades, TEXT("Pierce_Enemy"), 10) + Takes(Blood, TEXT("Sword_Stab_With_Blood"), 2)
+			+ Takes(Blood, TEXT("Stab"), 3)));
+		USoundBase* BluntFlesh = RandomTakes(TEXT("SC_Hit_Blunt_Flesh"), Snappy(Takes(Weapons, TEXT("Impact_Punch"), 5) + Takes(Weapons, TEXT("Impact_Punch_Soft"), 4)
+			+ Takes(Weapons, TEXT("Impact_Punch_With_Blood"), 7)));
+		USoundBase* BladeWood = RandomTakes(TEXT("SC_Hit_Blade_Wood"), Snappy(Takes(Blades, TEXT("Impact_Sword_Wood"), 6) + Takes(Weapons, TEXT("Impact_Sword_To_Wood"), 4)));
+		USoundBase* BladeStone = RandomTakes(TEXT("SC_Hit_Blade_Stone"), Snappy(Takes(Weapons, TEXT("Impact_Sword_To_Stone"), 4)));
+		USoundBase* BladeMetal = RandomTakes(TEXT("SC_Hit_Blade_Metal"), Snappy(Takes(Weapons, TEXT("Impact_Sword_To_PlateArmour"), 5)
+			+ Takes(Weapons, TEXT("Impact_Sword_To_Armour_Chain"), 5) + Takes(Blades, TEXT("Impact_Armour"), 2)));
+		USoundBase* BluntHard = RandomTakes(TEXT("SC_Hit_Blunt_Hard"), Snappy(Takes(Weapons, TEXT("BigHammer_Impact"), 3)));
+		USoundBase* BluntMetal = RandomTakes(TEXT("SC_Hit_Blunt_Metal"), Snappy(Takes(Blades, TEXT("Impact_Metal"), 6)));
 
 		// Ours from an earlier run go; the rest of the table stays.
 		const FString Ours = FString(Folder) / TEXT("SC_Hit_");
