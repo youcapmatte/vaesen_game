@@ -1922,6 +1922,29 @@ namespace VaesenAnimSetup
 			Hip->ReferenceGrabPoint = FVector::ZeroVector;
 			// Hung from the hilt, the blade down and back (between 45 degrees and straight down), swinging as he moves.
 			Hip->HangAngle = 60.0f;
+
+			// Resting against the left leg: how far the thigh slopes outward standing (the plain idle, which the sheath
+			// was placed against), and in the run for the log (the legs come in under the body).
+			const auto ThighOutward = [](const TCHAR* Path)
+			{
+				const UAnimSequence* Anim = LoadObject<UAnimSequence>(nullptr, Path);
+				float Sum = 0.0f;
+				int32 Count = 0;
+				for (float Time = 0.0f; Anim && Time <= Anim->GetPlayLength(); Time += 1.0f / 30.0f, ++Count)
+				{
+					const FAnimPose Pose = PoseAt(Anim, Time);
+					const FVector Thigh = (UAnimPoseExtensions::GetBonePose(Pose, TEXT("calf_l"), EAnimPoseSpaces::World).GetLocation()
+						- UAnimPoseExtensions::GetBonePose(Pose, TEXT("thigh_l"), EAnimPoseSpaces::World).GetLocation()).GetSafeNormal();
+					// Manny's left is +X.
+					Sum += Thigh.X;
+				}
+				return Count > 0 ? Sum / Count : 0.0f;
+			};
+			Hip->LegBone = TEXT("thigh_l");
+			Hip->KneeBone = TEXT("calf_l");
+			Hip->LegRestOutward = ThighOutward(TEXT("/Game/Characters/Mannequins/Animations/Manny/MM_Idle.MM_Idle"));
+			UE_LOG(LogVaesenAnimSetup, Display, TEXT("Left thigh slopes outward %.3f standing, %.3f running (average)"), Hip->LegRestOutward,
+				ThighOutward(TEXT("/Game/Characters/Mannequins/Animations/Manny/MM_Run_Fwd.MM_Run_Fwd")));
 		}
 
 		// The stance, the fingers round the hilt, and the sword angled in the hand as the pack holds it.

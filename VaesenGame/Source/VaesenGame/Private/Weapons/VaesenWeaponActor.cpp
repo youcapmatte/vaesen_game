@@ -233,6 +233,9 @@ void AVaesenWeaponActor::AttachToOwner(bool bNowInHand)
 		SwingFrequency = Location->SwingFrequency;
 		SwingDamping = Location->SwingDamping;
 		SwingAmount = Location->SwingAmount;
+		LegBone = Location->LegBone;
+		KneeBone = Location->KneeBone;
+		LegRestOutward = Location->LegRestOutward;
 		SwingOffset = SwingVelocity = PivotVelocity = FVector::ZeroVector;
 		bPivotKnown = false;
 		// After the body is posed this frame.
@@ -382,7 +385,17 @@ void AVaesenWeaponActor::UpdateHang(float DeltaSeconds)
 	const float Side = FVector::DotProduct(Pivot - Character->GetActorLocation(), Right) >= 0.0f ? 1.0f : -1.0f;
 	const FVector Heading = (-Character->GetActorForwardVector() + Right * (Side * 0.255f)).GetSafeNormal();
 	const float Angle = FMath::DegreesToRadians(HangAngle);
-	const FVector Hang = (Heading * FMath::Cos(Angle) - FVector::UpVector * FMath::Sin(Angle)).GetSafeNormal();
+	FVector Hang = (Heading * FMath::Cos(Angle) - FVector::UpVector * FMath::Sin(Angle)).GetSafeNormal();
+
+	// Resting against the leg: as the thigh slopes in or out from how it stands (a run brings the legs in under the
+	// body), the blade leans with it, so the gap to the leg stays. Sideways only.
+	if (!LegBone.IsNone() && !KneeBone.IsNone() && Body->GetBoneIndex(LegBone) != INDEX_NONE && Body->GetBoneIndex(KneeBone) != INDEX_NONE)
+	{
+		const FVector Out = Right * Side;
+		const FVector Thigh = (Body->GetBoneLocation(KneeBone) - Body->GetBoneLocation(LegBone)).GetSafeNormal();
+		const float Lean = FVector::DotProduct(Thigh, Out) - LegRestOutward;
+		Hang = (Hang + Out * (Lean * FMath::Abs(Hang.Z))).GetSafeNormal();
+	}
 
 	// A pendulum: the tip lags as the hip speeds up, slows or turns, then swings back and settles.
 	const float Omega = 2.0f * UE_PI * SwingFrequency;

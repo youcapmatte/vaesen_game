@@ -840,7 +840,7 @@ void UVaesenCombatSelfTest::BuildSteps()
 		Shot(TEXT("8_Running"));
 		return 0.25f;
 	} });
-	Steps.Add({ FString(), [this]() { Shot(TEXT("9_Running")); return 0.3f; } });
+	Steps.Add({ FString(), [this]() { Shot(TEXT("9_RunningFront"), nullptr, 0.0f, true); return 0.3f; } });
 	Steps.Add({ FString(), [this, RunTimer, StandAt]()
 	{
 		Fighter->GetWorldTimerManager().ClearTimer(*RunTimer);
@@ -901,6 +901,27 @@ void UVaesenCombatSelfTest::BuildSteps()
 	} });
 
 	Steps.Add({ FString(), [this]() { Shot(TEXT("7b_SheathedFront"), nullptr, 0.0f, true); return 0.3f; } });
+
+	// Running with the sword sheathed (it rests against the leg as the legs come in under the body).
+	Steps.Add({ FString(), [this, RunTimer, StandAt]()
+	{
+		*StandAt = Fighter->GetActorTransform();
+		const FVector Away = -Fighter->GetActorForwardVector();
+		Fighter->GetWorldTimerManager().SetTimer(*RunTimer, FTimerDelegate::CreateWeakLambda(Fighter.Get(), [Fighter = Fighter.Get(), Away]()
+		{
+			Fighter->AddMovementInput(Away);
+		}), 0.01f, true);
+		return 0.9f;
+	} });
+	Steps.Add({ FString(), [this]() { Shot(TEXT("10_RunningSheathedFront"), nullptr, 0.0f, true); return 0.2f; } });
+	Steps.Add({ FString(), [this]() { Shot(TEXT("11_RunningSheathedFront"), nullptr, 0.0f, true); return 0.2f; } });
+	Steps.Add({ FString(), [this, RunTimer, StandAt]()
+	{
+		Fighter->GetWorldTimerManager().ClearTimer(*RunTimer);
+		Fighter->GetCharacterMovement()->StopMovementImmediately();
+		Fighter->SetActorTransform(*StandAt);
+		return 0.3f;
+	} });
 
 	// --- Throwing a stone ---
 	Steps.Add({ TEXT("Throw"), [this, Inventory]()

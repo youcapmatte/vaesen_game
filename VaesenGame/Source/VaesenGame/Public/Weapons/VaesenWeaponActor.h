@@ -179,4 +179,9 @@ private:
 	FVector LastPivot = FVector::ZeroVector;
 	FVector PivotVelocity = FVector::ZeroVector;
 	bool bPivotKnown = false;
+
+	/** Resting against a leg (LegBone to KneeBone; None = not), and its outward slope standing. */
+	FName LegBone;
+	FName KneeBone;
+	float LegRestOutward = 0.0f;
 };

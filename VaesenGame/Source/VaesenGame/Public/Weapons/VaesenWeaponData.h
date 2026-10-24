@@ -251,6 +251,21 @@ struct FVaesenSheathLocation
 	/** How much the body's movement swings it (0 = it hangs still). */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sheath|Hang", meta = (ClampMin = "0", EditCondition = "HangAngle > 0"))
 	float SwingAmount = 1.0f;
+
+	/**
+	 * Rests against this leg (thigh_l): the blade leans in and out with the thigh (LegBone to KneeBone), keeping the gap
+	 * it has standing, as a scabbard on its straps leans on the leg. Only sideways: the stride's swing forward and back
+	 * is left alone. None = it doesn't.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sheath|Hang", meta = (EditCondition = "HangAngle > 0"))
+	FName LegBone;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sheath|Hang", meta = (EditCondition = "HangAngle > 0"))
+	FName KneeBone;
+
+	/** How far the thigh slopes outward standing (per unit of its length); -run=VaesenAnimSetup measures it in the idle. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sheath|Hang", meta = (EditCondition = "HangAngle > 0"))
+	float LegRestOutward = 0.0f;
 };
 
 /**
