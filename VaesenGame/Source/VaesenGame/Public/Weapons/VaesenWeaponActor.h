@@ -157,4 +157,26 @@ private:
 
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<AActor>> StruckThisSwing;
+
+	/** Ticks while a hit window is open or it hangs (and swings) in its sheath. */
+	void UpdateTickEnabled();
+
+	/** Sheathed at a location that hangs (HangAngle): hangs from the hilt and swings with the body (cosmetic). */
+	void UpdateHang(float DeltaSeconds);
+
+	/** Where it's attached now, and how (for the hang). */
+	FName AttachSocket;
+	FTransform AttachOffset;
+
+	/** Hanging: the location's settings, and the pendulum (the blade's sideways offset and its speed; the hilt's last place and speed). */
+	bool bHangs = false;
+	float HangAngle = 0.0f;
+	float SwingFrequency = 1.3f;
+	float SwingDamping = 0.3f;
+	float SwingAmount = 1.0f;
+	FVector SwingOffset = FVector::ZeroVector;
+	FVector SwingVelocity = FVector::ZeroVector;
+	FVector LastPivot = FVector::ZeroVector;
+	FVector PivotVelocity = FVector::ZeroVector;
+	bool bPivotKnown = false;
 };

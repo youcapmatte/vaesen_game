@@ -880,7 +880,18 @@ void UVaesenCombatSelfTest::BuildSteps()
 		return 2.0f;
 	} });
 
-	Steps.Add({ FString(), [this]() { Shot(TEXT("7_Sheathed")); return 0.3f; } });
+	Steps.Add({ FString(), [this]()
+	{
+		Shot(TEXT("7_Sheathed"));
+		// At the hip it hangs from the hilt, the blade down and back (not level, not straight down).
+		const UVaesenWeaponItem* Sword = Fighter->GetEquipment()->GetWeaponInSlot(EVaesenEquipmentSlot::MainHand);
+		const AVaesenWeaponActor* Sheathed = Sword ? Sword->GetWeaponActor() : nullptr;
+		const float Below = Sheathed ? FMath::RadiansToDegrees(FMath::Asin(-Sheathed->GetActorForwardVector().Z)) : 0.0f;
+		Check(Sheathed && !Sheathed->IsInHand() && Below > 35.0f && Below < 85.0f, FString::Printf(TEXT("the sheathed sword hangs at the hip (%.0f degrees below level; %s hangs %.0f; ticking %d)"), Below,
+			Sword ? *Sword->SheathSocket.ToString() : TEXT("-"), Sword && UVaesenWeaponCategoryDefaults::Get()->FindSheathLocation(Sword->SheathSocket) ? UVaesenWeaponCategoryDefaults::Get()->FindSheathLocation(Sword->SheathSocket)->HangAngle : -1.0f,
+			Sheathed && Sheathed->IsActorTickEnabled() ? 1 : 0));
+		return 0.3f;
+	} });
 
 	// --- Throwing a stone ---
 	Steps.Add({ TEXT("Throw"), [this, Inventory]()

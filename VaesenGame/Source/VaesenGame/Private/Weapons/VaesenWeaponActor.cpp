@@ -1,4 +1,6 @@
 #include "Weapons/VaesenWeaponActor.h"
+#include "Anim/VaesenAnimInstance.h"
+#include "Animation/AnimInstance.h"
 
 #include "Characters/VaesenBaseCharacter.h"
 #include "Combat/VaesenCombatLibrary.h"
@@ -219,12 +221,30 @@ void AVaesenWeaponActor::AttachToOwner(bool bNowInHand)
 
 	AttachToComponent(Character->GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, Socket);
 	SetActorRelativeTransform(Offset);
+	AttachSocket = Socket;
+	AttachOffset = Offset;
+
+	// In a sheath that hangs: from the hilt, swinging (only where it's seen).
+	const FVaesenSheathLocation* Location = !bNowInHand && WeaponItem ? UVaesenWeaponCategoryDefaults::Get()->FindSheathLocation(WeaponItem->SheathSocket) : nullptr;
+	bHangs = Location && Location->HangAngle > 0.0f && GetNetMode() != NM_DedicatedServer;
+	if (bHangs)
+	{
+		HangAngle = Location->HangAngle;
+		SwingFrequency = Location->SwingFrequency;
+		SwingDamping = Location->SwingDamping;
+		SwingAmount = Location->SwingAmount;
+		SwingOffset = SwingVelocity = PivotVelocity = FVector::ZeroVector;
+		bPivotKnown = false;
+		// After the body is posed this frame.
+		AddTickPrerequisiteComponent(Character->GetMesh());
+	}
 
 	if (bInHand != bNowInHand)
 	{
 		bInHand = bNowInHand;
 		OnAttachedToOwner(bInHand);
 	}
+	UpdateTickEnabled();
 }
 
 void AVaesenWeaponActor::PlayWeaponSound(EVaesenWeaponSound Sound) const
@@ -311,7 +331,12 @@ void AVaesenWeaponActor::EndHitWindow()
 		SweepHitWindow();
 	}
 	bHitWindowOpen = false;
-	SetActorTickEnabled(false);
+	UpdateTickEnabled();
+}
+
+void AVaesenWeaponActor::UpdateTickEnabled()
+{
+	SetActorTickEnabled(bHitWindowOpen || (bHangs && !bInHand));
 }
 
 void AVaesenWeaponActor::Tick(float DeltaSeconds)
@@ -321,6 +346,62 @@ void AVaesenWeaponActor::Tick(float DeltaSeconds)
 	{
 		SweepHitWindow();
 	}
+	if (bHangs && !bInHand)
+	{
+		UpdateHang(DeltaSeconds);
+	}
+}
+
+void AVaesenWeaponActor::UpdateHang(float DeltaSeconds)
+{
+	const AVaesenBaseCharacter* Character = GetOwningCharacter();
+	const USkeletalMeshComponent* Body = Character ? Character->GetMesh() : nullptr;
+	const float Step = FMath::Min(DeltaSeconds, 1.0f / 30.0f);
+	if (!Body || Step <= 0.0f)
+	{
+		return;
+	}
+	// The sheath as the socket has it; the hilt (the actor's origin, its Grip) is the pivot.
+	const FTransform Rest = AttachOffset * Body->GetSocketTransform(AttachSocket);
+	const FVector Pivot = Rest.GetLocation();
+	FVector PivotAcceleration = FVector::ZeroVector;
+	if (bPivotKnown)
+	{
+		const FVector Velocity = (Pivot - LastPivot) / Step;
+		// A teleport or a snap of the pose isn't a swing.
+		PivotAcceleration = ((Velocity - PivotVelocity) / Step).GetClampedToMaxSize(3000.0f);
+		PivotVelocity = Velocity;
+	}
+	LastPivot = Pivot;
+	bPivotKnown = true;
+
+	// At rest the blade hangs HangAngle below level, heading back the way the socket points it.
+	const FVector Blade = Rest.GetUnitAxis(EAxis::X);
+	FVector Heading = Blade.GetSafeNormal2D();
+	if (Heading.IsNearlyZero())
+	{
+		Heading = -Character->GetActorForwardVector();
+	}
+	const float Angle = FMath::DegreesToRadians(HangAngle);
+	const FVector Hang = (Heading * FMath::Cos(Angle) - FVector::UpVector * FMath::Sin(Angle)).GetSafeNormal();
+
+	// A pendulum: the tip lags as the hip speeds up, slows or turns, then swings back and settles.
+	const float Omega = 2.0f * UE_PI * SwingFrequency;
+	const float Length = 60.0f;
+	const FVector Pull = -Omega * Omega * SwingOffset - 2.0f * SwingDamping * Omega * SwingVelocity - PivotAcceleration * (SwingAmount / Length);
+	SwingVelocity += Pull * Step;
+	SwingOffset += SwingVelocity * Step;
+	// Only across the blade, and not too far.
+	SwingOffset -= Hang * FVector::DotProduct(SwingOffset, Hang);
+	SwingVelocity -= Hang * FVector::DotProduct(SwingVelocity, Hang);
+	SwingOffset = SwingOffset.GetClampedToMaxSize(0.6f);
+
+	// As the hand reaches for the hilt (or lets go of it), the sword comes up to the socket's angle: it meets the hand
+	// the way the draw holds it.
+	const UAnimInstance* Anim = Body->GetAnimInstance();
+	const float Reach = Anim ? FMath::Clamp(Anim->GetCurveValue(UVaesenAnimInstance::HandIKSheathCurve), 0.0f, 1.0f) : 0.0f;
+	const FQuat Turn = FQuat::Slerp(FQuat::Identity, FQuat::FindBetweenNormals(Blade, (Hang + SwingOffset).GetSafeNormal()), 1.0f - Reach);
+	SetActorLocationAndRotation(Pivot, (Turn * Rest.GetRotation()).GetNormalized());
 }
 
 void AVaesenWeaponActor::SweepHitWindow()

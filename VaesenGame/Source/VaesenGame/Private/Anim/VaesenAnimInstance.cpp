@@ -15,6 +15,14 @@
 #include "KismetAnimationLibrary.h"
 #include "Weapons/VaesenRangedWeaponActor.h"
 #include "Weapons/VaesenWeaponActor.h"
+#include "HAL/IConsoleManager.h"
+
+namespace
+{
+	// Off for now: the plain run's own wrist, untouched.
+	TAutoConsoleVariable<int32> CVarCarryTurn(TEXT("vaesen.anim.carryturn"), 0,
+		TEXT("1: at a free run, the wrist turns a carried one-handed blade forward, down and out, clear of the body."));
+}
 
 const FName UVaesenAnimInstance::HandIKSheathCurve(TEXT("HandIK_Sheath"));
 const FName UVaesenAnimInstance::TriggerFingerCurve(TEXT("TriggerFinger"));
@@ -208,7 +216,7 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 
 	// A one-handed weapon carried at a run (the plain run's arm swing): the blade forward, down and out to the right,
 	// clear of the body and the other arm. Not while a montage (a swing, a dodge, a draw) has the arm.
-	const bool bCarry = bFreeRunning && In.bHeld && bHandsFree && Weapon && !Weapon->IsRanged() && !Weapon->IsHeldTwoHanded() && !IsAnyMontagePlaying();
+	const bool bCarry = CVarCarryTurn.GetValueOnGameThread() > 0 && bFreeRunning && In.bHeld && bHandsFree && Weapon && !Weapon->IsRanged() && !Weapon->IsHeldTwoHanded() && !IsAnyMontagePlaying();
 	CarryBlend = FMath::FInterpTo(CarryBlend, bCarry ? 1.0f : 0.0f, DeltaSeconds, 8.0f);
 	In.CarryBlend = CarryBlend;
 	In.CarryDirection = CarryDirection;

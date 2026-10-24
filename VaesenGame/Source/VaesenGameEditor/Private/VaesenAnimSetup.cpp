@@ -1920,6 +1920,8 @@ namespace VaesenAnimSetup
 			Hip->DrawMontage = Draw;
 			Hip->SheathMontage = Sheath;
 			Hip->ReferenceGrabPoint = FVector::ZeroVector;
+			// Hung from the hilt, the blade down and back (between 45 degrees and straight down), swinging as he moves.
+			Hip->HangAngle = 60.0f;
 		}
 
 		// The stance, the fingers round the hilt, and the sword angled in the hand as the pack holds it.

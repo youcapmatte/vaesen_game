@@ -231,6 +231,26 @@ struct FVaesenSheathLocation
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sheath|Fallback")
 	FTransform FallbackOffset;
+
+	/**
+	 * Hangs from its hilt (a sword at the hip): the blade this far below level, its heading as the socket has it
+	 * (0 = held exactly as the socket has it; 90 = straight down). It swings as the body moves, and comes up to the
+	 * socket's angle as the hand reaches for the hilt (the draw's HandIK_Sheath curve).
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sheath|Hang", meta = (ClampMin = "0", ClampMax = "90", Units = "Degrees"))
+	float HangAngle = 0.0f;
+
+	/** How fast it swings back and forth (a pendulum's own rate). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sheath|Hang", meta = (ClampMin = "0.1", Units = "Hz", EditCondition = "HangAngle > 0"))
+	float SwingFrequency = 1.3f;
+
+	/** How quickly a swing dies down (0 = never, 1 = no overshoot). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sheath|Hang", meta = (ClampMin = "0", ClampMax = "1", EditCondition = "HangAngle > 0"))
+	float SwingDamping = 0.3f;
+
+	/** How much the body's movement swings it (0 = it hangs still). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sheath|Hang", meta = (ClampMin = "0", EditCondition = "HangAngle > 0"))
+	float SwingAmount = 1.0f;
 };
 
 /**
