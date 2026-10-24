@@ -56,3 +56,10 @@ VaesenGame/Content/Combat_SFX_Bundle/
 VaesenGame/Content/ThirdParty/
 VaesenGame/Content/1HM_Sword_Attacks_Finishers/
 VaesenGame/Content/RifleAnims/
+VaesenGame/Content/PistolLocomotionPack/
+# The packs' demo maps keep their actors here (one file per actor)
+VaesenGame/Content/__ExternalActors__/Demo/
+VaesenGame/Content/__ExternalActors__/PistolLocomotionPack/
+VaesenGame/Content/__ExternalActors__/ThirdPerson/
+VaesenGame/Content/__ExternalObjects__/Demo/
+VaesenGame/Content/__ExternalObjects__/PistolLocomotionPack/

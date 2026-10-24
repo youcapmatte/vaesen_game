@@ -8,8 +8,9 @@ Asset packs from Fab are **not in git**. What the project uses of a pack is kept
 | --- | --- | --- | --- |
 | Food Pack 01 | `Content/ThirdParty/Food_Pack_01` | the challah mesh and its materials and textures (the rye bread) | add more food |
 | One Hand Sword Attacks And Finishers (RamsterZ) | `Content/1HM_Sword_Attacks_Finishers` | nothing (the sword animations are retargeted copies in `Vaesen/Animations/Sword`) | rerun the sword import (`-run=VaesenAnimSetup -rebuild`), self-test screenshots |
+| Pistol Locomotion Pack (MandB) | `Content/PistolLocomotionPack` | nothing (the pistol animations are copies in `Vaesen/Animations/Pistol`) | rerun the pistol import (`-run=VaesenAnimSetup`) |
 | Shooter Rifle Animations | `Content/RifleAnims` | the UE4 mannequin and rifle (the retargeting source), two fire animations | re-retarget the rifle animations |
-| Distance Gun Sounds: WeaponVerse1 | `Content/WeaponVerse1` | the waves, cues and attenuations the gun sounds play | rebuild the gun sounds (`-run=VaesenSoundSetup -rebuild`) |
+| Distance Gun Sounds: WeaponVerse1 | `Content/WeaponVerse1` | the waves, cues and attenuations the gun sounds play (rifles, revolver, rolling-block) | rebuild the gun sounds (`-run=VaesenSoundSetup -rebuild`) |
 | Combat Sounds - Bundle Collection (Audios With Love) | `Content/Combat_SFX_Bundle` | the waves the sword and hit sounds play | rebuild the blade and hit sounds |
 
 `Content/Characters` (Epic's mannequins) and `Content/ThirdPerson` (the template's input) stay in git: nearly all of them is used.

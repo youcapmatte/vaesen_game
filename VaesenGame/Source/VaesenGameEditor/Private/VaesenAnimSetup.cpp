@@ -470,6 +470,74 @@ namespace VaesenAnimSetup
 
 	bool BladeInHand(FVector& OutBlade, FVector& OutEdge, FVector& OutGrip);
 
+	// --- Pistol pack (MandB Animation "Pistol Locomotion Pack") ---
+
+	const TCHAR* PistolPackFolder = TEXT("/Game/PistolLocomotionPack");
+
+	void AnalyzePistol()
+	{
+		UE_LOG(LogVaesenAnimSetup, Display, TEXT("=== Pistol pack analysis ==="));
+		IAssetRegistry& Registry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
+		Registry.SearchAllAssets(true);
+		TArray<FAssetData> Found;
+		Registry.GetAssetsByPath(FName(FString(PistolPackFolder) / TEXT("Animations")), Found, true);
+		Found.Sort([](const FAssetData& A, const FAssetData& B) { return A.AssetName.LexicalLess(B.AssetName); });
+		for (const FAssetData& Data : Found)
+		{
+			const UAnimSequence* Anim = Cast<UAnimSequence>(Data.GetAsset());
+			if (!Anim)
+			{
+				continue;
+			}
+			const FSwingTiming Timing = MeasureSwing(Anim);
+			UE_LOG(LogVaesenAnimSetup, Display, TEXT("%-48s %.2f s root motion %d lock %d, root moves %s (%.0f cm/s); hand fastest %.0f cm/s at %.2f; skeleton %s"),
+				*Data.AssetName.ToString(), Timing.Length, Anim->bEnableRootMotion ? 1 : 0, Anim->bForceRootLock ? 1 : 0, *Timing.RootMove.ToCompactString(),
+				Timing.RootMove.Size2D() / FMath::Max(Timing.Length, 0.01f), Timing.PeakSpeed, Timing.PeakTime, *GetPathNameSafe(Anim->GetSkeleton()));
+		}
+
+		// The pistol meshes, and how the demo character holds one.
+		TArray<FAssetData> Demo;
+		Registry.GetAssetsByPath(FName(FString(PistolPackFolder) / TEXT("Demo")), Demo, true);
+		for (const FAssetData& Data : Demo)
+		{
+			UObject* Asset = Data.GetAsset();
+			if (const USkeletalMesh* Mesh = Cast<USkeletalMesh>(Asset); Mesh && Data.PackagePath.ToString().Contains(TEXT("pistol")))
+			{
+				const FBox Box = Mesh->GetImportedBounds().GetBox();
+				UE_LOG(LogVaesenAnimSetup, Display, TEXT("Mesh %s (skeletal, %d bones) bounds %s .. %s"), *Data.AssetName.ToString(), Mesh->GetRefSkeleton().GetNum(),
+					*Box.Min.ToCompactString(), *Box.Max.ToCompactString());
+				for (int32 Bone = 0; Bone < Mesh->GetRefSkeleton().GetNum(); ++Bone)
+				{
+					UE_LOG(LogVaesenAnimSetup, Display, TEXT("    bone %s"), *Mesh->GetRefSkeleton().GetBoneName(Bone).ToString());
+				}
+			}
+			if (const UStaticMesh* Static = Cast<UStaticMesh>(Asset); Static && Data.PackagePath.ToString().Contains(TEXT("pistol")))
+			{
+				const FBox Box = Static->GetBoundingBox();
+				UE_LOG(LogVaesenAnimSetup, Display, TEXT("Mesh %s (static) bounds %s .. %s"), *Data.AssetName.ToString(), *Box.Min.ToCompactString(), *Box.Max.ToCompactString());
+			}
+			if (const USkeleton* Skeleton = Cast<USkeleton>(Asset))
+			{
+				for (const USkeletalMeshSocket* Socket : Skeleton->Sockets)
+				{
+					UE_LOG(LogVaesenAnimSetup, Display, TEXT("Skeleton %s socket %s on %s: loc %s rot %s"), *Data.AssetName.ToString(), *Socket->SocketName.ToString(),
+						*Socket->BoneName.ToString(), *Socket->RelativeLocation.ToCompactString(), *Socket->RelativeRotation.ToCompactString());
+				}
+			}
+			if (const UBlueprint* Blueprint = Cast<UBlueprint>(Asset); Blueprint && Blueprint->SimpleConstructionScript)
+			{
+				for (const USCS_Node* Node : Blueprint->SimpleConstructionScript->GetAllNodes())
+				{
+					if (const USceneComponent* Component = Node ? Cast<USceneComponent>(Node->ComponentTemplate) : nullptr)
+					{
+						UE_LOG(LogVaesenAnimSetup, Display, TEXT("BP %s: %s (%s) on %s socket '%s' at %s"), *Data.AssetName.ToString(), *Node->GetVariableName().ToString(),
+							*Component->GetClass()->GetName(), *Node->ParentComponentOrVariableName.ToString(), *Node->AttachToName.ToString(), *Describe(Component->GetRelativeTransform()));
+					}
+				}
+			}
+		}
+	}
+
 	void AnalyzeSword()
 	{
 		UE_LOG(LogVaesenAnimSetup, Display, TEXT("=== Sword pack analysis ==="));
@@ -2046,6 +2114,409 @@ namespace VaesenAnimSetup
 		}
 		Save(Defaults);
 	}
+
+	// --- Pistols (MandB Animation "Pistol Locomotion Pack") ---
+
+	const TCHAR* PistolFolder = TEXT("/Game/Vaesen/Animations/Pistol");
+	const TCHAR* PistolGraphPath = TEXT("/Game/Vaesen/Animations/Pistol/ABP_PistolLocomotion");
+	const TCHAR* PistolPackSkeleton = TEXT("/Game/PistolLocomotionPack/Demo/Characters/Mannequins/Meshes/SK_Mannequin");
+
+	/**
+	 * The pack's animation (Animations/<Group>/<Name>) as ours, in /Game/Vaesen/Animations/Pistol: a copy put on
+	 * Manny's skeleton (the pack's skeleton is a copy of it, the same bones), in place (the capsule moves). Made once.
+	 */
+	UAnimSequence* PistolAnim(const TCHAR* Group, const TCHAR* Name)
+	{
+		const FString Path = FString(PistolFolder) / Name;
+		if (UAnimSequence* Existing = LoadAt<UAnimSequence>(Path))
+		{
+			return Existing;
+		}
+		UAnimSequence* Source = LoadAt<UAnimSequence>(FString(PistolPackFolder) / TEXT("Animations") / Group / Name);
+		USkeleton* Skeleton = LoadObject<USkeleton>(nullptr, MannySkeletonPath);
+		if (!Source || !Skeleton)
+		{
+			UE_LOG(LogVaesenAnimSetup, Warning, TEXT("Pistol pack animation %s/%s is missing."), Group, Name);
+			return nullptr;
+		}
+		UPackage* Package = CreatePackage(*Path);
+		UAnimSequence* Copy = DuplicateObject<UAnimSequence>(Source, Package, FName(Name));
+		Copy->SetFlags(RF_Public | RF_Standalone);
+		FAssetRegistryModule::AssetCreated(Copy);
+		Copy->ReplaceSkeleton(Skeleton);
+		Copy->bEnableRootMotion = false;
+		Copy->bForceRootLock = true;
+		Copy->PostEditChange();
+		Save(Copy);
+		return Copy;
+	}
+
+	/** How fast the pack's walk with root motion (Loop_root/<Name>) goes, in cm/s. */
+	float PistolGaitSpeed(const FString& RootName)
+	{
+		const UAnimSequence* Root = LoadAt<UAnimSequence>(FString(PistolPackFolder) / TEXT("Animations/Loop_root") / RootName);
+		if (!Root)
+		{
+			return 0.0f;
+		}
+		const FSwingTiming Timing = MeasureSwing(Root);
+		return FMath::RoundToFloat(Timing.RootMove.Size2D() / FMath::Max(Timing.Length, 0.01f));
+	}
+
+	struct FPistolGait { const TCHAR* Group; const TCHAR* Loop; float Direction; };
+
+	/**
+	 * A direction/speed blend space set like the rifle's (BS_Rifle duplicated): Idle standing, and each loop at its own
+	 * speed (measured in the pack's Loop_root copy, "<Loop>_root"). Made once; -rebuild remakes it while the pack's there.
+	 */
+	UBlendSpace* MakePistolBlendSpace(const TCHAR* Name, UAnimSequence* Idle, TArrayView<const FPistolGait> Gaits, bool bRebuild)
+	{
+		const FString Path = FString(PistolFolder) / Name;
+		UBlendSpace* Space = LoadAt<UBlendSpace>(Path);
+		const bool bPack = FPackageName::DoesPackageExist(FString(PistolPackFolder) / TEXT("Animations/Loop_root/anim_pistol_walk_fwd_loop_root"));
+		if (Space && (!bRebuild || !bPack))
+		{
+			return Space;
+		}
+		if (!Space)
+		{
+			UBlendSpace* Rifle = RifleAsset<UBlendSpace>(TEXT("BS_Rifle"));
+			if (!Rifle)
+			{
+				return nullptr;
+			}
+			UPackage* Package = CreatePackage(*Path);
+			Space = DuplicateObject<UBlendSpace>(Rifle, Package, FName(Name));
+			Space->SetFlags(RF_Public | RF_Standalone);
+			FAssetRegistryModule::AssetCreated(Space);
+		}
+		while (Space->GetNumberOfBlendSamples() > 0)
+		{
+			Space->DeleteSample(0);
+		}
+		const auto Add = [Space](UAnimSequence* Anim, float Direction, float Speed)
+		{
+			if (Anim)
+			{
+				const FVector Value(Direction, Speed, 0.0);
+				Space->ExpandRangeForSample(Value);
+				Space->AddSample(Anim, Value);
+			}
+		};
+		for (const float Direction : { -180.0f, -90.0f, 0.0f, 90.0f, 180.0f })
+		{
+			Add(Idle, Direction, 0.0f);
+		}
+		for (const FPistolGait& Gait : Gaits)
+		{
+			UAnimSequence* Loop = PistolAnim(Gait.Group, Gait.Loop);
+			const float Speed = PistolGaitSpeed(FString(Gait.Loop) + TEXT("_root"));
+			if (Speed <= 0.0f)
+			{
+				UE_LOG(LogVaesenAnimSetup, Warning, TEXT("No speed for %s"), Gait.Loop);
+				continue;
+			}
+			Add(Loop, Gait.Direction, Speed);
+			// Straight back also at -180, so the space wraps round.
+			if (Gait.Direction == 180.0f)
+			{
+				Add(Loop, -180.0f, Speed);
+			}
+		}
+		Space->ValidateSampleData();
+		Space->ResampleData();
+		Space->PostEditChange();
+		Save(Space);
+		UE_LOG(LogVaesenAnimSetup, Display, TEXT("%s: %d samples, speed up to %.0f"), Name, Space->GetNumberOfBlendSamples(), Space->GetBlendParameter(1).Max);
+		return Space;
+	}
+
+	/**
+	 * How the pack's pistol sits in the hand: its demo skeleton holds it at hand_rSocket (the pistol's barrel along its
+	 * Y, up its Z). Ours point X along the barrel, Z up, held by their Grip where the palm closes. Manny's hand is the
+	 * same bone, so this is the category's InHand directly (on top of the hand socket).
+	 */
+	bool ComputePistolInHand(const USkeleton* Skeleton, FTransform& OutDesired, FTransform& OutInHand)
+	{
+		const USkeleton* Pack = LoadAt<USkeleton>(PistolPackSkeleton);
+		const USkeletalMeshSocket* Socket = Pack ? Pack->FindSocket(TEXT("hand_rSocket")) : nullptr;
+		const USkeletalMeshSocket* Palm = Skeleton->FindSocket(UVaesenWeaponCategoryDefaults::Get()->MainHandSocket);
+		const FReferenceSkeleton& Reference = Skeleton->GetReferenceSkeleton();
+		const int32 HandIndex = Reference.FindBoneIndex(TEXT("hand_r"));
+		const int32 KnuckleIndex = Reference.FindBoneIndex(TEXT("middle_01_r"));
+		if (!Socket || !Palm || HandIndex == INDEX_NONE || KnuckleIndex == INDEX_NONE)
+		{
+			return false;
+		}
+		const FTransform Gun = Socket->GetSocketLocalTransform();
+		const FTransform Hand = FAnimationRuntime::GetComponentSpaceTransformRefPose(Reference, HandIndex);
+		const FVector PalmInHand = Hand.InverseTransformPosition(FAnimationRuntime::GetComponentSpaceTransformRefPose(Reference, KnuckleIndex).GetLocation()) * 0.5;
+		OutDesired = FTransform(FRotationMatrix::MakeFromXZ(Gun.GetUnitAxis(EAxis::Y), Gun.GetUnitAxis(EAxis::Z)).ToQuat(), PalmInHand);
+		OutInHand = OutDesired * Palm->GetSocketLocalTransform().Inverse();
+		OutInHand.SetScale3D(FVector::OneVector);
+		UE_LOG(LogVaesenAnimSetup, Display, TEXT("Pistol in the hand %s (category InHand %s)"), *Describe(OutDesired), *Describe(OutInHand));
+		return true;
+	}
+
+	/** The pistol's aim offset (pitch): the rifle's AO1D duplicated, with the pack's front poses at the pitch the gun points in each. */
+	UBlendSpace* MakePistolAimOffset(const FTransform& GunInHand, bool bRebuild)
+	{
+		const FString Path = FString(PistolFolder) / TEXT("AO1D_Pistol");
+		UBlendSpace* Offset = LoadAt<UBlendSpace>(Path);
+		if (Offset && !bRebuild)
+		{
+			return Offset;
+		}
+		UAnimSequence* Center = PistolAnim(TEXT("AnimOffset"), TEXT("anim_pistol_front_center"));
+		UAnimSequence* Up = PistolAnim(TEXT("AnimOffset"), TEXT("anim_pistol_front_up"));
+		UAnimSequence* Down = PistolAnim(TEXT("AnimOffset"), TEXT("anim_pistol_front_down"));
+		if (!Center || !Up || !Down)
+		{
+			return Offset;
+		}
+		// Where the gun points in each pose (in the pack's own poses: ours become additive below).
+		const auto PitchOf = [&GunInHand](const TCHAR* Name)
+		{
+			const UAnimSequence* Pose = LoadAt<UAnimSequence>(FString(PistolPackFolder) / TEXT("Animations/AnimOffset") / Name);
+			if (!Pose)
+			{
+				return 0.0f;
+			}
+			const FTransform Hand = UAnimPoseExtensions::GetBonePose(PoseAt(Pose, 0.0), TEXT("hand_r"), EAnimPoseSpaces::World);
+			return static_cast<float>((GunInHand * Hand).Rotator().Pitch);
+		};
+		const float CenterPitch = PitchOf(TEXT("anim_pistol_front_center"));
+		const float UpPitch = PitchOf(TEXT("anim_pistol_front_up")) - CenterPitch;
+		const float DownPitch = PitchOf(TEXT("anim_pistol_front_down")) - CenterPitch;
+		UE_LOG(LogVaesenAnimSetup, Display, TEXT("Pistol aim poses: up %.0f, down %.0f degrees (from the centre's %.0f)"), UpPitch, DownPitch, CenterPitch);
+
+		// Rotation offsets in mesh space, from the centre pose.
+		for (UAnimSequence* Pose : { Center, Up, Down })
+		{
+			if (Pose->AdditiveAnimType != AAT_RotationOffsetMeshSpace)
+			{
+				Pose->AdditiveAnimType = AAT_RotationOffsetMeshSpace;
+				Pose->RefPoseType = ABPT_AnimFrame;
+				Pose->RefPoseSeq = Center;
+				Pose->RefFrameIndex = 0;
+				Pose->PostEditChange();
+				Save(Pose);
+			}
+		}
+		if (!Offset)
+		{
+			UBlendSpace* Rifle = RifleAsset<UBlendSpace>(TEXT("AO1D_Rifle_Aim"));
+			if (!Rifle)
+			{
+				return nullptr;
+			}
+			UPackage* Package = CreatePackage(*Path);
+			Offset = DuplicateObject<UBlendSpace>(Rifle, Package, FName(TEXT("AO1D_Pistol")));
+			Offset->SetFlags(RF_Public | RF_Standalone);
+			FAssetRegistryModule::AssetCreated(Offset);
+		}
+		if (UpPitch > 1.0f && DownPitch < -1.0f)
+		{
+			while (Offset->GetNumberOfBlendSamples() > 0)
+			{
+				Offset->DeleteSample(0);
+			}
+			const TPair<UAnimSequence*, float> Samples[] = { { Down, DownPitch }, { Center, 0.0f }, { Up, UpPitch } };
+			for (const TPair<UAnimSequence*, float>& Sample : Samples)
+			{
+				Offset->ExpandRangeForSample(FVector(Sample.Value, 0.0, 0.0));
+				Offset->AddSample(Sample.Key, FVector(Sample.Value, 0.0, 0.0));
+			}
+			Offset->ValidateSampleData();
+			Offset->ResampleData();
+			Offset->PostEditChange();
+			Save(Offset);
+		}
+		return Offset;
+	}
+
+	/** A montage of part of a pistol animation (made once). */
+	UAnimMontage* MakeTrimmedPistolMontage(const TCHAR* Name, UAnimSequence* Sequence, float Start, float End)
+	{
+		const FString Path = FString(PistolFolder) / Name;
+		const bool bNew = !Exists(Path);
+		UAnimMontage* Montage = MakeMontage(Path, Sequence, UpperBodySlot, 0.1f, 0.15f);
+		if (Montage && bNew)
+		{
+			TrimMontage(Montage, Start, End);
+			Save(Montage);
+		}
+		return Montage;
+	}
+
+	/**
+	 * ABP_PistolLocomotion: the pistol's stance, linked into the character's graph while a pistol or revolver is drawn.
+	 * Relaxed or aimed (each a direction/speed blend space), crouched, and the fall loop in the air; the aim offset
+	 * (AimPitch) on each.
+	 */
+	UClass* BuildPistolLocomotion(USkeleton* Skeleton, bool bRebuild, UBlendSpace* Relaxed, UBlendSpace* Aimed, UBlendSpace* Crouched, UBlendSpace* AimOffset, UAnimSequence* Fall)
+	{
+		if (!bRebuild)
+		{
+			if (UAnimBlueprint* Existing = LoadAt<UAnimBlueprint>(PistolGraphPath))
+			{
+				return Existing->GeneratedClass;
+			}
+		}
+		UAnimBlueprint* Blueprint = OpenAnimBlueprint(PistolGraphPath, Skeleton);
+		FGraphBuilder Builder(Blueprint);
+		if (!Blueprint || !Builder.Graph)
+		{
+			return nullptr;
+		}
+		UEdGraphNode* Hip = LocomotionWithAim(Builder, -1600, 0, Relaxed, AimOffset);
+		UEdGraphNode* Aim = LocomotionWithAim(Builder, -1600, 250, Aimed, AimOffset);
+		UEdGraphNode* Crouch = LocomotionWithAim(Builder, -1600, 500, Crouched, AimOffset);
+		UEdGraphNode* Standing = ByBool(Builder, -900, 100, TEXT("bAiming"), Aim, Hip, 0.2f);
+		UEdGraphNode* Grounded = ByBool(Builder, -600, 300, TEXT("bCrouching"), Crouch, Standing, 0.25f);
+		UAnimGraphNode_SequencePlayer* Air = Builder.Add<UAnimGraphNode_SequencePlayer>(-600, 650, [Fall](UAnimGraphNode_SequencePlayer* Node)
+		{
+			Node->Node.SetSequence(Fall);
+		});
+		UEdGraphNode* Final = ByBool(Builder, -300, 300, TEXT("bFalling"), Air, Grounded, 0.15f);
+		Builder.Pose(Final, Builder.Root(), TEXT("Result"));
+		CompileAndSave(Blueprint);
+		return Blueprint->GeneratedClass;
+	}
+
+	void BuildPistol()
+	{
+		const bool bRebuild = FParse::Param(FCommandLine::Get(), TEXT("rebuild"));
+		USkeleton* Skeleton = LoadObject<USkeleton>(nullptr, MannySkeletonPath);
+		UVaesenWeaponCategoryDefaults* Defaults = LoadObject<UVaesenWeaponCategoryDefaults>(nullptr, TEXT("/Game/Vaesen/Combat/DA_WeaponCategoryDefaults.DA_WeaponCategoryDefaults"));
+		const bool bPack = FPackageName::DoesPackageExist(FString(PistolPackFolder) / TEXT("Animations/StandIdle/anim_pistol_stand_idle"));
+		if (!Skeleton || !Defaults || (!bPack && !Exists(PistolGraphPath)))
+		{
+			UE_LOG(LogVaesenAnimSetup, Display, TEXT("Pistol pack (/Game/PistolLocomotionPack) not in the project; skipping the pistols."));
+			return;
+		}
+		const FString Folder = PistolFolder;
+
+		// How the pack holds its pistol (the grip in the hand); the aim offset's poses are measured with it.
+		FTransform GunInHand, InHand;
+		const bool bHold = bPack && ComputePistolInHand(Skeleton, GunInHand, InHand);
+
+		// The stance: relaxed (walk, jog), aimed (the aimed walk), crouched; the fall loop.
+		UAnimSequence* StandIdle = PistolAnim(TEXT("StandIdle"), TEXT("anim_pistol_stand_idle"));
+		UAnimSequence* AimIdle = PistolAnim(TEXT("Aim"), TEXT("anim_pistol_aim_idle"));
+		UAnimSequence* CrouchIdle = PistolAnim(TEXT("Crouch"), TEXT("anim_pistol_crouch_idle"));
+		const FPistolGait Relaxed[] = {
+			{ TEXT("Walk"), TEXT("anim_pistol_walk_fwd_loop"), 0.0f }, { TEXT("Walk"), TEXT("anim_pistol_walk_45_fwd_right_loop"), 45.0f },
+			{ TEXT("Walk"), TEXT("anim_pistol_walk_right_loop"), 90.0f }, { TEXT("Walk"), TEXT("anim_pistol_walk_45_bwd_right_loop"), 135.0f },
+			{ TEXT("Walk"), TEXT("anim_pistol_walk_bwd_loop"), 180.0f }, { TEXT("Walk"), TEXT("anim_pistol_walk_45_bwd_left_loop"), -135.0f },
+			{ TEXT("Walk"), TEXT("anim_pistol_walk_left_loop"), -90.0f }, { TEXT("Walk"), TEXT("anim_pistol_walk_45_fwd_left_loop"), -45.0f },
+			{ TEXT("Jog"), TEXT("anim_pistol_jog_fwd_loop"), 0.0f }, { TEXT("Jog"), TEXT("anim_pistol_jog_45_fwd_right_loop"), 45.0f },
+			{ TEXT("Jog"), TEXT("anim_pistol_jog_right_loop"), 90.0f }, { TEXT("Jog"), TEXT("anim_pistol_jog_45_bwd_right_loop"), 135.0f },
+			{ TEXT("Jog"), TEXT("anim_pistol_jog_bwd_loop"), 180.0f }, { TEXT("Jog"), TEXT("anim_pistol_jog_45_bwd_left_loop"), -135.0f },
+			{ TEXT("Jog"), TEXT("anim_pistol_jog_left_loop"), -90.0f }, { TEXT("Jog"), TEXT("anim_pistol_jog_45_fwd_left_loop"), -45.0f } };
+		const FPistolGait Aimed[] = {
+			{ TEXT("Aim"), TEXT("anim_pistol_aim_walk_fwd_loop"), 0.0f }, { TEXT("Aim"), TEXT("anim_pistol_aim_walk_45_fwd_right_loop"), 45.0f },
+			{ TEXT("Aim"), TEXT("anim_pistol_aim_walk_right_loop"), 90.0f }, { TEXT("Aim"), TEXT("anim_pistol_aim_walk_45_bwd_right_loop"), 135.0f },
+			{ TEXT("Aim"), TEXT("anim_pistol_aim_walk_bwd_loop"), 180.0f }, { TEXT("Aim"), TEXT("anim_pistol_aim_walk_45_bwd_left_loop"), -135.0f },
+			{ TEXT("Aim"), TEXT("anim_pistol_aim_walk_left_loop"), -90.0f }, { TEXT("Aim"), TEXT("anim_pistol_aim_walk_45_fwd_left_loop"), -45.0f } };
+		const FPistolGait Crouched[] = {
+			{ TEXT("Crouch"), TEXT("anim_pistol_crouch_fwd_loop"), 0.0f }, { TEXT("Crouch"), TEXT("anim_pistol_crouch_walk_right_loop"), 90.0f },
+			{ TEXT("Crouch"), TEXT("anim_pistol_crouch_bwd_loop"), 180.0f }, { TEXT("Crouch"), TEXT("anim_pistol_crouch_walk_left_loop"), -90.0f } };
+		UBlendSpace* RelaxedSpace = MakePistolBlendSpace(TEXT("BS_Pistol"), StandIdle, Relaxed, bRebuild);
+		UBlendSpace* AimedSpace = MakePistolBlendSpace(TEXT("BS_Pistol_Aim"), AimIdle, Aimed, bRebuild);
+		UBlendSpace* CrouchedSpace = MakePistolBlendSpace(TEXT("BS_Pistol_Crouch"), CrouchIdle, Crouched, bRebuild);
+		UBlendSpace* AimOffset = bHold ? MakePistolAimOffset(GunInHand, bRebuild) : LoadAt<UBlendSpace>(Folder / TEXT("AO1D_Pistol"));
+		UAnimSequence* Fall = PistolAnim(TEXT("Jump"), TEXT("anim_pistol_jump_fall_loop"));
+		UClass* Graph = BuildPistolLocomotion(Skeleton, bRebuild, RelaxedSpace, AimedSpace, CrouchedSpace, AimOffset, Fall);
+
+		// Firing (the upper body; the procedural kick is on top).
+		UAnimMontage* Fire = MakeMontage(Folder / TEXT("AM_Pistol_Fire"), PistolAnim(TEXT("Aim"), TEXT("anim_pistol_aim_fire")), UpperBodySlot, 0.05f, 0.2f);
+		if (Fire)
+		{
+			Save(Fire);
+		}
+
+		// Reloading. The pack's one reload, with its sounds where the hands are: the gun opened as it starts, the round
+		// (or rounds) in as the left hand meets the gun, closed as it ends. A revolver loads round by round: the moment
+		// the left hand meets the gun, again for each round.
+		UAnimSequence* ReloadAnim = PistolAnim(TEXT("Reload"), TEXT("anim_pistol_aim_reload"));
+		UAnimMontage* Reload = nullptr;
+		UAnimMontage* ReloadRound = nullptr;
+		if (ReloadAnim)
+		{
+			const float Length = ReloadAnim->GetPlayLength();
+			const float Insert = FindNearest(ReloadAnim, TEXT("hand_l"), TEXT("hand_r"), Length * 0.2f, Length * 0.9f);
+			Reload = MakeMontage(Folder / TEXT("AM_Pistol_Reload"), ReloadAnim, UpperBodySlot, 0.15f, 0.2f);
+			if (Reload)
+			{
+				bool bChanged = SetSoundNotify(Reload, EVaesenWeaponSound::ReloadOpen, Length * 0.1f);
+				bChanged |= SetSoundNotify(Reload, EVaesenWeaponSound::ReloadInsert, FMath::Max(Insert - 0.05f, 0.0f));
+				bChanged |= SetSoundNotify(Reload, EVaesenWeaponSound::ReloadClose, Length * 0.85f);
+				if (bChanged)
+				{
+					Save(Reload);
+				}
+			}
+			const float RoundStart = FMath::Max(Insert - 0.3f, 0.0f);
+			ReloadRound = MakeTrimmedPistolMontage(TEXT("AM_Pistol_ReloadRound"), ReloadAnim, RoundStart, FMath::Min(Insert + 0.25f, Length));
+			if (ReloadRound && SetSoundNotify(ReloadRound, EVaesenWeaponSound::ReloadInsert, FMath::Max(Insert - RoundStart - 0.05f, 0.0f)))
+			{
+				Save(ReloadRound);
+			}
+			UE_LOG(LogVaesenAnimSetup, Display, TEXT("Pistol reload %.2f s: the left hand meets the gun at %.2f s"), Length, Insert);
+		}
+
+		// The categories: the pistol (the rolling-block, a whole reload) and the revolver (round by round).
+		for (const EVaesenWeaponCategory Category : { EVaesenWeaponCategory::Pistol, EVaesenWeaponCategory::Revolver })
+		{
+			FVaesenCategoryDefaults& Entry = Defaults->Categories.FindOrAdd(Category);
+			Entry.AnimLayer = Graph;
+			Entry.GripPose = AimIdle;
+			Entry.Montages.Fire = Fire;
+			Entry.Montages.FireAimed = Fire;
+			Entry.Montages.Reload = Category == EVaesenWeaponCategory::Revolver ? ReloadRound : Reload;
+			Entry.Montages.ReloadEmpty = Entry.Montages.Reload;
+			if (bHold)
+			{
+				Entry.InHand = InHand;
+			}
+		}
+		Save(Defaults);
+
+		// The left hand on the gun when aiming (the pack aims with both hands), and how far out the sight is: measured
+		// in the aimed idle, on our grey-box pistols (where not set already, or still the one-handed guess).
+		if (bHold && AimIdle)
+		{
+			const FAnimPose Pose = PoseAt(AimIdle, 0.0);
+			const FTransform Gun = GunInHand * UAnimPoseExtensions::GetBonePose(Pose, TEXT("hand_r"), EAnimPoseSpaces::World);
+			const USkeletalMeshSocket* LeftPalm = Skeleton->FindSocket(TEXT("hand_l_weapon"));
+			const USkeletalMeshSocket* Eye = Skeleton->FindSocket(TEXT("Eye_R"));
+			if (LeftPalm && Eye)
+			{
+				FTransform LeftGrip = (LeftPalm->GetSocketLocalTransform() * UAnimPoseExtensions::GetBonePose(Pose, TEXT("hand_l"), EAnimPoseSpaces::World)).GetRelativeTransform(Gun);
+				LeftGrip.SetScale3D(FVector::OneVector);
+				const FVector EyeAt = (Eye->GetSocketLocalTransform() * UAnimPoseExtensions::GetBonePose(Pose, TEXT("head"), EAnimPoseSpaces::World)).GetLocation();
+				const float SightOut = FMath::RoundToFloat(FVector::DotProduct(Gun.GetLocation() - EyeAt, Gun.GetUnitAxis(EAxis::X)));
+				UE_LOG(LogVaesenAnimSetup, Display, TEXT("Pistol aimed: left palm on the gun at %s; the grip %.0f cm out from the eye"), *Describe(LeftGrip), SightOut);
+				for (const TCHAR* MeshName : { TEXT("SM_GB_Revolver"), TEXT("SM_GB_Pistol") })
+				{
+					SetMeshSocket(LoadAt<UStaticMesh>(FString(TEXT("/Game/Vaesen/Combat/GreyBox")) / MeshName), TEXT("LeftGrip"), LeftGrip, false);
+				}
+				for (const TCHAR* WeaponName : { TEXT("BP_Weapon_Revolver"), TEXT("BP_Weapon_RollingBlockPistol") })
+				{
+					UBlueprint* Weapon = LoadAt<UBlueprint>(FString(TEXT("/Game/Vaesen/Blueprints/Items/Weapons")) / WeaponName);
+					UVaesenWeaponItem* Item = Weapon ? Cast<UVaesenWeaponItem>(Weapon->GeneratedClass->GetDefaultObject()) : nullptr;
+					if (Item && Item->Hold.AimSightOffset.Equals(FVector(52.0, 0.0, 0.0)) && SightOut > 20.0f)
+					{
+						Item->Hold.AimSightOffset = FVector(SightOut, 0.0, 0.0);
+						FBlueprintEditorUtils::MarkBlueprintAsModified(Weapon);
+						FKismetEditorUtilities::CompileBlueprint(Weapon);
+						Save(Weapon);
+					}
+				}
+			}
+		}
+	}
 }
 
 UVaesenAnimSetupCommandlet::UVaesenAnimSetupCommandlet()
@@ -2062,6 +2533,11 @@ int32 UVaesenAnimSetupCommandlet::Main(const FString& Params)
 	{
 		return 0;
 	}
+	if (Params.Contains(TEXT("-analyzepistol")))
+	{
+		VaesenAnimSetup::AnalyzePistol();
+		return 0;
+	}
 	if (Params.Contains(TEXT("-analyzesword")))
 	{
 		VaesenAnimSetup::AnalyzeSword();
@@ -2074,5 +2550,6 @@ int32 UVaesenAnimSetupCommandlet::Main(const FString& Params)
 	}
 	VaesenAnimSetup::BuildRifle();
 	VaesenAnimSetup::BuildSword();
+	VaesenAnimSetup::BuildPistol();
 	return 0;
 }

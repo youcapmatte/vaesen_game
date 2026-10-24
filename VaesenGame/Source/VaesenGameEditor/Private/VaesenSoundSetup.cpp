@@ -155,6 +155,8 @@ namespace VaesenSoundSetup
 	 * A gunshot heard as it is at the listener's distance: the 5, 25, 100 and 300 m recordings, each crossfading into
 	 * the next (cm). Recordings missing from the pack are left out. Pitch below 1 makes it deeper.
 	 */
+	USoundNode* DistanceFade(USoundCue* Cue, const TCHAR* Group, const TCHAR* Gun);
+
 	USoundCue* DistanceShot(const FString& Name, const TCHAR* Group, const TCHAR* Gun, float Pitch = 1.0f)
 	{
 		USoundCue* Existing;
@@ -163,6 +165,35 @@ namespace VaesenSoundSetup
 		{
 			return Existing;
 		}
+		USoundNode* Fade = DistanceFade(Cue, Group, Gun);
+		return Fade ? Finish(Cue, Vary(Cue, Fade, 0.02f, Pitch)) : nullptr;
+	}
+
+	/** One of several guns' shots at random (two recordings of a revolver), each heard as it is at the listener's distance. */
+	USoundCue* DistanceShots(const FString& Name, const TCHAR* Group, const TArray<const TCHAR*>& Guns)
+	{
+		USoundCue* Existing;
+		USoundCue* Cue = OpenCue(Name, Existing);
+		if (!Cue)
+		{
+			return Existing;
+		}
+		USoundNodeRandom* Random = Many<USoundNodeRandom>(Cue);
+		Random->Weights.Reset();
+		for (const TCHAR* Gun : Guns)
+		{
+			if (USoundNode* Fade = DistanceFade(Cue, Group, Gun))
+			{
+				Random->ChildNodes.Add(Fade);
+				Random->Weights.Add(1.0f);
+			}
+		}
+		return Random->ChildNodes.Num() > 0 ? Finish(Cue, Vary(Cue, Random, 0.02f)) : nullptr;
+	}
+
+	/** A gun's shot recorded at 5, 25, 100 and 300 m, each crossfading into the next by the listener's distance (null if none is in the pack). */
+	USoundNode* DistanceFade(USoundCue* Cue, const TCHAR* Group, const TCHAR* Gun)
+	{
 		struct FBand { const TCHAR* Folder; const TCHAR* Suffix; float InStart, InEnd, OutStart, OutEnd; };
 		const FBand Bands[] = {
 			{ TEXT("5M"), TEXT("5M"), 0.0f, 0.0f, 1500.0f, 3000.0f },
@@ -187,11 +218,7 @@ namespace VaesenSoundSetup
 			Datum.Volume = 1.0f;
 			Fade->ChildNodes.Add(Player(Cue, Wave));
 		}
-		if (Fade->ChildNodes.Num() == 0)
-		{
-			return nullptr;
-		}
-		return Finish(Cue, Vary(Cue, Fade, 0.02f, Pitch));
+		return Fade->ChildNodes.Num() > 0 ? Fade : nullptr;
 	}
 
 	/** One of several takes at random. */
@@ -350,20 +377,36 @@ namespace VaesenSoundSetup
 			{ EVaesenWeaponSound::Flyby, Flyby },
 		}));
 
-		// The revolver: the MP412 (a revolver's report).
+		// The revolver: the pack's own revolver (two recordings of its shot, one at random), drawn from the holster, the
+		// cylinder opened and closed, a round clicked in, the hammer cocked and falling on nothing.
+		const auto Take = [](const TCHAR* Name, const TCHAR* Wave) { return RandomTakes(Name, { Wave }); };
+		USoundCue* RevolverClick = Take(TEXT("SC_Revolver_Click"), TEXT("Bolts/BoltRelease/Dry/PS/Audio/PSREVOLVER_Bolt_Release"));
+		USoundCue* RevolverDraw = Take(TEXT("SC_Revolver_Draw"), TEXT("Draws/Dry/PS/Audio/PSREVOLVER_Draw"));
+		USoundCue* RevolverCock = Take(TEXT("SC_Revolver_Cock"), TEXT("Bolts/BoltBack/Dry/PS/Audio/PSREVOLVER_BoltBack"));
 		Assign(TEXT("BP_Weapon_Revolver"), SoundSet(TEXT("DA_WeaponSounds_Revolver"), {
-			{ EVaesenWeaponSound::Fire, DistanceShot(TEXT("SC_Revolver_Fire"), TEXT("PS"), TEXT("PSMP412")) },
-			{ EVaesenWeaponSound::Draw, PistolDraw },
-			{ EVaesenWeaponSound::Sheath, PistolDraw },
+			{ EVaesenWeaponSound::Fire, DistanceShots(TEXT("SC_Revolver_Fire"), TEXT("PS"), { TEXT("PSREVOLVER1"), TEXT("PSREVOLVER2") }) },
+			{ EVaesenWeaponSound::Draw, RevolverDraw },
+			{ EVaesenWeaponSound::Sheath, RevolverDraw },
+			{ EVaesenWeaponSound::ReloadOpen, Take(TEXT("SC_Revolver_CylinderOpen"), TEXT("Magazines/Magazine_Out/Dry/PS/Audio/PSREVOLVER_Manazine_Out")) },
+			{ EVaesenWeaponSound::ReloadInsert, RevolverClick },
+			{ EVaesenWeaponSound::ReloadClose, Take(TEXT("SC_Revolver_CylinderClose"), TEXT("Magazines/Magazine_In/Dry/PS/Audio/PSREVOLVER_Magazine_In")) },
+			{ EVaesenWeaponSound::HammerCock, RevolverCock },
+			{ EVaesenWeaponSound::DryFire, RevolverClick },
 			{ EVaesenWeaponSound::DropLand, Drop },
 			{ EVaesenWeaponSound::Flyby, Flyby },
 		}));
 
-		// The rolling-block pistol: a heavy single shot.
+		// The rolling-block pistol: a heavy single shot; its breech opened, a cartridge in and the breech closed (the
+		// pack's M1911 handling, the nearest to a pistol's breech), the hammer as the revolver's.
 		Assign(TEXT("BP_Weapon_RollingBlockPistol"), SoundSet(TEXT("DA_WeaponSounds_RollingBlock"), {
 			{ EVaesenWeaponSound::Fire, DistanceShot(TEXT("SC_RollingBlock_Fire"), TEXT("PS"), TEXT("PS44MAGNUM2")) },
 			{ EVaesenWeaponSound::Draw, PistolDraw },
 			{ EVaesenWeaponSound::Sheath, PistolDraw },
+			{ EVaesenWeaponSound::ReloadOpen, Take(TEXT("SC_RollingBlock_BreechOpen"), TEXT("Bolts/BoltBack/Dry/PS/Audio/PSM1911_BoltBack")) },
+			{ EVaesenWeaponSound::ReloadInsert, Take(TEXT("SC_RollingBlock_Insert"), TEXT("Magazines/Magazine_In/Dry/PS/Audio/PSM1911_Magazine_In")) },
+			{ EVaesenWeaponSound::ReloadClose, Take(TEXT("SC_RollingBlock_BreechClose"), TEXT("Bolts/BoltRelease/Dry/PS/Audio/PSM1911_Bolt_Release")) },
+			{ EVaesenWeaponSound::HammerCock, RevolverCock },
+			{ EVaesenWeaponSound::DryFire, RevolverClick },
 			{ EVaesenWeaponSound::DropLand, Drop },
 			{ EVaesenWeaponSound::Flyby, Flyby },
 		}));

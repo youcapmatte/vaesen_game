@@ -226,6 +226,11 @@ void UVaesenGA_Reload::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 	const UVaesenRangedWeaponItem* Item = GetRangedItem(ActorInfo);
 	AVaesenRangedWeaponActor* Actor = GetRangedActor(ActorInfo);
 	bPerRound = Item->CanInterruptReload();
+	// Loading round by round (a revolver's cylinder): opened first, closed when done (each round its own sound).
+	if (bPerRound && IsLocallyControlled())
+	{
+		Actor->PlayWeaponSound(EVaesenWeaponSound::ReloadOpen);
+	}
 	SetCanBeCanceled(Item->ReloadStyle != EVaesenReloadStyle::MuzzleLoading);
 
 	// Spent casings out first (revolver emptied, breech opened).
@@ -241,6 +246,18 @@ void UVaesenGA_Reload::ActivateAbility(const FGameplayAbilitySpecHandle Handle, 
 		}
 	}
 	StartRound();
+}
+
+void UVaesenGA_Reload::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
+{
+	// Round by round: the cylinder closed again, done or stopped (to fire).
+	AVaesenRangedWeaponActor* Actor = bPerRound && IsLocallyControlled() ? GetRangedActor(ActorInfo) : nullptr;
+	if (Actor)
+	{
+		Actor->PlayWeaponSound(EVaesenWeaponSound::ReloadClose);
+	}
+	bPerRound = false;
+	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
 
 void UVaesenGA_Reload::StartRound()

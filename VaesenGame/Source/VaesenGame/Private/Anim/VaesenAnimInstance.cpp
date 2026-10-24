@@ -146,13 +146,14 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		&& WeaponCategory != EVaesenWeaponCategory::Bow;
 	const FTransform& Component = Body->GetComponentTransform();
 
-	// Off hand on the fore-grip of two-handed weapons: its palm (hand_l_weapon) on the LeftGrip socket, turned as the
-	// socket is. LeftHandIK (older meshes) gives only the place.
+	// Off hand on the fore-grip of two-handed weapons (and an aimed pistol): its palm (hand_l_weapon) on the LeftGrip
+	// socket, turned as the socket is. LeftHandIK (older meshes) gives only the place.
 	FTransform LeftGrip;
 	FVector LeftHandIKOnly;
 	const bool bLeftGrip = Held.IsValid() && Held.GetLocalSocketTransform(TEXT("LeftGrip"), LeftGrip);
 	const bool bLeftPlace = bLeftGrip || (Held.IsValid() && Held.GetLocalSocket(TEXT("LeftHandIK"), LeftHandIKOnly));
-	const bool bLeftHolds = bTwoHanded && bInHand && bHandsFree && bLeftPlace;
+	// A pistol takes the left hand too while aimed (a two-handed hold), where it has a LeftGrip.
+	const bool bLeftHolds = (bTwoHanded || (bOneHandedGun && bShoulderAim)) && bInHand && bHandsFree && bLeftPlace;
 	FTransform HandInWeapon;
 	if (bLeftHolds)
 	{

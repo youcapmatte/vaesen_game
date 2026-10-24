@@ -231,9 +231,17 @@ It photographs the fighter side-on (idle, two slashes, a stab, the guard, a dodg
 
 A category can have its own **Locked Anim Layer** (`DA_WeaponCategoryDefaults` → category): a separate animation set while locked. Empty = its normal layer, which sees `bTargetLocked` (and `bRelaxed` false) and can square up itself, as the sword's does. Range, angle and break distance are on the character (Combat → Target Lock).
 
-### 0.7e Pistols aimed (procedural, until there's a pistol animation pack)
+### 0.7e Pistols (MandB Pistol Locomotion Pack)
 
-Right mouse with the revolver or the rolling-block pistol raises it one-handed to arm's length, a duelling stance: the Shoulder Aim node lays the gun along the aim with its `Sight` socket (the rear sight, on the top strap) **Aim Sight Offset** in front of the eye (52 cm: the arm nearly straight), and solves the right arm onto the grip; the left arm stays as the stance has it. A shot flips the muzzle up (Recoil Pitch 14°), pushes the hand back a little (2.5 cm) and kicks the camera (2°). The pistols' Hold (Weapon Blueprint → Hold) has these; tune them in the Weapon Fit rig. Without a pistol stance the drawn pistol walks with the plain mannequin, and fire, reload and the holster draw are still timed without animations.
+The revolver and the rolling-block pistol use the MandB Pistol Locomotion Pack, copied onto our mannequin by `-run=VaesenAnimSetup` into `Vaesen/Animations/Pistol`: a relaxed stance (gun low) for walking and running, the pack's aimed stance when strafing or aiming, a crouched set, and an aim offset for looking up and down (`ABP_PistolLocomotion`, `BS_Pistol`, `BS_Pistol_Aim`, `BS_Pistol_Crouch`, `AO1D_Pistol`). The pack's moves are kept in place: the capsule moves the character, not the animations.
+
+Right mouse raises the gun two-handed, the way the pack holds it: the Shoulder Aim node lays it along the aim with its `Sight` socket (the rear sight) **Aim Sight Offset** in front of the eye (37 cm, measured from the pack's aim pose), with the right arm on the grip and the left hand on the gun's `LeftGrip` socket. A shot plays `AM_Pistol_Fire`, flips the muzzle up (Recoil Pitch 14°), pushes the hand back (2.5 cm) and kicks the camera (2°). The pistols' Hold (Weapon Blueprint → Hold) has these; tune them in the Weapon Fit rig.
+
+Reload: the rolling-block plays the pack's whole reload (`AM_Pistol_Reload`, 1.5 s: breech open, round in, breech closed, each with its sound). The revolver loads round by round (`AM_Pistol_ReloadRound`, a 1.1 s piece of that reload around the round going in): cylinder open at the start, a click per round, cylinder closed when it's full or the reload is cancelled.
+
+Sounds (WeaponVerse1): each revolver shot picks one of two revolver recordings, with distance layers as for the rifles; draw, cylinder open and close, the round click, hammer cock and dry fire have their own takes. The rolling-block fires a heavy pistol shot and uses the M1911's slide and magazine sounds for the breech.
+
+Still missing: a holster draw and put-away animation (timed without one), and a true revolver reload (swing-out cylinder, rounds by hand); the per-round piece stands in. Test: draw each pistol, walk, run, crouch, aim up and down, fire, reload empty and half full (the revolver stops at full), and listen for the sounds above.
 
 ### 0.8 How weapons are held (sockets), and the Weapon Fit rig
 
