@@ -192,6 +192,31 @@ public sealed class RosterBuilder(IMysteryModel model, MysteryOptions options)
             }
         }
 
+        // The names are fixed once the roster is kept, so 1872 patronymics are checked here (review 2, item 5).
+        foreach (var p in output.People.Where(p => p.Role == RosterRoles.Household))
+        {
+            var head = output.People.Find(o => o.Id == p.HouseholdOf);
+            if (head is null || NameRules.Patronymic(p.Name) is not { } suffix)
+            {
+                continue;
+            }
+
+            var relation = p.Relation.ToLowerInvariant();
+            var child = System.Text.RegularExpressions.Regex.IsMatch(relation, @"\b(son|daughter|child|boy|girl)\b");
+            var wife = System.Text.RegularExpressions.Regex.IsMatch(relation, @"\b(wife|spouse)\b");
+            var expected = NameRules.PatronymicOf(NameRules.FirstName(head.Name), suffix);
+            if (child && head.Gender.StartsWith('m') && !p.Name.EndsWith(expected, StringComparison.OrdinalIgnoreCase))
+            {
+                issues.Add(CoherenceIssue.Error(IssueCodes.CastCoherence, $"roster:{p.Id}", $"{p.Name} is {head.Name}'s {p.Relation}, so in 1872 the patronymic is {expected}.",
+                    $"Rename to {NameRules.FirstName(p.Name)} {expected}, keeping the id."));
+            }
+            else if (wife && NameRules.LastName(p.Name) == NameRules.LastName(head.Name))
+            {
+                issues.Add(CoherenceIssue.Error(IssueCodes.CastCoherence, $"roster:{p.Id}", $"{p.Name} carries her husband's patronymic; in 1872 a wife keeps her own.",
+                    "Give her her own father's first name and -dotter, keeping the id."));
+            }
+        }
+
         foreach (var place in level.Places.Where(p => !string.IsNullOrWhiteSpace(p.OwnerRole)))
         {
             var holders = output.People.Where(p => p.PlaceId == place.Id && RosterRoles.Holds(p.Role)).ToList();

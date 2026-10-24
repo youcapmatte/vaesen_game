@@ -999,7 +999,8 @@ public sealed partial class CaseValidator : ICoherenceValidator
             foreach (var (a, b, nature) in Ties())
             {
                 var (older, younger) = (a.Identity?.Age ?? 0) >= (b.Identity?.Age ?? 0) ? (a, b) : (b, a);
-                if (IsParentChild(nature) && Male(older) && NameRules.Patronymic(younger.Name) is { } suffix)
+                // A persistent person's name is fixed in the Society's world: it cannot be renamed here.
+                if (IsParentChild(nature) && Male(older) && !Fixed(younger) && NameRules.Patronymic(younger.Name) is { } suffix)
                 {
                     var expected = NameRules.PatronymicOf(NameRules.FirstName(older.Name), suffix);
                     if (!younger.Name.EndsWith(expected, StringComparison.OrdinalIgnoreCase))
@@ -1014,7 +1015,7 @@ public sealed partial class CaseValidator : ICoherenceValidator
                 {
                     var (wife, husband) = Male(a) ? (b, a) : (a, b);
                     var wifeLast = NameRules.LastName(wife.Name);
-                    if (Male(husband) && !Male(wife) && wifeLast.Length > 0 && wifeLast == NameRules.LastName(husband.Name) && NameRules.Patronymic(husband.Name) == "son")
+                    if (Male(husband) && !Male(wife) && !Fixed(wife) && wifeLast.Length > 0 && wifeLast == NameRules.LastName(husband.Name) && NameRules.Patronymic(husband.Name) == "son")
                     {
                         WarnOn([$"{wife.CharacterId}.identity"], IssueCodes.CastCoherence, $"cast:{wife.CharacterId}",
                             $"{wife.Name} carries her husband's patronymic; in 1872 a wife keeps her own, from her father's first name and -dotter.",
@@ -1050,6 +1051,8 @@ public sealed partial class CaseValidator : ICoherenceValidator
 
         private static bool IsSpouse(string nature) =>
             System.Text.RegularExpressions.Regex.IsMatch(nature, @"\b(wife|husband|spouse|married)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        private static bool Fixed(CastMember c) => c.InstanceRef is InstanceRefs.Persistent or InstanceRefs.Promoted;
 
         private static bool Male(CastMember c) => (c.Identity?.Gender ?? "").Trim().ToLowerInvariant() switch
         {

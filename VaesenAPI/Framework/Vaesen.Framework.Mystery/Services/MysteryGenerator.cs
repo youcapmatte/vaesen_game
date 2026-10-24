@@ -590,7 +590,9 @@ public sealed class MysteryGenerator(
                     // The whole-case warnings as the case now stands, not as it was before the fixes.
                     draft.Packet.Validation.Issues.RemoveAll(i => i.Source == IssueSources.Structural);
                     whole = validator.Validate(draft.Packet, draft.ValidationContext, CheckScope.Whole);
-                    if (unresolved.Count > 0 && o.UnresolvedFixIsError)
+                    // A fix that did not hold is a warning marked unresolved, never "applied"; only one that breaks the table
+                    // (or any, with UnresolvedFixIsError) fails the case.
+                    if (unresolved.Any(u => o.UnresolvedFixIsError || BreaksTheTable(u)))
                     {
                         draft.FailedStep = CheckStepName;
                         draft.Packet.Validation.Issues.AddRange(whole);
@@ -860,6 +862,10 @@ public sealed class MysteryGenerator(
 
         return draft.Packet.Validation.Issues.Where(i => i.Source == IssueSources.Critic && i.Unresolved is not null).Concat(structural).ToList();
     }
+
+    /// <summary>A fix that must hold for the case to be played: two people claiming to have fetched the Society.</summary>
+    private static bool BreaksTheTable(CoherenceIssue issue) =>
+        issue.Source == IssueSources.Structural && issue.Code == IssueCodes.Opening && issue.Location.StartsWith("cast:", StringComparison.Ordinal);
 
     /// <summary>The issue again, with what the verifying look found still standing, for the retry.</summary>
     private static CoherenceIssue WithRemaining(CoherenceIssue issue, string? still) => new()

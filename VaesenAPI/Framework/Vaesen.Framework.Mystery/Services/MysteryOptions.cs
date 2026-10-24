@@ -113,10 +113,12 @@ public sealed class MysteryOptions
     public int FixRetries { get; set; } = 1;
 
     /// <summary>
-    /// A critic fix that still did not hold after the retries fails the case visibly (review 2, item 1); off, it stays a
-    /// warning marked unresolved, never "applied".
+    /// Any fix that still did not hold after the retries fails the case (review 2, item 1). Off by default: such a fix
+    /// stays a warning marked unresolved, never "applied", and only one that breaks the table (a second person who
+    /// fetched the Society) fails the case. On, a minor leftover throws away a whole case: case 06's regeneration was
+    /// rejected over a missing item field.
     /// </summary>
-    public bool UnresolvedFixIsError { get; set; } = true;
+    public bool UnresolvedFixIsError { get; set; }
 
     /// <summary>How many of a level's people a case takes as its residents when the Society has a roster there.</summary>
     public int RosterResidents { get; set; } = 4;

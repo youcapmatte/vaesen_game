@@ -15,9 +15,9 @@ public sealed class ReviewTwoTests
     private static List<CoherenceIssue> Validate(CasePacket packet, CheckScope scope = CheckScope.Full) =>
         new CaseValidator().Validate(packet, ValidatorTests.ContextFor(packet), scope);
 
-    private static Task<ResultOf> Generate(PipelineTests.ScriptedModel model)
+    private static Task<ResultOf> Generate(PipelineTests.ScriptedModel model, bool strict = false)
     {
-        var options = new MysteryOptions();
+        var options = new MysteryOptions { UnresolvedFixIsError = strict };
         var (generator, _, _) = PipelineTests.Build(options, model, out _);
         return generator.GenerateAsync(new GenerationRequest
         {
@@ -50,13 +50,29 @@ public sealed class ReviewTwoTests
     }
 
     [Fact]
-    public async Task A_fix_the_verifying_look_finds_not_taken_is_retried_then_fails_the_case_visibly()
+    public async Task A_fix_that_does_not_take_is_retried_then_marked_unresolved_never_applied()
     {
         var model = PipelineTests.ScriptedModel.FromSample(criticFailsFirst: false);
         model.TargetedCritic = true;
         model.FixesDoNotTake = true;
 
         var result = await Generate(model);
+
+        Assert.True(result.Success, result.Error);
+        Assert.Equal(2, model.Calls.Count(c => c == FixVerifier.StepName));
+        var issue = Assert.Single(result.Case!.Packet.Validation.Issues, i => i.Code == "critic." + CriticChecks.Solves);
+        Assert.False(issue.Applied);
+        Assert.Equal("Still there.", issue.Unresolved);
+    }
+
+    [Fact]
+    public async Task With_the_strict_option_a_fix_that_does_not_take_fails_the_case_visibly()
+    {
+        var model = PipelineTests.ScriptedModel.FromSample(criticFailsFirst: false);
+        model.TargetedCritic = true;
+        model.FixesDoNotTake = true;
+
+        var result = await Generate(model, strict: true);
 
         Assert.False(result.Success);
         Assert.Contains("did not hold", result.Error, StringComparison.Ordinal);
@@ -128,6 +144,27 @@ public sealed class ReviewTwoTests
         son.Name = "Vilho Eriksson";
         issues = Validate(packet, CheckScope.Cast);
         Assert.DoesNotContain(issues, i => i.Location == "cast:npc-axel-wester" && (i.Explanation.Contains("patronymic", StringComparison.Ordinal) || i.Explanation.Contains("is in", StringComparison.Ordinal)));
+    }
+
+    [Fact]
+    public void A_persistent_child_s_fixed_name_is_not_asked_to_change_but_the_roster_writes_it_right()
+    {
+        var packet = ValidatorTests.SampleCase();
+        var father = packet.Cast.First(c => c.CharacterId == "npc-per-holm");
+        father.Name = "Petter Olsson";
+        father.Identity!.Age = 40;
+        var son = packet.Cast.First(c => c.CharacterId == "npc-axel-wester");
+        son.Name = "Halvar Petersson";
+        son.Identity!.Age = 12;
+        son.InstanceRef = InstanceRefs.Persistent;
+        son.Relationships.Add(new CastRelationship { CharacterId = father.CharacterId, Nature = "his father" });
+        Assert.DoesNotContain(Validate(packet, CheckScope.Cast), i => i.Location == "cast:npc-axel-wester" && i.Explanation.Contains("patronymic", StringComparison.Ordinal));
+
+        var roster = PipelineTests.ScriptedModel.Roster();
+        var farmer = roster.People.First(p => p.Role == RosterRoles.Owner && p.PlaceId == "farm");
+        roster.People.Add(new RosterPerson { Id = "npc-halvar-storgard", Name = "Halvar Ivarson", PlaceId = "farm", Role = RosterRoles.Household, HouseholdOf = farmer.Id, Relation = "eldest son", Drive = "to farm" });
+        var issues = RosterBuilder.Validate(roster, ContentTests.LoadPack().FindLevel("level-forsby-october")!, new SocietyWorld());
+        Assert.Contains(issues, i => i.IsError && i.Location == "roster:npc-halvar-storgard" && i.Explanation.Contains("Ivarsson", StringComparison.Ordinal));
     }
 
     [Fact]

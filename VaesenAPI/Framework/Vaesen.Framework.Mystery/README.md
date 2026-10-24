@@ -67,7 +67,7 @@ The engine sets the fact weights. Colour and season facts, and what the group kn
   - a replacement's old text must be gone;
   - a critic issue must be found gone by a verifying look (`FixVerifier`, prompt `verify.md`: the critic model at low effort).
 
-  What did not take is tried again (`FixRetries`, 1) with what still stands. A fix that still does not hold fails the case visibly (`UnresolvedFixIsError`, on); with the option off, it stays a warning marked `unresolved`. The report and the case file say "fix verified" or "fix did not hold".
+  What did not take is tried again (`FixRetries`, 1) with what still stands. A fix that still does not hold stays a warning marked `unresolved`, never applied. Only one that breaks the table (a second person who fetched the Society) fails the case, unless `UnresolvedFixIsError` is on, when any does. Case 06's regeneration with that on was thrown away over a missing item field. The report and the case file say "fix verified" or "fix did not hold".
 - **Mechanical fixes in code.** The critic gives a rename, a date or a wrong id as `replacements` (exact old and new text, `everywhere` or only inside the targets). `TextReplacements` applies them to the packet and every kept output, and logs a `replace` entry; no model is asked.
 - **Judgement fixes are patches.**
   - The last round patches on the patch model, never the small one.
@@ -79,7 +79,7 @@ The engine sets the fact weights. Colour and season facts, and what the group kn
   - Residents need a drive; the roster now writes one.
   - Fact ids in prose must exist and be known; the prompts keep them out of prose and turn clues in secrets into facts.
 - **Names of 1872.**
-  - A son takes his father's first name and -son, a daughter -dotter, and a wife keeps her own patronymic: these are warned on.
+  - A son takes his father's first name and -son, a daughter -dotter, and a wife keeps her own patronymic: these are warned on in a case, except for persistent people, whose names are fixed, and are errors when a roster is written.
   - A parent and child are not warned on for sounding alike.
   - A first name that lives only in a house name ("Old Brita's") is flagged where the case speaks of it as a person. Storskog's cottage is renamed.
 - **A lever requires at most eight facts** (`ValidationContext.MaxLeverFacts`).
