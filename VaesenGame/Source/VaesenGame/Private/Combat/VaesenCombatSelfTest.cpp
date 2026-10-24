@@ -764,6 +764,8 @@ void UVaesenCombatSelfTest::BuildSteps()
 	Steps.Add({ FString(), [this]()
 	{
 		Shot(TEXT("1_SwordIdle"), TEXT("/Game/1HM_Sword_Attacks_Finishers/Animations/1HM_Idle/1HM_Idle_Standing.1HM_Idle_Standing"), 0.0f);
+		const UVaesenAnimInstance* Anim = Cast<UVaesenAnimInstance>(Fighter->GetMesh()->GetAnimInstance());
+		Check(Anim && Anim->IsRelaxed(), TEXT("standing with a sword drawn: the plain idle (not the fighting stance)"));
 		return 0.3f;
 	} });
 	Steps.Add({ FString(), [Tap, Attack]() { Tap(Attack); return 0.32f; } });
@@ -792,6 +794,8 @@ void UVaesenCombatSelfTest::BuildSteps()
 	Steps.Add({ FString(), [this, AimOrBlock]()
 	{
 		Shot(TEXT("5_Guard"), TEXT("/Game/1HM_Sword_Attacks_Finishers/Animations/1HM_Block/1HM_BlockRight.1HM_BlockRight"), 0.54f);
+		const UVaesenAnimInstance* Anim = Cast<UVaesenAnimInstance>(Fighter->GetMesh()->GetAnimInstance());
+		Check(Anim && !Anim->IsRelaxed(), TEXT("guarding squares up: the fighting stance"));
 		Release(AimOrBlock);
 		return 0.5f;
 	} });
@@ -832,7 +836,7 @@ void UVaesenCombatSelfTest::BuildSteps()
 	Steps.Add({ FString(), [this]()
 	{
 		const UVaesenAnimInstance* Anim = Cast<UVaesenAnimInstance>(Fighter->GetMesh()->GetAnimInstance());
-		Check(Anim && Anim->IsFreeRunning(), FString::Printf(TEXT("running with the sword uses the plain run (%.0f cm/s)"), Fighter->GetVelocity().Size2D()));
+		Check(Anim && Anim->IsRelaxed(), FString::Printf(TEXT("running with the sword uses the plain run (%.0f cm/s)"), Fighter->GetVelocity().Size2D()));
 		Shot(TEXT("8_Running"));
 		return 0.25f;
 	} });

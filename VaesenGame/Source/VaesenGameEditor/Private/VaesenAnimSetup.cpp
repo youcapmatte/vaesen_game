@@ -1696,15 +1696,15 @@ namespace VaesenAnimSetup
 		});
 		UEdGraphNode* Stance = ByBool(Builder, -1250, 100, TEXT("bFalling"), Air, Walking, 0.15f);
 
-		// Running or jumping freely (not strafing): the plain run and jump (ABP_Manny), arms and all; the character
-		// graph's hand node turns the wrist so the blade stays clear of the body. The pack's footwork is a fencer's,
-		// for standing, strafing and guarding.
+		// Not squared up to fight (not strafing): the plain locomotion (ABP_Manny), standing, running and jumping, arms
+		// and all. The pack's stance (right foot forward, a fencer's footwork) is for squaring up: guarding, aiming and
+		// a later target lock.
 		UClass* Plain = LoadObject<UClass>(nullptr, UnarmedGraphPath);
 		UAnimGraphNode_LinkedAnimGraph* Running = Builder.Add<UAnimGraphNode_LinkedAnimGraph>(-1600, -300, [Plain](UAnimGraphNode_LinkedAnimGraph* Node)
 		{
 			Node->Node.InstanceClass = Plain;
 		});
-		UEdGraphNode* Moving = ByBool(Builder, -1100, 0, TEXT("bFreeRunning"), Running, Stance, 0.3f);
+		UEdGraphNode* Moving = ByBool(Builder, -1100, 0, TEXT("bRelaxed"), Running, Stance, 0.3f);
 		UAnimGraphNode_SaveCachedPose* Cache = Builder.Add<UAnimGraphNode_SaveCachedPose>(-1000, 100, [](UAnimGraphNode_SaveCachedPose* Node)
 		{
 			Node->CacheName = TEXT("SwordLocomotion");

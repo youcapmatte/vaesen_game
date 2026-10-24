@@ -170,7 +170,7 @@ In a running game (PIE with a dedicated server is fine), open the console and ty
 
 It first checks that the interaction trace finds every pickup in the map and picks up a rifle through its interaction. It then runs the test Blueprints: revolver (draw, reload, fire, armored target), Krag (left hand on LeftGrip from the hip and aimed, shouldered, the bolt worked by hand at the shoulder, the case out as the bolt comes back), punch, sword (stamina, block, parry, wear), stone throw, and bow.
 
-Every check prints PASS or FAIL on screen and in the log, and everything it spawned is removed at the end. In `L_CombatTest` it reported **58 passed, 0 failed** (with the sword animations: the swing hits by root motion, the combo, the stab and the dodge).
+Every check prints PASS or FAIL on screen and in the log, and everything it spawned is removed at the end. In `L_CombatTest` it reported **62 passed, 0 failed** (with the sword animations: the swing hits by root motion, the combo, the stab and the dodge).
 
 It checks what the C++ tests can't: the generated assets, the Blueprints and the map's collision together. Both clients should see the fighter do everything. The sword swing is reported as INFO until an attack montage exists, because without one the blade stays where the hand hangs.
 
@@ -193,7 +193,7 @@ The Fab pack **One Hand Sword Attacks And Finishers** (RamsterZ) is in `Content/
 
 | What | From the pack | Notes |
 | --- | --- | --- |
-| Stance (`ABP_SwordLocomotion`) | Idle, walk and run in 8 directions, jump loop | Standing, strafing and guarding: `BS_1HM_Locomotion`, each animation at its own speed (a fencer's footwork, kept for strafing and a later target lock). **Running or jumping freely** (turned by your movement): the plain run and jump (`ABP_Manny`), arms and all, the wrist as the run has it. (`vaesen.anim.carryturn 1` turns the wrist so the blade points forward, down and out instead; off for now.) No crouch animation (crouching shows the standing stance). |
+| Stance (`ABP_SwordLocomotion`) | Idle, walk and run in 8 directions, jump loop | **Relaxed** (not squared up: no block or aim, later no target lock): the plain mannequin locomotion (`ABP_Manny`), idle, run and jump, arms and all, the wrist as it has it. **Squared up** (guarding, aiming, later a target lock): the pack's fighting stance, right foot forward, `BS_1HM_Locomotion` at each animation's own speed. (`vaesen.anim.carryturn 1` turns the wrist so the blade points forward, down and out instead; off for now.) No crouch animation (crouching shows the standing stance). |
 | Light attack (left mouse) | Slash 01 → 02 → 03 → 04 | A combo: attacking again within 0.6 s of a swing ending plays the next one, and after the fourth it starts over. Full body, **root motion**: the animation moves you (about 40 cm of footwork over a combo), not your input. You turn to where you steer as each swing starts, then you're committed; a dodge can cut the follow-through once the swing is over. |
 | Heavy attack (Shift + left mouse) | Stab 01 → 02 → 03 | A combo the same way. Effort grunt. |
 | Hit window | — | Worked out from each animation: where the sword hand moves fastest, plus a little either side (`ANS_MeleeHitWindow` in each `AM_1HM_*`). Slash 01 is live 0.24–0.43 s. The whoosh plays as it opens. A swing is over (the next can start) 0.2 s after its window closes; the follow-through plays out unless you cut it short. |

@@ -84,9 +84,9 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		bStrafing = !Character->GetCharacterMovement()->bOrientRotationToMovement;
 		bCrouching = Character->bIsCrouched;
 		bFalling = Character->GetCharacterMovement()->IsFalling();
-		// Running (or jumping) where it's going, not strafing: weapon stances use the plain run then (a little
-		// hysteresis, so it doesn't flicker).
-		bFreeRunning = !bStrafing && (bFalling || Speed > (bFreeRunning ? 60.0f : 120.0f));
+		// Not squared up to fight (not strafing: no block or aim, later no target lock): weapon stances use the plain
+		// locomotion then, standing, running and jumping. The fighting stance is for squaring up.
+		bRelaxed = !bStrafing;
 
 		const UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Character);
 		const auto HasTag = [ASC](const FGameplayTag& Tag) { return ASC && ASC->HasMatchingGameplayTag(Tag); };
@@ -113,7 +113,7 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		Speed = Rig->Speed;
 		Direction = Rig->Direction;
 		bStrafing = true;
-		bFreeRunning = false;
+		bRelaxed = false;
 		bCrouching = Rig->IsCrouchPose();
 		bAiming = bShouldering = Rig->IsAimPose();
 		bFalling = bBlocking = bReloading = bStaggered = false;
@@ -216,7 +216,7 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 
 	// A one-handed weapon carried at a run (the plain run's arm swing): the blade forward, down and out to the right,
 	// clear of the body and the other arm. Not while a montage (a swing, a dodge, a draw) has the arm.
-	const bool bCarry = CVarCarryTurn.GetValueOnGameThread() > 0 && bFreeRunning && In.bHeld && bHandsFree && Weapon && !Weapon->IsRanged() && !Weapon->IsHeldTwoHanded() && !IsAnyMontagePlaying();
+	const bool bCarry = CVarCarryTurn.GetValueOnGameThread() > 0 && bRelaxed && Speed > 60.0f && In.bHeld && bHandsFree && Weapon && !Weapon->IsRanged() && !Weapon->IsHeldTwoHanded() && !IsAnyMontagePlaying();
 	CarryBlend = FMath::FInterpTo(CarryBlend, bCarry ? 1.0f : 0.0f, DeltaSeconds, 8.0f);
 	In.CarryBlend = CarryBlend;
 	In.CarryDirection = CarryDirection;

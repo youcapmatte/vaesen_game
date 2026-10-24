@@ -47,8 +47,8 @@ class VAESENGAME_API UVaesenAnimInstance : public UAnimInstance
 public:
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
 
-	/** Running freely (the weapon stance uses the plain run). */
-	bool IsFreeRunning() const { return bFreeRunning; }
+	/** Not squared up to fight (the weapon stance uses the plain locomotion). */
+	bool IsRelaxed() const { return bRelaxed; }
 
 	/** A shot: the trigger finger curls and lets go (and a shouldered weapon kicks). */
 	void PulseTriggerFinger();
@@ -184,9 +184,9 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Locomotion")
 	bool bStrafing = false;
 
-	/** Running freely: turned by its movement (not strafing), faster than a slow walk or in the air. */
+	/** Not squared up to fight (not strafing: no block or aim, later no target lock): the plain locomotion, idle included. */
 	UPROPERTY(BlueprintReadOnly, Category = "Locomotion")
-	bool bFreeRunning = false;
+	bool bRelaxed = false;
 
 	/** The drawn category's locomotion database for motion matching (null = the default locomotion). */
 	UPROPERTY(BlueprintReadOnly, Category = "Locomotion")
