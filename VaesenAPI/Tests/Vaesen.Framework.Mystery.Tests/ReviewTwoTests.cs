@@ -126,11 +126,11 @@ public sealed class ReviewTwoTests
     public void Patronymics_follow_1872_and_a_parent_and_child_are_not_called_alike()
     {
         var packet = ValidatorTests.SampleCase();
-        var father = packet.Cast.First(c => c.CharacterId == "npc-per-holm");
+        var father = packet.Cast.First(c => c.CharacterId == "npc-case-miller");
         father.Name = "Erik Ersson";
-        var wife = packet.Cast.First(c => c.CharacterId == "npc-brita-holm");
+        var wife = packet.Cast.First(c => c.CharacterId == "npc-case-miller-wife");
         wife.Name = "Kaisa Ersson";
-        var son = packet.Cast.First(c => c.CharacterId == "npc-axel-wester");
+        var son = packet.Cast.First(c => c.CharacterId == "npc-case-sawmill-manager");
         son.Name = "Vilho Erikson";
         son.Identity!.Age = 12;
         father.Identity!.Age = 40;
@@ -138,31 +138,31 @@ public sealed class ReviewTwoTests
 
         var issues = Validate(packet, CheckScope.Cast);
 
-        Assert.Contains(issues, i => i.Location == "cast:npc-axel-wester" && i.Explanation.Contains("Eriksson", StringComparison.Ordinal));
-        Assert.Contains(issues, i => i.Location == "cast:npc-brita-holm" && i.Explanation.Contains("keeps her own", StringComparison.Ordinal));
+        Assert.Contains(issues, i => i.Location == "cast:npc-case-sawmill-manager" && i.Explanation.Contains("Eriksson", StringComparison.Ordinal));
+        Assert.Contains(issues, i => i.Location == "cast:npc-case-miller-wife" && i.Explanation.Contains("keeps her own", StringComparison.Ordinal));
 
         son.Name = "Vilho Eriksson";
         issues = Validate(packet, CheckScope.Cast);
-        Assert.DoesNotContain(issues, i => i.Location == "cast:npc-axel-wester" && (i.Explanation.Contains("patronymic", StringComparison.Ordinal) || i.Explanation.Contains("is in", StringComparison.Ordinal)));
+        Assert.DoesNotContain(issues, i => i.Location == "cast:npc-case-sawmill-manager" && (i.Explanation.Contains("patronymic", StringComparison.Ordinal) || i.Explanation.Contains("is in", StringComparison.Ordinal)));
     }
 
     [Fact]
     public void A_persistent_child_s_fixed_name_is_not_asked_to_change_but_the_roster_writes_it_right()
     {
         var packet = ValidatorTests.SampleCase();
-        var father = packet.Cast.First(c => c.CharacterId == "npc-per-holm");
+        var father = packet.Cast.First(c => c.CharacterId == "npc-case-miller");
         father.Name = "Petter Olsson";
         father.Identity!.Age = 40;
-        var son = packet.Cast.First(c => c.CharacterId == "npc-axel-wester");
+        var son = packet.Cast.First(c => c.CharacterId == "npc-case-sawmill-manager");
         son.Name = "Halvar Petersson";
         son.Identity!.Age = 12;
         son.InstanceRef = InstanceRefs.Persistent;
         son.Relationships.Add(new CastRelationship { CharacterId = father.CharacterId, Nature = "his father" });
-        Assert.DoesNotContain(Validate(packet, CheckScope.Cast), i => i.Location == "cast:npc-axel-wester" && i.Explanation.Contains("patronymic", StringComparison.Ordinal));
+        Assert.DoesNotContain(Validate(packet, CheckScope.Cast), i => i.Location == "cast:npc-case-sawmill-manager" && i.Explanation.Contains("patronymic", StringComparison.Ordinal));
 
         var roster = PipelineTests.ScriptedModel.Roster();
         var farmer = roster.People.First(p => p.Role == RosterRoles.Owner && p.PlaceId == "farm");
-        roster.People.Add(new RosterPerson { Id = "npc-halvar-storgard", Name = "Halvar Ivarson", PlaceId = "farm", Role = RosterRoles.Household, HouseholdOf = farmer.Id, Relation = "eldest son", Drive = "to farm" });
+        roster.People.Add(new RosterPerson { Id = "npc-halvar-storgard", Name = "Halvar Ivarson", PlaceId = "farm", Role = RosterRoles.Household, HouseholdOf = farmer.Id, Relation = "eldest son", Drive = "to farm", Fear = "a bad harvest" });
         var issues = RosterBuilder.Validate(roster, ContentTests.LoadPack().FindLevel("level-forsby-october")!, new SocietyWorld());
         Assert.Contains(issues, i => i.IsError && i.Location == "roster:npc-halvar-storgard" && i.Explanation.Contains("Ivarsson", StringComparison.Ordinal));
     }

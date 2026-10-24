@@ -225,4 +225,7 @@ public static class LogEntryKinds
 
     /// <summary>Taken from the Society's roster of the level, without a model call (fixes 4, section 12.1).</summary>
     public const string Roster = "roster";
+
+    /// <summary>One fix broke a structural check and its repair did not hold, so that fix alone was undone (review 3, item 1).</summary>
+    public const string Undo = "undo";
 }

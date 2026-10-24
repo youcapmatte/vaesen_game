@@ -54,6 +54,14 @@ public sealed class CoherenceIssue
     [JsonProperty("everywhere", DefaultValueHandling = DefaultValueHandling.Ignore)]
     public bool Everywhere { get; set; }
 
+    /// <summary>
+    /// A critic issue that breaks the case at the table if it stays (review 3, item 3): a scene or opening that gives
+    /// away a gated clue, a hook that contradicts the cast or the facts, a period error players would notice, someone
+    /// saying what they cannot know. Unfixed, it marks the case as needing review. Otherwise the issue is advisory.
+    /// </summary>
+    [JsonProperty("blocking", DefaultValueHandling = DefaultValueHandling.Ignore)]
+    public bool Blocking { get; set; }
+
     [JsonIgnore]
     [System.Text.Json.Serialization.JsonIgnore]
     public bool IsError => Severity == IssueSeverities.Error;

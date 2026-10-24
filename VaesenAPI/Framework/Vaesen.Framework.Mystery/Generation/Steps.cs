@@ -86,6 +86,9 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
     /// <summary>The model of the first try: <see cref="MysteryOptions.CreativeModel"/> by default.</summary>
     protected virtual string FirstTryModel(MysteryOptions o) => o.CreativeModel;
 
+    /// <summary>The model of patches and fixes: <see cref="MysteryOptions.PatchModel"/> by default.</summary>
+    protected virtual string FixModel(MysteryOptions o) => o.PatchModel;
+
     /// <summary>How hard the first try thinks (fixes, section 9): <see cref="MysteryOptions.StandardEffort"/> by default.</summary>
     protected virtual string FirstTryEffort(MysteryOptions o) => o.StandardEffort;
 
@@ -150,8 +153,8 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
             var (modelName, effort) = (patching, fixing, attempt) switch
             {
                 // Judgement fixes go to the patch model as patches, never to the small model (review 2, item 2).
-                (_, true, _) when mode == Mode.FixLight => (Or(options.PatchModel, options.CreativeModel), options.PatchEffort),
-                (true, _, _) or (_, true, _) => (Or(options.PatchModel, options.CreativeModel), options.PatchEffort),
+                (_, true, _) when mode == Mode.FixLight => (Or(FixModel(options), options.CreativeModel), options.PatchEffort),
+                (true, _, _) or (_, true, _) => (Or(FixModel(options), options.CreativeModel), options.PatchEffort),
                 (_, _, 0) => (Or(FirstTryModel(options), options.CreativeModel), FirstTryEffort(options)),
                 _ => (Or(options.RetryModel, options.CreativeModel), options.LightEffort),
             };
@@ -391,6 +394,14 @@ public sealed class HumansStep(IMysteryModel model, ICoherenceValidator validato
         var residents = draft.Outputs.TryGetValue(ResidentsStep.StepName, out var kept) && kept is ResidentsOutput r
             ? r.Residents.Select(c => c.CharacterId).ToHashSet(StringComparer.Ordinal)
             : [];
+
+        // New people get ids from their role, not their name (review 3, item 5), before anything refers to them.
+        var rekeyed = PersonIds.Rekey(output.Cast, packet, draft.ValidationContext.SocietyCharacterIds);
+        if (output.HiddenHandCharacterId is { } hand && rekeyed.TryGetValue(hand, out var handId))
+        {
+            output.HiddenHandCharacterId = handId;
+        }
+
         packet.Cast = ToCast(draft, packet, output.Cast)
             .Concat(packet.Cast.Where(c => residents.Contains(c.CharacterId) && !output.Cast.Exists(o => o.CharacterId == c.CharacterId)))
             .ToList();
@@ -482,6 +493,9 @@ public sealed class ResidentsStep(IMysteryModel model, ICoherenceValidator valid
 
     protected override string FirstTryEffort(MysteryOptions o) => o.LightEffort;
 
+    /// <summary>A resident's record is short: its patches stay on the small model too (review 3, item 6).</summary>
+    protected override string FixModel(MysteryOptions o) => o.LightModel;
+
     protected override IReadOnlyList<PatchList> PatchLists(ResidentsOutput output) => [new("cast", output.Residents, c => ((CastDraft)c).CharacterId)];
 
     protected override string Instruction(MysteryDraft draft) =>
@@ -518,7 +532,7 @@ public sealed class ResidentsStep(IMysteryModel model, ICoherenceValidator valid
                 Importance = CastImportance.Resident,
                 Identity = c.Identity,
                 HomePlaceId = c.HomePlaceId,
-                Wants = new CastWants { Drives = c.Drives.Select(d => d.Text).ToList() },
+                Wants = new CastWants { Drives = c.Drives.Select(d => d.Text).ToList(), Fears = c.Fears.ToList() },
                 Secrets = c.LatentHooks.Select(h => h.Text).ToList(),
                 Routine = c.Background,
                 VoiceNotes = c.Voice.Register,
@@ -547,6 +561,7 @@ public sealed class ResidentsStep(IMysteryModel model, ICoherenceValidator valid
 
     private static void AddResidents(MysteryDraft draft, CasePacket packet, ResidentsOutput output)
     {
+        PersonIds.Rekey(output.Residents, packet, draft.ValidationContext.SocietyCharacterIds);
         var previous = draft.Outputs.TryGetValue(StepName, out var kept) && kept is ResidentsOutput r
             ? r.Residents.Select(c => c.CharacterId).ToHashSet(StringComparer.Ordinal)
             : [];
@@ -787,6 +802,16 @@ public sealed class HookStep(IMysteryModel model, ICoherenceValidator validator,
             AssertedFactIds = output.Hook.AssertedFactIds,
             OpeningEventIds = output.Hook.OpeningEventIds,
         };
+        // The writer of the hook knows what it states (review 3, item 3): a fact the minds step did not give them is
+        // something they heard, so the runtime does not have them deny their own letter. Hearsay never counts as a way in.
+        if (packet.FindCast(packet.Hook.HookGiverId) is { } giver)
+        {
+            foreach (var factId in packet.Hook.AssertedFactIds.Where(f => packet.FindFact(f) is not null && !giver.Knows.Exists(k => k.FactId == f)).Distinct())
+            {
+                giver.Knows.Add(new CastKnowledge { FactId = factId, Source = KnowledgeSources.BystanderPrefix + "parish-talk", When = "before sending for the Society" });
+            }
+        }
+
         packet.Level.PlacesUsed = output.PlacesUsed;
         packet.Level.SceneDescriptions = output.SceneDescriptions
             .GroupBy(s => s.PlaceId)
@@ -864,6 +889,7 @@ public sealed class CriticStep(IMysteryModel model, MysteryOptions options)
                 Targets = c.Targets.Where(t => !string.IsNullOrWhiteSpace(t)).Select(t => t.Trim()).ToList(),
                 Replacements = c.Replacements.Where(r => r.From.Length > 0 && r.From != r.To).ToList() is { Count: > 0 } replacements ? replacements : null,
                 Everywhere = c.Everywhere,
+                Blocking = c.Blocking,
             })
             .ToList();
 

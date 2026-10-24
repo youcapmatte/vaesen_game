@@ -202,11 +202,13 @@ public sealed class ContentGenerator(IMysteryModel model, IOptions<MysteryOption
             geography:
             - realAnalogue: the real place it is closest to in history, industry and landscape, as "Place (district)". It
               grounds the routes and distances; it is never shown to players. fictional: true unless the level is that place.
+              analogueAt: its latitude and longitude (lat, lon), so code can check the neighbours' distances and directions.
             - province, county, parish.
             - knownFor: two to four things an educated Swede of {pack.Setting.StartYear} would know of the place or district before arriving.
             - neighbours: the nearest market town, the county seat and any other town the case may need (a works, a
               mining town, a port): name, kind, a rough distance and direction by road or water, and what each offers
-              (market, bank, newspaper, steamers, railway from a year).
+              (market, bank, newspaper, steamers, railway from a year), and at: the town's latitude and longitude. Give
+              the direction from the analogue as the map has it, and a road distance no shorter than the straight line.
             - authorities: where the crown sheriff (or police), the district court and its sessions, the provincial doctor,
               the post office and how often the post goes, the telegraph, the nearest bank and newspaper are, and how far.
               Use the institutions above where they fit. Empty only if the level truly has none within reach.

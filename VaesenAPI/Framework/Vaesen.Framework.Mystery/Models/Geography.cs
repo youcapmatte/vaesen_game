@@ -15,6 +15,10 @@ public sealed class LevelGeography
     [JsonProperty("fictional")]
     public bool Fictional { get; set; } = true;
 
+    /// <summary>The real analogue's position (latitude, longitude), so code can check what the neighbours say of distance and direction (review 3, item 7).</summary>
+    [JsonProperty("analogueAt", NullValueHandling = NullValueHandling.Ignore)]
+    public GeoPoint? AnalogueAt { get; set; }
+
     [JsonProperty("province")]
     public string Province { get; set; } = "";
 
@@ -55,6 +59,32 @@ public sealed class LevelNeighbour
 
     [JsonProperty("offers")]
     public List<string> Offers { get; set; } = [];
+
+    /// <summary>The town's real position, if known.</summary>
+    [JsonProperty("at", NullValueHandling = NullValueHandling.Ignore)]
+    public GeoPoint? At { get; set; }
+}
+
+/// <summary>A real position in degrees.</summary>
+public sealed class GeoPoint
+{
+    [JsonProperty("lat")]
+    public double Lat { get; set; }
+
+    [JsonProperty("lon")]
+    public double Lon { get; set; }
+
+    /// <summary>The great-circle distance in km and the compass bearing in degrees from here to <paramref name="to"/>.</summary>
+    public (double Km, double Bearing) To(GeoPoint to)
+    {
+        const double R = 6371;
+        double Rad(double d) => d * Math.PI / 180;
+        var (f1, f2, dl) = (Rad(Lat), Rad(to.Lat), Rad(to.Lon - Lon));
+        var a = Math.Pow(Math.Sin((f2 - f1) / 2), 2) + Math.Cos(f1) * Math.Cos(f2) * Math.Pow(Math.Sin(dl / 2), 2);
+        var km = 2 * R * Math.Asin(Math.Sqrt(a));
+        var bearing = Math.Atan2(Math.Sin(dl) * Math.Cos(f2), Math.Cos(f1) * Math.Sin(f2) - Math.Sin(f1) * Math.Cos(f2) * Math.Cos(dl)) * 180 / Math.PI;
+        return (km, (bearing + 360) % 360);
+    }
 }
 
 /// <summary>Where the level's authorities are and how far; empty means the level has none of that kind within reach.</summary>

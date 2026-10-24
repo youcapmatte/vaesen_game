@@ -156,6 +156,10 @@ public sealed class CaseSummary
     [JsonProperty("passed")]
     public bool Passed { get; set; }
 
+    /// <summary>Passed, but a blocking critic issue was not fixed: someone should read it before it is played (review 3).</summary>
+    [JsonProperty("needsReview")]
+    public bool NeedsReview { get; set; }
+
     /// <summary>For the Society's history (cooldowns); spoils only which creature it was.</summary>
     [JsonProperty("vaesenIds")]
     public List<string> VaesenIds { get; set; } = [];
@@ -200,6 +204,7 @@ public sealed class CaseSummary
         Month = p.Brief.Month,
         Year = p.Brief.Year,
         Passed = p.Validation.Passed,
+        NeedsReview = p.Validation.NeedsReview,
         VaesenIds = p.Brief.VaesenIds,
         HookChannelId = p.Brief.HookChannelId,
         HookGiverType = p.Brief.HookGiverType,

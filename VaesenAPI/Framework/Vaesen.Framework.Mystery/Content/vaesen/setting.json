@@ -353,19 +353,47 @@
       "notes": "State standard-gauge trunk shared by the southern and western main lines. The year is approximate: the Stockholm-Södertälje stretch dates from about 1860 and the full run to Katrineholm from the early 1860s. Passengers change here for Östergötland, Närke and Småland."
     },
     {
-      "id": "sodra-stambanan-katrineholm-nassjo",
-      "name": "Southern Main Line (Södra stambanan), Katrineholm-Nässjö",
+      "id": "ostra-stambanan-katrineholm-linkoping",
+      "name": "Eastern Main Line (Östra stambanan), Katrineholm–Linköping",
       "kind": "railway",
       "from": "Katrineholm",
+      "to": "Linköping",
+      "via": [
+        "Norrköping"
+      ],
+      "opened": 1872,
+      "months": [],
+      "region": "Ekeby Manor",
+      "notes": "State line built in stages: Katrineholm–Norrköping opened in 1866, Norrköping–Linköping in 1872. Linköping is the railhead for Ekeby Manor and the Roxen plain. Carries passengers, mail, grain and timber."
+    },
+    {
+      "id": "ostra-stambanan-linkoping-nassjo",
+      "name": "Eastern Main Line (Östra stambanan), Linköping–Nässjö",
+      "kind": "railway",
+      "from": "Linköping",
       "to": "Nässjö",
       "via": [
         "Mjölby",
-        "Linköping"
+        "Tranås"
+      ],
+      "opened": 1874,
+      "months": [],
+      "region": "Mossaby Parish",
+      "notes": "The last stretch of the Eastern Main Line, finished in 1874; Mjölby may have had trains from 1873, which is not confirmed. Before 1874 the way south from Linköping is the post road. At Nässjö it meets the Southern Main Line."
+    },
+    {
+      "id": "sodra-stambanan-falkoping-nassjo",
+      "name": "Southern Main Line (Södra stambanan), Falköping–Nässjö",
+      "kind": "railway",
+      "from": "Falköping",
+      "to": "Nässjö",
+      "via": [
+        "Jönköping (branch)"
       ],
       "opened": 1864,
       "months": [],
       "region": "Mossaby Parish",
-      "notes": "State standard-gauge line that continues to Alvesta, Hässleholm and Malmö. Opened in stages ending in 1864. Linköping and Mjölby are the railheads for Ekeby Manor south of Lake Roxen. Nässjö is the junction for Småland and the forest uplands around Mossaby. Carried timber, grain, and passengers."
+      "notes": "State line from the Western Main Line at Falköping to Nässjö, open since 1864, continuing south to Alvesta, Hässleholm and Malmö. Before 1874 it is the railway way to Nässjö from Stockholm: change at Falköping. Nässjö is the junction for Småland and the forest uplands around Mossaby."
     },
     {
       "id": "vastra-stambanan-katrineholm-goteborg",

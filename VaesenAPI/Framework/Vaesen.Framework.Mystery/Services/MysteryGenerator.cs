@@ -690,13 +690,20 @@ public sealed class MysteryGenerator(
         Targets = issue.Targets,
         Replacements = issue.Replacements,
         Everywhere = issue.Everywhere,
+        Blocking = issue.Blocking,
     };
+
+    /// <summary>What a round of fixes did: the issues whose fixes were kept, and those undone, with why.</summary>
+    private sealed record FixRound(List<CoherenceIssue> Applied, Dictionary<CoherenceIssue, string> Undone);
 
     /// <summary>
     /// Routes the issues to their owning steps (fixes 2, section 1) and fixes each step in place, in pipeline order:
-    /// a patch of the items named, or a revised answer. Returns the issues whose step was fixed.
+    /// a patch of the items named, or a revised answer. Each fix is checked on its own (review 3, item 1): one that
+    /// breaks a structural check the case passed before gets one repair from the steps that own the broken checks
+    /// (a redundancy break is a new way in from minds and channels), and if that does not hold, only that fix is
+    /// undone. Code replacements are checked one by one the same way.
     /// </summary>
-    private async Task<List<CoherenceIssue>> FixRoundAsync(MysteryDraft draft, IReadOnlyList<CoherenceIssue> issues, int caseAttempt, bool light, CancellationToken ct)
+    private async Task<FixRound> FixRoundAsync(MysteryDraft draft, IReadOnlyList<CoherenceIssue> issues, int caseAttempt, bool light, CancellationToken ct)
     {
         var o = Options;
         var steps = new Dictionary<string, IFixableStep>(StringComparer.Ordinal)
@@ -713,12 +720,17 @@ public sealed class MysteryGenerator(
         };
 
         var applied = new List<CoherenceIssue>();
+        var undone = new Dictionary<CoherenceIssue, string>();
+
+        // What the case already fails is not any fix's fault: only new errors count against a fix.
+        var baseline = ErrorKeys(Errors(draft));
 
         // Mechanical fixes are done by code (review 2, item 2): a rename, a date or a wrong id is exact text replaced
         // in the packet and every kept output, and logged. Only what changed nothing goes on to a model.
         var replaced = new List<CoherenceIssue>();
         foreach (var issue in issues.Where(i => i.Replacements is { Count: > 0 }))
         {
+            var before = Snapshot(draft);
             var places = TextReplacements.Apply(draft, issue);
             draft.Log.Add(new GenerationLogEntry
             {
@@ -729,17 +741,26 @@ public sealed class MysteryGenerator(
                 Instruction = string.Join("; ", issue.Replacements!.Select(r => $"\"{r.From}\" → \"{r.To}\"")) + (issue.Everywhere ? " everywhere" : $" in {string.Join(", ", issue.Targets ?? [])}"),
                 Output = $"{places} place(s)",
             });
-            if (places > 0)
+            if (places == 0)
             {
-                replaced.Add(issue);
+                continue;
             }
+
+            if (NewErrors(draft, baseline) is { Count: > 0 } broke)
+            {
+                Restore(draft, before);
+                undone[issue] = $"Its replacement broke {Describe(broke)} and was undone.";
+                LogUndo(draft, caseAttempt, "replacement", broke);
+                continue;
+            }
+
+            replaced.Add(issue);
         }
 
         applied.AddRange(replaced);
 
         // An issue split over several steps is applied only if every part was: one failed part means it was not.
-        var failed = new HashSet<CoherenceIssue>();
-        var routed = CriticRouting.Route(issues.Except(replaced)).ToDictionary(r => r.Step, r => r.Issues, StringComparer.Ordinal);
+        var routed = CriticRouting.Route(issues.Except(replaced).Except(undone.Keys)).ToDictionary(r => r.Step, r => r.Issues, StringComparer.Ordinal);
 
         // A resident's record is the residents step's, not humans'.
         if (draft.Outputs.TryGetValue(ResidentsStep.StepName, out var kept) && kept is ResidentsOutput residents
@@ -757,6 +778,7 @@ public sealed class MysteryGenerator(
                 }
             }
         }
+
         foreach (var step in CriticRouting.PipelineOrder)
         {
             if (!routed.TryGetValue(step, out var parts))
@@ -764,19 +786,41 @@ public sealed class MysteryGenerator(
                 continue;
             }
 
-            var before = draft.Packet;
+            var before = Snapshot(draft);
             var result = await steps[step].FixAsync(draft, parts.Select(p => p.Part).ToList(), caseAttempt, light, ct);
             if (!result.Success)
             {
-                failed.UnionWith(parts.Select(p => p.Original));
+                foreach (var part in parts)
+                {
+                    undone.TryAdd(part.Original, $"The {step} fix did not pass that step's checks: {result.ErrorMessage}");
+                }
+
                 logger.LogWarning("The fix for {Step} did not pass its checks and was not applied: {Error}", step, result.ErrorMessage);
                 continue;
+            }
+
+            if (NewErrors(draft, baseline) is { Count: > 0 } broke)
+            {
+                // One repair, asked of the steps that own what broke, with what broke: never the same fix sent again.
+                logger.LogInformation("The fix for {Step} broke {Broke}; asking for a repair", step, Describe(broke));
+                var repaired = await RepairAsync(draft, broke, steps, caseAttempt, light, ct) && NewErrors(draft, baseline).Count == 0;
+                if (!repaired)
+                {
+                    Restore(draft, before);
+                    foreach (var part in parts)
+                    {
+                        undone.TryAdd(part.Original, $"The {step} fix broke {Describe(broke)}; one repair did not hold, so this fix alone was undone.");
+                    }
+
+                    LogUndo(draft, caseAttempt, step, broke);
+                    continue;
+                }
             }
 
             applied.AddRange(parts.Select(p => p.Original));
 
             // What this fix changed reaches the later steps whose items are built on it.
-            foreach (var (later, follow) in CriticRouting.Dependents(before, draft.Packet))
+            foreach (var (later, follow) in CriticRouting.Dependents(before.Packet, draft.Packet))
             {
                 if (!routed.TryGetValue(later, out var list))
                 {
@@ -787,43 +831,134 @@ public sealed class MysteryGenerator(
             }
         }
 
-        return applied.Where(i => i.Code != IssueCodes.Consistency && !failed.Contains(i)).Distinct().ToList();
+        return new FixRound(applied.Where(i => i.Code != IssueCodes.Consistency && !undone.ContainsKey(i)).Distinct().ToList(), undone);
     }
 
     /// <summary>
-    /// The last round (fixes 2, section 2; review 2, items 1 and 2): the remaining warnings with concrete fixes, as
-    /// replacements in code and patches on the patch model, never whole-step rewrites. Then the structural checks, and
-    /// a check that each fix took: a structural warning must be gone, a replacement's old text must be gone, and a
-    /// critic issue must be found gone by a verifying look. What did not take is tried once more with what still
-    /// stands; only what then holds is marked applied. Returns the critic issues that still did not hold.
+    /// One repair of the checks a fix broke (review 3, item 2): too few ways in becomes a new channel or a first-hand
+    /// teller from minds and channels; anything else goes, as an error, to the step that owns the item it names.
+    /// </summary>
+    private static async Task<bool> RepairAsync(MysteryDraft draft, List<CoherenceIssue> broke, Dictionary<string, IFixableStep> steps, int caseAttempt, bool light, CancellationToken ct)
+    {
+        static bool WaysInIssue(CoherenceIssue e) => e.Code is IssueCodes.Redundancy or IssueCodes.SinglePointOfFailure;
+        var asks = broke.Where(WaysInIssue)
+            .SelectMany(e => WaysIn(draft.Packet, e))
+            .Select(e => (Step: MindsStep.StepName, Issue: e))
+            .Concat(broke.Where(e => !WaysInIssue(e)).Select(e => (Step: RepairOwner(e), Issue: e)))
+            .GroupBy(a => a.Step)
+            .OrderBy(g => CriticRouting.PipelineOrder.ToList().IndexOf(g.Key));
+        foreach (var ask in asks)
+        {
+            if (!steps.TryGetValue(ask.Key, out var step) || !(await step.FixAsync(draft, ask.Select(a => a.Issue).ToList(), caseAttempt, light, ct)).Success)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <summary>The step that owns a structural issue's item: what a person knows is minds and channels', the rest by its id.</summary>
+    internal static string RepairOwner(CoherenceIssue issue)
+    {
+        var colon = issue.Location.IndexOf(':');
+        var id = colon >= 0 ? issue.Location[(colon + 1)..] : issue.Location;
+        if (issue.Location.StartsWith("cast:", StringComparison.Ordinal))
+        {
+            return issue.Code == IssueCodes.Provenance ? MindsStep.StepName : CriticRouting.Owner(id).Step;
+        }
+
+        if (colon < 0 || issue.Location.StartsWith("scene", StringComparison.Ordinal))
+        {
+            return ClueStepNames[ClueSubStep(issue)];
+        }
+
+        return CriticRouting.Owner(id).Step;
+    }
+
+    /// <summary>Every structural error the case has now, the tension's included.</summary>
+    private List<CoherenceIssue> Errors(MysteryDraft draft)
+    {
+        var check = Derived.Tension(draft.Packet);
+        check.AddRange(validator.Validate(draft.Packet, draft.ValidationContext, CheckScope.Full));
+        return check.Where(i => i.IsError).ToList();
+    }
+
+    /// <summary>The errors the case has now that it did not have at <paramref name="baseline"/>.</summary>
+    private List<CoherenceIssue> NewErrors(MysteryDraft draft, HashSet<string> baseline) =>
+        Errors(draft).Where(e => !baseline.Contains(ErrorKey(e))).ToList();
+
+    private static HashSet<string> ErrorKeys(IEnumerable<CoherenceIssue> errors) => errors.Select(ErrorKey).ToHashSet(StringComparer.Ordinal);
+
+    private static string ErrorKey(CoherenceIssue e) => $"{e.Code}|{e.Location}";
+
+    private static string Describe(List<CoherenceIssue> broke) =>
+        string.Join("; ", broke.Take(3).Select(b => $"{b.Code} at {b.Location}")) + (broke.Count > 3 ? $" and {broke.Count - 3} more" : "");
+
+    private static void LogUndo(MysteryDraft draft, int caseAttempt, string what, List<CoherenceIssue> broke) => draft.Log.Add(new GenerationLogEntry
+    {
+        CaseAttempt = caseAttempt,
+        Step = CheckStepName,
+        Kind = LogEntryKinds.Undo,
+        Passed = false,
+        Instruction = $"Undid the {what} fix alone: it broke {Describe(broke)}.",
+        Issues = broke,
+    });
+
+    /// <summary>
+    /// The last round (fixes 2, section 2; review 2, items 1 and 2; review 3, items 1 and 2): the remaining warnings
+    /// with concrete fixes, as replacements in code and patches on the patch model, never whole-step rewrites. Each fix
+    /// is kept or undone on its own (see <see cref="FixRoundAsync"/>). Then a check that each kept fix took: a
+    /// structural warning must be gone, a replacement's old text must be gone, and a critic issue must be found gone by
+    /// a verifying look. Only what a verifying look found still standing is tried again, with what it found; an undone
+    /// fix and an instruction already sent are not. Returns the issues that still did not hold.
     /// </summary>
     private async Task<List<CoherenceIssue>> ApplyWarningsAsync(MysteryDraft draft, IReadOnlyList<CoherenceIssue> warnings, int caseAttempt, CancellationToken ct)
     {
-        var pending = warnings.ToList();
         var held = new List<CoherenceIssue>();
         var remaining = new Dictionary<CoherenceIssue, string>();
-        for (var attempt = 0; attempt <= Options.FixRetries && pending.Count > 0; attempt++)
+        var sent = new HashSet<string>(StringComparer.Ordinal);
+
+        // What is asked this time, by the original issue it stands for.
+        var asked = warnings.Distinct().ToDictionary(i => i, i => i);
+        for (var attempt = 0; attempt <= Options.FixRetries && asked.Count > 0; attempt++)
         {
+            foreach (var ask in asked.Values)
+            {
+                sent.Add(Signature(ask));
+            }
+
             var before = Snapshot(draft);
-            var asked = attempt == 0 ? pending : pending.Select(i => WithRemaining(i, remaining.GetValueOrDefault(i))).ToList();
-            await FixRoundAsync(draft, asked, caseAttempt, light: true, ct);
+            var round = await FixRoundAsync(draft, asked.Values.ToList(), caseAttempt, light: true, ct);
             if (!StillPasses(draft, caseAttempt))
             {
-                logger.LogInformation("The last round's fixes broke the case's checks; keeping it as it was");
+                // Each fix was checked alone, so this is fixes that clash: keep the case as it was.
+                logger.LogInformation("The last round's fixes broke the case's checks together; keeping it as it was");
                 Restore(draft, before);
-                foreach (var issue in pending)
+                foreach (var original in asked.Keys)
                 {
-                    remaining[issue] = "Its fix broke the case's structural checks and was undone.";
+                    remaining[original] = "Its fix clashed with another fix in the same round and was undone.";
                 }
 
                 break;
             }
 
+            var byAsk = asked.ToDictionary(p => p.Value, p => p.Key);
+            foreach (var (ask, why) in round.Undone)
+            {
+                if (byAsk.TryGetValue(ask, out var original))
+                {
+                    remaining[original] = why;
+                }
+            }
+
+            var tried = asked.Keys.Where(i => !round.Undone.ContainsKey(asked[i])).ToList();
             var now = validator.Validate(draft.Packet, draft.ValidationContext, CheckScope.Full);
-            var critic = pending.Where(i => i.Source == IssueSources.Critic && i.Replacements is not { Count: > 0 }).ToList();
+            var critic = tried.Where(i => i.Source == IssueSources.Critic && i.Replacements is not { Count: > 0 }).ToList();
             var looked = critic.Count == 0 ? [] : (await new FixVerifier(model, Options).VerifyAsync(draft, critic, caseAttempt, ct)).Result
                 ?? critic.Select(_ => (string?)"The verifying look failed.").ToList();
-            foreach (var issue in pending)
+            var again = new Dictionary<CoherenceIssue, CoherenceIssue>();
+            foreach (var issue in tried)
             {
                 string? still = issue switch
                 {
@@ -835,20 +970,24 @@ public sealed class MysteryGenerator(
                 {
                     held.Add(issue);
                     remaining.Remove(issue);
+                    continue;
                 }
-                else
+
+                remaining[issue] = still;
+                var retry = WithRemaining(issue, still);
+                if (!sent.Contains(Signature(retry)))
                 {
-                    remaining[issue] = still;
+                    again[issue] = retry;
                 }
             }
 
-            pending = pending.Except(held).ToList();
+            asked = again;
         }
 
         foreach (var issue in draft.Packet.Validation.Issues.Where(i => i.Source == IssueSources.Critic))
         {
             issue.Applied = held.Exists(a => a.Code == issue.Code && a.Explanation == issue.Explanation);
-            issue.Unresolved = remaining.FirstOrDefault(r => r.Key.Code == issue.Code && r.Key.Explanation == issue.Explanation).Value;
+            issue.Unresolved = issue.Applied ? null : remaining.FirstOrDefault(r => r.Key.Code == issue.Code && r.Key.Explanation == issue.Explanation).Value;
         }
 
         logger.LogInformation("Last round: {Held} fixes held, {Unresolved} did not", held.Count, remaining.Count);
@@ -862,6 +1001,9 @@ public sealed class MysteryGenerator(
 
         return draft.Packet.Validation.Issues.Where(i => i.Source == IssueSources.Critic && i.Unresolved is not null).Concat(structural).ToList();
     }
+
+    /// <summary>What an instruction asks, to never send the same one twice.</summary>
+    private static string Signature(CoherenceIssue issue) => $"{issue.Code}|{issue.Location}|{string.Join(",", issue.Targets ?? [])}|{issue.Explanation}|{issue.SuggestedFix}";
 
     /// <summary>A fix that must hold for the case to be played: two people claiming to have fetched the Society.</summary>
     private static bool BreaksTheTable(CoherenceIssue issue) =>
@@ -879,6 +1021,7 @@ public sealed class MysteryGenerator(
         Targets = issue.Targets,
         Replacements = issue.Replacements,
         Everywhere = issue.Everywhere,
+        Blocking = issue.Blocking,
     };
 
     /// <summary>
@@ -939,9 +1082,10 @@ public sealed class MysteryGenerator(
     {
         IssueCodes.Opening => 4,
         "critic." + CriticChecks.Hook => 4,
+        "critic." + CriticChecks.Scenes => 4,
         "critic." + CriticChecks.Solves => 2,
         "critic." + CriticChecks.DeepLoreTrail => 0,
-        _ when issue.Location.StartsWith("hook", StringComparison.Ordinal) => 4,
+        _ when issue.Location.StartsWith("hook", StringComparison.Ordinal) || issue.Location.StartsWith("scene", StringComparison.Ordinal) => 4,
         _ when issue.Location.StartsWith("creatureMinds", StringComparison.Ordinal) => 3,
         _ when issue.Location == "facts" && issue.Code is IssueCodes.Schema or IssueCodes.Giveaway => 0,
         _ when issue.Location.StartsWith("beat", StringComparison.Ordinal) || issue.Location == "climax" => 2,
@@ -993,6 +1137,9 @@ public sealed class MysteryGenerator(
 
         packet.Validation.Issues = structural.Concat(critic).ToList();
         packet.Validation.Passed = passed && !structural.Exists(i => i.IsError);
+
+        // A blocking critic issue no fix took (review 3, item 3): the case is kept, but marked for a person to read.
+        packet.Validation.NeedsReview = packet.Validation.Passed && critic.Exists(i => i.Blocking && !i.Applied);
         packet.Validation.Runs++;
     }
 }

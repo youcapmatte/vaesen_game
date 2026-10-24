@@ -49,6 +49,8 @@ export interface CaseSummary {
   /** The in-world year; 0 for cases from before the calendar. */
   year?: number;
   passed: boolean;
+  /** Passed, but a blocking critic issue was not fixed: read it before playing. */
+  needsReview?: boolean;
   vaesenIds: string[];
   hookChannelId: string;
   hookGiverType: string;
@@ -71,6 +73,8 @@ export interface CoherenceIssue {
   applied?: boolean;
   /** A fix that was tried and did not hold: what still stands. */
   unresolved?: string | null;
+  /** A critic issue that breaks the case at the table if it stays. */
+  blocking?: boolean;
 }
 
 export interface EscalationEvent {
@@ -183,7 +187,7 @@ export interface CasePacket {
   /** The level's public facts this case explains; they join the Society's world when it is played. */
   publicFactsExplained?: { publicFactId: string; fact: string; explanation: string }[];
   tension: { start: number };
-  validation: { passed: boolean; issues: CoherenceIssue[]; runs: number };
+  validation: { passed: boolean; issues: CoherenceIssue[]; runs: number; needsReview?: boolean };
 }
 
 export interface GenerationLogEntry {

@@ -340,6 +340,7 @@ public sealed class PipelineTests
             {
                 Id = id, Name = name, PlaceId = place, Role = role, Age = 45, Gender = "man", Occupation = occupation, Rank = "worker", Line = occupation + " here", LatentHook = hook,
                 Drive = "to keep the " + occupation + "'s trade going",
+                Fear = "to lose the " + occupation + "'s trade",
             };
 
             return new RosterOutput
@@ -351,9 +352,9 @@ public sealed class PipelineTests
                     Person("npc-ivar-storgard", "Ivar Storgård", "farm", RosterRoles.Owner, "farmer"),
                     Person("npc-mattias-rosen", "Mattias Rosén", "church", RosterRoles.Clergy, "vicar"),
                     Person("npc-mans-bergqvist", "Måns Bergqvist", "inn", RosterRoles.Keeper, "innkeeper"),
-                    Person("npc-erik-smed", "Erik the smith", "smithy", RosterRoles.Keeper, "smith", "owes the sawmill for charcoal"),
+                    Person("npc-smithy-smith", "Erik the smith", "smithy", RosterRoles.Keeper, "smith", "owes the sawmill for charcoal"),
                     Person("npc-ruben-granlund", "Ruben Granlund", "croft", RosterRoles.Owner, "crofter"),
-                    Person("npc-greta-forsberg", "Greta Forsberg", "inn", RosterRoles.Resident, "serving woman", "hears everything said over the ale"),
+                    Person("npc-inn-serving-woman", "Greta Forsberg", "inn", RosterRoles.Resident, "serving woman", "hears everything said over the ale"),
                 ],
             };
         }
@@ -471,8 +472,25 @@ public sealed class PipelineTests
                 output.Channels.RemoveAll(c => c.Id == "c10");
             }
 
+            if (MindsFixesBreak && _mindsCalls > 1)
+            {
+                // The parish note now needs the weeping at the wheel, which itself needs f7: f7 is left one way in.
+                var c10 = JsonConvert.DeserializeObject<CaseChannel>(JsonConvert.SerializeObject(output.Channels.Find(c => c.Id == "c10")))!;
+                c10.Access.Requires = ["knowsFact:f8"];
+                output.Channels[output.Channels.FindIndex(c => c.Id == "c10")] = c10;
+            }
+
             return output;
         }
+
+        /// <summary>Every minds-and-channels answer after the first gates c10 behind f8, breaking f7's two ways in, repairs included.</summary>
+        public bool MindsFixesBreak { get; set; }
+
+        /// <summary>
+        /// The critic's warnings only: a rename (code), a blocking clue warning on c10 (minds) and a lever warning on r2
+        /// (the arc), so one round fixes three steps' worth at once.
+        /// </summary>
+        public bool MixedWarnings { get; set; }
 
         /// <summary>The critic's only issue is a warning that is a rename, given as a replacement for code to apply.</summary>
         public bool RenameWarning { get; set; }
@@ -493,6 +511,27 @@ public sealed class PipelineTests
                             Replacements = [new TextReplacement { From = "mill race", To = "millrace" }], Everywhere = true,
                         }
                         : new CriticCheck { Check = name, Passed = true }).ToList(),
+                };
+            }
+
+            if (MixedWarnings)
+            {
+                CriticCheck Warning(string name, List<string> targets, bool blocking, List<TextReplacement>? replacements = null) => new()
+                {
+                    Check = name, Passed = false, Severity = IssueSeverities.Warning, Location = string.Join(", ", targets), Targets = targets,
+                    Explanation = $"{name} needs a change.", SuggestedFix = "Change it as described.", Blocking = blocking,
+                    Replacements = replacements ?? [], Everywhere = replacements is not null,
+                };
+                return new CriticOutput
+                {
+                    Overall = "Three things.",
+                    Checks = CriticChecks.All.Select(name => name switch
+                    {
+                        CriticChecks.Timeline => Warning(name, ["f1"], false, [new TextReplacement { From = "mill race", To = "millrace" }]),
+                        CriticChecks.FairClues => Warning(name, ["c10"], true),
+                        CriticChecks.Solves => Warning(name, ["r2"], false),
+                        _ => new CriticCheck { Check = name, Passed = true },
+                    }).ToList(),
                 };
             }
 
@@ -527,7 +566,7 @@ public sealed class PipelineTests
                         Check = name,
                         Passed = name != CriticChecks.WorldConsistency,
                         Severity = IssueSeverities.Error,
-                        Location = "truth.summary; npc-per-holm",
+                        Location = "truth.summary; npc-case-miller",
                         Explanation = name == CriticChecks.WorldConsistency ? "The mill's age does not match the summary." : "",
                     }).ToList(),
                 };

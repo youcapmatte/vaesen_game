@@ -182,6 +182,10 @@ public sealed class CharacterInstance
     [JsonProperty("drives")]
     public List<Drive> Drives { get; set; } = [];
 
+    /// <summary>What they fear in their ordinary life (a level's people; review 3, item 4).</summary>
+    [JsonProperty("fears")]
+    public List<string> Fears { get; set; } = [];
+
     [JsonProperty("voice")]
     public CharacterVoice Voice { get; set; } = new();
 

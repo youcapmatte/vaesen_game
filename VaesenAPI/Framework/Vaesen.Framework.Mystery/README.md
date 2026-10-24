@@ -60,6 +60,25 @@ Services/      MysteryGenerator, WorldService (seeding, closing, write-back), Co
 
 The engine sets the fact weights. Colour and season facts, and what the group knows on arrival, weigh nothing, so the dial starts at its start; decoy facts weigh half, load-bearing ones double. The weights are scaled so the deep solve's path (its lever's facts and what gates them) ends 15% past the climax. A beat with a time fires when its threshold is reached and its time has come, whichever is later.
 
+### Review 3 (case 07)
+
+- **Each fix is checked on its own.** After every code replacement and every step's fix, the structural checks run again. A fix that adds an error the case did not have gets one repair: too few ways in goes to minds and channels as a new channel or a first-hand teller, and anything else goes to the step that owns the broken item. If the repair does not hold, only that fix is undone (an `undo` log entry). The others are kept, and code replacements always stay unless they break something themselves.
+- **No blind retries.** An undone fix is not tried again. Only what the verifying look found still standing is retried, with what it found, and an instruction already sent is never sent again.
+- **Blocking issues.** The critic marks an issue `blocking` when it would break the case at the table: a scene leak, a hook that contradicts the case, a period error, someone saying what they cannot know, an event told twice. A passed case with a blocking issue no fix took is kept, with `validation.needsReview`. CaseLab's report, the case files list and the case file show "Needs review".
+- **New checks.**
+  - Scene leaks (`SceneWords`): a scene sharing three or more distinctive words, and a third of them, with a gated reveal is an error for the hook step. The hook prompt now asks for only what anyone sees on arrival, and the critic has a `scenes` check.
+  - The hook names people as the case does ("my sister Maja" with no Maja is an error).
+  - The hook-giver knows what the hook states. The hook step adds what they lack as parish talk, which is hearsay and never a way in.
+  - A beat's actor puts out only what they know, or their own deed.
+  - Someone who tells a load-bearing fact has a fear and a permitted action.
+  - A tie to no one is an error.
+- **Ids are not names (`PersonIds`).**
+  - Roster people get `npc-<place>-<role>` ids from code; the model numbers them p1, p2...
+  - A new person whose model-given id is made from their name is re-keyed the same way before anything refers to them.
+  - Roster people now carry a fear.
+- **Residents' patches** run on the small model (`LightModel`).
+- **Geography against the map.** A level's `analogueAt` and each neighbour's `at` (latitude, longitude) let the content validator check stated distances and directions. Ekeby's neighbours are corrected. The transport canon splits the Eastern Main Line: Katrineholm to Linköping by 1872, Linköping to Nässjö in 1874. Mjölby's own date is not confirmed, so Ekeby's railhead is Linköping. Mossaby goes by Falköping before 1874.
+
 ### Review 2 (case 06)
 
 - **Fixes are verified.** In the last round, nothing is marked applied on trust:

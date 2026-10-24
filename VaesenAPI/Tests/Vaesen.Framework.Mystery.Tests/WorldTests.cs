@@ -85,12 +85,12 @@ public sealed class WorldTests
         var withWorld = new ValidationContext
         {
             Pack = context.Pack, Level = context.Level, Vaesen = context.Vaesen, Conflict = context.Conflict,
-            SocietyCharacterIds = ["npc-per-holm"],
+            SocietyCharacterIds = ["npc-case-miller"],
         };
 
         var issues = new CaseValidator().Validate(packet, withWorld, CheckScope.Cast);
 
-        Assert.Contains(issues, i => i.IsError && i.Location == "cast:npc-per-holm");
+        Assert.Contains(issues, i => i.IsError && i.Location == "cast:npc-case-miller");
     }
 
     [Fact]
@@ -104,8 +104,8 @@ public sealed class WorldTests
 
         // Give the deep solve a measurable cost, as a generated case would.
         var lever = stored.Packet.ResolutionLevers.Single(l => l.Id == "r2");
-        lever.Consequences.Attitudes.Single(a => a.CharacterId == "npc-axel-wester").Delta = -2;
-        lever.Consequences.Fates.Add(new CharacterFate { CharacterId = "npc-lars-spelman", Status = CharacterStatuses.Departed, Reason = "Left for Uppsala to play for money." });
+        lever.Consequences.Attitudes.Single(a => a.CharacterId == "npc-case-sawmill-manager").Delta = -2;
+        lever.Consequences.Fates.Add(new CharacterFate { CharacterId = "npc-case-fiddler", Status = CharacterStatuses.Departed, Reason = "Left for Uppsala to play for money." });
         await store.SaveAsync(stored);
 
         var closed = await worlds.CloseMysteryAsync("society-test", stored.Packet.MysteryId,
@@ -117,15 +117,15 @@ public sealed class WorldTests
         Assert.NotEmpty(closed.Result.Closing.Changes);
 
         var world = (await worlds.GetAsync("society-test")).Result!;
-        var anna = world.Find("npc-anna-lind")!;
+        var anna = world.Find("npc-case-maid")!;
         Assert.Equal(WorldTiers.Core, anna.Tier);
         Assert.Equal(1, anna.Attitude);
         Assert.Contains(anna.Memories, m => m.Text.Contains("Played on a Thursday.", StringComparison.Ordinal));
         Assert.Contains(anna.Knowledge, k => k.FactId == "f2");
-        Assert.Equal(-2, world.Find("npc-axel-wester")!.Attitude);
-        Assert.Equal(CharacterStatuses.Departed, world.Find("npc-lars-spelman")!.Status);
-        Assert.Equal(WorldTiers.LocationResident, world.Find("npc-greta-forsberg")!.Tier);
-        Assert.Equal("level-forsby-october/inn", world.Find("npc-greta-forsberg")!.Home);
+        Assert.Equal(-2, world.Find("npc-case-sawmill-manager")!.Attitude);
+        Assert.Equal(CharacterStatuses.Departed, world.Find("npc-case-fiddler")!.Status);
+        Assert.Equal(WorldTiers.LocationResident, world.Find("npc-inn-serving-woman")!.Tier);
+        Assert.Equal("level-forsby-october/inn", world.Find("npc-inn-serving-woman")!.Home);
         Assert.Single(world.Overlay);
         Assert.Contains(stored.Packet.MysteryId, world.ClosedMysteryIds);
         Assert.DoesNotContain(WorldValidator.Validate(world, ContentTests.LoadPack()), i => i.IsError);
@@ -141,7 +141,7 @@ public sealed class WorldTests
         var (generator, _, store) = PipelineTests.Build(new MysteryOptions { UseCritic = false }, model, out var worlds);
         var stored = (await generator.GenerateAsync(Request())).Result!.Case;
         stored.Packet.ResolutionLevers.Single(l => l.Id == "r2").Consequences.Fates.Add(
-            new CharacterFate { CharacterId = "npc-lars-spelman", Status = CharacterStatuses.Departed, Reason = "Gone." });
+            new CharacterFate { CharacterId = "npc-case-fiddler", Status = CharacterStatuses.Departed, Reason = "Gone." });
         await store.SaveAsync(stored);
         var closed = await worlds.CloseMysteryAsync("society-test", stored.Packet.MysteryId, new CloseMysteryRequest { LeverId = "r2" });
         Assert.True(closed.Success, closed.ErrorMessage);
@@ -150,9 +150,9 @@ public sealed class WorldTests
 
         var context = model.Contexts.Last(c => c.Contains("# Persistent characters", StringComparison.Ordinal));
         var offered = context[context.IndexOf("# Persistent characters", StringComparison.Ordinal)..];
-        Assert.Contains("npc-anna-lind", offered, StringComparison.Ordinal);
+        Assert.Contains("npc-case-maid", offered, StringComparison.Ordinal);
         Assert.Contains("# Dead or gone", offered, StringComparison.Ordinal);
-        Assert.Contains("Lars Spelman (npc-lars-spelman): departed", offered, StringComparison.Ordinal);
+        Assert.Contains("Lars Spelman (npc-case-fiddler): departed", offered, StringComparison.Ordinal);
         Assert.Contains("# What the Society's past mysteries have changed", offered, StringComparison.Ordinal);
     }
 

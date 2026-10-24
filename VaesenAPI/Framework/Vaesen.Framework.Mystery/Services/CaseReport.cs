@@ -33,7 +33,7 @@ public static class CaseReport
         s.AppendLine(inv, $"- **Creature:** {string.Join(", ", p.Brief.VaesenIds)}; reason {p.Truth.ReasonKind}{(p.Truth.Origin is null ? "" : $", origin {p.Truth.Origin}")}");
         s.AppendLine(inv, $"- **Shape:** focus {p.Truth.Focus}, plot centre {p.Truth.PlotCentre.Kind}{(p.Truth.PlotCentre.CharacterId is null ? "" : $" ({p.Truth.PlotCentre.CharacterId})")}, conflict {p.Brief.ConflictArchetypeId}");
         s.AppendLine(inv, $"- **Hook:** {p.Hook.Channel} from {Name(p, p.Hook.HookGiverId)}");
-        s.AppendLine(inv, $"- **Validation:** {(p.Validation.Passed ? "passed" : "FAILED")}, {p.Validation.Runs} validator runs, {p.Validation.Issues.Count(i => i.IsError)} errors, {p.Validation.Issues.Count(i => !i.IsError)} warnings");
+        s.AppendLine(inv, $"- **Validation:** {(p.Validation.Passed ? p.Validation.NeedsReview ? "passed, NEEDS REVIEW (a blocking critic issue was not fixed)" : "passed" : "FAILED")}, {p.Validation.Runs} validator runs, {p.Validation.Issues.Count(i => i.IsError)} errors, {p.Validation.Issues.Count(i => !i.IsError)} warnings");
         if (brief?.Notes.Count > 0)
         {
             s.AppendLine(inv, $"- **Assignment notes:** {string.Join(" ", brief.Notes)}");
@@ -207,7 +207,7 @@ public static class CaseReport
 
         foreach (var i in p.Validation.Issues.OrderBy(i => i.IsError ? 0 : 1))
         {
-            s.AppendLine(inv, $"- {(i.IsError ? "**error**" : "warning")}{(i.Applied ? " (fix verified)" : "")}{(i.Unresolved is null ? "" : $" (fix did not hold: {i.Unresolved})")} `{i.Code}` at {i.Location} ({i.Source}): {i.Explanation}{(i.SuggestedFix is null ? "" : $" *Fix:* {i.SuggestedFix}")}");
+            s.AppendLine(inv, $"- {(i.IsError ? "**error**" : "warning")}{(i.Blocking ? " **blocking**" : "")}{(i.Applied ? " (fix verified)" : "")}{(i.Unresolved is null ? "" : $" (fix did not hold: {i.Unresolved})")} `{i.Code}` at {i.Location} ({i.Source}): {i.Explanation}{(i.SuggestedFix is null ? "" : $" *Fix:* {i.SuggestedFix}")}");
         }
 
         if (log is { Count: > 0 })

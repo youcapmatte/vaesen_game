@@ -36,7 +36,7 @@
   },
   "hook": {
     "channel": "contact-letter",
-    "hookGiverId": "npc-anna-lind",
+    "hookGiverId": "npc-case-maid",
     "text": "Honoured gentlemen, I was told by Mrs Strand of the posting inn that you listen to things others laugh at. My brother Johan went into the log pond at Forsby on the tenth and has not come up, and the constable says the current took him, but there is no current there. The mill wheel stops at night with nothing in it. Our cows will not go near the ford. People say it is all one thing and will not say what. I am a servant at Storgården and cannot pay much, but I beg you to come before the ice.",
     "assertedFactIds": [ "f1", "f2", "f3" ],
     "openingEventIds": [ "e1", "e2", "e3" ]
@@ -73,60 +73,61 @@
     { "id": "f17", "statement": "The miller's boy was pulled toward the race at dusk and dragged out by the smith.", "loadBearing": false, "kind": "symptom", "pointsTo": "trueAnswer", "giveaway": false, "deepLore": false, "loreIds": [] }
   ],
   "channels": [
-    { "id": "c1", "factId": "f4", "kind": "testimony", "sourceCharacterId": "npc-greta-forsberg", "placeId": null, "affordanceId": null, "access": { "requires": [] }, "reveal": "Greta says the guests on the bridge side hear a fiddle late at night, and Lars swears it is not him." },
+    { "id": "c1", "factId": "f4", "kind": "testimony", "sourceCharacterId": "npc-inn-serving-woman", "placeId": null, "affordanceId": null, "access": { "requires": [] }, "reveal": "Greta says the guests on the bridge side hear a fiddle late at night, and Lars swears it is not him." },
     { "id": "c2", "factId": "f4", "kind": "event", "sourceCharacterId": null, "placeId": "inn", "affordanceId": "inn-guest-room-1", "access": { "requires": [ "time:night" ] }, "reveal": "Late at night a slow tune drifts up from somewhere along the rapids." },
     { "id": "c3", "factId": "f5", "kind": "trace", "sourceCharacterId": null, "placeId": "mill", "affordanceId": "mill-waterwheel", "access": { "requires": [ "roll:inspection" ] }, "reveal": "The race runs a hand lower than the moss line on its stones; the water has been taken from it recently." },
     { "id": "c4", "factId": "f5", "kind": "document", "sourceCharacterId": null, "placeId": "sawmill", "affordanceId": "sawmill-counting-house-desk-drawer", "access": { "requires": [ "roll:stealth" ] }, "reveal": "A contract dated August for a log dam 'to raise the pond and take the whole river to the saw'." },
-    { "id": "c5", "factId": "f5", "kind": "testimony", "sourceCharacterId": "npc-per-holm", "placeId": null, "affordanceId": null, "access": { "requires": [ "trust>=1" ] }, "reveal": "Holm says the race has run thin since the company put up its dam, and the wheel was slow even before it started stopping." },
+    { "id": "c5", "factId": "f5", "kind": "testimony", "sourceCharacterId": "npc-case-miller", "placeId": null, "affordanceId": null, "access": { "requires": [ "trust>=1" ] }, "reveal": "Holm says the race has run thin since the company put up its dam, and the wheel was slow even before it started stopping." },
     { "id": "c6", "factId": "f6", "kind": "knowledgeGated", "sourceCharacterId": "npc-kajsa-granback", "placeId": null, "affordanceId": null, "access": { "requires": [ "knowsFact:f1" ] }, "reveal": "Old Tyra asks whether Holm left the coin and the cake at the race this year, as his father always did, and says a mill that forgets its due gets its wheel stopped." },
-    { "id": "c7", "factId": "f6", "kind": "testimony", "sourceCharacterId": "npc-brita-holm", "placeId": null, "affordanceId": null, "access": { "requires": [ "trust>=1" ] }, "reveal": "Signe admits that Per left nothing at the race this autumn, for the first time since they married." },
+    { "id": "c7", "factId": "f6", "kind": "testimony", "sourceCharacterId": "npc-case-miller-wife", "placeId": null, "affordanceId": null, "access": { "requires": [ "trust>=1" ] }, "reveal": "Signe admits that Per left nothing at the race this autumn, for the first time since they married." },
     { "id": "c8", "factId": "f6", "kind": "trace", "sourceCharacterId": null, "placeId": "mill", "affordanceId": "mill-waterwheel", "access": { "requires": [ "roll:investigation" ] }, "reveal": "On a ledge under the race, a row of rusted coins from past years, and a bare place where this year's should be." },
     { "id": "c9", "factId": "f7", "kind": "knowledgeGated", "sourceCharacterId": "npc-kajsa-granback", "placeId": null, "affordanceId": null, "access": { "requires": [ "knowsFact:f6", "trust>=1" ] }, "reveal": "Tyra says it is the one in the falls that is owed, the fiddler under the water, and that it keeps the drowned who are never found." },
     { "id": "c10", "factId": "f7", "kind": "document", "sourceCharacterId": null, "placeId": "church", "affordanceId": "church-sacristy-chest", "access": { "requires": [ "knowsFact:f6", "roll:learning" ] }, "reveal": "A 1791 note in the parish chest: the miller fined for 'sacrificing to the fosskarl at the race', with the old miller's own plea that the wheel stops if he does not." },
     { "id": "c11", "factId": "f8", "kind": "event", "sourceCharacterId": null, "placeId": "mill", "affordanceId": "mill-waterwheel", "access": { "requires": [ "knowsFact:f7", "time:dusk" ] }, "reveal": "At dusk, over the thin roar of the race, a voice weeps and asks whether it will ever be saved." },
     { "id": "c12", "factId": "f9", "kind": "knowledgeGated", "sourceCharacterId": "npc-kajsa-granback", "placeId": null, "affordanceId": null, "access": { "requires": [ "knowsFact:f7", "trust>=2" ] }, "reveal": "Tyra says it can be paid back with its due and its water, or nailed down with steel in the race - and that the second is a cruel thing to do to it." },
     { "id": "c13", "factId": "f9", "kind": "document", "sourceCharacterId": null, "placeId": "church", "affordanceId": "church-sacristy-chest", "access": { "requires": [ "knowsFact:f7", "roll:learning" ] }, "reveal": "The same parish note records that a knife driven into the race-bed 'silenced the fosskarl', and that the falls then gave no fish for seven years." },
-    { "id": "c14", "factId": "f10", "kind": "overheard", "sourceCharacterId": "npc-erik-smed", "placeId": "inn", "affordanceId": "inn-taproom", "access": { "requires": [] }, "reveal": "The smith grumbles that Greta's brännvin gets weaker every time a gentleman from Uppsala sits down." },
-    { "id": "c15", "factId": "f11", "kind": "testimony", "sourceCharacterId": "npc-greta-forsberg", "placeId": null, "affordanceId": null, "access": { "requires": [] }, "reveal": "Greta says Lars played like a pig scraping a gate last winter and now people come from two parishes to hear him." },
-    { "id": "c16", "factId": "f11", "kind": "overheard", "sourceCharacterId": "npc-erik-smed", "placeId": "inn", "affordanceId": "inn-taproom", "access": { "requires": [] }, "reveal": "In the taproom someone mutters that Lars has been to the falls, and a few men nod." },
-    { "id": "c17", "factId": "f12", "kind": "testimony", "sourceCharacterId": "npc-greta-forsberg", "placeId": null, "affordanceId": null, "access": { "requires": [ "knowsFact:f11" ] }, "reveal": "Greta says Lars played in her taproom from dark until two the night Johan went missing; the whole room saw him." },
+    { "id": "c14", "factId": "f10", "kind": "overheard", "sourceCharacterId": "npc-smithy-smith", "placeId": "inn", "affordanceId": "inn-taproom", "access": { "requires": [] }, "reveal": "The smith grumbles that Greta's brännvin gets weaker every time a gentleman from Uppsala sits down." },
+    { "id": "c15", "factId": "f11", "kind": "testimony", "sourceCharacterId": "npc-inn-serving-woman", "placeId": null, "affordanceId": null, "access": { "requires": [] }, "reveal": "Greta says Lars played like a pig scraping a gate last winter and now people come from two parishes to hear him." },
+    { "id": "c16", "factId": "f11", "kind": "overheard", "sourceCharacterId": "npc-smithy-smith", "placeId": "inn", "affordanceId": "inn-taproom", "access": { "requires": [] }, "reveal": "In the taproom someone mutters that Lars has been to the falls, and a few men nod." },
+    { "id": "c17", "factId": "f12", "kind": "testimony", "sourceCharacterId": "npc-inn-serving-woman", "placeId": null, "affordanceId": null, "access": { "requires": [ "knowsFact:f11" ] }, "reveal": "Greta says Lars played in her taproom from dark until two the night Johan went missing; the whole room saw him." },
     { "id": "c18", "factId": "f12", "kind": "document", "sourceCharacterId": null, "placeId": "inn", "affordanceId": "inn-office-desk-drawer", "access": { "requires": [ "knowsFact:f11", "roll:investigation" ] }, "reveal": "The inn's book for the tenth: 'dance in the taproom, Lars Spelman paid two riksdaler, closed past two'." },
     { "id": "c19", "factId": "f13", "kind": "document", "sourceCharacterId": null, "placeId": "inn", "affordanceId": "inn-guest-room-1-chest", "access": { "requires": [ "knowsFact:f11" ] }, "reveal": "Letters from an Uppsala music master, thanking Lars for his summer's fees and praising his progress." },
-    { "id": "c20", "factId": "f13", "kind": "testimony", "sourceCharacterId": "npc-lars-spelman", "placeId": null, "affordanceId": null, "access": { "requires": [ "knowsFact:f11", "trust>=1" ] }, "reveal": "Lars, stung, says he spent every coin he had on a master in Uppsala all summer and practised till his fingers bled." },
-    { "id": "c21", "factId": "f14", "kind": "testimony", "sourceCharacterId": "npc-per-holm", "placeId": null, "affordanceId": null, "access": { "requires": [ "trust>=2" ] }, "reveal": "Holm, ashamed, says Wester laughed at the offering in front of the men and said a company tenant who keeps heathen customs keeps no lease." },
-    { "id": "c22", "factId": "f14", "kind": "testimony", "sourceCharacterId": "npc-brita-holm", "placeId": null, "affordanceId": null, "access": { "requires": [ "trust>=2" ] }, "reveal": "Signe says it was Wester's doing: he shamed Per into leaving nothing, and Per has not slept since." },
+    { "id": "c20", "factId": "f13", "kind": "testimony", "sourceCharacterId": "npc-case-fiddler", "placeId": null, "affordanceId": null, "access": { "requires": [ "knowsFact:f11", "trust>=1" ] }, "reveal": "Lars, stung, says he spent every coin he had on a master in Uppsala all summer and practised till his fingers bled." },
+    { "id": "c21", "factId": "f14", "kind": "testimony", "sourceCharacterId": "npc-case-miller", "placeId": null, "affordanceId": null, "access": { "requires": [ "trust>=2" ] }, "reveal": "Holm, ashamed, says Wester laughed at the offering in front of the men and said a company tenant who keeps heathen customs keeps no lease." },
+    { "id": "c22", "factId": "f14", "kind": "testimony", "sourceCharacterId": "npc-case-miller-wife", "placeId": null, "affordanceId": null, "access": { "requires": [ "trust>=2" ] }, "reveal": "Signe says it was Wester's doing: he shamed Per into leaving nothing, and Per has not slept since." },
     { "id": "c23", "factId": "f14", "kind": "document", "sourceCharacterId": null, "placeId": "mill", "affordanceId": "mill-counting-house-desk-drawer", "access": { "requires": [ "roll:investigation" ] }, "reveal": "A note from Wester to Holm: 'The company expects its tenants to be modern men. Superstition at the race will be remembered at Michaelmas.'" },
-    { "id": "c24", "factId": "f15", "kind": "testimony", "sourceCharacterId": "npc-erik-smed", "placeId": null, "affordanceId": null, "access": { "requires": [] }, "reveal": "The smith says nobody below the falls has had a decent catch since the leaves turned." },
-    { "id": "c25", "factId": "f5", "kind": "testimony", "sourceCharacterId": "npc-axel-wester", "placeId": null, "affordanceId": null, "access": { "requires": [ "knowsFact:f1" ] }, "reveal": "Wester says proudly that the new dam gives the saw the whole river now, and the old mill can grind with what is left." },
+    { "id": "c24", "factId": "f15", "kind": "testimony", "sourceCharacterId": "npc-smithy-smith", "placeId": null, "affordanceId": null, "access": { "requires": [] }, "reveal": "The smith says nobody below the falls has had a decent catch since the leaves turned." },
+    { "id": "c25", "factId": "f5", "kind": "testimony", "sourceCharacterId": "npc-case-sawmill-manager", "placeId": null, "affordanceId": null, "access": { "requires": [ "knowsFact:f1" ] }, "reveal": "Wester says proudly that the new dam gives the saw the whole river now, and the old mill can grind with what is left." },
     { "id": "c26", "factId": "f16", "kind": "event", "sourceCharacterId": null, "placeId": null, "affordanceId": null, "access": { "requires": [ "afterBeat:b2" ] }, "reveal": "Next morning the clerk at the saw complains loudly that the dam papers have gone from the office." },
     { "id": "c27", "factId": "f17", "kind": "event", "sourceCharacterId": null, "placeId": null, "affordanceId": null, "access": { "requires": [ "afterBeat:b3" ] }, "reveal": "By morning the whole village knows the miller's boy was nearly lost at the race." }
   ],
+  "offstagePeople": [ { "id": "johan", "name": "Johan Lind", "relation": "Anna Lind's brother, drowned in the log pond", "note": "Went into the pond on the tenth and has not come up." } ],
   "cast": [
     {
-      "characterId": "npc-anna-lind", "name": "Anna Lind", "instanceRef": "new", "plotRole": "hook-giver", "importance": "significant", "roleSlotId": "victim",
+      "characterId": "npc-case-maid", "name": "Anna Lind", "instanceRef": "new", "plotRole": "hook-giver", "importance": "significant", "roleSlotId": "victim",
       "identity": { "age": 22, "gender": "female", "occupation": "maid at Storgården", "rank": "farmhand or maid", "home": "Forsby", "appearance": "Thin, red-handed, a black ribbon sewn on her sleeve." },
       "homePlaceId": "farm",
-      "knows": [ { "factId": "f2", "source": "told:npc-erik-smed", "when": "the morning after" }, { "factId": "f3", "source": "witnessed", "when": "this month" }, { "factId": "f1", "source": "told:npc-brita-holm", "when": "last week" } ],
+      "knows": [ { "factId": "f2", "source": "told:npc-smithy-smith", "when": "the morning after" }, { "factId": "f3", "source": "witnessed", "when": "this month" }, { "factId": "f1", "source": "told:npc-case-miller-wife", "when": "last week" } ],
       "thinks": [ { "belief": "Lars the fiddler sold Johan to the falls for his music.", "true": false } ],
       "wants": { "drives": [ "to have her brother buried", "to be believed" ], "fears": [ "losing her place for spreading stories" ], "guilt": "She quarrelled with Johan the day he died.", "exposureBelief": 0.1, "permittedActions": [ { "id": "anna-plead", "desperation": "medium", "description": "Begs the Society to drag the pond.", "effects": [] } ] },
       "secrets": [ "She quarrelled with Johan about his drinking the day he died." ], "lies": [],
-      "routine": "Milking at five, the farm kitchen all day, church on Sunday.", "voiceNotes": "Quick, low, apologetic; says 'begging your pardon' often.", "relationships": [ { "characterId": "npc-lars-spelman", "nature": "suspects him", "sentiment": -2 } ]
+      "routine": "Milking at five, the farm kitchen all day, church on Sunday.", "voiceNotes": "Quick, low, apologetic; says 'begging your pardon' often.", "relationships": [ { "characterId": "npc-case-fiddler", "nature": "suspects him", "sentiment": -2 } ]
     },
     {
-      "characterId": "npc-per-holm", "name": "Per Holm", "instanceRef": "new", "plotRole": "the one who neglected the custom", "importance": "significant", "roleSlotId": "go-between",
+      "characterId": "npc-case-miller", "name": "Per Holm", "instanceRef": "new", "plotRole": "the one who neglected the custom", "importance": "significant", "roleSlotId": "go-between",
       "identity": { "age": 51, "gender": "male", "occupation": "miller", "rank": "tenant farmer", "home": "Forsby Mill", "appearance": "Flour in the creases of his face, big shoulders gone soft, eyes red from no sleep." },
       "homePlaceId": "mill",
       "knows": [ { "factId": "f1", "source": "witnessed", "when": "every night" }, { "factId": "f5", "source": "witnessed", "when": "since August" }, { "factId": "f6", "source": "self", "when": "the start of the season" }, { "factId": "f14", "source": "witnessed", "when": "September" } ],
       "thinks": [ { "belief": "The river is punishing him for leaving nothing.", "true": true } ],
       "wants": { "drives": [ "to keep the lease", "to have the wheel turn" ], "fears": [ "the company", "that Johan's death is on him" ], "guilt": "He thinks he killed Johan by leaving nothing.", "exposureBelief": 0.4, "permittedActions": [ { "id": "holm-deflect", "desperation": "low", "description": "Blames the dam and nothing else.", "effects": [] }, { "id": "holm-confess", "desperation": "high", "description": "Confesses the broken offering to the vicar.", "effects": [ "emits f6" ] } ] },
       "secrets": [ "He left nothing at the race this year." ], "lies": [ { "about": "f6", "story": "That he made the offering as always." } ],
-      "routine": "At the mill from dawn; drinks alone in the counting house after dark.", "voiceNotes": "Slow, heavy, answers questions with questions.", "relationships": [ { "characterId": "npc-axel-wester", "nature": "his landlord's man", "sentiment": -2 }, { "characterId": "npc-brita-holm", "nature": "husband", "sentiment": 2 } ]
+      "routine": "At the mill from dawn; drinks alone in the counting house after dark.", "voiceNotes": "Slow, heavy, answers questions with questions.", "relationships": [ { "characterId": "npc-case-sawmill-manager", "nature": "his landlord's man", "sentiment": -2 }, { "characterId": "npc-case-miller-wife", "nature": "husband", "sentiment": 2 } ]
     },
     {
-      "characterId": "npc-brita-holm", "name": "Signe Holm", "instanceRef": "new", "plotRole": "witness", "importance": "significant", "roleSlotId": null,
+      "characterId": "npc-case-miller-wife", "name": "Signe Holm", "instanceRef": "new", "plotRole": "witness", "importance": "significant", "roleSlotId": null,
       "identity": { "age": 47, "gender": "female", "occupation": "miller's wife", "rank": "tenant farmer", "home": "Forsby Mill", "appearance": "Small, quick, a shawl crossed and knotted tight." },
       "homePlaceId": "mill",
-      "knows": [ { "factId": "f1", "source": "witnessed", "when": "every night" }, { "factId": "f6", "source": "witnessed", "when": "the start of the season" }, { "factId": "f14", "source": "told:npc-per-holm", "when": "September" } ],
+      "knows": [ { "factId": "f1", "source": "witnessed", "when": "every night" }, { "factId": "f6", "source": "witnessed", "when": "the start of the season" }, { "factId": "f14", "source": "told:npc-case-miller", "when": "September" } ],
       "thinks": [ { "belief": "Wester is to blame for all of it.", "true": false } ],
       "wants": { "drives": [ "to protect Per" ], "fears": [ "losing the mill" ], "guilt": null, "exposureBelief": 0.2, "permittedActions": [ { "id": "brita-plead", "desperation": "medium", "description": "Pleads with the Society not to tell the company.", "effects": [] } ] },
       "secrets": [], "lies": [],
@@ -136,34 +137,34 @@
       "characterId": "npc-kajsa-granback", "name": "Tyra at Granbacken", "instanceRef": "new", "plotRole": "the warner who knows the old ways", "importance": "significant", "roleSlotId": "warner",
       "identity": { "age": 78, "gender": "female", "occupation": "crofter's widow", "rank": "crofter", "home": "Granbacken", "appearance": "Bent nearly double, a clay pipe, very bright eyes." },
       "homePlaceId": "croft",
-      "knows": [ { "factId": "f1", "source": "told:npc-brita-holm", "when": "a Thursday" }, { "factId": "f6", "source": "told:npc-brita-holm", "when": "a Thursday" }, { "factId": "f7", "source": "lore", "when": "always" }, { "factId": "f9", "source": "lore", "when": "always" } ],
+      "knows": [ { "factId": "f1", "source": "told:npc-case-miller-wife", "when": "a Thursday" }, { "factId": "f6", "source": "told:npc-case-miller-wife", "when": "a Thursday" }, { "factId": "f7", "source": "lore", "when": "always" }, { "factId": "f9", "source": "lore", "when": "always" } ],
       "thinks": [ { "belief": "The young people deserve what they get for laughing.", "true": false } ],
       "wants": { "drives": [ "that the old ways be kept" ], "fears": [ "being called a witch again" ], "guilt": null, "exposureBelief": 0.0, "permittedActions": [ { "id": "kajsa-silence", "desperation": "low", "description": "Pretends to be deaf to gentlefolk.", "effects": [] } ] },
       "secrets": [ "She was tried for witchcraft talk in 1838." ], "lies": [],
       "routine": "Sits at her door when it is dry; sees no one but Signe.", "voiceNotes": "Riddling, dialect-heavy, laughs at her own jokes.", "relationships": []
     },
     {
-      "characterId": "npc-axel-wester", "name": "Hugo Wester", "instanceRef": "new", "plotRole": "the one who provoked", "importance": "significant", "roleSlotId": "provoker",
+      "characterId": "npc-case-sawmill-manager", "name": "Hugo Wester", "instanceRef": "new", "plotRole": "the one who provoked", "importance": "significant", "roleSlotId": "provoker",
       "identity": { "age": 36, "gender": "male", "occupation": "sawmill manager", "rank": "burgher", "home": "the sawmill house", "appearance": "Clean-shaven, a watch chain, boots too good for the mud." },
       "homePlaceId": "sawmill",
-      "knows": [ { "factId": "f5", "source": "self", "when": "August" }, { "factId": "f14", "source": "self", "when": "September" }, { "factId": "f1", "source": "told:npc-per-holm", "when": "this month" } ],
+      "knows": [ { "factId": "f5", "source": "self", "when": "August" }, { "factId": "f14", "source": "self", "when": "September" }, { "factId": "f1", "source": "told:npc-case-miller", "when": "this month" } ],
       "thinks": [ { "belief": "Holm stops his own wheel to get the rent lowered.", "true": false } ],
       "wants": { "drives": [ "to make the saw pay", "to be seen as a modern man" ], "fears": [ "the company's directors" ], "guilt": null, "exposureBelief": 0.3, "permittedActions": [ { "id": "wester-hide", "desperation": "medium", "description": "Has the dam papers taken from the office.", "effects": [ "closes c4", "emits f16" ] } ] },
       "secrets": [ "The dam was built without the county's permit." ], "lies": [],
       "routine": "The saw by day, the inn's best room in the evening.", "voiceNotes": "Brisk, superior, quotes newspapers.", "relationships": []
     },
     {
-      "characterId": "npc-lars-spelman", "name": "Lars Spelman", "instanceRef": "new", "plotRole": "suspect (decoy)", "importance": "significant", "roleSlotId": null,
+      "characterId": "npc-case-fiddler", "name": "Lars Spelman", "instanceRef": "new", "plotRole": "suspect (decoy)", "importance": "significant", "roleSlotId": null,
       "identity": { "age": 27, "gender": "male", "occupation": "fiddler and day labourer", "rank": "worker", "home": "the inn's back room", "appearance": "Long hands, a patched coat, a new fiddle case." },
       "homePlaceId": "inn",
       "knows": [ { "factId": "f12", "source": "self", "when": "the tenth" }, { "factId": "f13", "source": "self", "when": "the summer" } ],
       "thinks": [ { "belief": "The village wants someone to blame and he will do.", "true": true } ],
       "wants": { "drives": [ "to be a real musician" ], "fears": [ "a mob" ], "guilt": null, "exposureBelief": 0.6, "permittedActions": [ { "id": "lars-flee", "desperation": "high", "description": "Leaves for Uppsala by night.", "effects": [] } ] },
       "secrets": [], "lies": [],
-      "routine": "Labours at the saw by day and plays at the inn at night.", "voiceNotes": "Proud and touchy, then suddenly funny.", "relationships": [ { "characterId": "npc-anna-lind", "nature": "was courting her once", "sentiment": 1 } ]
+      "routine": "Labours at the saw by day and plays at the inn at night.", "voiceNotes": "Proud and touchy, then suddenly funny.", "relationships": [ { "characterId": "npc-case-maid", "nature": "was courting her once", "sentiment": 1 } ]
     },
     {
-      "characterId": "npc-greta-forsberg", "name": "Greta Forsberg", "instanceRef": "new", "plotRole": "innkeeper", "importance": "resident", "roleSlotId": null,
+      "characterId": "npc-inn-serving-woman", "name": "Greta Forsberg", "instanceRef": "new", "plotRole": "innkeeper", "importance": "resident", "roleSlotId": null,
       "identity": { "age": 44, "gender": "female", "occupation": "innkeeper", "rank": "burgher", "home": "Forsby Posting Inn", "appearance": "Broad, aproned, a ring of keys." },
       "homePlaceId": "inn",
       "knows": [ { "factId": "f4", "source": "witnessed", "when": "this month" }, { "factId": "f11", "source": "witnessed", "when": "this autumn" }, { "factId": "f12", "source": "witnessed", "when": "the tenth" } ],
@@ -171,7 +172,7 @@
       "secrets": [], "lies": [], "routine": "The taproom from noon.", "voiceNotes": "Loud and kind.", "relationships": []
     },
     {
-      "characterId": "npc-erik-smed", "name": "Erik the smith", "instanceRef": "new", "plotRole": "resident", "importance": "resident", "roleSlotId": null,
+      "characterId": "npc-smithy-smith", "name": "Erik the smith", "instanceRef": "new", "plotRole": "resident", "importance": "resident", "roleSlotId": null,
       "identity": { "age": 39, "gender": "male", "occupation": "blacksmith", "rank": "worker", "home": "the smithy at the bridge", "appearance": "Scorched forearms, a missing front tooth." },
       "homePlaceId": "smithy",
       "knows": [ { "factId": "f2", "source": "witnessed", "when": "twelve days ago" }, { "factId": "f10", "source": "witnessed", "when": "often" }, { "factId": "f11", "source": "witnessed", "when": "this autumn" }, { "factId": "f15", "source": "witnessed", "when": "this autumn" } ],
@@ -184,13 +185,13 @@
   ],
   "beats": [
     { "id": "b1", "threshold": 0.3, "description": "The wheel stops in broad daylight in front of the Society.", "requires": { "place": "mill", "time": null }, "emitsFactIds": [ "f4" ], "actorId": null },
-    { "id": "b2", "threshold": 0.45, "description": "Wester, feeling watched, has the dam papers taken from the sawmill office.", "requires": { "place": null, "time": null }, "emitsFactIds": [ "f16" ], "actorId": "npc-axel-wester", "actionId": "wester-hide" },
-    { "id": "b3", "threshold": 0.6, "description": "At dusk the miller's boy is pulled toward the race and the smith drags him out.", "requires": { "place": "mill", "time": "dusk" }, "emitsFactIds": [ "f17" ], "actorId": "npc-erik-smed" }
+    { "id": "b2", "threshold": 0.45, "description": "Wester, feeling watched, has the dam papers taken from the sawmill office.", "requires": { "place": null, "time": null }, "emitsFactIds": [ "f16" ], "actorId": "npc-case-sawmill-manager", "actionId": "wester-hide" },
+    { "id": "b3", "threshold": 0.6, "description": "At dusk the miller's boy is pulled toward the race and the smith drags him out.", "requires": { "place": "mill", "time": "dusk" }, "emitsFactIds": [ "f17" ], "actorId": "npc-smithy-smith" }
   ],
   "climax": { "threshold": 0.8, "conditions": { "place": "mill", "time": "a Thursday evening at dusk" }, "description": "At the race at dusk on a Thursday, the Näck rises to meet whoever answers it." },
   "resolutionLevers": [
     { "id": "r1", "description": "Drive steel into the race-bed and bind the Näck.", "solveDepth": "crude", "requiresFactIds": [ "f7", "f9" ], "requiredDeeds": [ { "id": "r1-d1", "description": "Drive steel into the race-bed at dusk.", "place": "mill", "time": "dusk", "performedBy": { "who": [ "players" ], "rule": "any" }, "witnesses": [] } ], "consequences": { "world": [ "The wheel turns again.", "The falls go silent and give no fish." ], "attitudes": [ { "characterId": "npc-kajsa-granback", "change": "Never speaks to the Society again." } ] } },
-    { "id": "r2", "description": "Make the offering again and get the company to give the race back its water.", "solveDepth": "deep", "requiresFactIds": [ "f5", "f6", "f9" ], "deedOrder": "listed", "requiredDeeds": [ { "id": "r2-d1", "description": "Get the company to open the dam so the race runs full.", "place": "sawmill", "performedBy": { "who": [ "npc-axel-wester" ], "rule": "all" }, "witnesses": [] }, { "id": "r2-d2", "description": "Make the offering again at the race at dusk.", "place": "mill", "time": "dusk", "performedBy": { "who": [ "players", "npc-per-holm" ], "rule": "any" }, "witnesses": [] } ], "consequences": { "world": [ "The wheel turns, the nets fill, Johan's body comes ashore." ], "attitudes": [ { "characterId": "npc-axel-wester", "change": "Resents the Society for costing the saw its water." }, { "characterId": "npc-per-holm", "change": "Grateful for life." } ] } }
+    { "id": "r2", "description": "Make the offering again and get the company to give the race back its water.", "solveDepth": "deep", "requiresFactIds": [ "f5", "f6", "f9" ], "deedOrder": "listed", "requiredDeeds": [ { "id": "r2-d1", "description": "Get the company to open the dam so the race runs full.", "place": "sawmill", "performedBy": { "who": [ "npc-case-sawmill-manager" ], "rule": "all" }, "witnesses": [] }, { "id": "r2-d2", "description": "Make the offering again at the race at dusk.", "place": "mill", "time": "dusk", "performedBy": { "who": [ "players", "npc-case-miller" ], "rule": "any" }, "witnesses": [] } ], "consequences": { "world": [ "The wheel turns, the nets fill, Johan's body comes ashore." ], "attitudes": [ { "characterId": "npc-case-sawmill-manager", "change": "Resents the Society for costing the saw its water." }, { "characterId": "npc-case-miller", "change": "Grateful for life." } ] } }
   ],
   "creatureMinds": [
     { "vaesenId": "nack", "wants": [ "Its water back in the race" ], "terms": [ "The race runs full again", "The old offering is made again" ], "termDeedIds": [ "r2-d1", "r2-d2" ], "redLines": [ "Steel in its water" ], "knows": [ { "factId": "f9", "source": "witnessed", "when": "since the dam" } ], "thinks": [ { "belief": "The miller took its water", "true": false } ], "voice": "A fiddle, with a young man's voice under it", "reactions": { "offering": "Listens.", "threat": "Laughs.", "steel": "Sinks and waits.", "prayer": "Falls silent.", "bargain": "Asks for the old offering.", "apology": "Hears it out.", "lie": "Knows it, and drowns the talk." } }

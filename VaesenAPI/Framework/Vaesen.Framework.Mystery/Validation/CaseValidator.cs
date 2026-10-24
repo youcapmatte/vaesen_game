@@ -108,6 +108,7 @@ public sealed partial class CaseValidator : ICoherenceValidator
             run.CheckProvenance();
             run.CheckHomes();
             run.CheckMindsPlayable();
+            run.CheckSourcesPlayable();
         }
 
         if (scope.HasFlag(CheckScope.Arc))
@@ -125,6 +126,8 @@ public sealed partial class CaseValidator : ICoherenceValidator
             run.CheckHook();
             run.CheckGeography();
             run.CheckHouseNames();
+            run.CheckSceneLeaks();
+            run.CheckHookNames();
         }
 
         if (scope.HasFlag(CheckScope.Whole))
@@ -135,6 +138,8 @@ public sealed partial class CaseValidator : ICoherenceValidator
             run.CheckHookGiver();
             run.CheckOneHookGiver();
             run.CheckCitedFacts();
+            run.CheckHookGiverKnows();
+            run.CheckBeatProvenance();
             run.CheckBeatsDoNotSolve();
             run.CheckThreatsBelieved();
             run.CheckRedundancy();
@@ -425,10 +430,12 @@ public sealed partial class CaseValidator : ICoherenceValidator
                 }
 
                 // Ties may reach anyone in the Society's world, not only this case's cast.
-                foreach (var rel in member.Relationships.Where(r => packet.FindCast(r.CharacterId) is null
+                foreach (var rel in member.Relationships.Where(r => packet.FindCast(r.CharacterId) is null && !packet.OffstagePeople.Exists(o => o.Id == r.CharacterId)
                     && !context.SocietyCharacterIds.Contains(r.CharacterId) && context.Pack.FindCharacter(r.CharacterId) is null))
                 {
-                    Warn(IssueCodes.UnknownReference, at, $"Relationship to '{rel.CharacterId}', who is not in the cast or the Society's world.");
+                    // A tie to no one is a placeholder the runtime cannot follow (review 3, item 5): an error, fixed by a patch.
+                    Error(IssueCodes.UnknownReference, at, $"Relationship to '{rel.CharacterId}', who is not in the cast or the Society's world.",
+                        "Point the relationship at someone in the cast, the offstage people or the Society's world by their id, or drop it.");
                 }
             }
 
@@ -1474,6 +1481,143 @@ public sealed partial class CaseValidator : ICoherenceValidator
             foreach (var id in packet.Level.SceneDescriptions.Keys.Where(id => context.Level.FindPlace(id) is null))
             {
                 Error(IssueCodes.AffordanceFit, "level.sceneDescriptions", $"Scene for place '{id}', which is not in the level.");
+            }
+        }
+
+        // ---- Review 3: scenes, the hook's writer, beats and the people they lean on ------------------------------
+
+        /// <summary>
+        /// A scene description is read to the players when they arrive (review 3, item 4): it must not show what a
+        /// channel hides behind trust, a roll, a time, an item or another fact. Code compares the scene's words with each
+        /// gated reveal's distinctive words (not the place's own, not what the opening already says); a large overlap is
+        /// an error, sent to the hook and scenes.
+        /// </summary>
+        public void CheckSceneLeaks()
+        {
+            var open = packet.Channels.Where(c => !Gated(c)).Select(c => c.Reveal)
+                .Append(packet.Hook.Text)
+                .Concat(packet.Truth.Escalation.Where(e => e.Opening).Select(e => e.Description));
+            var common = SceneWords.Of(string.Join(' ', open));
+            foreach (var (placeId, scene) in packet.Level.SceneDescriptions)
+            {
+                var place = context.Level.FindPlace(placeId);
+                var own = SceneWords.Of(string.Join(' ', new[] { place?.Name, place?.Description, context.Level.Name }
+                    .Concat(place?.AllAffordances().Select(a => a.Name) ?? [])));
+                var seen = SceneWords.Of(scene);
+                foreach (var channel in packet.Channels.Where(Gated))
+                {
+                    var hidden = SceneWords.Of(channel.Reveal);
+                    hidden.ExceptWith(own);
+                    hidden.ExceptWith(common);
+                    var shown = hidden.Intersect(seen).ToList();
+                    if (shown.Count >= SceneWords.LeakWords && shown.Count * SceneWords.LeakShare >= hidden.Count)
+                    {
+                        Error(IssueCodes.Giveaway, $"scene:{placeId}",
+                            $"The scene at {place?.Name ?? placeId} shows what channel {channel.Id} ({channel.FactId}) keeps behind {string.Join(", ", channel.Access.Requires)}: it shares \"{string.Join("\", \"", shown)}\" with that reveal. The game master reads the scene aloud on arrival.",
+                            $"Cut from the scene what {channel.Id} reveals; describe only what anyone sees on arriving.");
+                        break;
+                    }
+                }
+            }
+        }
+
+        /// <summary>A channel players cannot open on arrival: it needs trust, a roll, a time, an item, a fact or a beat.</summary>
+        private bool Gated(CaseChannel c) =>
+            c.Access.Item is { Length: > 0 } || c.Access.Requires.Exists(r => AccessRequirement.Parse(r) is { Kind: not AccessRequirement.Place });
+
+        /// <summary>
+        /// A relative or person the hook names is someone in the case (review 3, item 3): the hook is the first thing
+        /// players read, and a sister called Maja there and Frida in the case breaks the hook-giver at once.
+        /// </summary>
+        public void CheckHookNames()
+        {
+            var names = packet.Cast.Select(c => c.Name).Concat(packet.OffstagePeople.Select(o => o.Name)).Concat(context.WorldNames.Select(w => w.Name)).ToList();
+            bool Known(string name) => names.Exists(n => n.Split(' ').Contains(name, StringComparer.Ordinal) || n == name);
+            var text = packet.Hook.Text ?? "";
+            var named = HookRelative().Matches(text).Select(m => (Name: m.Groups["name"].Value, Said: m.Value))
+                .Concat(NameRules.Mentioned(text).Select(n => (Name: n, Said: n)));
+            foreach (var (name, said) in named.Where(n => !Known(n.Name)).DistinctBy(n => n.Name))
+            {
+                Error(IssueCodes.CastCoherence, "hook", $"The hook says \"{said}\", but no one in the case is called {name}.",
+                    $"Use the name the case gives that person ({string.Join(", ", packet.OffstagePeople.Select(o => $"{o.Name}, {o.Relation}"))}), or leave the name out.");
+            }
+        }
+
+        [System.Text.RegularExpressions.GeneratedRegex(@"\b(?:[Mm]y|[Oo]ur|[Hh]is|[Hh]er|[Tt]heir)\s+(?:\p{L}+\s+)?(?:sister|brother|wife|husband|daughter|son|mother|father|cousin|aunt|uncle|niece|nephew|friend|neighbour|neighbor|master|mistress|girl|boy|lad)\s*,?\s+(?<name>\p{Lu}\p{Ll}+)")]
+        private static partial System.Text.RegularExpressions.Regex HookRelative();
+
+        /// <summary>
+        /// The hook-giver knows what their hook states (review 3, item 3): the runtime plays them from their knows, and
+        /// would have them deny what they wrote. A warning, sent to minds and channels.
+        /// </summary>
+        public void CheckHookGiverKnows()
+        {
+            if (packet.FindCast(packet.Hook.HookGiverId) is not { } giver)
+            {
+                return;
+            }
+
+            var unknown = packet.Hook.AssertedFactIds.Where(f => packet.FindFact(f) is not null && !giver.Knows.Exists(k => k.FactId == f)).ToList();
+            if (unknown.Count > 0)
+            {
+                WarnOn([$"{giver.CharacterId}.knows"], IssueCodes.Provenance, $"cast:{giver.CharacterId}",
+                    $"{giver.Name} brought the Society with a hook that states {string.Join(", ", unknown)}, which {giver.Name} does not know.",
+                    $"Add {string.Join(", ", unknown)} to {giver.Name}'s knows, with how they learned it.");
+            }
+        }
+
+        /// <summary>
+        /// A beat's actor puts into the world only what they could (review 3, item 3): a fact another person observed is
+        /// not theirs to show or tell, though their own deed in the beat is. A warning, sent to the arc.
+        /// </summary>
+        public void CheckBeatProvenance()
+        {
+            foreach (var beat in packet.Beats)
+            {
+                if (packet.FindCast(beat.ActorId) is not { } actor)
+                {
+                    continue;
+                }
+
+                // A fact that names the actor is their own deed, done in the beat ("Wester has the papers taken"): theirs.
+                var names = new[] { NameRules.FirstName(actor.Name), NameRules.LastName(actor.Name) }.Where(n => n.Length > 2).ToList();
+                var theirs = beat.EmitsFactIds
+                    .Where(f => packet.FindFact(f) is { Kind: not FactKinds.Symptom } fact && !actor.Knows.Exists(k => k.FactId == f)
+                        && !names.Exists(n => System.Text.RegularExpressions.Regex.IsMatch(fact.Statement, $@"\b{System.Text.RegularExpressions.Regex.Escape(n)}\b")))
+                    .ToList();
+                if (theirs.Count > 0)
+                {
+                    WarnOn([beat.Id], IssueCodes.Provenance, $"beat:{beat.Id}",
+                        $"Beat {beat.Id} has {actor.Name} put {string.Join(", ", theirs)} into the world, which {actor.Name} does not know.",
+                        $"Take {string.Join(", ", theirs)} out of {beat.Id}'s emitsFactIds, or let the beat's actor be someone who knows it.");
+                }
+            }
+        }
+
+        /// <summary>
+        /// A person who tells a load-bearing fact is played, not read from a template (review 3, item 4): a resident who
+        /// carries the cause needs a fear and something they will do when pressed. A warning, sent to their step.
+        /// </summary>
+        public void CheckSourcesPlayable()
+        {
+            var tellers = packet.Channels
+                .Where(c => c.Kind is ChannelKinds.Testimony or ChannelKinds.Overheard && packet.FindFact(c.FactId) is { LoadBearing: true })
+                .Select(c => c.SourceCharacterId)
+                .OfType<string>()
+                .Distinct(StringComparer.Ordinal);
+            foreach (var member in tellers.Select(packet.FindCast).OfType<CastMember>())
+            {
+                var missing = new[]
+                {
+                    member.Wants.Fears.Count == 0 ? "a fear" : null,
+                    member.Wants.PermittedActions.Count == 0 ? "a permitted action" : null,
+                }.OfType<string>().ToList();
+                if (missing.Count > 0)
+                {
+                    WarnOn([$"{member.CharacterId}.wants"], IssueCodes.CastCoherence, $"cast:{member.CharacterId}",
+                        $"{member.Name} tells load-bearing facts but has no {string.Join(" and no ", missing)}: the game master cannot play their resistance.",
+                        $"Give {member.Name} {string.Join(" and ", missing)} that fit what they know and who they protect.");
+                }
             }
         }
 

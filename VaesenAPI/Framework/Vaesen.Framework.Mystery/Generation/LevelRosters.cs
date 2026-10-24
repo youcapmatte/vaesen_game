@@ -17,7 +17,7 @@ public sealed class RosterOutput
 
 public sealed class RosterPerson
 {
-    /// <summary>"npc-" and a slug of the name.</summary>
+    /// <summary>The roster's own handle (p1, p2...), for householdOf; the engine gives the person an id of place and role.</summary>
     [JsonProperty("id")]
     public string Id { get; set; } = "";
 
@@ -61,6 +61,10 @@ public sealed class RosterPerson
     /// <summary>What they want most in their ordinary life, so a case can play them (review 2, item 4).</summary>
     [JsonProperty("drive")]
     public string Drive { get; set; } = "";
+
+    /// <summary>What they fear most, so a case drawing on them has something to play against (review 3, item 4).</summary>
+    [JsonProperty("fear")]
+    public string Fear { get; set; } = "";
 
     /// <summary>For residents and some others: a thread a later case may pull.</summary>
     [JsonProperty("latentHook")]
@@ -139,6 +143,7 @@ public sealed class RosterBuilder(IMysteryModel model, MysteryOptions options)
             if (entry.Passed)
             {
                 var people = answer.Value.People.Select(p => ToCharacter(p, level, answer.Value.People)).ToList();
+                StableIds(people, world);
                 return ret.Ok((new LevelRoster
                 {
                     LevelId = level.Id,
@@ -166,9 +171,14 @@ public sealed class RosterBuilder(IMysteryModel model, MysteryOptions options)
         foreach (var p in output.People)
         {
             var at = $"roster:{p.Id}";
-            if (!p.Id.StartsWith("npc-", StringComparison.Ordinal) || !ids.Add(p.Id) || world.Find(p.Id) is not null)
+            if (string.IsNullOrWhiteSpace(p.Id) || !ids.Add(p.Id))
             {
-                issues.Add(CoherenceIssue.Error(IssueCodes.Schema, at, $"The id '{p.Id}' must start with npc-, be unique and not be anyone's in the Society's world.", "Use npc- and a slug of the name."));
+                issues.Add(CoherenceIssue.Error(IssueCodes.Schema, at, $"The id '{p.Id}' must be given and unique on the roster.", "Number the people p1, p2, p3..."));
+            }
+
+            if (string.IsNullOrWhiteSpace(p.Fear))
+            {
+                issues.Add(CoherenceIssue.Error(IssueCodes.Schema, at, $"{p.Name} has no fear.", "Give one line of what they fear most in their ordinary life."));
             }
 
             if (string.IsNullOrWhiteSpace(p.Drive))
@@ -251,6 +261,34 @@ public sealed class RosterBuilder(IMysteryModel model, MysteryOptions options)
         return issues;
     }
 
+    /// <summary>
+    /// The roster's own ids (p1, p2...) become ids of place and role, "npc-lyckan-crofter" (review 3, item 5): a name the
+    /// checks change later never leaves a person with someone else's name in their id.
+    /// </summary>
+    public static void StableIds(List<CharacterInstance> people, SocietyWorld world)
+    {
+        var taken = world.Characters.Select(c => c.Id).ToHashSet(StringComparer.Ordinal);
+        var map = people.ToDictionary(p => p.Id, p => PersonIds.ForRole(p.Identity.Occupation, p.HomePlaceId, taken), StringComparer.Ordinal);
+        foreach (var p in people)
+        {
+            p.Id = map[p.Id];
+            foreach (var d in p.Drives)
+            {
+                d.Id = $"{p.Id}-drive-{p.Drives.IndexOf(d) + 1}";
+            }
+
+            foreach (var h in p.LatentHooks)
+            {
+                h.Id = $"{p.Id}-hook-{p.LatentHooks.IndexOf(h) + 1}";
+            }
+
+            foreach (var tie in p.Relationships)
+            {
+                tie.CharacterId = map.GetValueOrDefault(tie.CharacterId, tie.CharacterId);
+            }
+        }
+    }
+
     /// <summary>A roster person as one of the Society's location residents.</summary>
     public static CharacterInstance ToCharacter(RosterPerson p, LevelDefinition level, List<RosterPerson> all)
     {
@@ -275,6 +313,7 @@ public sealed class RosterBuilder(IMysteryModel model, MysteryOptions options)
             },
             Voice = new CharacterVoice { Register = string.IsNullOrWhiteSpace(p.Voice) ? "plain speech" : p.Voice },
             Drives = string.IsNullOrWhiteSpace(p.Drive) ? [] : [new Drive { Id = $"{p.Id}-drive-1", Text = p.Drive, Strength = 2 }],
+            Fears = string.IsNullOrWhiteSpace(p.Fear) ? [] : [p.Fear],
             Background = p.Line,
             LatentHooks = string.IsNullOrWhiteSpace(p.LatentHook) ? [] : [new LatentHook { Id = $"{p.Id}-hook-1", Kind = LatentHookKinds.Secret, Text = p.LatentHook }],
             Relationships = head is null ? [] : [new WorldRelationship { CharacterId = head.Id, Nature = p.Relation, Sentiment = 1 }],

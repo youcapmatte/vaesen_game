@@ -113,6 +113,7 @@ public static partial class CriticRouting
     public static string DefaultStep(string code) => code switch
     {
         "critic." + CriticChecks.Hook => HookStep.StepName,
+        "critic." + CriticChecks.Scenes => HookStep.StepName,
         "critic." + CriticChecks.Solves => ArcStep.StepName,
         "critic." + CriticChecks.DeepLoreTrail => FactsStep.StepName,
         "critic." + CriticChecks.HonestRedHerrings => FactsStep.StepName,
@@ -134,6 +135,7 @@ public static partial class CriticRouting
         SuggestedFix = issue.SuggestedFix,
         Source = issue.Source,
         Targets = issue.Targets,
+        Blocking = issue.Blocking,
     };
 
     /// <summary>

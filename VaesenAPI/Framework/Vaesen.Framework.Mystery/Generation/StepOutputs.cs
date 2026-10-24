@@ -392,6 +392,10 @@ public sealed class CriticCheck
     [JsonProperty("everywhere")]
     public bool Everywhere { get; set; }
 
+    /// <summary>Left unfixed, the case breaks at the table (see the critic prompt); otherwise advisory.</summary>
+    [JsonProperty("blocking")]
+    public bool Blocking { get; set; }
+
     /// <summary>Every id the issue touches, so it is routed to the step that owns each (see the critic prompt).</summary>
     [JsonProperty("targets")]
     public List<string> Targets { get; set; } = [];
@@ -429,6 +433,9 @@ public static class CriticChecks
     /// <summary>People's actions, secrets, lies and beliefs agree with the facts (the review of case 05).</summary>
     public const string NpcRecords = "npcRecords";
 
+    /// <summary>Scene descriptions show only what anyone sees on arrival, never a gated clue (review 3, item 4).</summary>
+    public const string Scenes = "scenes";
+
     public static readonly IReadOnlyList<string> All =
-        [DeepLoreTrail, NonTrivial, KnowledgeGate, HumansFromConflict, DifficultyOnFocus, Hook, FairClues, HonestRedHerrings, Solves, WorldConsistency, Timeline, Mechanisms, ActsToPlan, Leverage, MindsAgree, NpcRecords];
+        [DeepLoreTrail, NonTrivial, KnowledgeGate, HumansFromConflict, DifficultyOnFocus, Hook, FairClues, HonestRedHerrings, Solves, WorldConsistency, Timeline, Mechanisms, ActsToPlan, Leverage, MindsAgree, NpcRecords, Scenes];
 }

@@ -12,6 +12,8 @@ When a person is called by two names, the cast's name is the right one: target t
 
 Mechanical fixes are done by the engine, not rewritten: for a rename, a date, a number or a wrong id, give replacements (the exact old text as it stands in the case, and the new text), and set everywhere true for a rename that holds across the case; otherwise the replacements apply only inside the targets. Use replacements only where exact text swaps fix it; anything that needs rewording is a suggestedFix.
 
+Set blocking true on a failed check that would break the case at the table if it stayed: a scene or the opening that shows a clue players are meant to earn, a hook that contradicts the cast or the facts (a wrong name, a fact its writer does not know), a period error players would notice, someone saying what they cannot know, an event that happens twice. Leave it false for what would only make the case better. A blocking problem left unfixed marks the case for a person to review.
+
 Keep explanation and suggestedFix to about 60 words each: the items and the change, nothing else. When a date or a detail disagrees, say which version every item should use.
 
 - deepLoreTrail: the solution trail rests on the creature's deep lore, not the obvious folklore answer.
@@ -31,4 +33,5 @@ Keep explanation and suggestedFix to about 60 words each: the items and the chan
 - leverage: every threat, blackmail or bargain states why the threatened party believes it; mutual exposure is addressed (who would be believed, and why).
 - worldConsistency also covers the level's geography: the towns, courts, sheriffs, doctors and newspapers a case names are the ones the level lists, travel uses only routes that run in the case's month and year, and the real place the level is modelled on is never named.
 - worldConsistency also covers this place's past for the Society: nothing contradicts the level's public facts or what is settled about the place, and its keepers and owners are the people of the place listed.
+- scenes: each scene description shows only what anyone sees on arriving at the place. Nothing in it may give away what a channel there or elsewhere hides behind trust, a roll, a time, an item or another fact: an object wedged in a wall, earth in bedclothes, a wound. Name each leaking scene as scene:<placeId> and say what to cut.
 - timeline: the facts, what each person knows and when, their secrets and the channels' reveals agree on when things happened.

@@ -361,6 +361,47 @@ public static class ContentValidator
     /// A level's geography and journey (fixes 4, sections 13 and 14): it says where it is, and every leg of the journey
     /// runs on a line that was open in the setting's start year, in the months the line runs.
     /// </summary>
+    /// <summary>
+    /// What a neighbour's distance says ("about 25 km west") agrees with the real map, where the analogue and the town
+    /// have positions (review 3, item 7): a road may be half again as long as the straight line, but not shorter, and
+    /// the direction is within one point of eight.
+    /// </summary>
+    private static void CheckNeighbourBearings(LevelDefinition level, List<CoherenceIssue> issues)
+    {
+        if (level.Geography.AnalogueAt is not { } home)
+        {
+            return;
+        }
+
+        foreach (var n in level.Geography.Neighbours.Where(n => n.At is not null))
+        {
+            var (km, bearing) = home.To(n.At!);
+            var text = n.Distance.ToLowerInvariant();
+            var at = $"level:{level.Id}";
+            if (System.Text.RegularExpressions.Regex.Match(text, @"(\d+)\s*km") is { Success: true } said && int.Parse(said.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture) is var stated
+                && (stated < km * 0.8 - 3 || stated > km * 1.8 + 5))
+            {
+                issues.Add(CoherenceIssue.Warning(IssueCodes.Content, at, $"{n.Name} is said to be {stated} km away, but it is {km:0} km in a straight line from {level.Geography.RealAnalogue}.",
+                    "Give a distance between the straight line and half again as much."));
+            }
+
+            if (Compass.FirstOrDefault(c => System.Text.RegularExpressions.Regex.IsMatch(text, $@"\b{c.Word}\b")) is { Word: not null } dir
+                && Math.Abs(((dir.Degrees - bearing + 540) % 360) - 180) > 45)
+            {
+                issues.Add(CoherenceIssue.Warning(IssueCodes.Content, at, $"{n.Name} is said to lie {dir.Word}, but from {level.Geography.RealAnalogue} it lies at a bearing of {bearing:0}°.",
+                    "Correct the direction."));
+            }
+        }
+    }
+
+    /// <summary>The compass words, the two-word ones first so "north-west" is not read as "north".</summary>
+    private static readonly (string Word, double Degrees)[] Compass =
+    [
+        ("north-east", 45), ("south-east", 135), ("south-west", 225), ("north-west", 315),
+        ("northeast", 45), ("southeast", 135), ("southwest", 225), ("northwest", 315),
+        ("north", 0), ("east", 90), ("south", 180), ("west", 270),
+    ];
+
     private static void CheckGeography(LevelDefinition level, Setting setting, List<CoherenceIssue> issues)
     {
         var at = $"level:{level.Id}";
@@ -376,6 +417,8 @@ public static class ContentValidator
             {
                 issues.Add(CoherenceIssue.Warning(IssueCodes.Content, at, $"{level.Name} does not say where its {kind} is."));
             }
+
+            CheckNeighbourBearings(level, issues);
         }
 
         if (level.Journey.Routes.Count == 0)

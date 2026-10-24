@@ -1078,4 +1078,11 @@ public sealed class CaseValidation
     /// <summary>How many validator runs it took, over all steps.</summary>
     [JsonProperty("runs")]
     public int Runs { get; set; }
+
+    /// <summary>
+    /// The case passed, but a blocking critic issue was not fixed (review 3, item 3): someone should read it, or fix
+    /// those points by hand, before it is played.
+    /// </summary>
+    [JsonProperty("needsReview", DefaultValueHandling = DefaultValueHandling.Ignore)]
+    public bool NeedsReview { get; set; }
 }

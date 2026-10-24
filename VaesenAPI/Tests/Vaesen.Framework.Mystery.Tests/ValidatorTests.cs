@@ -118,13 +118,13 @@ public sealed class ValidatorTests(ITestOutputHelper output)
     public void Someone_cannot_testify_to_what_they_do_not_know()
     {
         var packet = SampleCase();
-        packet.FindCast("npc-per-holm")!.Knows.RemoveAll(k => k.FactId == "f14");
+        packet.FindCast("npc-case-miller")!.Knows.RemoveAll(k => k.FactId == "f14");
 
         var issues = Validate(packet);
 
         // Both sit on Per, whose knowledge is missing, so a patch of his mind can add it.
-        Assert.Contains(issues, i => i.IsError && i.Code == IssueCodes.Provenance && i.Location == "cast:npc-per-holm" && i.Explanation.Contains("channel c21", StringComparison.Ordinal));
-        Assert.Contains(issues, i => i.IsError && i.Code == IssueCodes.Provenance && i.Location == "cast:npc-per-holm" && i.Explanation.Contains("told by Per Holm", StringComparison.Ordinal));
+        Assert.Contains(issues, i => i.IsError && i.Code == IssueCodes.Provenance && i.Location == "cast:npc-case-miller" && i.Explanation.Contains("channel c21", StringComparison.Ordinal));
+        Assert.Contains(issues, i => i.IsError && i.Code == IssueCodes.Provenance && i.Location == "cast:npc-case-miller" && i.Explanation.Contains("told by Per Holm", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -165,7 +165,7 @@ public sealed class ValidatorTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public void A_tie_may_reach_anyone_in_the_Society_world_but_not_nobody()
+    public void A_tie_may_reach_anyone_in_the_Society_world_but_a_tie_to_nobody_is_an_error()
     {
         var packet = SampleCase();
         packet.Cast[0].Relationships = [new CastRelationship { CharacterId = "npc-sara-lindqvist" }, new CastRelationship { CharacterId = "npc-nobody" }];
@@ -175,7 +175,7 @@ public sealed class ValidatorTests(ITestOutputHelper output)
         var issues = new CaseValidator().Validate(packet, withWorld, CheckScope.Cast);
 
         Assert.DoesNotContain(issues, i => i.Explanation.Contains("npc-sara-lindqvist", StringComparison.Ordinal));
-        Assert.Contains(issues, i => !i.IsError && i.Explanation.Contains("'npc-nobody', who is not in the cast or the Society's world", StringComparison.Ordinal));
+        Assert.Contains(issues, i => i.IsError && i.Explanation.Contains("'npc-nobody', who is not in the cast or the Society's world", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -295,7 +295,7 @@ public sealed class ValidatorTests(ITestOutputHelper output)
     public void A_beat_or_climax_act_must_be_permitted_and_unlocked_by_its_tension()
     {
         var packet = SampleCase();
-        var axel = packet.FindCast("npc-axel-wester")!;
+        var axel = packet.FindCast("npc-case-sawmill-manager")!;
         axel.Wants.PermittedActions.Add(new CharacterAction { Id = "wester-burn", Desperation = DesperationTiers.High, Description = "Burn the dam papers and the office." });
         packet.Beats.First(b => b.Id == "b2").ActionId = "wester-burn";
         packet.Climax.ActorId = axel.CharacterId;
@@ -348,7 +348,7 @@ public sealed class ValidatorTests(ITestOutputHelper output)
         });
 
         // An error at the humans step, so it is patched before any later step writes the name into prose.
-        Assert.True(Assert.Single(issues, i => i.Location == "cast:npc-per-holm" && i.Explanation.Contains("Society's world", StringComparison.Ordinal)).IsError);
+        Assert.True(Assert.Single(issues, i => i.Location == "cast:npc-case-miller" && i.Explanation.Contains("Society's world", StringComparison.Ordinal)).IsError);
         Assert.Null(NameRules.FirstNameClash("Anna Lind", "Anders Berg"));
         Assert.Null(NameRules.FirstNameClash("Gunnar Ek", "Gustaf Roos"));
         Assert.NotNull(NameRules.FirstNameClash("Henning Wahl", "Henrik Ekelund"));
@@ -424,7 +424,7 @@ public sealed class ValidatorTests(ITestOutputHelper output)
         Assert.Contains("Pål Holm owes the mill. Pål knows it.", draft.Packet.Truth.Summary, StringComparison.Ordinal);
         Assert.DoesNotContain("Per Holm", Newtonsoft.Json.JsonConvert.SerializeObject(draft.Packet), StringComparison.Ordinal);
         Assert.Equal("Pål Holm says nothing.", ((Generation.MindsOutput)draft.Outputs["minds"]).Channels[0].Reveal);
-        Assert.Contains("npc-per-holm", draft.Packet.Cast.Select(c => c.CharacterId));
+        Assert.Contains("npc-case-miller", draft.Packet.Cast.Select(c => c.CharacterId));
     }
 
     [Fact]
@@ -455,7 +455,7 @@ public sealed class ValidatorTests(ITestOutputHelper output)
         packet.Truth.Summary += " Years ago the sawyer Jon Persson drowned there.";
 
         // A first name in another's surname is only a warning: it may be a patronymic (Erik and Karin Eriksdotter).
-        Assert.Contains(Validate(packet), i => !i.IsError && i.Location == "cast:npc-per-holm" && i.Explanation.Contains("'Per Ers' and 'Jon Persson'", StringComparison.Ordinal));
+        Assert.Contains(Validate(packet), i => !i.IsError && i.Location == "cast:npc-case-miller" && i.Explanation.Contains("'Per Ers' and 'Jon Persson'", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -555,7 +555,7 @@ public sealed class ValidatorTests(ITestOutputHelper output)
     public void A_hidden_hand_case_needs_a_crude_and_a_deep_solve_and_an_honest_clue_to_the_hand()
     {
         var packet = SampleCase();
-        packet.Truth.PlotCentre = new PlotCentre { Kind = PlotCentreKinds.HiddenHand, CharacterId = "npc-axel-wester" };
+        packet.Truth.PlotCentre = new PlotCentre { Kind = PlotCentreKinds.HiddenHand, CharacterId = "npc-case-sawmill-manager" };
         packet.Truth.HiddenHandMotive = "He wants the whole river for the saw.";
         packet.ResolutionLevers.RemoveAll(l => l.SolveDepth == SolveDepths.Crude);
 

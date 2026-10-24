@@ -13,10 +13,14 @@
   ],
   "description": "Ekeby is an old noble estate on the fertile Östergötland plain: a white manor house with two wings at the end of an avenue of limes, a home farm, its own mill, and some twenty tenant crofts scattered along the forest edge whose holders owe the estate days of labour. The present owner, a baron, spends the winters in Stockholm and has begun to replace the crofters with contract labourers (statare) paid in kind.",
   "seasonNotes": "April, the spring thaw. The snow has gone from the fields but lies grey in the forest; the roads are axle-deep in mud and almost impassable. Meltwater fills every ditch and the stream runs loud and brown over the mill weir. The first lapwings and larks return over the fields. Ploughing waits for the ground to dry; the crofters are spreading manure and mending fences. Easter falls this month.",
-  "travel": "From Uppsala by rail to Stockholm, by the trunk line to Katrineholm, by the Southern Main Line to Mjölby (or by the eastern line to Norrköping and then by coach), and the last miles in a hired carriage or the estate's carriage over the thaw-mud roads: about a long day in April.",
+  "travel": "From Uppsala by rail to Stockholm, by the trunk line to Katrineholm, by the Eastern Main Line through Norrköping to Linköping (or off at Norrköping and on by coach), and the last miles in a hired carriage or the estate's carriage over the thaw-mud roads: about a long day in April.",
   "geography": {
     "realAnalogue": "Bjärka-Säby (Roxen plain, Östergötland)",
     "fictional": true,
+    "analogueAt": {
+      "lat": 58.27,
+      "lon": 15.756
+    },
     "province": "Östergötland",
     "county": "Östergötlands län",
     "parish": "Ekeby parish",
@@ -28,21 +32,24 @@
     "neighbours": [
       {
         "name": "Mjölby",
-        "kind": "railway town and crown sheriff's seat",
-        "distance": "about 20 km south-west by road, 3 to 4 hours by carriage in thaw",
+        "kind": "market town and crown sheriff's seat",
+        "distance": "about 35 km west by road, a long day by carriage in thaw",
         "offers": [
-          "railway station on the Southern Main Line",
-          "telegraph office at the station",
+          "the eastern railway being built through it (trains from 1873 or 1874, not yet certain)",
           "provincial doctor",
           "crown sheriff",
           "weekly market",
           "inns with hired horses"
-        ]
+        ],
+        "at": {
+          "lat": 58.325,
+          "lon": 15.131
+        }
       },
       {
         "name": "Linköping",
         "kind": "county seat and cathedral town",
-        "distance": "about 25 km west by road, 4 to 5 hours by carriage in thaw",
+        "distance": "about 17 km north-west by road, 2 to 3 hours by carriage in thaw",
         "offers": [
           "governor and county administration",
           "district court",
@@ -50,40 +57,52 @@
           "cathedral chapter and library",
           "Östgöta Enskilda Bank",
           "Östgöta Correspondenten",
-          "railway on the Southern Main Line since 1872 era's established service",
-          "telegraph"
-        ]
+          "railway station on the Eastern Main Line (Östra stambanan), open since 1872",
+          "telegraph office at the station"
+        ],
+        "at": {
+          "lat": 58.411,
+          "lon": 15.621
+        }
       },
       {
         "name": "Borensberg",
         "kind": "canal village on the Göta Canal",
-        "distance": "about 12 km north, near the shore of Lake Roxen",
+        "distance": "about 40 km north-west, on Lake Boren where the canal's Östergötland stretch begins",
         "offers": [
           "canal locks and a small harbour",
           "passenger steamers in the open season, May to October",
           "grain and timber barges",
           "a village inn and shop"
-        ]
+        ],
+        "at": {
+          "lat": 58.56,
+          "lon": 15.284
+        }
       },
       {
         "name": "Norrköping",
         "kind": "industrial town and port",
-        "distance": "about 55 km east by road",
+        "distance": "about 45 km north-east by road",
         "offers": [
           "textile mills and harbour",
           "Norrköpings Tidningar",
           "banks and merchants",
-          "railway connection to Katrineholm and the trunk line",
+          "railway station on the Eastern Main Line, to Katrineholm and Linköping",
           "booksellers and instrument makers"
-        ]
+        ],
+        "at": {
+          "lat": 58.588,
+          "lon": 16.192
+        }
       }
     ],
     "authorities": {
-      "police": "The crown sheriff (kronolänsman) of the Roxen plain district lives at Mjölby, about 20 km away; the parish has a constable (fjärdingsman) who answers to him and the vicar, and in practice to the steward.",
+      "police": "The crown sheriff (kronolänsman) of the district lives at Mjölby, about 35 km away; the parish has a constable (fjärdingsman) who answers to him and the vicar, and in practice to the steward.",
       "court": "The häradsrätt for the Roxen plain sits at Linköping, with a judge and twelve lay assessors; ordinary sessions are held a few times a year, and the parish is summoned by the sheriff.",
-      "doctor": "The provincial doctor lives at Mjölby, 20 km away, and covers many parishes on bad roads; he can be sent for by the estate's rider, and often arrives a day late. He signs the death certificates.",
-      "post": "The parish post point at the inn or the parsonage has post by relay twice a week; Mjölby and Linköping have daily post by train.",
-      "telegraph": "Nearest telegraph office is at Mjölby station, 20 km away; Linköping is also reachable. Ekeby itself has no wire, so messages go on by rider or carriage.",
+      "doctor": "The provincial doctor lives at Mjölby, about 35 km away, and covers many parishes on bad roads; Linköping's county hospital is nearer. He can be sent for by the estate's rider, and often arrives a day late. He signs the death certificates.",
+      "post": "The parish post point at the inn or the parsonage has post by relay twice a week; Linköping has daily post by train.",
+      "telegraph": "Nearest telegraph office is at Linköping station, about 17 km away. Ekeby itself has no wire, so messages go on by rider or carriage.",
       "bank": "Östgöta Enskilda Bank in Linköping lends to the estate and the mill; the parish sparbank serves the crofters and is open on fixed days at the parsonage.",
       "newspaper": "Östgöta Correspondenten in Linköping is the local paper, read at the manor and the parsonage; Norrköpings Tidningar comes to the manor by post."
     }
@@ -92,7 +111,7 @@
     "fromHeadquarters": "Uppsala",
     "routes": [
       {
-        "name": "Rail via Katrineholm and Mjölby, then carriage",
+        "name": "Rail via Katrineholm and Linköping, then carriage",
         "legs": [
           {
             "from": "Uppsala",
@@ -118,22 +137,22 @@
           },
           {
             "from": "Katrineholm",
-            "to": "Mjölby",
+            "to": "Linköping",
             "mode": "railway",
-            "lineId": "sodra-stambanan-katrineholm-nassjo",
-            "duration": "about 2 to 3 hours",
+            "lineId": "ostra-stambanan-katrineholm-linkoping",
+            "duration": "about 3 hours",
             "cost": "about 3 riksdaler third class",
-            "schedule": "daily trains on the Southern Main Line, via Linköping",
+            "schedule": "two trains a day on the Eastern Main Line, via Norrköping",
             "months": [],
-            "notes": "Mjölby is the nearest station and the seat of the crown sheriff and the doctor. Passengers can also get off at Linköping and go by road."
+            "notes": "Linköping is the nearest station, opened in 1872, with a telegraph office. The line south to Mjölby is still being finished."
           },
           {
-            "from": "Mjölby",
+            "from": "Linköping",
             "to": "Ekeby Manor",
             "mode": "hiredCarriage",
             "lineId": null,
-            "duration": "3 to 4 hours in April mud",
-            "cost": "about 6 to 8 riksdaler for a hired carriage and driver; free if the manor sends its carriage",
+            "duration": "2 to 3 hours in April mud",
+            "cost": "about 4 to 6 riksdaler for a hired carriage and driver; free if the manor sends its carriage",
             "schedule": "hired at the station inn; the estate's carriage only if sent for by letter",
             "months": [],
             "notes": "The last miles run along the limes' avenue but the road is deep in thaw mud, and the carriage may stick or the horses be changed at the roadside inn."
@@ -169,19 +188,19 @@
             "from": "Katrineholm",
             "to": "Norrköping",
             "mode": "railway",
-            "lineId": null,
+            "lineId": "ostra-stambanan-katrineholm-linkoping",
             "duration": "about 2 hours",
             "cost": "about 3 riksdaler third class",
             "schedule": "one or two trains a day",
             "months": [],
-            "notes": "The newest stretch of the eastern line, not in the period list of known lines; times are uncertain and the stretch may suffer delays after the thaw."
+            "notes": "Eastern Main Line, open to Norrköping since 1866."
           },
           {
             "from": "Norrköping",
             "to": "Ekeby Manor",
             "mode": "coach",
             "lineId": null,
-            "duration": "about 8 hours including a change of horses",
+            "duration": "about 6 to 7 hours including a change of horses",
             "cost": "about 5 riksdaler by coach, plus a tip to the driver",
             "schedule": "post coach in the morning; otherwise hire at the town inn",
             "months": [],

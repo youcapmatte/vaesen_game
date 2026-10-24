@@ -129,7 +129,7 @@ public sealed class LevelContinuityTests
     {
         var packet = ValidatorTests.SampleCase();
         var context = ValidatorTests.ContextFor(packet);
-        var per = packet.FindCast("npc-per-holm")!;
+        var per = packet.FindCast("npc-case-miller")!;
         per.Keeps = "mill";
         var holders = new ValidationContext
         {
@@ -137,10 +137,10 @@ public sealed class LevelContinuityTests
             Holders = new() { ["mill"] = ("npc-viktor-strom", "Viktor Strömberg") },
         };
 
-        Assert.Contains(new CaseValidator().Validate(packet, holders), i => i.IsError && i.Location == "cast:npc-per-holm" && i.Explanation.Contains("Viktor Strömberg", StringComparison.Ordinal));
+        Assert.Contains(new CaseValidator().Validate(packet, holders), i => i.IsError && i.Location == "cast:npc-case-miller" && i.Explanation.Contains("Viktor Strömberg", StringComparison.Ordinal));
 
         per.Keeps = null;
-        Assert.DoesNotContain(new CaseValidator().Validate(packet, holders), i => i.Location == "cast:npc-per-holm" && i.Explanation.Contains("holds", StringComparison.Ordinal));
+        Assert.DoesNotContain(new CaseValidator().Validate(packet, holders), i => i.Location == "cast:npc-case-miller" && i.Explanation.Contains("holds", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -178,7 +178,7 @@ public sealed class LevelContinuityTests
         var roster = world.RosterFor("level-forsby-october")!;
         Assert.Equal(first.Result!.Case.Packet.MysteryId, roster.FirstMysteryId);
         Assert.Equal(8, world.PeopleOf("level-forsby-october").Count());
-        Assert.Contains(first.Result.Case.Packet.Cast, c => c.CharacterId == "npc-greta-forsberg" && c.InstanceRef == InstanceRefs.Persistent);
+        Assert.Contains(first.Result.Case.Packet.Cast, c => c.CharacterId == "npc-inn-serving-woman" && c.InstanceRef == InstanceRefs.Persistent);
         Assert.Contains(first.Result.Case.Log, e => e.Step == ResidentsStep.StepName && e.Kind == LogEntryKinds.Roster);
 
         var second = await generator.GenerateAsync(request);
