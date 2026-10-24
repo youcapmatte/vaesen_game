@@ -175,6 +175,7 @@ public sealed class MysteryGenerator(
             var draft = NewDraft(pack, request.History, brief, caseWorld);
             draft.Log.AddRange(rosterLog);
             draft.SettledPublicFacts = await SettledPublicFactsAsync(request.History, brief.LevelId, world, cancellationToken);
+            draft.EarlierPlots = await EarlierPlotsAsync(request.History, brief, cancellationToken);
             progress?.Report(new GenerationProgress(caseAttempt, "assignment",
                 $"{draft.Vaesen.Name} at {draft.Level.Name}, {new InWorldDate(brief.Year, brief.Month)}, focus {brief.Focus}{(brief.HiddenHand ? ", with a hidden hand" : "")}{(brief.ReturnVisit ? ", a return visit" : "")}."));
 
@@ -304,6 +305,32 @@ public sealed class MysteryGenerator(
         }
 
         return settled;
+    }
+
+    /// <summary>How many earlier cases the plot memory holds: the latest with the same creature or at the same level.</summary>
+    public const int EarlierPlotCount = 6;
+
+    /// <summary>
+    /// The plot memory (review of case 09, problem 5): the Society's latest cases with this creature or at this level,
+    /// played or queued, each as its title and the first sentences of its truth.
+    /// </summary>
+    private async Task<List<EarlierPlot>> EarlierPlotsAsync(SocietyHistory history, AssignmentBrief brief, CancellationToken ct)
+    {
+        var plots = new List<EarlierPlot>();
+        foreach (var past in history.Mysteries.Where(m => m.VaesenIds.Contains(brief.VaesenId) || m.LevelId == brief.LevelId).Reverse().Take(EarlierPlotCount))
+        {
+            var stored = await cases.GetAsync(history.SocietyId, past.MysteryId, ct);
+            if (stored.Result?.Packet is not { } packet)
+            {
+                continue;
+            }
+
+            var summary = packet.Truth.Summary.Length <= 600 ? packet.Truth.Summary : packet.Truth.Summary[..600].TrimEnd() + "…";
+            plots.Add(new EarlierPlot(past.MysteryId, packet.Title, past.VaesenIds.FirstOrDefault() ?? "", past.LevelId, past.Year, past.Month,
+                packet.Brief.ConflictArchetypeId, summary, past.Finished));
+        }
+
+        return plots;
     }
 
     /// <summary>A copy of the world with a level's new roster in it, for a case to draw on before the roster is kept.</summary>
@@ -558,7 +585,8 @@ public sealed class MysteryGenerator(
 
                 var critique = review.Result!;
                 draft.Packet.Validation.Issues.RemoveAll(i => i.Source == IssueSources.Critic);
-                if (critique.Exists(i => i.IsError) && criticReworks < o.MaxCriticReworks)
+                // A retold plot alone is not worth a round and a second look: no patch can change it.
+                if (critique.Exists(i => i.IsError && i.Code != "critic." + CriticChecks.Novelty) && criticReworks < o.MaxCriticReworks)
                 {
                     // The critic's objections, and its warnings with concrete fixes, go to the steps that own them and
                     // are fixed in place, in pipeline order; then the whole case is checked and reviewed once more.
@@ -712,22 +740,35 @@ public sealed class MysteryGenerator(
     internal static List<FixPart> PartsOf(CasePacket packet, CoherenceIssue issue, bool light)
     {
         var parts = new List<FixPart>();
+        if (issue.Code == "critic." + CriticChecks.Novelty)
+        {
+            parts.Add(new FixPart { Kind = FixPartKinds.Patch, Status = FixPartStatuses.Unrouted, Note = "A retold plot is the whole design: it is for a person to judge, not a patch." });
+            return parts;
+        }
+
         var scope = string.Join(", ", issue.Everywhere ? ["everywhere"] : issue.Targets ?? []);
         parts.AddRange((issue.Replacements ?? []).Select(r => new FixPart { Kind = FixPartKinds.Replace, Owner = "code", Target = scope, Detail = $"\"{r.From}\" → \"{r.To}\"" }));
         parts.AddRange((issue.SetFields ?? []).Select(f => new FixPart { Kind = FixPartKinds.SetField, Owner = "code", Target = f.Path, Detail = f.Value }));
         var asks = issue.Patches is { Count: > 0 } patches
-            ? patches.Select(p => (p.Target, Fix: string.IsNullOrWhiteSpace(p.Fix) ? issue.SuggestedFix ?? "" : p.Fix)).ToList()
-            : parts.Count == 0 ? (issue.Targets ?? []).Select(t => (Target: t, Fix: issue.SuggestedFix ?? "")).ToList() : [];
+            ? patches.Select(p => (p.Target, Fix: string.IsNullOrWhiteSpace(p.Fix) ? issue.SuggestedFix ?? "" : p.Fix, p.Change)).ToList()
+            : parts.Count == 0 ? (issue.Targets ?? []).Select(t => (Target: t, Fix: issue.SuggestedFix ?? "", Change: PatchChanges.Reword)).ToList() : [];
         var tree = CaseItems.Tree(packet);
-        foreach (var (target, fix) in asks)
+        foreach (var (target, fix, asked) in asks)
         {
-            var (step, location) = CriticRouting.Owner(target);
+            var change = ChangeOf(packet, issue, target.Trim(), asked);
+            var (step, location) = change switch
+            {
+                PatchChanges.AddChannel => (MindsStep.StepName, Patch.NewItem + "channel"),
+                PatchChanges.AddPerson => (HumansStep.StepName, Patch.NewItem + "cast"),
+                _ => CriticRouting.Owner(target),
+            };
             var known = location.StartsWith(Patch.NewItem, StringComparison.Ordinal) || CaseItems.Json(tree, target) is not null;
             parts.Add(new FixPart
             {
                 Kind = FixPartKinds.Patch,
                 Owner = known ? step : "",
                 Target = target,
+                Change = change == PatchChanges.Reword ? null : change,
                 Detail = fix,
                 Status = known ? FixPartStatuses.Pending : FixPartStatuses.Unrouted,
                 Note = known ? null : $"The case has no item {target}.",
@@ -742,6 +783,34 @@ public sealed class MysteryGenerator(
         }
 
         return parts;
+    }
+
+    /// <summary>The item a field path is on: "channels[id=c44]" for "channels[id=c44].placeId".</summary>
+    private static string ItemOf(string path)
+    {
+        var dot = path.LastIndexOf('.');
+        return dot > 0 ? path[..dot] : path;
+    }
+
+    /// <summary>
+    /// What a patch changes (review of case 09, problem 2), as the critic said or as its target shows: a fair-clues
+    /// patch on a fact asks for a way in, which only a new channel gives; a person the case does not have yet is a new
+    /// person. A reword goes to the step that owns the target.
+    /// </summary>
+    internal static string ChangeOf(CasePacket packet, CoherenceIssue issue, string target, string? asked)
+    {
+        if (asked is PatchChanges.AddChannel or PatchChanges.AddPerson)
+        {
+            return asked;
+        }
+
+        var id = target.Split('.')[0];
+        if (issue.Code == "critic." + CriticChecks.FairClues && packet.FindFact(id) is not null)
+        {
+            return PatchChanges.AddChannel;
+        }
+
+        return id.StartsWith("npc-", StringComparison.Ordinal) && packet.FindCast(id) is null ? PatchChanges.AddPerson : PatchChanges.Reword;
     }
 
     /// <summary>
@@ -779,46 +848,64 @@ public sealed class MysteryGenerator(
         // same issue already changed (a rank set, then the identity patched) counts as changed.
         var roundStart = CaseItems.Tree(draft.Packet);
 
-        // Code parts: each pair and field on its own, so one that matched nothing or broke a check costs only itself.
+        // Code parts: each pair on its own, so one that matched nothing or broke a check costs only itself; the fields
+        // of one item together (review of case 09, problem 6): a channel's placeId and affordanceId each break the
+        // affordance check alone, and set one at a time both were undone.
         foreach (var issue in issues)
         {
             var codeParts = issue.Parts!.Where(p => p.Owner == "code").ToList();
             var pairs = issue.Replacements ?? [];
             var fields = issue.SetFields ?? [];
-            for (var i = 0; i < codeParts.Count; i++)
+            var units = codeParts.Select((part, i) => (Part: part, Index: i))
+                .GroupBy(x => x.Part.Kind == FixPartKinds.Replace ? $"pair:{x.Index}" : "field:" + ItemOf(x.Part.Target))
+                .Select(g => g.ToList());
+            foreach (var unit in units)
             {
-                var part = codeParts[i];
                 var before = Snapshot(draft);
-                var result = part.Kind == FixPartKinds.Replace
-                    ? TextReplacements.Apply(draft, new CoherenceIssue { Targets = issue.Targets, Everywhere = issue.Everywhere, Replacements = [pairs[i]] })[0]
-                    : TextReplacements.SetField(draft, fields[i - pairs.Count]);
-                draft.Log.Add(new GenerationLogEntry
+                var failed = false;
+                foreach (var (part, i) in unit)
                 {
-                    CaseAttempt = caseAttempt,
-                    Step = CheckStepName,
-                    Kind = LogEntryKinds.Replace,
-                    Passed = result.Ok,
-                    Instruction = $"{issue.Code}: {result.Op} {result.What} in {part.Target}",
-                    Output = result.ToString(),
-                });
-                part.Note = result.ToString();
-                if (!result.Ok)
+                    var result = part.Kind == FixPartKinds.Replace
+                        ? TextReplacements.Apply(draft, new CoherenceIssue { Targets = issue.Targets, Everywhere = issue.Everywhere, Replacements = [pairs[i]] })[0]
+                        : TextReplacements.SetField(draft, fields[i - pairs.Count]);
+                    draft.Log.Add(new GenerationLogEntry
+                    {
+                        CaseAttempt = caseAttempt,
+                        Step = CheckStepName,
+                        Kind = LogEntryKinds.Replace,
+                        Passed = result.Ok,
+                        Instruction = $"{issue.Code}: {result.Op} {result.What} in {part.Target}",
+                        Output = result.ToString(),
+                    });
+                    part.Note = result.ToString();
+                    part.Status = result.Ok ? FixPartStatuses.Done : FixPartStatuses.Failed;
+                    failed |= !result.Ok;
+                }
+
+                if (failed)
                 {
+                    // One field of an item that did not take leaves the item as it was: half a move is no move.
                     Restore(draft, before);
-                    part.Status = FixPartStatuses.Failed;
+                    foreach (var (part, _) in unit.Where(u => u.Part.Status == FixPartStatuses.Done))
+                    {
+                        part.Status = FixPartStatuses.Failed;
+                        part.Note = "Undone with the other fields of its item, one of which did not take.";
+                    }
+
                     continue;
                 }
 
                 if (NewErrors(draft, baseline) is { Count: > 0 } broke)
                 {
                     Restore(draft, before);
-                    part.Status = FixPartStatuses.Undone;
-                    part.Note = $"It broke {Describe(broke)} and was undone.";
-                    LogUndo(draft, caseAttempt, $"{result.Op} {result.What}", broke);
-                    continue;
-                }
+                    foreach (var (part, _) in unit)
+                    {
+                        part.Status = FixPartStatuses.Undone;
+                        part.Note = $"It broke {Describe(broke)} and was undone.";
+                    }
 
-                part.Status = FixPartStatuses.Done;
+                    LogUndo(draft, caseAttempt, string.Join("; ", unit.Select(u => $"{u.Part.Kind} {u.Part.Target}")), broke);
+                }
             }
         }
 
@@ -831,12 +918,23 @@ public sealed class MysteryGenerator(
         {
             foreach (var part in issue.Parts!.Where(p => p.Kind == FixPartKinds.Patch && p.Status == FixPartStatuses.Pending))
             {
-                var location = part.Target.Length == 0 ? issue.Location : CriticRouting.Owner(part.Target).Location;
+                var location = part.Change switch
+                {
+                    PatchChanges.AddChannel => Patch.NewItem + "channel",
+                    PatchChanges.AddPerson => Patch.NewItem + "cast",
+                    _ => part.Target.Length == 0 ? issue.Location : CriticRouting.Owner(part.Target).Location,
+                };
                 var step = part.Owner == HumansStep.StepName && residents.Contains(location) ? ResidentsStep.StepName : part.Owner;
                 var ask = new CoherenceIssue
                 {
                     Code = issue.Code, Severity = issue.Severity, Location = location, Explanation = issue.Explanation,
-                    SuggestedFix = part.Detail, Source = issue.Source, Targets = part.Target.Length == 0 ? issue.Targets : [part.Target],
+                    SuggestedFix = part.Change switch
+                    {
+                        PatchChanges.AddChannel => $"Add a new channel for {part.Target.Split('.')[0]} (another person, or a trace or document at another spot): {part.Detail}",
+                        PatchChanges.AddPerson => $"Add {part.Target.Split('.')[0]} to the cast as a new person: {part.Detail}",
+                        _ => part.Detail,
+                    },
+                    Source = issue.Source, Targets = part.Target.Length == 0 ? issue.Targets : [part.Target],
                 };
                 if (!routed.TryGetValue(step, out var list))
                 {
@@ -858,6 +956,22 @@ public sealed class MysteryGenerator(
             var beforeTree = CaseItems.Tree(before.Packet);
             var beforeOutput = Newtonsoft.Json.JsonConvert.SerializeObject(before.Outputs.GetValueOrDefault(step));
             var result = await steps[step].FixAsync(draft, asks.Select(a => a.Ask).ToList(), caseAttempt, light, ct);
+
+            // A new person is not done until minds give them what they know (review of case 09, problem 2): ask in
+            // the same unit, before checking, or the person with no mind would count as a fix that broke the case.
+            var added = draft.Packet.Cast.Where(c => before.Packet.FindCast(c.CharacterId) is null).ToList();
+            if (result.Success && added.Count > 0 && step != MindsStep.StepName && asks.Exists(a => a.Part.Change == PatchChanges.AddPerson))
+            {
+                var minds = added.Select(c => new CoherenceIssue
+                {
+                    Code = IssueCodes.Consistency, Severity = IssueSeverities.Error, Location = Patch.NewItem + "cast", Source = IssueSources.Structural,
+                    Explanation = $"{c.Name} ({c.CharacterId}) has just joined the case and has no mind yet.",
+                    SuggestedFix = $"Add {c.CharacterId}'s mind (what they know, think and lie about) and any channel they are, for this: "
+                        + string.Join(" ", asks.Where(a => a.Part.Change == PatchChanges.AddPerson).Select(a => a.Part.Detail)),
+                }).ToList();
+                result = await steps[MindsStep.StepName].FixAsync(draft, minds, caseAttempt, light, ct);
+            }
+
             if (!result.Success)
             {
                 foreach (var (part, _) in asks.Where(a => a.Part.Status == FixPartStatuses.Pending))
@@ -892,14 +1006,25 @@ public sealed class MysteryGenerator(
             // The post-condition of a patch: the item it names is not as it was ("the call succeeded" is not one).
             var afterTree = CaseItems.Tree(draft.Packet);
             var afterOutput = Newtonsoft.Json.JsonConvert.SerializeObject(draft.Outputs.GetValueOrDefault(step));
+            // A new channel's: the fact has more ways in than it had; a new person's: the cast has someone it did not.
             foreach (var (part, _) in asks)
             {
-                var changed = part.Target.Length == 0
-                    ? beforeOutput != afterOutput
-                    : CaseItems.Json(beforeTree, part.Target) != CaseItems.Json(afterTree, part.Target)
-                        || CaseItems.Json(roundStart, part.Target) != CaseItems.Json(afterTree, part.Target);
+                var id = part.Target.Split('.')[0];
+                var changed = part.Change switch
+                {
+                    PatchChanges.AddChannel => draft.Packet.Channels.Count(c => c.FactId == id) > before.Packet.Channels.Count(c => c.FactId == id),
+                    PatchChanges.AddPerson => draft.Packet.Cast.Exists(c => before.Packet.FindCast(c.CharacterId) is null),
+                    _ when part.Target.Length == 0 => beforeOutput != afterOutput,
+                    _ => CaseItems.Json(beforeTree, part.Target) != CaseItems.Json(afterTree, part.Target)
+                        || CaseItems.Json(roundStart, part.Target) != CaseItems.Json(afterTree, part.Target),
+                };
                 part.Status = changed ? FixPartStatuses.Done : FixPartStatuses.Failed;
-                part.Note = changed ? null : $"The {step} patch left {(part.Target.Length == 0 ? "the step" : part.Target)} as it was.";
+                part.Note = changed ? null : part.Change switch
+                {
+                    PatchChanges.AddChannel => $"The {step} patch added no channel for {id}.",
+                    PatchChanges.AddPerson => $"The {step} patch added no one to the cast.",
+                    _ => $"The {step} patch left {(part.Target.Length == 0 ? "the step" : part.Target)} as it was.",
+                };
             }
 
             // What this fix changed reaches the later steps whose items are built on it.

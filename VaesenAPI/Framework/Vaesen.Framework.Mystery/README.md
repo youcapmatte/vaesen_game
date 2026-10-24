@@ -60,6 +60,16 @@ Services/      MysteryGenerator, WorldService (seeding, closing, write-back), Co
 
 The engine sets the fact weights. Colour and season facts, and what the group knows on arrival, weigh nothing, so the dial starts at its start; decoy facts weigh half, load-bearing ones double. The weights are scaled so the deep solve's path (its lever's facts and what gates them) ends 15% past the climax. A beat with a time fires when its threshold is reached and its time has come, whichever is later.
 
+### Fixes 6: the review of case 09
+
+- **Items resolve to themselves** (`CaseItems`). An id names the shallowest object that carries it: `npc-x.identity` is the cast record, not another person's relationship to it. A fact is shown with the channels that reveal it, so the re-check can see a new way in.
+- **Patches are routed by what they change.** Each critic patch has a `change`: `reword` (the target's owning step), `addChannel` (a new way into the target fact; minds and channels make it, and it is done when the fact has more channels than it had) or `addPerson` (humans add them and minds give them a mind in the same unit; done when the cast has someone new). A fair-clues patch on a fact is always a new channel. A patch on a person the case lacks is a new person, not unrouted. Facts state what is true, never who can learn it.
+- **Load-bearing is derived** (`Derived.LoadBearing`): a fact the partial or deep solve needs is load-bearing, whatever the facts step marked, so the two-ways-in check covers it.
+- **Blocking holds.** Every field of a structured answer is required, so the critic always filled `impact`, and an "advisory" written for every warning made blocking checks advisory. `impact` is now `default`, `blocking` or `advisory`, and a move counts only with an `impactReason`.
+- **Plot memory.** Each case's summary keeps its conflict and reason. A creature the Society has met comes back with a reason it has not had, if it has one, and its used conflicts last. The conflict, escalation and facts steps and the critic see the Society's latest cases with the same creature or at the same place (`EarlierPlots`, up to six, played or queued). The critic's `novelty` check blocks by default and is never patched: a retold plot goes to a person.
+- **Fields of one item are set together**: a channel's `placeId` and `affordanceId` are applied, checked and undone as one.
+- **Offstage kin.** An offstage parent or child (by their relation, or a cast member's relationship to them), or one named in a cast member's parent or child relationship, silences the similar-name warning.
+
 ### Fixes 5: critic fixes that land
 
 - **Code fixes prove they changed the data** (`TextReplacements`).

@@ -40,11 +40,27 @@ public static class CaseItems
             _ when t.Contains("creatureMind", StringComparison.OrdinalIgnoreCase) => root["creatureMinds"],
             _ => ById(root, t.Split('.')[0].Split(' ')[^1]),
         };
+
+        // A fact is shown with the channels that reveal it (review of case 09, problem 2): a fix that adds a way in
+        // changes no fact, and the re-check must see the ways in to confirm it.
+        if (item is JObject fact && root["facts"] is JArray facts && fact.Parent == facts && root["channels"] is JArray channels)
+        {
+            var id = (string?)fact["id"];
+            return new JObject { ["fact"] = fact, ["channels"] = new JArray(channels.Where(c => (string?)c["factId"] == id)) }.ToString(Formatting.None);
+        }
+
         return item?.ToString(Formatting.None);
     }
 
     public static string? Json(CasePacket packet, string target) => Json(Tree(packet), target);
 
+    /// <summary>
+    /// The item whose own id is <paramref name="id"/>: of every object that carries it, the shallowest (review of case
+    /// 09, problem 1). A cast record is at cast[i]; another person's relationship to it, with the same characterId, is
+    /// deeper, and taking the first in document order showed the re-check a relationship instead of the person.
+    /// </summary>
     private static JToken? ById(JToken root, string id) =>
-        root.SelectTokens("$..*").OfType<JObject>().FirstOrDefault(o => IdKeys.Any(k => o[k] is JValue { Type: JTokenType.String } v && (string)v.Value! == id));
+        root.SelectTokens("$..*").OfType<JObject>()
+            .Where(o => IdKeys.Any(k => o[k] is JValue { Type: JTokenType.String } v && (string)v.Value! == id))
+            .MinBy(o => o.Ancestors().Count());
 }

@@ -32,6 +32,23 @@ public static class Derived
     }
 
     /// <summary>
+    /// A fact the partial or deep solve needs is load-bearing (review of case 09, problem 3), whatever the facts step
+    /// said: it was written before the levers, and a lever fact marked ordinary escaped the two-ways-in check. The
+    /// facts step's own marks stay; this only adds.
+    /// </summary>
+    public static void LoadBearing(CasePacket packet)
+    {
+        var needed = packet.ResolutionLevers
+            .Where(l => l.SolveDepth is SolveDepths.Partial or SolveDepths.Deep)
+            .SelectMany(l => l.RequiresFactIds)
+            .ToHashSet(StringComparer.Ordinal);
+        foreach (var fact in packet.Facts.Where(f => needed.Contains(f.Id) && !FactPointsTo.IsDecoy(f.PointsTo)))
+        {
+            fact.LoadBearing = true;
+        }
+    }
+
+    /// <summary>
     /// Sets the fact weights (fixes 2, section 4). Colour and season facts, and what the group knows on arrival (the
     /// hook's facts and the opening events'), weigh nothing, so the dial starts at its start; decoy facts weigh half,
     /// load-bearing ones double. The weights are scaled so that the deep solve's path (its lever's facts and the facts
@@ -41,6 +58,7 @@ public static class Derived
     public static List<CoherenceIssue> Tension(CasePacket packet)
     {
         var issues = new List<CoherenceIssue>();
+        LoadBearing(packet);
         var inv = CultureInfo.InvariantCulture;
         var start = packet.Tension.Start;
         var climax = packet.Climax.Threshold;

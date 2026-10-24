@@ -90,6 +90,8 @@ export interface FixPart {
   kind: "replace" | "setField" | "patch";
   owner: string;
   target: string;
+  /** A patch that adds rather than rewords: a new channel for the target fact, or a new person. */
+  change?: "addChannel" | "addPerson" | null;
   detail: string;
   status: "pending" | "done" | "failed" | "undone" | "unrouted";
   note?: string | null;

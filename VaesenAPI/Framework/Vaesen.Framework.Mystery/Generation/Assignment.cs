@@ -86,9 +86,13 @@ public static class Assignment
         brief.LevelId = level.Id;
         brief.VaesenId = chosenVaesen.Id;
 
-        ChoosePlotCentre(chosenVaesen, conflicts, random, brief);
+        // What the Society has already had with this creature goes last (review of case 09, problem 5): the same reason
+        // and conflict with the same creature tell the same story.
+        var before = history.Mysteries.Where(m => m.VaesenIds.Contains(chosenVaesen.Id)).ToList();
+        ChoosePlotCentre(chosenVaesen, conflicts, random, brief, before.Select(m => m.ReasonKind).ToHashSet(StringComparer.Ordinal));
         brief.ConflictArchetypeIds = conflicts
             .Where(c => c.ReasonKinds.Contains(brief.ReasonKind))
+            .OrderBy(c => before.Exists(m => m.ConflictArchetypeId == c.Id))
             .Select(c => c.Id)
             .ToList();
 
@@ -198,9 +202,14 @@ public static class Assignment
     /// Spec 7.2: the reason kind (and for afflictions the origin), whether a hidden hand is present, the plot centre, and
     /// the focus. With a hidden hand the difficulty goes into the hand and the why; without one, into identity.
     /// </summary>
-    private static void ChoosePlotCentre(VaesenDefinition vaesen, List<ConflictArchetype> conflicts, Random random, AssignmentBrief brief)
+    private static void ChoosePlotCentre(VaesenDefinition vaesen, List<ConflictArchetype> conflicts, Random random, AssignmentBrief brief, IReadOnlySet<string> usedReasons)
     {
         var kinds = vaesen.ReasonKinds.Where(k => conflicts.Exists(c => c.ReasonKinds.Contains(k))).ToList();
+        if (kinds.Exists(k => !usedReasons.Contains(k)))
+        {
+            kinds = kinds.Where(k => !usedReasons.Contains(k)).ToList();
+        }
+
         brief.ReasonKind = kinds[random.Next(kinds.Count)];
 
         if (brief.ReasonKind == ReasonKinds.Affliction && vaesen.OriginSet.Count > 0)

@@ -537,7 +537,7 @@ public sealed class PipelineTests
                 CriticCheck Warning(string name, List<string> targets, bool blocking, List<TextReplacement>? replacements = null) => new()
                 {
                     Check = name, Passed = false, Severity = IssueSeverities.Warning, Location = string.Join(", ", targets), Targets = targets,
-                    Explanation = $"{name} needs a change.", SuggestedFix = "Change it as described.", Impact = blocking ? "blocking" : "advisory",
+                    Explanation = $"{name} needs a change.", SuggestedFix = "Change it as described.", Impact = blocking ? "blocking" : "advisory", ImpactReason = "As scripted.",
                     Replacements = replacements ?? [], Everywhere = replacements is not null,
                 };
                 return new CriticOutput

@@ -4,6 +4,7 @@ Decide the facts of the case: everything the players could come to know, true or
 
 Facts
 - List every fact of the case. Each fact's kind is exactly one of: symptom, cause, identity, alibi, motive, resolution, season, colour. The kind says what the fact is about, not how players find it: lore, trace, testimony, physical, event and pattern are not kinds. An old-lore fact naming what the creature is, is identity. A lore fact about how to appease it is resolution. A physical trace of the broken grave is cause.
+- A fact states what is true, never who can learn it or how ("in plain view", "anyone can read it", "without asking him"): access is the channels' work. A fix asking for a way into a fact is not yours to make by rewording it.
 - Every concrete clue a person's secrets or routine hold (a track they saw, a list they keep, a thing they found) is a fact here, so it gets a way in; the game master voices those records.
 - Mark the load-bearing ones (the case cannot be solved without them). Each says what it points to: trueAnswer, neutral, or decoy:<threadId>.
 - For every fact that rests on the creature's lore or signs, list the ids it rests on (loreIds). This is how the engine knows which facts are deep lore and which are giveaway tells, so do not leave it empty for a lore-based fact.

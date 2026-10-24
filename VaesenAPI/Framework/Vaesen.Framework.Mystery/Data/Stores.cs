@@ -173,6 +173,13 @@ public sealed class CaseSummary
     [JsonProperty("hookChannelId")]
     public string HookChannelId { get; set; } = "";
 
+    /// <summary>The conflict and the reason, so the next case with this creature takes others (review of case 09, problem 5).</summary>
+    [JsonProperty("conflictArchetypeId")]
+    public string ConflictArchetypeId { get; set; } = "";
+
+    [JsonProperty("reasonKind")]
+    public string ReasonKind { get; set; } = "";
+
     [JsonProperty("hookGiverType")]
     public string HookGiverType { get; set; } = "";
 
@@ -194,6 +201,8 @@ public sealed class CaseSummary
             VaesenIds = s.VaesenIds,
             HookChannelId = s.HookChannelId,
             HookGiverType = s.HookGiverType,
+            ConflictArchetypeId = s.ConflictArchetypeId,
+            ReasonKind = s.ReasonKind,
             Year = s.Year,
             Month = s.Month,
             Finished = s.Status is CaseStatuses.Solved or CaseStatuses.Failed,
@@ -214,6 +223,8 @@ public sealed class CaseSummary
         VaesenIds = p.Brief.VaesenIds,
         HookChannelId = p.Brief.HookChannelId,
         HookGiverType = p.Brief.HookGiverType,
+        ConflictArchetypeId = p.Brief.ConflictArchetypeId,
+        ReasonKind = p.Truth.ReasonKind,
     };
 }
 

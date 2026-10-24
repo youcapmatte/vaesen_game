@@ -125,6 +125,28 @@ public sealed class PatchAsk
 
     [JsonProperty("fix")]
     public string Fix { get; set; } = "";
+
+    /// <summary>
+    /// What kind of change it is (review of case 09, problem 2): routed by this, not by the word in the target. A new
+    /// way into fact f13 is a new channel, which the minds and channels step makes; the facts step can only reword f13.
+    /// </summary>
+    [OneOf(typeof(PatchChanges))]
+    [JsonProperty("change")]
+    public string Change { get; set; } = PatchChanges.Reword;
+}
+
+public static class PatchChanges
+{
+    /// <summary>Reword or correct the target item; its owning step does it.</summary>
+    public const string Reword = "reword";
+
+    /// <summary>A new channel (a person, trace or document) for the target fact; minds and channels make it.</summary>
+    public const string AddChannel = "addChannel";
+
+    /// <summary>A new person in the cast (the target is the id they should have); humans make them, minds give them what they know.</summary>
+    public const string AddPerson = "addPerson";
+
+    public static readonly IReadOnlyList<string> All = [Reword, AddChannel, AddPerson];
 }
 
 /// <summary>
@@ -144,6 +166,10 @@ public sealed class FixPart
     /// <summary>The item it is about ("c66", "npc-x.knows"), or the pair or path for code.</summary>
     [JsonProperty("target")]
     public string Target { get; set; } = "";
+
+    /// <summary>A patch's <see cref="PatchChanges"/> other than a reword: a new channel or a new person.</summary>
+    [JsonProperty("change", NullValueHandling = NullValueHandling.Ignore)]
+    public string? Change { get; set; }
 
     /// <summary>What to change: the pair, the value, or the patch's instruction.</summary>
     [JsonProperty("detail")]

@@ -32,6 +32,12 @@ public sealed class MysteryDraft
     /// </summary>
     public List<SettledPublicFact> SettledPublicFacts { get; set; } = [];
 
+    /// <summary>
+    /// The Society's earlier cases with this creature or at this level, played or queued (review of case 09, problem
+    /// 5): the plot steps are told what not to tell again, and the critic checks the case does not.
+    /// </summary>
+    public List<EarlierPlot> EarlierPlots { get; set; } = [];
+
     public CasePacket Packet { get; set; } = new();
 
     public List<GenerationLogEntry> Log { get; } = [];
@@ -140,6 +146,9 @@ public sealed class CluesStage : DraftStage
 /// <summary>One model call or validator run during generation, for the generation log (spec 7.10: every run is logged).</summary>
 /// <summary>A level's public fact another of the Society's cases explains, and how.</summary>
 public sealed record SettledPublicFact(string PublicFactId, string Fact, string Explanation, string MysteryId, bool Played);
+
+/// <summary>An earlier case of the Society, as the plot memory tells it: what it was about, never how it was solved.</summary>
+public sealed record EarlierPlot(string MysteryId, string Title, string VaesenId, string LevelId, int Year, int Month, string ConflictArchetypeId, string Summary, bool Played);
 
 public sealed class GenerationLogEntry
 {

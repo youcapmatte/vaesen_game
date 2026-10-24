@@ -498,7 +498,7 @@ public sealed partial class CaseValidator : ICoherenceValidator
         private void CheckNames()
         {
             var people = packet.Cast.Select(c => (Name: c.Name, At: $"cast:{c.CharacterId}"))
-                .Concat(packet.OffstagePeople.Select(o => (Name: o.Name, At: "offstagePeople")))
+                .Concat(packet.OffstagePeople.Select(o => (Name: o.Name, At: $"offstage:{o.Id}")))
                 .ToList();
             var texts = new[] { packet.Truth.Summary, packet.Truth.Provocation, packet.Truth.HiddenHandMotive ?? "", packet.Truth.DecoyReading ?? "" }
                 .Concat(packet.Truth.Escalation.Select(e => e.Description));
@@ -516,18 +516,18 @@ public sealed partial class CaseValidator : ICoherenceValidator
                 {
                     // A first name in another's surname is a warning: it may be a patronymic of the period (Eriksdotter).
                     if (NameRules.Clash(people[i].Name, people[j].Name) is null && NameRules.SurnameEcho(people[i].Name, people[j].Name) is { } echo
-                        && !Kin(people[i].At, people[j].At))
+                        && !Kin(people[i].At, people[j].At) && !NamedKin(people[i], people[j]) && !NamedKin(people[j], people[i]))
                     {
-                        Warn(IssueCodes.CastCoherence, people[j].At.StartsWith("cast:", StringComparison.Ordinal) ? people[j].At : people[i].At,
+                        Warn(IssueCodes.CastCoherence, Located(people[j].At.StartsWith("cast:", StringComparison.Ordinal) ? people[j].At : people[i].At),
                             $"'{people[i].Name}' and '{people[j].Name}': {echo}. Fine for a parent and child; otherwise players may mix them up.");
                     }
 
                     if (NameRules.Clash(people[i].Name, people[j].Name) is { } why)
                     {
                         // The later cast member is renamed (the first may be a persistent character or a name in the truth).
-                        var at = people[j].At.StartsWith("cast:", StringComparison.Ordinal) ? people[j].At : people[i].At;
+                        var at = Located(people[j].At.StartsWith("cast:", StringComparison.Ordinal) ? people[j].At : people[i].At);
                         Error(IssueCodes.CastCoherence, at, $"'{people[i].Name}' and '{people[j].Name}' sound alike ({why}); players will mix them up.",
-                            $"Rename {(at == people[j].At ? people[j].Name : people[i].Name)}, keeping the id: no two people share a first name or first syllable, and no surname holds another's first name.");
+                            $"Rename {(at == Located(people[j].At) ? people[j].Name : people[i].Name)}, keeping the id: no two people share a first name or first syllable, and no surname holds another's first name.");
                     }
                 }
             }
@@ -1053,8 +1053,33 @@ public sealed partial class CaseValidator : ICoherenceValidator
                 .GroupBy(t => (t.A.CharacterId, t.B.CharacterId))
                 .Select(g => (g.First().A, g.First().B, string.Join("; ", g.Select(t => t.Nature))));
 
+        /// <summary>
+        /// A person only named in the truth or the events, whom a cast member's relationship calls their parent or child
+        /// by name ("father of Vilhelm, drowned in the race").
+        /// </summary>
+        private bool NamedKin((string Name, string At) named, (string Name, string At) other) =>
+            !named.At.StartsWith("cast:", StringComparison.Ordinal) && other.At.StartsWith("cast:", StringComparison.Ordinal)
+            && packet.FindCast(other.At[5..]) is { } member
+            && member.Relationships.Exists(r => IsParentChild(r.Nature) && r.Nature.Contains(NameRules.FirstName(named.Name), StringComparison.Ordinal));
+
+        /// <summary>An offstage person's issues are the offstage list's, as before ids were kept for the kin test.</summary>
+        private static string Located(string at) => at.StartsWith("offstage:", StringComparison.Ordinal) ? "offstagePeople" : at;
+
         private bool Kin(string atA, string atB)
         {
+            // A parent or child who is offstage (the drowned son, review of case 09): their relation says so, or a
+            // cast member's relationship to them does.
+            if (atA.StartsWith("offstage:", StringComparison.Ordinal) || atB.StartsWith("offstage:", StringComparison.Ordinal))
+            {
+                var (off, other) = atA.StartsWith("offstage:", StringComparison.Ordinal) ? (atA[9..], atB) : (atB[9..], atA);
+                var person = packet.OffstagePeople.Find(o => o.Id == off);
+                var member = other.StartsWith("cast:", StringComparison.Ordinal) ? packet.FindCast(other[5..]) : null;
+                return person is not null && member is not null
+                    && ((IsParentChild(person.Relation) && (person.Relation.Contains(member.CharacterId, StringComparison.Ordinal)
+                            || person.Relation.Contains(NameRules.FirstName(member.Name), StringComparison.Ordinal)))
+                        || member.Relationships.Exists(r => r.CharacterId == off && IsParentChild(r.Nature)));
+            }
+
             if (!atA.StartsWith("cast:", StringComparison.Ordinal) || !atB.StartsWith("cast:", StringComparison.Ordinal))
             {
                 return false;

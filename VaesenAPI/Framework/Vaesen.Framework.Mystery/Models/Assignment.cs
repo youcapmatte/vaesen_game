@@ -37,6 +37,12 @@ public sealed class PastMystery
     [JsonProperty("hookGiverType")]
     public string HookGiverType { get; set; } = "";
 
+    [JsonProperty("conflictArchetypeId")]
+    public string ConflictArchetypeId { get; set; } = "";
+
+    [JsonProperty("reasonKind")]
+    public string ReasonKind { get; set; } = "";
+
     /// <summary>The in-world year it is set in; 0 for cases from before the calendar (the setting's start year).</summary>
     [JsonProperty("year")]
     public int Year { get; set; }

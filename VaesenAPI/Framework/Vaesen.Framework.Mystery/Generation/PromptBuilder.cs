@@ -160,6 +160,20 @@ public static class PromptBuilder
             text.AppendLine();
         }
 
+        // The plot memory (review of case 09, problem 5): without it the creature's strongest lore tells the same story twice.
+        if (draft.EarlierPlots.Count > 0 && For(ConflictStep.StepName, EscalationStep.StepName, FactsStep.StepName))
+        {
+            text.AppendLine("# The Society's earlier cases with this creature or at this place (tell a different story)");
+            foreach (var plot in draft.EarlierPlots)
+            {
+                var same = plot.VaesenId == draft.Vaesen.Id ? $"the same creature, conflict {plot.ConflictArchetypeId}" : $"{plot.VaesenId}, at this place";
+                text.AppendLine($"- \"{plot.Title}\" ({(plot.Year > 0 ? new InWorldDate(plot.Year, plot.Month).ToString() : "before the calendar")}, {same}{(plot.Played ? ", played" : ", queued")}): {plot.Summary}");
+            }
+
+            text.AppendLine("Do not repeat these plots: not the same binding or provocation, the same kind of victim and how they were taken, the same people's roles (the one who warned, the one who took the money), the same signs or the same cure. Draw on other lore of the creature.");
+            text.AppendLine();
+        }
+
         var locals = draft.World?.RosterFor(draft.Level.Id) is null ? [] : draft.World.PeopleOf(draft.Level.Id).Where(c => c.Status is CharacterStatuses.Alive or CharacterStatuses.Absent).ToList();
         if (locals.Count > 0 && For(HumansStep.StepName))
         {

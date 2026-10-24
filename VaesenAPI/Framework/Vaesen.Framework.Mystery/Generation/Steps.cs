@@ -621,6 +621,7 @@ public sealed class FactsStep(IMysteryModel model, ICoherenceValidator validator
             LoreIds = f.LoreIds,
         }).ToList();
         Derived.LoreFlags(packet.Facts, draft.Vaesen);
+        Derived.LoadBearing(packet);
 
         foreach (var e in packet.Truth.Escalation)
         {
@@ -730,6 +731,7 @@ public sealed class ArcStep(IMysteryModel model, ICoherenceValidator validator, 
         packet.Beats = output.Beats;
         packet.Climax = output.Climax;
         packet.ResolutionLevers = output.ResolutionLevers;
+        Derived.LoadBearing(packet);
         // The weights depend on the hook and the channels too: they are set before each whole-case check.
         packet.Tension = new CaseTension();
         return [];
@@ -895,14 +897,8 @@ public sealed class CriticStep(IMysteryModel model, MysteryOptions options)
                 SetFields = c.SetFields.Where(f => f.Path.Length > 0).ToList() is { Count: > 0 } fields ? fields : null,
                 Patches = c.Patches.Where(p => p.Target.Length > 0).ToList() is { Count: > 0 } patches ? patches : null,
 
-                // Each check blocks or advises by default (fixes 5, section 5); the critic may move it, with a reason.
-                Blocking = c.Impact switch
-                {
-                    "blocking" => true,
-                    "advisory" => false,
-                    _ => CriticChecks.BlockingByDefault.Contains(c.Check),
-                },
-                ImpactReason = string.IsNullOrWhiteSpace(c.ImpactReason) ? null : c.ImpactReason,
+                Blocking = BlockingOf(c),
+                ImpactReason = string.IsNullOrWhiteSpace(c.ImpactReason) || c.Impact == CriticImpacts.Default ? null : c.ImpactReason,
             })
             .ToList();
 
@@ -925,6 +921,18 @@ public sealed class CriticStep(IMysteryModel model, MysteryOptions options)
         draft.Packet.Validation.Runs++;
         return ret.Ok(issues);
     }
+
+    /// <summary>
+    /// Whether a failed check blocks: its check's default (fixes 5, section 5), unless the critic moved it and said why.
+    /// A move without a reason is the field filled because every field must be, not a judgement (review of case 09).
+    /// </summary>
+    public static bool BlockingOf(CriticCheck check) =>
+        (string.IsNullOrWhiteSpace(check.ImpactReason) ? CriticImpacts.Default : check.Impact) switch
+        {
+            CriticImpacts.Blocking => true,
+            CriticImpacts.Advisory => false,
+            _ => CriticChecks.BlockingByDefault.Contains(check.Check),
+        };
 
     /// <summary>
     /// The last look's issues, for the second look: without them it reviews from scratch and asks for a new detail on

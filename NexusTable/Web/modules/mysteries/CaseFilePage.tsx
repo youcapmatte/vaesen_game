@@ -461,7 +461,7 @@ function IssueLine({ issue }: { issue: CoherenceIssue }) {
       {issue.suggestedFix && <Text fz="xs" fs="italic" c="var(--nx-ink-soft)">{issue.suggestedFix}</Text>}
       {issue.parts?.map((part, i) => (
         <Text key={i} fz="xs" c={part.status === "done" ? "var(--nx-ink-soft)" : "blood.3"}>
-          {part.kind} by {part.owner || "nobody"}{part.target ? ` on ${part.target}` : ""}: {part.status}{part.note ? ` (${part.note})` : ""}
+          {part.change ?? part.kind} by {part.owner || "nobody"}{part.target ? ` on ${part.target}` : ""}: {part.status}{part.note ? ` (${part.note})` : ""}
         </Text>
       ))}
     </Box>

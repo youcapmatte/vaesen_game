@@ -362,6 +362,15 @@ public sealed class CriticOutput
     public string Overall { get; set; } = "";
 }
 
+public static class CriticImpacts
+{
+    public const string Default = "default";
+    public const string Blocking = "blocking";
+    public const string Advisory = "advisory";
+
+    public static readonly IReadOnlyList<string> All = [Default, Blocking, Advisory];
+}
+
 public sealed class CriticCheck
 {
     /// <summary>One of <see cref="CriticChecks"/>.</summary>
@@ -400,9 +409,14 @@ public sealed class CriticCheck
     [JsonProperty("patches")]
     public List<PatchAsk> Patches { get; set; } = [];
 
-    /// <summary>"blocking" or "advisory" to move the issue from its check's default; empty keeps the default.</summary>
+    /// <summary>
+    /// One of <see cref="CriticImpacts"/>: "default" keeps the check's default; "blocking" or "advisory" moves it, and
+    /// counts only with a reason. Every field of the answer is required, so a free string was always filled, and a
+    /// critic that wrote "advisory" for every warning made every blocking check advisory (review of case 09, problem 4).
+    /// </summary>
+    [OneOf(typeof(CriticImpacts))]
     [JsonProperty("impact")]
-    public string Impact { get; set; } = "";
+    public string Impact { get; set; } = CriticImpacts.Default;
 
     /// <summary>One line on why, when <see cref="Impact"/> moves it.</summary>
     [JsonProperty("impactReason")]
@@ -449,14 +463,20 @@ public static class CriticChecks
     public const string Scenes = "scenes";
 
     /// <summary>
+    /// The case does not retell one of the Society's earlier cases (review of case 09, problem 5). Never patched: a
+    /// retold plot is the whole design, so it goes to a person.
+    /// </summary>
+    public const string Novelty = "novelty";
+
+    /// <summary>
     /// Checks whose failures block the case by default (fixes 5, section 5): left open, the case needs review. The
     /// others are advisory unless the critic says otherwise.
     /// </summary>
     public static readonly IReadOnlySet<string> BlockingByDefault = new HashSet<string>(StringComparer.Ordinal)
     {
-        Hook, NpcRecords, MindsAgree, WorldConsistency, Timeline, FairClues, Solves, Scenes, NonTrivial, KnowledgeGate,
+        Hook, NpcRecords, MindsAgree, WorldConsistency, Timeline, FairClues, Solves, Scenes, NonTrivial, KnowledgeGate, Novelty,
     };
 
     public static readonly IReadOnlyList<string> All =
-        [DeepLoreTrail, NonTrivial, KnowledgeGate, HumansFromConflict, DifficultyOnFocus, Hook, FairClues, HonestRedHerrings, Solves, WorldConsistency, Timeline, Mechanisms, ActsToPlan, Leverage, MindsAgree, NpcRecords, Scenes];
+        [DeepLoreTrail, NonTrivial, KnowledgeGate, HumansFromConflict, DifficultyOnFocus, Hook, FairClues, HonestRedHerrings, Solves, WorldConsistency, Timeline, Mechanisms, ActsToPlan, Leverage, MindsAgree, NpcRecords, Scenes, Novelty];
 }
