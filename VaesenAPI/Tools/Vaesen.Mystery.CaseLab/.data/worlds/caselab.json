@@ -1,0 +1,5085 @@
+{
+  "schemaVersion": 1,
+  "societyId": "caselab",
+  "settingId": "vaesen",
+  "seededAt": "2026-10-24T14:20:36.3993837Z",
+  "updatedAt": "2026-10-24T14:20:36.4019062Z",
+  "version": 1,
+  "characters": [
+    {
+      "id": "comminister-hallgren",
+      "definitionId": "comminister-hallgren",
+      "name": "Nils Fredrik Hallgren",
+      "tier": "canonical",
+      "status": "alive",
+      "importance": 2,
+      "home": "The comminister's house beside the church at Gamla Uppsala, in sight of the great royal mounds",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 58,
+        "gender": "male",
+        "occupation": "Comminister (assistant vicar) of Gamla Uppsala parish",
+        "rank": "clergy",
+        "home": "The comminister's house beside the church at Gamla Uppsala, in sight of the great royal mounds",
+        "appearance": "Gaunt and very upright, with white hair worn long at the collar, a clerical bib always spotless, and long cold fingers he folds over his hymnal."
+      },
+      "personality": {
+        "openness": 1,
+        "conscientiousness": 4,
+        "extraversion": 2,
+        "agreeableness": 2,
+        "neuroticism": 4
+      },
+      "drives": [
+        {
+          "id": "cleanse-the-parish",
+          "text": "Root out the remnants of heathen belief in a parish that sits on the very graves of the old kings.",
+          "strength": 3
+        },
+        {
+          "id": "the-revival",
+          "text": "Hold the parish in the state church against the revivalist lay preachers who are emptying his pews.",
+          "strength": 2
+        },
+        {
+          "id": "forget",
+          "text": "Never again think about what he saw in the mound field when he was eleven.",
+          "strength": 3
+        }
+      ],
+      "fears": [],
+      "voice": {
+        "register": "Measured, scriptural and chilly; quotes the catechism and the Bible as a matter of course, and never raises his voice.",
+        "mannerisms": [
+          "Begins a reproach with 'I say this in love'",
+          "Glances towards the mounds when anyone mentions the old faith",
+          "Answers questions about folk belief with a question about churchgoing"
+        ],
+        "sampleLines": [
+          "I say this in love. The household examination is in March, and I shall expect the whole house, gentlefolk and servants alike.",
+          "The mounds are graves of heathen men, and graves are for the dead. I would thank you not to walk among them after dark.",
+          "There are those in this parish who would leave milk on a stone sooner than bring their children to be confirmed. You would not encourage them, I hope."
+        ]
+      },
+      "background": "Hallgren has served the parish of Gamla Uppsala for more than twenty years, long enough to have buried most of the farmers who were young when he came. He is conscientious, unbending and genuinely devoted to the souls in his charge, and he regards the lingering folk customs of his parish, the offerings at stones, the charms against the vittra, the summer fires, as a darkness he was sent to drive out. He also keeps the parish's household examination rolls, which record every person in every house, including who in the Society's household reads the catechism and who does not. As a boy, staying with an uncle at the parsonage, he walked into the mound field one autumn night and saw something there that he has spent his life calling a fever dream.",
+      "latentHooks": [
+        {
+          "id": "the-mound-night",
+          "kind": "secret",
+          "text": "He has the Sight, suppressed since childhood; what he saw at the mounds was real, and he knows it."
+        },
+        {
+          "id": "examination-rolls",
+          "kind": "habit",
+          "text": "He keeps the household examination rolls in exacting detail, noting not only catechism but rumours, absences and quarrels, for every farm in the parish."
+        },
+        {
+          "id": "bishop-favour",
+          "kind": "ambition",
+          "text": "He hopes to be made vicar of a better parish before he dies, and an archbishop's commendation for stamping out superstition would bring it."
+        },
+        {
+          "id": "foundling",
+          "kind": "secret",
+          "text": "Thirty years ago he quietly entered a foundling child in the register under a false parentage to spare a family's shame; the child grew up in the parish."
+        }
+      ],
+      "networkLinks": [
+        {
+          "targetId": "parish",
+          "place": "Gamla Uppsala and the cathedral chapter",
+          "nature": "Comminister with the ear of the cathedral chapter",
+          "influence": "Can denounce the Society's household from the pulpit, or bring the chapter's displeasure on any household it favours."
+        },
+        {
+          "targetId": "constable-hagg",
+          "place": "Uppsala",
+          "nature": "Fellow-sceptic and churchgoer",
+          "influence": "Can pass the constable what he learns at the examinations."
+        },
+        {
+          "targetId": "landowner",
+          "place": "Around Gamla Uppsala",
+          "nature": "Confidant of the pious manor families of the district",
+          "influence": "Can make the Society's members unwelcome at the local manors."
+        }
+      ],
+      "attitude": -1,
+      "attitudeReason": "He suspects the Society of indulging the old superstitions his life has been spent driving out, and fears what they might make him remember.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "constable-hagg",
+      "definitionId": "constable-hagg",
+      "name": "Karl Edvard Hägg",
+      "tier": "canonical",
+      "status": "alive",
+      "importance": 2,
+      "home": "Two rooms above a harness-maker's in Svartbäcken, Uppsala",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 44,
+        "gender": "male",
+        "occupation": "Senior police constable of the Uppsala town police",
+        "rank": "worker",
+        "home": "Two rooms above a harness-maker's in Svartbäcken, Uppsala",
+        "appearance": "Broad and slightly stooped, grey side-whiskers clipped short, a uniform coat brushed thin at the elbows, and a notebook he writes in with a carpenter's pencil."
+      },
+      "personality": {
+        "openness": 2,
+        "conscientiousness": 5,
+        "extraversion": 2,
+        "agreeableness": 2,
+        "neuroticism": 3
+      },
+      "drives": [
+        {
+          "id": "protect-the-gullible",
+          "text": "Keep cunning folk, spiritualists and confidence men from preying on frightened country people.",
+          "strength": 3
+        },
+        {
+          "id": "orderly-town",
+          "text": "Have Uppsala's books balanced at the end of each month: every report filed, every drunk accounted for.",
+          "strength": 2
+        },
+        {
+          "id": "pension",
+          "text": "Reach his pension without a scandal that would let the stadsfiskal pass him over.",
+          "strength": 2
+        }
+      ],
+      "fears": [],
+      "voice": {
+        "register": "Plain, slow and official; Uppland country speech under a policeman's formal phrases.",
+        "mannerisms": [
+          "Writes down what you say before he answers it",
+          "Calls everyone by their full name and parish",
+          "Ends a question with a long silence instead of a second question"
+        ],
+        "sampleLines": [
+          "I'll have that again, slowly. Where were you on the evening of the fourteenth, and who will swear to it?",
+          "I've seen a widow in Bälinge sell her last cow to a man who promised to talk to her drowned boy. I don't care for gentlemen who see what others can't.",
+          "Nothing in Uppsala walks at night that can't be put in the cells by morning, sir. That is my experience."
+        ]
+      },
+      "background": "Hägg was born a farmhand's son at Vaksala, served eight years in the Uppland regiment and joined the town police when it was little more than a watch. He is honest to the point of rudeness and has never taken a coin. Fifteen years ago he arrested a travelling 'wise man' who had stripped a parish of its savings by promising to lift curses, and he watched the widow at the heart of that case hang herself in her barn before the trial. He has distrusted anyone who trades in the unseen ever since. He has heard that a group of gentlefolk near Gamla Uppsala receive strange letters from the countryside and travel out to answer them, and to him that sounds like the same trade in better clothes.",
+      "latentHooks": [
+        {
+          "id": "the-widows-barn",
+          "kind": "secret",
+          "text": "He found the widow in Bälinge alive enough to speak, and what she told him about her son's drowning is not in his report; it did not fit."
+        },
+        {
+          "id": "brother-in-law-debt",
+          "kind": "debt",
+          "text": "His wife's brother runs a tavern in Fjärdingen without a proper licence, and Hägg has been looking the other way for years."
+        },
+        {
+          "id": "sunday-ledger",
+          "kind": "habit",
+          "text": "Every Sunday afternoon he copies the week's incidents into a private ledger he keeps at home, with notes he would never put in an official report."
+        },
+        {
+          "id": "sergeant-post",
+          "kind": "ambition",
+          "text": "The post of police sergeant (överkonstapel) falls vacant next year, and a clean, celebrated arrest would win it."
+        }
+      ],
+      "networkLinks": [
+        {
+          "targetId": "police",
+          "place": "Uppsala",
+          "nature": "Senior constable, trusted by the stadsfiskal for country errands",
+          "influence": "Can have the Society's names noted as persons of interest, or quietly ask a rural länsman to refuse them help."
+        },
+        {
+          "targetId": "parish",
+          "place": "Vaksala and Uppsala",
+          "nature": "Knows the parish clerks who keep the registers",
+          "influence": "Can learn who moved into and out of a parish, and when, before the Society can."
+        },
+        {
+          "targetId": "comminister-hallgren",
+          "place": "Gamla Uppsala",
+          "nature": "Fellow-sceptic; they compare notes after church",
+          "influence": "Each feeds the other's suspicions about the Society."
+        }
+      ],
+      "attitude": -2,
+      "attitudeReason": "He believes the Society are well-born charlatans of the kind he has seen ruin poor families, and he is waiting for them to make a mistake.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "docent-ekelund",
+      "definitionId": "docent-ekelund",
+      "name": "Henrik Ekelund",
+      "tier": "canonical",
+      "status": "alive",
+      "importance": 2,
+      "home": "Rented rooms on Övre Slottsgatan, Uppsala, crammed with notebooks and dialect word-slips",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 34,
+        "gender": "male",
+        "occupation": "Docent (lecturer) in Nordic languages at Uppsala University",
+        "rank": "burgher",
+        "home": "Rented rooms on Övre Slottsgatan, Uppsala, crammed with notebooks and dialect word-slips",
+        "appearance": "Tall and thin, with spectacles pushed up into untidy fair hair, a velvet waistcoat with a burn hole, and pockets full of folded paper slips."
+      },
+      "personality": {
+        "openness": 5,
+        "conscientiousness": 2,
+        "extraversion": 4,
+        "agreeableness": 4,
+        "neuroticism": 3
+      },
+      "drives": [
+        {
+          "id": "the-great-work",
+          "text": "Compile the definitive record of Swedish folk belief, parish by parish, before the railway and the emigrant ships erase it.",
+          "strength": 3
+        },
+        {
+          "id": "professorship",
+          "text": "Win the chair that his rival in Lund is also courting.",
+          "strength": 2
+        },
+        {
+          "id": "believe-or-not",
+          "text": "Find out, privately, whether any of it is true.",
+          "strength": 2
+        }
+      ],
+      "fears": [],
+      "voice": {
+        "register": "Eager, learned and digressive; drops into dialect words with delight and corrects his own Latin.",
+        "mannerisms": [
+          "Writes words on slips of paper mid-conversation",
+          "Asks how a thing is said in your home parish",
+          "Says 'fascinating' when he means 'alarming'"
+        ],
+        "sampleLines": [
+          "In Hälsingland they don't say she was taken, they say she was 'borrowed'. Borrowed! Do you hear the difference? It means someone expects her back.",
+          "I am a man of science, naturally. But if you were to go to that mill on Midsummer Eve, would you be so kind as to take me with you?",
+          "Professor Tornell would call this peasant fancy. Professor Tornell has never sat in a cowshed in Orsa at four in the morning."
+        ]
+      },
+      "background": "Ekelund is a pastor's son from Dalarna who escaped into philology and has never quite come back down. In 1872 he helped a circle of students found one of the new dialect societies, the landsmålsföreningar, which send young men out every summer to write down the speech, songs and tales of their home provinces. His rooms are a paper flood of word-slips, transcribed charms and folk tunes. He tells his colleagues that folk belief is a fossil record of the Nordic mind; he has privately begun to suspect it is also a field report. He has worked out that the Society knows more than it says and is courting them shamelessly.",
+      "latentHooks": [
+        {
+          "id": "student-collectors",
+          "kind": "connection",
+          "text": "His student collectors spread across half the provinces every summer, and their notebooks often record strange events weeks before the papers do."
+        },
+        {
+          "id": "the-charm-he-tried",
+          "kind": "secret",
+          "text": "Last spring, alone in his rooms, he tried one of the charms he had transcribed, and something answered; he has not slept well since."
+        },
+        {
+          "id": "borrowed-manuscript",
+          "kind": "debt",
+          "text": "He borrowed a seventeenth-century manuscript of spells from the university library's closed collection and has not returned it."
+        },
+        {
+          "id": "publish-the-society",
+          "kind": "ambition",
+          "text": "He dreams of a learned paper on 'a living tradition of seers near Uppsala', which would make his name and expose the Society."
+        }
+      ],
+      "networkLinks": [
+        {
+          "targetId": "university",
+          "place": "Uppsala",
+          "nature": "Docent with friends among the younger faculty and the student nations",
+          "influence": "Can open the library's closed collections and the university's archives, or a word from him can get the Society's members barred from them."
+        },
+        {
+          "targetId": "parish",
+          "place": "Across the provinces",
+          "nature": "Corresponds with dozens of country vicars who send him local customs",
+          "influence": "Can find out quickly which parish has had strange deaths or customs revived."
+        },
+        {
+          "targetId": "press",
+          "place": "Uppsala and Stockholm",
+          "nature": "Writes popular articles on folk belief for the papers",
+          "influence": "Can make a case into a learned curiosity in print, for better or worse."
+        }
+      ],
+      "attitude": 2,
+      "attitudeReason": "He sees the Society as the most exciting source he has ever found and wants their trust, and their secrets.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "editor-blom",
+      "definitionId": "editor-blom",
+      "name": "Johan August Blom",
+      "tier": "canonical",
+      "status": "alive",
+      "importance": 2,
+      "home": "The newspaper office and flat above it on Drottninggatan, Uppsala, smelling of ink and wet paper",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 47,
+        "gender": "male",
+        "occupation": "Editor and part-owner of the liberal newspaper Fyrisposten",
+        "rank": "burgher",
+        "home": "The newspaper office and flat above it on Drottninggatan, Uppsala, smelling of ink and wet paper",
+        "appearance": "Heavy-set and red-cheeked, with a magnificent brown beard, a cigar he rarely lights, and shirt cuffs grey with printer's ink."
+      },
+      "personality": {
+        "openness": 4,
+        "conscientiousness": 3,
+        "extraversion": 4,
+        "agreeableness": 2,
+        "neuroticism": 2
+      },
+      "drives": [
+        {
+          "id": "circulation",
+          "text": "Keep the paper's subscribers ahead of the conservative rival across the river.",
+          "strength": 3
+        },
+        {
+          "id": "progress",
+          "text": "Push the cause of reform: schools, railways, an end to superstition and to the clergy's grip on the countryside.",
+          "strength": 2
+        },
+        {
+          "id": "the-story",
+          "text": "Get the true story of what the Society does, whatever it is, and print it first.",
+          "strength": 2
+        }
+      ],
+      "fears": [],
+      "voice": {
+        "register": "Booming, jovial and argumentative; speaks in headlines and leading articles even across a dinner table.",
+        "mannerisms": [
+          "Taps the table with a folded newspaper to make a point",
+          "Calls everyone 'my friend' especially when he disagrees",
+          "Repeats a good phrase twice to remember it for print"
+        ],
+        "sampleLines": [
+          "My friend, the age of trolls is over. The age of the telegraph is here. Superstition in the countryside, that's the headline, that's the story.",
+          "You've been to Hedesunda twice this month. I don't ask why. I merely note it. I am a noting sort of man.",
+          "Give me something true and I'll print it straight. Give me nothing and I shall have to print what people say, and people say such things."
+        ]
+      },
+      "background": "Blom was a schoolteacher in Västerås until a sharp article on the cathedral chapter cost him his post. He drifted into journalism in Stockholm, came to Uppsala to run Fyrisposten in 1864, and has turned a dull advertiser into a lively, quarrelsome liberal paper read in every coffee house in town. He mocks rural superstition in print as a matter of policy, but he is too good a newspaperman not to notice that certain country stories keep ending with the arrival of the same gentlefolk from Gamla Uppsala. He does not yet know whether the Society are a story about fraud, about science, or about something else.",
+      "latentHooks": [
+        {
+          "id": "paid-informants",
+          "kind": "connection",
+          "text": "He pays small sums to servants, coachmen and telegraph clerks for news, and some of them work close to the Society."
+        },
+        {
+          "id": "libel-suit",
+          "kind": "debt",
+          "text": "A libel suit from a Uppsala alderman is pending, and losing it would ruin him; he would trade a great deal for leverage."
+        },
+        {
+          "id": "sister-in-asylum",
+          "kind": "secret",
+          "text": "His younger sister has been in the asylum at Uppsala for ten years after seeing 'the woman in the lake'; he visits her monthly and tells no one."
+        },
+        {
+          "id": "riksdag-seat",
+          "kind": "ambition",
+          "text": "He means to stand for the second chamber of the Riksdag, and a sensational exposé would make his name across the county."
+        }
+      ],
+      "networkLinks": [
+        {
+          "targetId": "press",
+          "place": "Uppsala and Stockholm",
+          "nature": "Editor with correspondents in the provincial papers",
+          "influence": "Can put a story in print across the county within the week, praising or mocking the Society."
+        },
+        {
+          "targetId": "police",
+          "place": "Uppsala",
+          "nature": "Drinks with junior constables who sell him the night's arrests",
+          "influence": "Can learn of the Society's dealings with the police almost as soon as they happen."
+        },
+        {
+          "targetId": "innkeeper-strand",
+          "place": "The northern road",
+          "nature": "Buys road gossip from Brita Strand",
+          "influence": "Learns who has been coming and going from the Society's headquarters."
+        }
+      ],
+      "attitude": 0,
+      "attitudeReason": "Neither friend nor foe; the Society is a story he has not yet decided how to write.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "innkeeper-strand",
+      "definitionId": "innkeeper-strand",
+      "name": "Brita Strand",
+      "tier": "canonical",
+      "status": "alive",
+      "importance": 2,
+      "home": "Strands gästgivargård, by the post road a short walk from the Society's headquarters",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 52,
+        "gender": "female",
+        "occupation": "Keeper of the coaching inn (gästgivaregård) on the northern road out of Uppsala",
+        "rank": "burgher",
+        "home": "Strands gästgivargård, by the post road a short walk from the Society's headquarters",
+        "appearance": "Small and quick, with ink-stained fingers from the post ledger, a black silk widow's cap worn rakishly, and a loud laugh that carries across the yard."
+      },
+      "personality": {
+        "openness": 3,
+        "conscientiousness": 4,
+        "extraversion": 5,
+        "agreeableness": 3,
+        "neuroticism": 2
+      },
+      "drives": [
+        {
+          "id": "keep-the-inn",
+          "text": "Keep the inn and its post-horse contract out of the hands of her late husband's cousin, who wants it.",
+          "strength": 3
+        },
+        {
+          "id": "know-everything",
+          "text": "Know every traveller's business before they have unbuckled their bags.",
+          "strength": 2
+        },
+        {
+          "id": "daughter-match",
+          "text": "See her daughter Lovisa married to someone with prospects, not the stable lad she keeps looking at.",
+          "strength": 2
+        }
+      ],
+      "fears": [],
+      "voice": {
+        "register": "Warm, fast and mercantile; switches to careful politeness for gentlefolk and back again the moment they leave.",
+        "mannerisms": [
+          "Quotes prices before anyone asks",
+          "Calls regular guests by what they drink",
+          "Lowers her voice for the interesting parts and raises it for the rest"
+        ],
+        "sampleLines": [
+          "A room is one riksdaler, the horses are extra, and your secrets, my dear, are free. I'll only charge you for keeping them.",
+          "Three of you came back in the small hours on Tuesday, muddy to the knees, and not one word to old Brita. I'm hurt.",
+          "The post coach from Gävle had a lady on it who asked after your house by name. I told her nothing, naturally. Well. Very little."
+        ]
+      },
+      "background": "Brita married into the inn at nineteen and ran it in practice long before her husband drank himself into the churchyard in 1866. The inn holds the county contract to keep post-horses for travellers, which makes it a nerve of the district: coachmen, pedlars, emigrants on their way to the Gothenburg boats and commercial travellers all pass through her taproom, and she forgets nothing. She likes the Society because they pay promptly, bring interesting guests and never quibble over the bill, but she has noticed that trouble follows them up the road, and she charges accordingly.",
+      "latentHooks": [
+        {
+          "id": "cousin-claim",
+          "kind": "debt",
+          "text": "Her husband died owing money to his cousin Anders Strand, a grain merchant in Uppsala, who holds a note on the inn and could call it in."
+        },
+        {
+          "id": "post-ledger",
+          "kind": "habit",
+          "text": "She keeps the post-horse ledger meticulously, so she can say who hired horses for which road, and when, going back twenty years."
+        },
+        {
+          "id": "the-night-guest",
+          "kind": "secret",
+          "text": "One winter night years ago she gave shelter to a traveller who left before dawn and was never seen again; she kept his trunk, and something in it frightens her."
+        },
+        {
+          "id": "coachmen-network",
+          "kind": "connection",
+          "text": "Every coachman and post-boy between Uppsala and Gävle drinks at her bar and carries her gossip."
+        }
+      ],
+      "networkLinks": [
+        {
+          "targetId": "company",
+          "place": "Uppsala and Gävle",
+          "nature": "Feeds and lodges the timber and railway companies' men on the road north",
+          "influence": "Can learn when company agents travel and where, and can make a stranger's stay pleasant or very uncomfortable."
+        },
+        {
+          "targetId": "press",
+          "place": "Uppsala",
+          "nature": "Sells the editor small items of news for a few skilling",
+          "influence": "Can put a story about the Society into the paper, or keep one out of it, with a word."
+        },
+        {
+          "targetId": "servant-alm",
+          "place": "The Society's headquarters",
+          "nature": "Elin Alm's aunt by marriage; Elin visits on her free Sundays",
+          "influence": "Hears, sooner or later, most of what goes on in the headquarters' kitchen."
+        }
+      ],
+      "attitude": 1,
+      "attitudeReason": "Good customers who pay on time and bring interesting company, though she suspects they are worth more than they pay.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "servant-alm",
+      "definitionId": "servant-alm",
+      "name": "Elin Alm",
+      "tier": "canonical",
+      "status": "alive",
+      "importance": 2,
+      "home": "A small room behind the kitchen at the Society's headquarters near Gamla Uppsala",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 19,
+        "gender": "female",
+        "occupation": "Maid of all work at the Society's headquarters",
+        "rank": "farmhand or maid",
+        "home": "A small room behind the kitchen at the Society's headquarters near Gamla Uppsala",
+        "appearance": "Sturdy and freckled, with red, chapped hands, a plaited fair braid pinned under a cap, and very sharp grey eyes that miss nothing."
+      },
+      "personality": {
+        "openness": 4,
+        "conscientiousness": 4,
+        "extraversion": 2,
+        "agreeableness": 4,
+        "neuroticism": 4
+      },
+      "drives": [
+        {
+          "id": "passage-money",
+          "text": "Save enough for a steerage passage to join her brother Per in Minnesota.",
+          "strength": 3
+        },
+        {
+          "id": "protect-the-house",
+          "text": "Keep the household she serves safe from the things she has seen in the yard at night.",
+          "strength": 2
+        },
+        {
+          "id": "grandmother",
+          "text": "Honour what her grandmother taught her without the vicar finding out.",
+          "strength": 1
+        }
+      ],
+      "fears": [],
+      "voice": {
+        "register": "Quiet and correct with the gentlefolk, broad Hälsingland dialect when frightened or among her own.",
+        "mannerisms": [
+          "Answers a question with 'if the master wishes'",
+          "Touches the iron nail sewn into her apron hem when she is uneasy",
+          "Goes very still and listens before she speaks"
+        ],
+        "sampleLines": [
+          "If the master wishes. Only, I'd not leave the stable door open after dark this week. Not this week.",
+          "My grandmother used to put a pair of scissors under the cradle. I don't hold with such things, of course. But I've put a pair under the back step.",
+          "Someone was asking at the inn what time the gentlemen come and go. I didn't care for the look of him."
+        ]
+      },
+      "background": "Elin came south from a croft near Bollnäs after the famine of 1868 took her parents and sent her brother to America. Her grandmother was a respected wise woman who could stop blood and find lost cattle, and taught Elin far more than either of them ever told the vicar. She came to the headquarters through her aunt's connection with the inn and was hired because she did not scream on her first night. She half-has the Sight herself, keeps the house's old protections quietly in order, and is fiercely loyal, but she is also saving every coin she can, and coins come from more than one direction.",
+      "latentHooks": [
+        {
+          "id": "editors-coins",
+          "kind": "secret",
+          "text": "Editor Blom pays her a few skilling for harmless news of the household; she tells herself she gives him nothing that matters."
+        },
+        {
+          "id": "grandmothers-book",
+          "kind": "connection",
+          "text": "She keeps her grandmother's book of charms and remedies, written in a mixture of Swedish and old rune-signs, hidden in her trunk."
+        },
+        {
+          "id": "brothers-letters",
+          "kind": "habit",
+          "text": "Letters from Per in Minnesota arrive irregularly through the inn; one has not come in five months, and she fears the worst."
+        },
+        {
+          "id": "half-sight",
+          "kind": "secret",
+          "text": "She sometimes sees what the Society sees, and does not yet know whether to tell them."
+        }
+      ],
+      "networkLinks": [
+        {
+          "targetId": "innkeeper-strand",
+          "place": "The northern road",
+          "nature": "Niece by marriage; visits on free Sundays",
+          "influence": "Can pass word to or from the inn, and anything she says there travels."
+        },
+        {
+          "targetId": "editor-blom",
+          "place": "Uppsala",
+          "nature": "Paid, occasional informant",
+          "influence": "Can, without meaning harm, let slip the Society's movements to the press."
+        },
+        {
+          "targetId": "parish",
+          "place": "Gamla Uppsala",
+          "nature": "Communicant who must attend the household examination",
+          "influence": "Her answers at the catechism examination can draw the vicar's attention to the house."
+        }
+      ],
+      "attitude": 2,
+      "attitudeReason": "Loyal to the household that took her in and frightened for it, though she keeps her own counsel and her own savings.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-gustaf-nordenfelt",
+      "definitionId": null,
+      "name": "Gustaf Adolf Nordenfelt",
+      "tier": "core",
+      "status": "alive",
+      "importance": 2,
+      "home": "Uppsala",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 58,
+        "gender": "male",
+        "occupation": "Professor of medicine at Uppsala University and physician to the academic hospital",
+        "rank": "burgher",
+        "home": "A tall stone house on Trädgårdsgatan, Uppsala",
+        "appearance": "Narrow, silver-whiskered, immaculate black coat, a gold pince-nez he polishes when contradicted."
+      },
+      "personality": {
+        "openness": 2,
+        "conscientiousness": 5,
+        "extraversion": 3,
+        "agreeableness": 2,
+        "neuroticism": 3
+      },
+      "drives": [
+        {
+          "id": "dr1",
+          "text": "Prove that every so-called haunting is nerves, hunger or bad air, and make the lesson public.",
+          "strength": 8
+        },
+        {
+          "id": "dr2",
+          "text": "Protect his standing on the university board and the asylum committee.",
+          "strength": 6
+        }
+      ],
+      "fears": [],
+      "voice": {
+        "register": "Dry, precise, condescending academic Swedish with Latin tags.",
+        "mannerisms": [
+          "Polishes his pince-nez before disagreeing",
+          "Calls every strange tale 'a case'",
+          "Never raises his voice"
+        ],
+        "sampleLines": [
+          "Superstition is merely a diagnosis that has not yet been made.",
+          "Bring me the patient and leave the spirits at the door."
+        ]
+      },
+      "background": "Trained in Paris and Vienna, he built his name on the study of hysteria in country parishes. He has quietly read the Society's cases as source material and considers its members interesting patients rather than colleagues.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "ambition",
+          "text": "He is drafting a treatise on 'collective delusion in the Uppland peasantry' and would like the Society's members as unwitting case studies."
+        },
+        {
+          "id": "h2",
+          "kind": "secret",
+          "text": "Years ago he signed a death certificate for a patient with a cause that he knew was false, to avoid an inquiry into a colleague."
+        },
+        {
+          "id": "h3",
+          "kind": "connection",
+          "text": "He sits on the asylum committee and can open or close the ward doors where Editor Blom's sister lies."
+        }
+      ],
+      "networkLinks": [
+        {
+          "targetId": "university",
+          "place": "Uppsala",
+          "nature": "Senior professor and board member",
+          "influence": "Can discredit the Society's claims to scholars and can grant or refuse access to the university library."
+        },
+        {
+          "targetId": "physician",
+          "place": "Uppsala",
+          "nature": "Mentor to many district physicians",
+          "influence": "District doctors send him their odd cases and follow his reading of them."
+        }
+      ],
+      "attitude": -2,
+      "attitudeReason": "He regards the Society as a symptom of the age's credulity and wants proof of that.",
+      "relationships": [
+        {
+          "characterId": "editor-blom",
+          "nature": "Mutual wariness; the professor has twice been needled in print",
+          "sentiment": -1
+        },
+        {
+          "characterId": "docent-ekelund",
+          "nature": "Disapproving senior colleague",
+          "sentiment": -1
+        },
+        {
+          "characterId": "npc-sofia-wennerberg",
+          "nature": "Buys medical books from her and distrusts her stock",
+          "sentiment": 0
+        }
+      ],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-sofia-wennerberg",
+      "definitionId": null,
+      "name": "Sofia Wennerberg",
+      "tier": "core",
+      "status": "alive",
+      "importance": 2,
+      "home": "Uppsala",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 47,
+        "gender": "female",
+        "occupation": "Antiquarian bookseller and dealer in old manuscripts",
+        "rank": "burgher",
+        "home": "A narrow shop with rooms above on Fyristorg, Uppsala",
+        "appearance": "Stout and quick-eyed, ink on her cuffs, a shawl always pinned with a brooch of dark amber."
+      },
+      "personality": {
+        "openness": 4,
+        "conscientiousness": 3,
+        "extraversion": 4,
+        "agreeableness": 3,
+        "neuroticism": 2
+      },
+      "drives": [
+        {
+          "id": "dr1",
+          "text": "Keep the shop solvent and her late husband's name respectable.",
+          "strength": 7
+        },
+        {
+          "id": "dr2",
+          "text": "Collect rare manuscripts of folk magic and sell them to the right buyers.",
+          "strength": 6
+        }
+      ],
+      "fears": [],
+      "voice": {
+        "register": "Warm, chatty, a shopkeeper's flattery over a sharp mind.",
+        "mannerisms": [
+          "Taps the spine of a book as she talks price",
+          "Lowers her voice for anything valuable",
+          "Calls customers 'my dear'"
+        ],
+        "sampleLines": [
+          "Everything has a price, my dear, but not everything has a buyer.",
+          "I never ask where a book has been, only what it will fetch."
+        ]
+      },
+      "background": "Widowed six years, she kept the shop going through the lean years by trading in what the university's collectors would not sell openly. She likes the Society because it buys books and asks interesting questions, and she is a little afraid of what some of her volumes contain.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "debt",
+          "text": "She owes a large sum on her stock to a grain merchant in Uppsala and cannot easily meet the next instalment."
+        },
+        {
+          "id": "h2",
+          "kind": "connection",
+          "text": "She quietly sells and lends seventeenth-century spell manuscripts to Docent Ekelund and to others who ask no questions."
+        },
+        {
+          "id": "h3",
+          "kind": "secret",
+          "text": "One bundle of papers in her cellar came from a dead pastor's estate and names living families in a way that could shame them."
+        }
+      ],
+      "networkLinks": [
+        {
+          "targetId": "university",
+          "place": "Uppsala",
+          "nature": "Supplier to scholars and students",
+          "influence": "Hears which professors are hunting which texts and can steer a student to a source."
+        }
+      ],
+      "attitude": 2,
+      "attitudeReason": "The Society are good customers and make her shop feel like it matters.",
+      "relationships": [
+        {
+          "characterId": "docent-ekelund",
+          "nature": "Valued customer and gossiping friend",
+          "sentiment": 2
+        },
+        {
+          "characterId": "npc-gustaf-nordenfelt",
+          "nature": "Customer she finds tiresome",
+          "sentiment": 0
+        },
+        {
+          "characterId": "innkeeper-strand",
+          "nature": "Old acquaintance who trades news over coffee",
+          "sentiment": 1
+        }
+      ],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-per-olof-sjoberg",
+      "definitionId": null,
+      "name": "Per-Olof Sjöberg",
+      "tier": "core",
+      "status": "alive",
+      "importance": 2,
+      "home": "Sala",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 41,
+        "gender": "male",
+        "occupation": "Rural constable (länsman) of the Sala district",
+        "rank": "burgher",
+        "home": "The länsman's farm on the road north of Sala",
+        "appearance": "Heavy-shouldered, red-bearded, a cap he turns in his hands, boots always muddy."
+      },
+      "personality": {
+        "openness": 2,
+        "conscientiousness": 4,
+        "extraversion": 2,
+        "agreeableness": 2,
+        "neuroticism": 3
+      },
+      "drives": [
+        {
+          "id": "dr1",
+          "text": "Keep the district quiet and his reports tidy so the county governor leaves him alone.",
+          "strength": 8
+        },
+        {
+          "id": "dr2",
+          "text": "Get out from under the debt he owes the manor.",
+          "strength": 6
+        }
+      ],
+      "fears": [],
+      "voice": {
+        "register": "Blunt, slow country speech, wary of towns and titles.",
+        "mannerisms": [
+          "Turns his cap",
+          "Answers a question with a question",
+          "Looks at the door when anyone mentions the manor"
+        ],
+        "sampleLines": [
+          "I report what I can put my hand on. The rest is for the vicar.",
+          "Folk talk. Folk always talk. Doesn't make it so."
+        ]
+      },
+      "background": "He has policed the Sala district for eleven years, where the silver mine has gone quiet and half the young men have left for America. He has seen things at night that he does not write down.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "debt",
+          "text": "He borrowed money from the Baron at Salberga to cover his wife's illness and now cannot refuse the Baron a favour."
+        },
+        {
+          "id": "h2",
+          "kind": "secret",
+          "text": "He once closed a death as 'drowned by accident' because the real circumstances would have sent a crofter's family to ruin."
+        },
+        {
+          "id": "h3",
+          "kind": "habit",
+          "text": "He walks the old mine tracks alone at dusk, and never says why."
+        }
+      ],
+      "networkLinks": [
+        {
+          "targetId": "police",
+          "place": "Sala",
+          "nature": "Rural constable answering to the county governor",
+          "influence": "Can open or close access to inquest papers and to any crime scene in the district."
+        },
+        {
+          "targetId": "landowner",
+          "place": "Salberga manor",
+          "nature": "Debtor to the Baron",
+          "influence": "Passes on word of strangers asking questions."
+        }
+      ],
+      "attitude": -1,
+      "attitudeReason": "He distrusts anyone from Uppsala who arrives asking about local deaths.",
+      "relationships": [
+        {
+          "characterId": "constable-hagg",
+          "nature": "Exchanges terse letters; respects him cautiously",
+          "sentiment": 1
+        },
+        {
+          "characterId": "npc-carl-gyllenhammar",
+          "nature": "Debtor and reluctant servant",
+          "sentiment": -1
+        },
+        {
+          "characterId": "npc-oskar-brandt",
+          "nature": "Resents the company engineer's airs",
+          "sentiment": -1
+        }
+      ],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-lovisa-hedman",
+      "definitionId": null,
+      "name": "Lovisa Hedman",
+      "tier": "core",
+      "status": "alive",
+      "importance": 2,
+      "home": "a croft near Delsbo in Hälsingland",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 66,
+        "gender": "female",
+        "occupation": "Midwife and healer, known as a cunning woman",
+        "rank": "crofter",
+        "home": "A grey timber croft near Delsbo, Hälsingland, with herbs hanging from the rafters",
+        "appearance": "Small and bent, hands like roots, a black headscarf and very pale eyes."
+      },
+      "personality": {
+        "openness": 4,
+        "conscientiousness": 4,
+        "extraversion": 2,
+        "agreeableness": 3,
+        "neuroticism": 2
+      },
+      "drives": [
+        {
+          "id": "dr1",
+          "text": "Pass her remedies and the old rules to someone who will keep them before she dies.",
+          "strength": 8
+        },
+        {
+          "id": "dr2",
+          "text": "Keep the vicar and the doctor from taking away her trade.",
+          "strength": 5
+        }
+      ],
+      "fears": [],
+      "voice": {
+        "register": "Slow Hälsingland dialect, proverb-laden, speaks of the unseen as plain neighbours.",
+        "mannerisms": [
+          "Answers questions sideways with a proverb",
+          "Spits lightly to the side after naming a bad thing",
+          "Never says 'thank you' for a gift"
+        ],
+        "sampleLines": [
+          "What you feed in the dark will come to your door in the light.",
+          "Ask politely and give something. That is all the old rules ever were."
+        ]
+      },
+      "background": "She has delivered half the parish and buried a good part of it. She keeps the old customs of offerings and thresholds, and she remembers the Society's founders from a hard winter long ago.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "connection",
+          "text": "She knew Elin Alm's grandmother and once exchanged charms with her by letter."
+        },
+        {
+          "id": "h2",
+          "kind": "secret",
+          "text": "She has never told the vicar that she leaves milk out each Thursday on the boundary stone of the croft."
+        },
+        {
+          "id": "h3",
+          "kind": "habit",
+          "text": "She will not travel after dark and will not cross a running stream on certain days."
+        }
+      ],
+      "networkLinks": [
+        {
+          "targetId": "parish",
+          "place": "Delsbo",
+          "nature": "Tolerated by the vicar, scorned by the church council",
+          "influence": "Mothers in four parishes trust her over the district doctor."
+        },
+        {
+          "targetId": "physician",
+          "place": "Hälsingland",
+          "nature": "Rivalry with the district doctor over births",
+          "influence": "Hears of sudden deaths and strange illnesses before the authorities do."
+        }
+      ],
+      "attitude": 1,
+      "attitudeReason": "She sees the Society as heirs of people she once respected, and has not yet decided if they are worthy.",
+      "relationships": [
+        {
+          "characterId": "servant-alm",
+          "nature": "Knew her grandmother and keeps a quiet interest in the girl",
+          "sentiment": 1
+        },
+        {
+          "characterId": "npc-jonas-ryd",
+          "nature": "He calls her a witch from the pulpit stairs",
+          "sentiment": -2
+        }
+      ],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-carl-gyllenhammar",
+      "definitionId": null,
+      "name": "Carl Gustaf Gyllenhammar",
+      "tier": "core",
+      "status": "alive",
+      "importance": 2,
+      "home": "Salberga manor near Sala",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 52,
+        "gender": "male",
+        "occupation": "Baron, owner of Salberga manor and shares in the Sala silver works",
+        "rank": "nobility",
+        "home": "Salberga manor near Sala, a yellow wooden house with a mouldering park",
+        "appearance": "Tall, stooped, courtly, a faded uniform coat from his youth and a limp he hides."
+      },
+      "personality": {
+        "openness": 3,
+        "conscientiousness": 2,
+        "extraversion": 3,
+        "agreeableness": 3,
+        "neuroticism": 4
+      },
+      "drives": [
+        {
+          "id": "dr1",
+          "text": "Save the estate from bankruptcy by any means that will not shame the name.",
+          "strength": 9
+        },
+        {
+          "id": "dr2",
+          "text": "Learn whether the old bargains made by his family are still binding.",
+          "strength": 6
+        }
+      ],
+      "fears": [],
+      "voice": {
+        "register": "Gracious, old-fashioned aristocratic Swedish with French words, charm that slips into pleading.",
+        "mannerisms": [
+          "Pours wine before business",
+          "Says 'my dear sir' when he is afraid",
+          "Glances at the portrait of his grandfather"
+        ],
+        "sampleLines": [
+          "A gentleman's debts are matters of honour, and honour, alas, is expensive.",
+          "My family has always treated the land with respect. Some respect is costly."
+        ]
+      },
+      "background": "The last of his line, he inherited an estate with a mine that yields less every year and a family history of strange bargains. He welcomes the Society as helpers, but intends to use them to settle a private account.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "secret",
+          "text": "His grandfather signed an agreement with something on the estate's land in exchange for the silver, and the Baron has found the paper."
+        },
+        {
+          "id": "h2",
+          "kind": "debt",
+          "text": "He is mortgaged to the hilt to a Stockholm bank and has promised the mine to an investor he cannot satisfy."
+        },
+        {
+          "id": "h3",
+          "kind": "ambition",
+          "text": "He intends to have the Society remove, or silence, whatever haunts the old shaft so the company can reopen it."
+        }
+      ],
+      "networkLinks": [
+        {
+          "targetId": "landowner",
+          "place": "Västmanland",
+          "nature": "Old nobility with neighbours and tenants",
+          "influence": "Can grant or deny access to land, tenants and records on the estate."
+        },
+        {
+          "targetId": "company",
+          "place": "Sala",
+          "nature": "Shareholder in the silver works",
+          "influence": "Can open the mine records to the Society or lock them away."
+        }
+      ],
+      "attitude": 1,
+      "attitudeReason": "He wants the Society's help and hides that he also wants to use it.",
+      "relationships": [
+        {
+          "characterId": "npc-per-olof-sjoberg",
+          "nature": "Creditor and patron of the local constable",
+          "sentiment": 1
+        },
+        {
+          "characterId": "npc-oskar-brandt",
+          "nature": "Uneasy partner in the plan to reopen the mine",
+          "sentiment": 0
+        },
+        {
+          "characterId": "comminister-hallgren",
+          "nature": "Distant acquaintance through the archbishop's circle",
+          "sentiment": 0
+        }
+      ],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-matilda-forsberg",
+      "definitionId": null,
+      "name": "Matilda Forsberg",
+      "tier": "core",
+      "status": "alive",
+      "importance": 2,
+      "home": "Uppsala",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 26,
+        "gender": "female",
+        "occupation": "Telegraph clerk at Uppsala railway station",
+        "rank": "worker",
+        "home": "A rented attic room near the station, Uppsala",
+        "appearance": "Slight, sharp-chinned, ink-stained fingers, a tidy blue dress mended at the hem."
+      },
+      "personality": {
+        "openness": 4,
+        "conscientiousness": 4,
+        "extraversion": 3,
+        "agreeableness": 3,
+        "neuroticism": 3
+      },
+      "drives": [
+        {
+          "id": "dr1",
+          "text": "Earn enough to bring her brother's family out of poverty or to follow him to America.",
+          "strength": 8
+        },
+        {
+          "id": "dr2",
+          "text": "Be taken seriously in a post where men talk over her.",
+          "strength": 6
+        }
+      ],
+      "fears": [],
+      "voice": {
+        "register": "Quick, clipped, telegraphic, with a clerk's habit of precision.",
+        "mannerisms": [
+          "Taps on the counter in rhythm",
+          "Corrects spelling aloud",
+          "Drops her voice when a message is private"
+        ],
+        "sampleLines": [
+          "A telegram is paid for by the word, so I learn which words matter.",
+          "I don't read them. I merely see them go by."
+        ]
+      },
+      "background": "She came from a crofter family in Roslagen and learned the telegraph through a pastor's patronage. She sees every message of every important person in Uppsala and tells herself she keeps quiet about them.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "secret",
+          "text": "She passes snippets of telegrams to Editor Blom for a few riksdaler each, and has told herself it is harmless."
+        },
+        {
+          "id": "h2",
+          "kind": "connection",
+          "text": "Her brother in Minnesota writes to her about a man from Uppland who carries a sickness the doctors there cannot name."
+        },
+        {
+          "id": "h3",
+          "kind": "habit",
+          "text": "She copies unusual messages into a small notebook she keeps inside her stays."
+        }
+      ],
+      "networkLinks": [
+        {
+          "targetId": "press",
+          "place": "Uppsala",
+          "nature": "Paid informant to Editor Blom",
+          "influence": "Can tell the Society what is being wired about them, and tell the press what the Society wires."
+        },
+        {
+          "targetId": "police",
+          "place": "Uppsala station",
+          "nature": "Sends and receives constabulary telegrams",
+          "influence": "Sees police inquiries before the Society does."
+        }
+      ],
+      "attitude": 2,
+      "attitudeReason": "The Society's messages are the most interesting thing she handles, and they tip generously.",
+      "relationships": [
+        {
+          "characterId": "editor-blom",
+          "nature": "Paid informant, uneasy about it",
+          "sentiment": 0
+        },
+        {
+          "characterId": "servant-alm",
+          "nature": "Friendly acquaintance; both wait for letters from America",
+          "sentiment": 2
+        },
+        {
+          "characterId": "constable-hagg",
+          "nature": "He questions her about wires and she fears his glare",
+          "sentiment": -1
+        }
+      ],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-jonas-ryd",
+      "definitionId": null,
+      "name": "Jonas Ryd",
+      "tier": "core",
+      "status": "alive",
+      "importance": 2,
+      "home": "Gävle",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 44,
+        "gender": "male",
+        "occupation": "Shoemaker and lay preacher of a free-church congregation",
+        "rank": "worker",
+        "home": "A workshop and chapel room behind a tanner's yard in Gävle",
+        "appearance": "Lean, bright-eyed, a threadbare coat, hands stained with blacking and a battered Bible always at hand."
+      },
+      "personality": {
+        "openness": 2,
+        "conscientiousness": 4,
+        "extraversion": 4,
+        "agreeableness": 1,
+        "neuroticism": 3
+      },
+      "drives": [
+        {
+          "id": "dr1",
+          "text": "Save souls from the state church's lukewarm faith and from the devil's tricks.",
+          "strength": 9
+        },
+        {
+          "id": "dr2",
+          "text": "Expose anyone who deals with spirits as a servant of the enemy.",
+          "strength": 8
+        }
+      ],
+      "fears": [],
+      "voice": {
+        "register": "Fervent preacher's cadence, scripture quoted as weapon, warmth turning into denunciation.",
+        "mannerisms": [
+          "Quotes Deuteronomy",
+          "Points with the Bible",
+          "Pauses to let silence accuse"
+        ],
+        "sampleLines": [
+          "There is no neutral ground between the Lord and the spirits that whisper in the woods.",
+          "You carry the Sight as a gift? Brother, that is a snare."
+        ]
+      },
+      "background": "He has been fined twice for holding conventicles. He saw something as a boy that he has since called Satan, and he has devoted his life to denouncing anything that stirs the old world. He regards the Society as sorcerers.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "secret",
+          "text": "The thing he saw as a boy was real, and he has never admitted to anyone that it spoke to him kindly."
+        },
+        {
+          "id": "h2",
+          "kind": "connection",
+          "text": "His congregation includes mill-hands and dock workers who will gather at a word from him."
+        },
+        {
+          "id": "h3",
+          "kind": "ambition",
+          "text": "He hopes to be recognised as the leader of the free church in the province."
+        }
+      ],
+      "networkLinks": [
+        {
+          "targetId": "parish",
+          "place": "Gävle",
+          "nature": "Open adversary of the state clergy",
+          "influence": "Can stir a crowd against the Society and write to the free-church press."
+        },
+        {
+          "targetId": "press",
+          "place": "Gävle",
+          "nature": "Contributes tracts to a revival paper",
+          "influence": "Can brand the Society as occultists in print."
+        }
+      ],
+      "attitude": -3,
+      "attitudeReason": "He believes the Society traffics with spirits and wants them driven out.",
+      "relationships": [
+        {
+          "characterId": "npc-lovisa-hedman",
+          "nature": "Hates her trade, fears her power",
+          "sentiment": -2
+        },
+        {
+          "characterId": "comminister-hallgren",
+          "nature": "Opponent in print, secretly shares his zeal against superstition",
+          "sentiment": -1
+        }
+      ],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-erik-tallroth",
+      "definitionId": null,
+      "name": "Erik Tallroth",
+      "tier": "core",
+      "status": "alive",
+      "importance": 2,
+      "home": "Öregrund",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 55,
+        "gender": "male",
+        "occupation": "Steamboat captain on the Roslagen and Åland routes",
+        "rank": "burgher",
+        "home": "A red house by the quay at Öregrund, Roslagen",
+        "appearance": "Barrel-chested, grey-bearded, a sealskin cap and a pipe he never lights aboard."
+      },
+      "personality": {
+        "openness": 3,
+        "conscientiousness": 3,
+        "extraversion": 4,
+        "agreeableness": 3,
+        "neuroticism": 2
+      },
+      "drives": [
+        {
+          "id": "dr1",
+          "text": "Keep his boat running and his crew paid through the lean seasons.",
+          "strength": 7
+        },
+        {
+          "id": "dr2",
+          "text": "Settle a long-standing grudge with the pilots' guild.",
+          "strength": 4
+        }
+      ],
+      "fears": [],
+      "voice": {
+        "register": "Rolling coastal talk, jokes and weather, stories told as if everything were hearsay.",
+        "mannerisms": [
+          "Reads the sky before answering",
+          "Chuckles at his own warnings",
+          "Tells stories beginning 'I knew a man who'"
+        ],
+        "sampleLines": [
+          "The sea doesn't care what you believe, only whether you've reefed in time.",
+          "I knew a man who saw a light on the skerry. He's still a good deal quieter than he was."
+        ]
+      },
+      "background": "He has carried pilgrims, emigrants and contraband along the coast for thirty years. He has heard most of the sea-tales of Roslagen from men too sober to lie.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "secret",
+          "text": "He carries untaxed spirits across from Åland in the false bottom of a coal bunker."
+        },
+        {
+          "id": "h2",
+          "kind": "connection",
+          "text": "He is Brita Strand's late husband's godfather's nephew and lodges at her inn when in Uppsala."
+        },
+        {
+          "id": "h3",
+          "kind": "habit",
+          "text": "He leaves a coin on a particular skerry at every passing and says it is for luck."
+        }
+      ],
+      "networkLinks": [
+        {
+          "targetId": "company",
+          "place": "Öregrund",
+          "nature": "Contract carrier for the ironworks",
+          "influence": "Can arrange a passage for the Society on short notice and tell of cargo movements."
+        },
+        {
+          "targetId": "police",
+          "place": "Roslagen",
+          "nature": "Avoids the customs and coast police by habit",
+          "influence": "Knows which constables look away and which do not."
+        }
+      ],
+      "attitude": 1,
+      "attitudeReason": "They pay in full and ask good questions about the skerries.",
+      "relationships": [
+        {
+          "characterId": "innkeeper-strand",
+          "nature": "Lodges at her inn and brings coastal gossip",
+          "sentiment": 2
+        },
+        {
+          "characterId": "constable-hagg",
+          "nature": "Dodges him on landings",
+          "sentiment": -1
+        }
+      ],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-agnes-lindahl",
+      "definitionId": null,
+      "name": "Agnes Lindahl",
+      "tier": "core",
+      "status": "alive",
+      "importance": 2,
+      "home": "Gamla Uppsala",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 63,
+        "gender": "female",
+        "occupation": "Widowed farmer, supplier of milk, eggs and firewood to the Society's headquarters",
+        "rank": "freeholder farmer",
+        "home": "A freehold farm a short walk from the royal mounds, Gamla Uppsala",
+        "appearance": "Broad, weathered, a man's coat over her skirts, a laugh that carries across the yard."
+      },
+      "personality": {
+        "openness": 3,
+        "conscientiousness": 4,
+        "extraversion": 3,
+        "agreeableness": 3,
+        "neuroticism": 2
+      },
+      "drives": [
+        {
+          "id": "dr1",
+          "text": "Keep the farm in the family and her grandson out of the emigrant ships.",
+          "strength": 8
+        },
+        {
+          "id": "dr2",
+          "text": "Know everything that happens within sight of the mounds.",
+          "strength": 5
+        }
+      ],
+      "fears": [],
+      "voice": {
+        "register": "Plain Uppland farm speech, gruff and teasing, never flattering.",
+        "mannerisms": [
+          "Counts coins twice",
+          "Shakes her head at 'town folk'",
+          "Gestures with her chin toward the mounds"
+        ],
+        "sampleLines": [
+          "The mounds have been there longer than any of us, and they mind their own business. You should do likewise.",
+          "Milk's a penny dearer now. Cows don't care for scholars."
+        ]
+      },
+      "background": "She has lived under the mounds her whole life and speaks of them as of neighbours who are not to be pressed. She sells to the Society out of habit and gossips about its comings and goings to anyone who asks.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "habit",
+          "text": "She leaves the first sheaf of the harvest at the foot of the mound each year and tells no one."
+        },
+        {
+          "id": "h2",
+          "kind": "connection",
+          "text": "She is churchwarden for Comminister Hallgren and sees every entry in the parish rolls before it is closed."
+        },
+        {
+          "id": "h3",
+          "kind": "debt",
+          "text": "She has lent money to a neighbour's son who went to America, and the family now avoids her."
+        }
+      ],
+      "networkLinks": [
+        {
+          "targetId": "parish",
+          "place": "Gamla Uppsala",
+          "nature": "Churchwarden and long-time parishioner",
+          "influence": "Hears the parish's gossip and can vouch for the Society's good name, or withhold it."
+        },
+        {
+          "targetId": "landowner",
+          "place": "Gamla Uppsala",
+          "nature": "Neighbouring freeholder and farm supplier",
+          "influence": "Knows which tenants are leaving and which farms have lain fallow."
+        }
+      ],
+      "attitude": 0,
+      "attitudeReason": "A good customer, but she distrusts what she does not understand.",
+      "relationships": [
+        {
+          "characterId": "comminister-hallgren",
+          "nature": "Churchwarden under his authority; respects but does not fear him",
+          "sentiment": 1
+        },
+        {
+          "characterId": "servant-alm",
+          "nature": "Fond of the girl and passes her scraps and news",
+          "sentiment": 2
+        },
+        {
+          "characterId": "innkeeper-strand",
+          "nature": "Sells eggs to the inn; they gossip over the price",
+          "sentiment": 1
+        }
+      ],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-oskar-brandt",
+      "definitionId": null,
+      "name": "Oskar Brandt",
+      "tier": "core",
+      "status": "alive",
+      "importance": 2,
+      "home": "Falun",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 38,
+        "gender": "male",
+        "occupation": "Mining engineer and agent for a company with interests in Dalarna and Västmanland",
+        "rank": "burgher",
+        "home": "A company house with a brass plate in Falun",
+        "appearance": "Neat, clean-shaven, a sharp grey suit and a pocket watch he consults often."
+      },
+      "personality": {
+        "openness": 3,
+        "conscientiousness": 4,
+        "extraversion": 3,
+        "agreeableness": 2,
+        "neuroticism": 3
+      },
+      "drives": [
+        {
+          "id": "dr1",
+          "text": "Make his name by reopening the old workings profitably.",
+          "strength": 9
+        },
+        {
+          "id": "dr2",
+          "text": "Have the company's accident records kept quiet.",
+          "strength": 7
+        }
+      ],
+      "fears": [],
+      "voice": {
+        "register": "Smooth, modern, figures and schedules, impatient with folk talk.",
+        "mannerisms": [
+          "Checks his watch",
+          "Speaks in percentages",
+          "Smiles with his mouth only"
+        ],
+        "sampleLines": [
+          "Every shaft closed is capital idle. I should be glad to know what keeps this one shut.",
+          "Rumour is a cost like any other. I prefer to price it."
+        ]
+      },
+      "background": "Trained at the mining academy in Falun, he serves a Stockholm consortium that wants to reopen abandoned shafts. He has noticed that accidents cluster around certain old workings and has an unnerving interest in why.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "secret",
+          "text": "He has a private notebook of accidents that the company reported as rockfalls, with the true causes written in the margin."
+        },
+        {
+          "id": "h2",
+          "kind": "ambition",
+          "text": "He wants a seat on the consortium's board and believes the Sala shaft is his route to it."
+        },
+        {
+          "id": "h3",
+          "kind": "connection",
+          "text": "He has been courting the Baron of Salberga's investment with promises he cannot yet keep."
+        }
+      ],
+      "networkLinks": [
+        {
+          "targetId": "company",
+          "place": "Falun",
+          "nature": "Company agent with authority over foremen and records",
+          "influence": "Can open or close access to mine records, shafts and miners."
+        },
+        {
+          "targetId": "landowner",
+          "place": "Västmanland",
+          "nature": "Negotiating leases with manor owners",
+          "influence": "Can pressure estates to grant or refuse the Society access."
+        }
+      ],
+      "attitude": 0,
+      "attitudeReason": "Useful if the Society clears obstacles; a threat if it reveals the accident records.",
+      "relationships": [
+        {
+          "characterId": "npc-carl-gyllenhammar",
+          "nature": "Business partner with mutual suspicion",
+          "sentiment": 0
+        },
+        {
+          "characterId": "npc-per-olof-sjoberg",
+          "nature": "Finds the constable obstinate",
+          "sentiment": -1
+        }
+      ],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-hilda-berglund",
+      "definitionId": null,
+      "name": "Hilda Berglund",
+      "tier": "background",
+      "status": "alive",
+      "importance": 1,
+      "home": "Uppsala",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 39,
+        "gender": "female",
+        "occupation": "Baker's wife who sells bread to the Society's kitchen",
+        "rank": "burgher",
+        "home": "A bakery on Sankt Olofsgatan, Uppsala",
+        "appearance": "Floury, round-faced, busy hands."
+      },
+      "personality": {
+        "openness": 2,
+        "conscientiousness": 4,
+        "extraversion": 4,
+        "agreeableness": 4,
+        "neuroticism": 2
+      },
+      "drives": [],
+      "fears": [],
+      "voice": {
+        "register": "Cheerful, gossiping shop talk.",
+        "mannerisms": [
+          "Talks while kneading"
+        ],
+        "sampleLines": [
+          "Fresh this morning, and the news is fresher."
+        ]
+      },
+      "background": "Hears every rumour of the town across the counter.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "habit",
+          "text": "Reads the leftover newspapers used to wrap the loaves."
+        },
+        {
+          "id": "h2",
+          "kind": "debt",
+          "text": "Her husband owes the miller for two seasons of flour."
+        }
+      ],
+      "networkLinks": [],
+      "attitude": 1,
+      "attitudeReason": "Likes the steady custom.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-lars-petter-nyman",
+      "definitionId": null,
+      "name": "Lars-Petter Nyman",
+      "tier": "background",
+      "status": "alive",
+      "importance": 1,
+      "home": "Uppsala",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 50,
+        "gender": "male",
+        "occupation": "Hackney coachman at the station rank",
+        "rank": "worker",
+        "home": "A stable yard near the station, Uppsala",
+        "appearance": "Weather-beaten, whip tucked in his belt."
+      },
+      "personality": {
+        "openness": 2,
+        "conscientiousness": 3,
+        "extraversion": 4,
+        "agreeableness": 3,
+        "neuroticism": 2
+      },
+      "drives": [],
+      "fears": [],
+      "voice": {
+        "register": "Laconic, grumbling, road talk.",
+        "mannerisms": [
+          "Spits before naming a fare"
+        ],
+        "sampleLines": [
+          "Where to, and who's paying?"
+        ]
+      },
+      "background": "Knows who arrives and departs and by which train.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "habit",
+          "text": "Drinks at Strands gästgivargård every payday."
+        },
+        {
+          "id": "h2",
+          "kind": "connection",
+          "text": "Carries passengers for Editor Blom's reporters."
+        },
+        {
+          "id": "h3",
+          "kind": "secret",
+          "text": "Once drove a hooded passenger out to the mounds at night and was told to forget it."
+        }
+      ],
+      "networkLinks": [],
+      "attitude": 0,
+      "attitudeReason": "A fare is a fare.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-emma-sundin",
+      "definitionId": null,
+      "name": "Emma Sundin",
+      "tier": "background",
+      "status": "alive",
+      "importance": 1,
+      "home": "Enköping",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 29,
+        "gender": "female",
+        "occupation": "Parish schoolteacher",
+        "rank": "burgher",
+        "home": "The schoolhouse in Enköping",
+        "appearance": "Thin, spectacled, upright."
+      },
+      "personality": {
+        "openness": 4,
+        "conscientiousness": 4,
+        "extraversion": 2,
+        "agreeableness": 3,
+        "neuroticism": 3
+      },
+      "drives": [],
+      "fears": [],
+      "voice": {
+        "register": "Earnest, schoolroom diction.",
+        "mannerisms": [
+          "Corrects grammar mid-sentence"
+        ],
+        "sampleLines": [
+          "The children tell me many things they would not tell the vicar."
+        ]
+      },
+      "background": "Collects children's rhymes and tales from the parish.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "connection",
+          "text": "Sends rhyme notebooks to Docent Ekelund."
+        },
+        {
+          "id": "h2",
+          "kind": "ambition",
+          "text": "Wants to publish a collection of local folktales."
+        }
+      ],
+      "networkLinks": [],
+      "attitude": 1,
+      "attitudeReason": "Curious about anyone who studies old customs.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-johan-wallin",
+      "definitionId": null,
+      "name": "Johan Wallin",
+      "tier": "background",
+      "status": "alive",
+      "importance": 1,
+      "home": "Uppsala",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 61,
+        "gender": "male",
+        "occupation": "Apothecary",
+        "rank": "burgher",
+        "home": "The apothecary shop on Drottninggatan, Uppsala",
+        "appearance": "Stooped, gentle, brass scales at his elbow."
+      },
+      "personality": {
+        "openness": 3,
+        "conscientiousness": 5,
+        "extraversion": 2,
+        "agreeableness": 3,
+        "neuroticism": 3
+      },
+      "drives": [],
+      "fears": [],
+      "voice": {
+        "register": "Soft, measured, professional discretion.",
+        "mannerisms": [
+          "Weighs powders while speaking"
+        ],
+        "sampleLines": [
+          "I dispense what is prescribed and remember what is not."
+        ]
+      },
+      "background": "Supplies the Society's remedies and keeps his own counsel.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "secret",
+          "text": "Sells laudanum to students without a physician's note."
+        },
+        {
+          "id": "h2",
+          "kind": "habit",
+          "text": "Keeps a private ledger of unusual prescriptions."
+        }
+      ],
+      "networkLinks": [],
+      "attitude": 1,
+      "attitudeReason": "Discreet and well paid.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-kristina-ostman",
+      "definitionId": null,
+      "name": "Kristina Östman",
+      "tier": "background",
+      "status": "alive",
+      "importance": 1,
+      "home": "a farm near Mora",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 45,
+        "gender": "female",
+        "occupation": "Farm wife and dairymaid at a summer pasture",
+        "rank": "tenant farmer",
+        "home": "A farm near Mora in Dalarna",
+        "appearance": "Strong-armed, sunburnt, plain linen cap."
+      },
+      "personality": {
+        "openness": 3,
+        "conscientiousness": 4,
+        "extraversion": 3,
+        "agreeableness": 3,
+        "neuroticism": 2
+      },
+      "drives": [],
+      "fears": [],
+      "voice": {
+        "register": "Dalecarlian lilt, practical.",
+        "mannerisms": [
+          "Calls cattle by name mid-conversation"
+        ],
+        "sampleLines": [
+          "Up at the shieling, the cows know things the priest does not."
+        ]
+      },
+      "background": "Keeps the old summer pasture customs.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "habit",
+          "text": "Leaves a bowl of cream at the pasture gate."
+        },
+        {
+          "id": "h2",
+          "kind": "connection",
+          "text": "Her sister married a miner in Falun."
+        }
+      ],
+      "networkLinks": [],
+      "attitude": 0,
+      "attitudeReason": "Has not yet met them.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-anton-fahlgren",
+      "definitionId": null,
+      "name": "Anton Fahlgren",
+      "tier": "background",
+      "status": "alive",
+      "importance": 1,
+      "home": "Älvkarleby",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 57,
+        "gender": "male",
+        "occupation": "Ferryman and salmon fisher",
+        "rank": "crofter",
+        "home": "A cottage by the falls at Älvkarleby",
+        "appearance": "Short, wiry, hands scarred by line."
+      },
+      "personality": {
+        "openness": 2,
+        "conscientiousness": 3,
+        "extraversion": 2,
+        "agreeableness": 3,
+        "neuroticism": 3
+      },
+      "drives": [],
+      "fears": [],
+      "voice": {
+        "register": "Few words, river patience.",
+        "mannerisms": [
+          "Watches the water mid-sentence"
+        ],
+        "sampleLines": [
+          "The river takes what it likes. I just row."
+        ]
+      },
+      "background": "Rows travellers across the river and knows who crosses at night.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "secret",
+          "text": "Ferried a stranger across at midnight and was paid in old silver."
+        },
+        {
+          "id": "h2",
+          "kind": "debt",
+          "text": "Owes a net-maker for a season's gear."
+        }
+      ],
+      "networkLinks": [],
+      "attitude": 0,
+      "attitudeReason": "Keeps to himself.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-greta-holm",
+      "definitionId": null,
+      "name": "Greta Holm",
+      "tier": "background",
+      "status": "alive",
+      "importance": 1,
+      "home": "Uppsala",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 34,
+        "gender": "female",
+        "occupation": "Seamstress and mender of coats",
+        "rank": "worker",
+        "home": "A rented room in Svartbäcken, Uppsala",
+        "appearance": "Pale, quick fingers, a pin cushion on her wrist."
+      },
+      "personality": {
+        "openness": 3,
+        "conscientiousness": 4,
+        "extraversion": 3,
+        "agreeableness": 4,
+        "neuroticism": 3
+      },
+      "drives": [],
+      "fears": [],
+      "voice": {
+        "register": "Quiet, observant, townswoman's Swedish.",
+        "mannerisms": [
+          "Looks at hems and cuffs before faces"
+        ],
+        "sampleLines": [
+          "A coat tells me where its owner has been."
+        ]
+      },
+      "background": "Mends clothes for students, constables and the Society alike.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "connection",
+          "text": "Sews for Constable Hägg's wife and hears his household talk."
+        },
+        {
+          "id": "h2",
+          "kind": "secret",
+          "text": "Found a bloodied cuff in a coat left for mending and never reported it."
+        }
+      ],
+      "networkLinks": [],
+      "attitude": 1,
+      "attitudeReason": "Pays on time.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-nils-bjork",
+      "definitionId": null,
+      "name": "Nils Björk",
+      "tier": "background",
+      "status": "alive",
+      "importance": 1,
+      "home": "Tierp",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 48,
+        "gender": "male",
+        "occupation": "Blacksmith",
+        "rank": "freeholder farmer",
+        "home": "A smithy at the crossroads in Tierp",
+        "appearance": "Huge forearms, soot-black, soft voice."
+      },
+      "personality": {
+        "openness": 2,
+        "conscientiousness": 4,
+        "extraversion": 3,
+        "agreeableness": 3,
+        "neuroticism": 2
+      },
+      "drives": [],
+      "fears": [],
+      "voice": {
+        "register": "Slow and unhurried, fond of proverbs about iron.",
+        "mannerisms": [
+          "Hammers while thinking"
+        ],
+        "sampleLines": [
+          "Cold iron keeps more than gates shut."
+        ]
+      },
+      "background": "Makes horseshoes and charms against ill luck.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "habit",
+          "text": "Nails a horseshoe over every door he forges for."
+        },
+        {
+          "id": "h2",
+          "kind": "connection",
+          "text": "Shoes the Society's horses when they travel north."
+        }
+      ],
+      "networkLinks": [],
+      "attitude": 1,
+      "attitudeReason": "Likes honest custom.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-ulrika-skog",
+      "definitionId": null,
+      "name": "Ulrika Skog",
+      "tier": "background",
+      "status": "alive",
+      "importance": 1,
+      "home": "Uppsala",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 55,
+        "gender": "female",
+        "occupation": "Washerwoman at the Fyris river",
+        "rank": "worker",
+        "home": "A hut by the Fyris, Uppsala",
+        "appearance": "Red-handed, sturdy, shawl pinned with a nail."
+      },
+      "personality": {
+        "openness": 2,
+        "conscientiousness": 3,
+        "extraversion": 4,
+        "agreeableness": 2,
+        "neuroticism": 3
+      },
+      "drives": [],
+      "fears": [],
+      "voice": {
+        "register": "Loud, salty gossip.",
+        "mannerisms": [
+          "Wrings cloth as she speaks"
+        ],
+        "sampleLines": [
+          "The river carries more than laundry, mind."
+        ]
+      },
+      "background": "Washes linen for half the town and sees what the river brings.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "secret",
+          "text": "Found a drowned stranger's boots and sold them."
+        },
+        {
+          "id": "h2",
+          "kind": "habit",
+          "text": "Reads the stains on linen like tea leaves."
+        }
+      ],
+      "networkLinks": [],
+      "attitude": 0,
+      "attitudeReason": "Curious but wary.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-henning-aberg",
+      "definitionId": null,
+      "name": "Henning Åberg",
+      "tier": "background",
+      "status": "alive",
+      "importance": 1,
+      "home": "Uppsala",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 22,
+        "gender": "male",
+        "occupation": "Theology student and folklore collector",
+        "rank": "burgher",
+        "home": "A student room in Uppsala",
+        "appearance": "Gangly, ink on his fingers, over-large coat."
+      },
+      "personality": {
+        "openness": 4,
+        "conscientiousness": 3,
+        "extraversion": 3,
+        "agreeableness": 4,
+        "neuroticism": 3
+      },
+      "drives": [],
+      "fears": [],
+      "voice": {
+        "register": "Eager, bookish, fast.",
+        "mannerisms": [
+          "Scribbles in a notebook"
+        ],
+        "sampleLines": [
+          "May I write that down? Everyone laughs when I ask."
+        ]
+      },
+      "background": "Spends summers collecting tales for Docent Ekelund.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "connection",
+          "text": "Reports to Docent Ekelund."
+        },
+        {
+          "id": "h2",
+          "kind": "secret",
+          "text": "Has doubts about his calling and the church."
+        },
+        {
+          "id": "h3",
+          "kind": "ambition",
+          "text": "Dreams of being the first to publish a rune-stave from his parish."
+        }
+      ],
+      "networkLinks": [],
+      "attitude": 2,
+      "attitudeReason": "Admires anyone who knows old lore.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-sven-ek",
+      "definitionId": null,
+      "name": "Sven Ek",
+      "tier": "background",
+      "status": "alive",
+      "importance": 1,
+      "home": "a forest estate near Fagersta",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 43,
+        "gender": "male",
+        "occupation": "Estate forester",
+        "rank": "tenant farmer",
+        "home": "A forester's lodge near Fagersta",
+        "appearance": "Lean, silent, a rifle and a grey dog."
+      },
+      "personality": {
+        "openness": 2,
+        "conscientiousness": 4,
+        "extraversion": 1,
+        "agreeableness": 3,
+        "neuroticism": 2
+      },
+      "drives": [],
+      "fears": [],
+      "voice": {
+        "register": "Terse, few words, woodland.",
+        "mannerisms": [
+          "Whistles to his dog"
+        ],
+        "sampleLines": [
+          "The forest has its ways. I mark the trees."
+        ]
+      },
+      "background": "Knows every track and charcoal clearing on the estate.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "habit",
+          "text": "Avoids a certain clearing after dusk."
+        },
+        {
+          "id": "h2",
+          "kind": "debt",
+          "text": "Owes the estate rent for his lodge."
+        }
+      ],
+      "networkLinks": [],
+      "attitude": 0,
+      "attitudeReason": "Wary of visitors.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-maria-lisa-persdotter",
+      "definitionId": null,
+      "name": "Maria-Lisa Persdotter",
+      "tier": "background",
+      "status": "alive",
+      "importance": 1,
+      "home": "a croft outside Norrtälje",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 72,
+        "gender": "female",
+        "occupation": "Crofter's widow, storyteller",
+        "rank": "crofter",
+        "home": "A croft outside Norrtälje",
+        "appearance": "Frail, milky-eyed, a cat on her lap."
+      },
+      "personality": {
+        "openness": 4,
+        "conscientiousness": 2,
+        "extraversion": 3,
+        "agreeableness": 4,
+        "neuroticism": 2
+      },
+      "drives": [],
+      "fears": [],
+      "voice": {
+        "register": "Quavering tales, old Roslagen words.",
+        "mannerisms": [
+          "Pauses and smiles at nothing"
+        ],
+        "sampleLines": [
+          "When I was a girl, we told the neighbours' names, and they listened."
+        ]
+      },
+      "background": "Remembers tales that no one has written down.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "secret",
+          "text": "Has seen something on the shore and told no one."
+        },
+        {
+          "id": "h2",
+          "kind": "connection",
+          "text": "Her grandson works on Captain Tallroth's boat."
+        }
+      ],
+      "networkLinks": [],
+      "attitude": 1,
+      "attitudeReason": "Glad of company.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-fredrik-cederholm",
+      "definitionId": null,
+      "name": "Fredrik Cederholm",
+      "tier": "background",
+      "status": "alive",
+      "importance": 1,
+      "home": "Östhammar",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 36,
+        "gender": "male",
+        "occupation": "District physician",
+        "rank": "burgher",
+        "home": "The doctor's house in Östhammar",
+        "appearance": "Tired, spectacled, medicine bag always at his side."
+      },
+      "personality": {
+        "openness": 3,
+        "conscientiousness": 4,
+        "extraversion": 2,
+        "agreeableness": 3,
+        "neuroticism": 4
+      },
+      "drives": [],
+      "fears": [],
+      "voice": {
+        "register": "Weary, careful, official.",
+        "mannerisms": [
+          "Rubs his eyes"
+        ],
+        "sampleLines": [
+          "I write what the law permits. I wonder about the rest."
+        ]
+      },
+      "background": "A doctor with a huge district and unexplained deaths on his list.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "secret",
+          "text": "Altered a cause of death to avoid a village panic."
+        },
+        {
+          "id": "h2",
+          "kind": "connection",
+          "text": "A former pupil of Professor Nordenfelt."
+        },
+        {
+          "id": "h3",
+          "kind": "debt",
+          "text": "Owes his medical-school fees to a benefactor."
+        }
+      ],
+      "networkLinks": [],
+      "attitude": 0,
+      "attitudeReason": "Overworked and sceptical.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-olle-trast",
+      "definitionId": null,
+      "name": "Olle Trast",
+      "tier": "background",
+      "status": "alive",
+      "importance": 1,
+      "home": "Roslagen",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 60,
+        "gender": "male",
+        "occupation": "Itinerant pedlar of ribbons and almanacs",
+        "rank": "vagrant",
+        "home": "Roads of Roslagen, no fixed home",
+        "appearance": "Ragged, merry, a pack larger than he is."
+      },
+      "personality": {
+        "openness": 4,
+        "conscientiousness": 2,
+        "extraversion": 5,
+        "agreeableness": 3,
+        "neuroticism": 2
+      },
+      "drives": [],
+      "fears": [],
+      "voice": {
+        "register": "Patter, rhymes, travelling salesman's cheer.",
+        "mannerisms": [
+          "Sings his wares"
+        ],
+        "sampleLines": [
+          "Ribbons, pins, and news for a penny!"
+        ]
+      },
+      "background": "Walks the whole coast and knows every farm's trouble.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "habit",
+          "text": "Sleeps in barns and hears what servants whisper."
+        },
+        {
+          "id": "h2",
+          "kind": "secret",
+          "text": "Was driven from a village for selling a charm that worked too well."
+        }
+      ],
+      "networkLinks": [],
+      "attitude": 1,
+      "attitudeReason": "Likes anyone who buys.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    }
+  ],
+  "overlay": [],
+  "closedMysteryIds": [],
+  "levelRosters": [],
+  "seedLog": [
+    "attempt 1: claude-sonnet-5-5, 6545 in (0 cached), 18133 out, 133458 ms, 10 core, 14 background, 23 errors",
+    "attempt 2: claude-sonnet-5-5, 22144 in (0 cached), 16532 out, 72186 ms, 10 core, 14 background, 0 errors"
+  ],
+  "Available": [
+    {
+      "id": "comminister-hallgren",
+      "definitionId": "comminister-hallgren",
+      "name": "Nils Fredrik Hallgren",
+      "tier": "canonical",
+      "status": "alive",
+      "importance": 2,
+      "home": "The comminister's house beside the church at Gamla Uppsala, in sight of the great royal mounds",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 58,
+        "gender": "male",
+        "occupation": "Comminister (assistant vicar) of Gamla Uppsala parish",
+        "rank": "clergy",
+        "home": "The comminister's house beside the church at Gamla Uppsala, in sight of the great royal mounds",
+        "appearance": "Gaunt and very upright, with white hair worn long at the collar, a clerical bib always spotless, and long cold fingers he folds over his hymnal."
+      },
+      "personality": {
+        "openness": 1,
+        "conscientiousness": 4,
+        "extraversion": 2,
+        "agreeableness": 2,
+        "neuroticism": 4
+      },
+      "drives": [
+        {
+          "id": "cleanse-the-parish",
+          "text": "Root out the remnants of heathen belief in a parish that sits on the very graves of the old kings.",
+          "strength": 3
+        },
+        {
+          "id": "the-revival",
+          "text": "Hold the parish in the state church against the revivalist lay preachers who are emptying his pews.",
+          "strength": 2
+        },
+        {
+          "id": "forget",
+          "text": "Never again think about what he saw in the mound field when he was eleven.",
+          "strength": 3
+        }
+      ],
+      "fears": [],
+      "voice": {
+        "register": "Measured, scriptural and chilly; quotes the catechism and the Bible as a matter of course, and never raises his voice.",
+        "mannerisms": [
+          "Begins a reproach with 'I say this in love'",
+          "Glances towards the mounds when anyone mentions the old faith",
+          "Answers questions about folk belief with a question about churchgoing"
+        ],
+        "sampleLines": [
+          "I say this in love. The household examination is in March, and I shall expect the whole house, gentlefolk and servants alike.",
+          "The mounds are graves of heathen men, and graves are for the dead. I would thank you not to walk among them after dark.",
+          "There are those in this parish who would leave milk on a stone sooner than bring their children to be confirmed. You would not encourage them, I hope."
+        ]
+      },
+      "background": "Hallgren has served the parish of Gamla Uppsala for more than twenty years, long enough to have buried most of the farmers who were young when he came. He is conscientious, unbending and genuinely devoted to the souls in his charge, and he regards the lingering folk customs of his parish, the offerings at stones, the charms against the vittra, the summer fires, as a darkness he was sent to drive out. He also keeps the parish's household examination rolls, which record every person in every house, including who in the Society's household reads the catechism and who does not. As a boy, staying with an uncle at the parsonage, he walked into the mound field one autumn night and saw something there that he has spent his life calling a fever dream.",
+      "latentHooks": [
+        {
+          "id": "the-mound-night",
+          "kind": "secret",
+          "text": "He has the Sight, suppressed since childhood; what he saw at the mounds was real, and he knows it."
+        },
+        {
+          "id": "examination-rolls",
+          "kind": "habit",
+          "text": "He keeps the household examination rolls in exacting detail, noting not only catechism but rumours, absences and quarrels, for every farm in the parish."
+        },
+        {
+          "id": "bishop-favour",
+          "kind": "ambition",
+          "text": "He hopes to be made vicar of a better parish before he dies, and an archbishop's commendation for stamping out superstition would bring it."
+        },
+        {
+          "id": "foundling",
+          "kind": "secret",
+          "text": "Thirty years ago he quietly entered a foundling child in the register under a false parentage to spare a family's shame; the child grew up in the parish."
+        }
+      ],
+      "networkLinks": [
+        {
+          "targetId": "parish",
+          "place": "Gamla Uppsala and the cathedral chapter",
+          "nature": "Comminister with the ear of the cathedral chapter",
+          "influence": "Can denounce the Society's household from the pulpit, or bring the chapter's displeasure on any household it favours."
+        },
+        {
+          "targetId": "constable-hagg",
+          "place": "Uppsala",
+          "nature": "Fellow-sceptic and churchgoer",
+          "influence": "Can pass the constable what he learns at the examinations."
+        },
+        {
+          "targetId": "landowner",
+          "place": "Around Gamla Uppsala",
+          "nature": "Confidant of the pious manor families of the district",
+          "influence": "Can make the Society's members unwelcome at the local manors."
+        }
+      ],
+      "attitude": -1,
+      "attitudeReason": "He suspects the Society of indulging the old superstitions his life has been spent driving out, and fears what they might make him remember.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "constable-hagg",
+      "definitionId": "constable-hagg",
+      "name": "Karl Edvard Hägg",
+      "tier": "canonical",
+      "status": "alive",
+      "importance": 2,
+      "home": "Two rooms above a harness-maker's in Svartbäcken, Uppsala",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 44,
+        "gender": "male",
+        "occupation": "Senior police constable of the Uppsala town police",
+        "rank": "worker",
+        "home": "Two rooms above a harness-maker's in Svartbäcken, Uppsala",
+        "appearance": "Broad and slightly stooped, grey side-whiskers clipped short, a uniform coat brushed thin at the elbows, and a notebook he writes in with a carpenter's pencil."
+      },
+      "personality": {
+        "openness": 2,
+        "conscientiousness": 5,
+        "extraversion": 2,
+        "agreeableness": 2,
+        "neuroticism": 3
+      },
+      "drives": [
+        {
+          "id": "protect-the-gullible",
+          "text": "Keep cunning folk, spiritualists and confidence men from preying on frightened country people.",
+          "strength": 3
+        },
+        {
+          "id": "orderly-town",
+          "text": "Have Uppsala's books balanced at the end of each month: every report filed, every drunk accounted for.",
+          "strength": 2
+        },
+        {
+          "id": "pension",
+          "text": "Reach his pension without a scandal that would let the stadsfiskal pass him over.",
+          "strength": 2
+        }
+      ],
+      "fears": [],
+      "voice": {
+        "register": "Plain, slow and official; Uppland country speech under a policeman's formal phrases.",
+        "mannerisms": [
+          "Writes down what you say before he answers it",
+          "Calls everyone by their full name and parish",
+          "Ends a question with a long silence instead of a second question"
+        ],
+        "sampleLines": [
+          "I'll have that again, slowly. Where were you on the evening of the fourteenth, and who will swear to it?",
+          "I've seen a widow in Bälinge sell her last cow to a man who promised to talk to her drowned boy. I don't care for gentlemen who see what others can't.",
+          "Nothing in Uppsala walks at night that can't be put in the cells by morning, sir. That is my experience."
+        ]
+      },
+      "background": "Hägg was born a farmhand's son at Vaksala, served eight years in the Uppland regiment and joined the town police when it was little more than a watch. He is honest to the point of rudeness and has never taken a coin. Fifteen years ago he arrested a travelling 'wise man' who had stripped a parish of its savings by promising to lift curses, and he watched the widow at the heart of that case hang herself in her barn before the trial. He has distrusted anyone who trades in the unseen ever since. He has heard that a group of gentlefolk near Gamla Uppsala receive strange letters from the countryside and travel out to answer them, and to him that sounds like the same trade in better clothes.",
+      "latentHooks": [
+        {
+          "id": "the-widows-barn",
+          "kind": "secret",
+          "text": "He found the widow in Bälinge alive enough to speak, and what she told him about her son's drowning is not in his report; it did not fit."
+        },
+        {
+          "id": "brother-in-law-debt",
+          "kind": "debt",
+          "text": "His wife's brother runs a tavern in Fjärdingen without a proper licence, and Hägg has been looking the other way for years."
+        },
+        {
+          "id": "sunday-ledger",
+          "kind": "habit",
+          "text": "Every Sunday afternoon he copies the week's incidents into a private ledger he keeps at home, with notes he would never put in an official report."
+        },
+        {
+          "id": "sergeant-post",
+          "kind": "ambition",
+          "text": "The post of police sergeant (överkonstapel) falls vacant next year, and a clean, celebrated arrest would win it."
+        }
+      ],
+      "networkLinks": [
+        {
+          "targetId": "police",
+          "place": "Uppsala",
+          "nature": "Senior constable, trusted by the stadsfiskal for country errands",
+          "influence": "Can have the Society's names noted as persons of interest, or quietly ask a rural länsman to refuse them help."
+        },
+        {
+          "targetId": "parish",
+          "place": "Vaksala and Uppsala",
+          "nature": "Knows the parish clerks who keep the registers",
+          "influence": "Can learn who moved into and out of a parish, and when, before the Society can."
+        },
+        {
+          "targetId": "comminister-hallgren",
+          "place": "Gamla Uppsala",
+          "nature": "Fellow-sceptic; they compare notes after church",
+          "influence": "Each feeds the other's suspicions about the Society."
+        }
+      ],
+      "attitude": -2,
+      "attitudeReason": "He believes the Society are well-born charlatans of the kind he has seen ruin poor families, and he is waiting for them to make a mistake.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "docent-ekelund",
+      "definitionId": "docent-ekelund",
+      "name": "Henrik Ekelund",
+      "tier": "canonical",
+      "status": "alive",
+      "importance": 2,
+      "home": "Rented rooms on Övre Slottsgatan, Uppsala, crammed with notebooks and dialect word-slips",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 34,
+        "gender": "male",
+        "occupation": "Docent (lecturer) in Nordic languages at Uppsala University",
+        "rank": "burgher",
+        "home": "Rented rooms on Övre Slottsgatan, Uppsala, crammed with notebooks and dialect word-slips",
+        "appearance": "Tall and thin, with spectacles pushed up into untidy fair hair, a velvet waistcoat with a burn hole, and pockets full of folded paper slips."
+      },
+      "personality": {
+        "openness": 5,
+        "conscientiousness": 2,
+        "extraversion": 4,
+        "agreeableness": 4,
+        "neuroticism": 3
+      },
+      "drives": [
+        {
+          "id": "the-great-work",
+          "text": "Compile the definitive record of Swedish folk belief, parish by parish, before the railway and the emigrant ships erase it.",
+          "strength": 3
+        },
+        {
+          "id": "professorship",
+          "text": "Win the chair that his rival in Lund is also courting.",
+          "strength": 2
+        },
+        {
+          "id": "believe-or-not",
+          "text": "Find out, privately, whether any of it is true.",
+          "strength": 2
+        }
+      ],
+      "fears": [],
+      "voice": {
+        "register": "Eager, learned and digressive; drops into dialect words with delight and corrects his own Latin.",
+        "mannerisms": [
+          "Writes words on slips of paper mid-conversation",
+          "Asks how a thing is said in your home parish",
+          "Says 'fascinating' when he means 'alarming'"
+        ],
+        "sampleLines": [
+          "In Hälsingland they don't say she was taken, they say she was 'borrowed'. Borrowed! Do you hear the difference? It means someone expects her back.",
+          "I am a man of science, naturally. But if you were to go to that mill on Midsummer Eve, would you be so kind as to take me with you?",
+          "Professor Tornell would call this peasant fancy. Professor Tornell has never sat in a cowshed in Orsa at four in the morning."
+        ]
+      },
+      "background": "Ekelund is a pastor's son from Dalarna who escaped into philology and has never quite come back down. In 1872 he helped a circle of students found one of the new dialect societies, the landsmålsföreningar, which send young men out every summer to write down the speech, songs and tales of their home provinces. His rooms are a paper flood of word-slips, transcribed charms and folk tunes. He tells his colleagues that folk belief is a fossil record of the Nordic mind; he has privately begun to suspect it is also a field report. He has worked out that the Society knows more than it says and is courting them shamelessly.",
+      "latentHooks": [
+        {
+          "id": "student-collectors",
+          "kind": "connection",
+          "text": "His student collectors spread across half the provinces every summer, and their notebooks often record strange events weeks before the papers do."
+        },
+        {
+          "id": "the-charm-he-tried",
+          "kind": "secret",
+          "text": "Last spring, alone in his rooms, he tried one of the charms he had transcribed, and something answered; he has not slept well since."
+        },
+        {
+          "id": "borrowed-manuscript",
+          "kind": "debt",
+          "text": "He borrowed a seventeenth-century manuscript of spells from the university library's closed collection and has not returned it."
+        },
+        {
+          "id": "publish-the-society",
+          "kind": "ambition",
+          "text": "He dreams of a learned paper on 'a living tradition of seers near Uppsala', which would make his name and expose the Society."
+        }
+      ],
+      "networkLinks": [
+        {
+          "targetId": "university",
+          "place": "Uppsala",
+          "nature": "Docent with friends among the younger faculty and the student nations",
+          "influence": "Can open the library's closed collections and the university's archives, or a word from him can get the Society's members barred from them."
+        },
+        {
+          "targetId": "parish",
+          "place": "Across the provinces",
+          "nature": "Corresponds with dozens of country vicars who send him local customs",
+          "influence": "Can find out quickly which parish has had strange deaths or customs revived."
+        },
+        {
+          "targetId": "press",
+          "place": "Uppsala and Stockholm",
+          "nature": "Writes popular articles on folk belief for the papers",
+          "influence": "Can make a case into a learned curiosity in print, for better or worse."
+        }
+      ],
+      "attitude": 2,
+      "attitudeReason": "He sees the Society as the most exciting source he has ever found and wants their trust, and their secrets.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "editor-blom",
+      "definitionId": "editor-blom",
+      "name": "Johan August Blom",
+      "tier": "canonical",
+      "status": "alive",
+      "importance": 2,
+      "home": "The newspaper office and flat above it on Drottninggatan, Uppsala, smelling of ink and wet paper",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 47,
+        "gender": "male",
+        "occupation": "Editor and part-owner of the liberal newspaper Fyrisposten",
+        "rank": "burgher",
+        "home": "The newspaper office and flat above it on Drottninggatan, Uppsala, smelling of ink and wet paper",
+        "appearance": "Heavy-set and red-cheeked, with a magnificent brown beard, a cigar he rarely lights, and shirt cuffs grey with printer's ink."
+      },
+      "personality": {
+        "openness": 4,
+        "conscientiousness": 3,
+        "extraversion": 4,
+        "agreeableness": 2,
+        "neuroticism": 2
+      },
+      "drives": [
+        {
+          "id": "circulation",
+          "text": "Keep the paper's subscribers ahead of the conservative rival across the river.",
+          "strength": 3
+        },
+        {
+          "id": "progress",
+          "text": "Push the cause of reform: schools, railways, an end to superstition and to the clergy's grip on the countryside.",
+          "strength": 2
+        },
+        {
+          "id": "the-story",
+          "text": "Get the true story of what the Society does, whatever it is, and print it first.",
+          "strength": 2
+        }
+      ],
+      "fears": [],
+      "voice": {
+        "register": "Booming, jovial and argumentative; speaks in headlines and leading articles even across a dinner table.",
+        "mannerisms": [
+          "Taps the table with a folded newspaper to make a point",
+          "Calls everyone 'my friend' especially when he disagrees",
+          "Repeats a good phrase twice to remember it for print"
+        ],
+        "sampleLines": [
+          "My friend, the age of trolls is over. The age of the telegraph is here. Superstition in the countryside, that's the headline, that's the story.",
+          "You've been to Hedesunda twice this month. I don't ask why. I merely note it. I am a noting sort of man.",
+          "Give me something true and I'll print it straight. Give me nothing and I shall have to print what people say, and people say such things."
+        ]
+      },
+      "background": "Blom was a schoolteacher in Västerås until a sharp article on the cathedral chapter cost him his post. He drifted into journalism in Stockholm, came to Uppsala to run Fyrisposten in 1864, and has turned a dull advertiser into a lively, quarrelsome liberal paper read in every coffee house in town. He mocks rural superstition in print as a matter of policy, but he is too good a newspaperman not to notice that certain country stories keep ending with the arrival of the same gentlefolk from Gamla Uppsala. He does not yet know whether the Society are a story about fraud, about science, or about something else.",
+      "latentHooks": [
+        {
+          "id": "paid-informants",
+          "kind": "connection",
+          "text": "He pays small sums to servants, coachmen and telegraph clerks for news, and some of them work close to the Society."
+        },
+        {
+          "id": "libel-suit",
+          "kind": "debt",
+          "text": "A libel suit from a Uppsala alderman is pending, and losing it would ruin him; he would trade a great deal for leverage."
+        },
+        {
+          "id": "sister-in-asylum",
+          "kind": "secret",
+          "text": "His younger sister has been in the asylum at Uppsala for ten years after seeing 'the woman in the lake'; he visits her monthly and tells no one."
+        },
+        {
+          "id": "riksdag-seat",
+          "kind": "ambition",
+          "text": "He means to stand for the second chamber of the Riksdag, and a sensational exposé would make his name across the county."
+        }
+      ],
+      "networkLinks": [
+        {
+          "targetId": "press",
+          "place": "Uppsala and Stockholm",
+          "nature": "Editor with correspondents in the provincial papers",
+          "influence": "Can put a story in print across the county within the week, praising or mocking the Society."
+        },
+        {
+          "targetId": "police",
+          "place": "Uppsala",
+          "nature": "Drinks with junior constables who sell him the night's arrests",
+          "influence": "Can learn of the Society's dealings with the police almost as soon as they happen."
+        },
+        {
+          "targetId": "innkeeper-strand",
+          "place": "The northern road",
+          "nature": "Buys road gossip from Brita Strand",
+          "influence": "Learns who has been coming and going from the Society's headquarters."
+        }
+      ],
+      "attitude": 0,
+      "attitudeReason": "Neither friend nor foe; the Society is a story he has not yet decided how to write.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "innkeeper-strand",
+      "definitionId": "innkeeper-strand",
+      "name": "Brita Strand",
+      "tier": "canonical",
+      "status": "alive",
+      "importance": 2,
+      "home": "Strands gästgivargård, by the post road a short walk from the Society's headquarters",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 52,
+        "gender": "female",
+        "occupation": "Keeper of the coaching inn (gästgivaregård) on the northern road out of Uppsala",
+        "rank": "burgher",
+        "home": "Strands gästgivargård, by the post road a short walk from the Society's headquarters",
+        "appearance": "Small and quick, with ink-stained fingers from the post ledger, a black silk widow's cap worn rakishly, and a loud laugh that carries across the yard."
+      },
+      "personality": {
+        "openness": 3,
+        "conscientiousness": 4,
+        "extraversion": 5,
+        "agreeableness": 3,
+        "neuroticism": 2
+      },
+      "drives": [
+        {
+          "id": "keep-the-inn",
+          "text": "Keep the inn and its post-horse contract out of the hands of her late husband's cousin, who wants it.",
+          "strength": 3
+        },
+        {
+          "id": "know-everything",
+          "text": "Know every traveller's business before they have unbuckled their bags.",
+          "strength": 2
+        },
+        {
+          "id": "daughter-match",
+          "text": "See her daughter Lovisa married to someone with prospects, not the stable lad she keeps looking at.",
+          "strength": 2
+        }
+      ],
+      "fears": [],
+      "voice": {
+        "register": "Warm, fast and mercantile; switches to careful politeness for gentlefolk and back again the moment they leave.",
+        "mannerisms": [
+          "Quotes prices before anyone asks",
+          "Calls regular guests by what they drink",
+          "Lowers her voice for the interesting parts and raises it for the rest"
+        ],
+        "sampleLines": [
+          "A room is one riksdaler, the horses are extra, and your secrets, my dear, are free. I'll only charge you for keeping them.",
+          "Three of you came back in the small hours on Tuesday, muddy to the knees, and not one word to old Brita. I'm hurt.",
+          "The post coach from Gävle had a lady on it who asked after your house by name. I told her nothing, naturally. Well. Very little."
+        ]
+      },
+      "background": "Brita married into the inn at nineteen and ran it in practice long before her husband drank himself into the churchyard in 1866. The inn holds the county contract to keep post-horses for travellers, which makes it a nerve of the district: coachmen, pedlars, emigrants on their way to the Gothenburg boats and commercial travellers all pass through her taproom, and she forgets nothing. She likes the Society because they pay promptly, bring interesting guests and never quibble over the bill, but she has noticed that trouble follows them up the road, and she charges accordingly.",
+      "latentHooks": [
+        {
+          "id": "cousin-claim",
+          "kind": "debt",
+          "text": "Her husband died owing money to his cousin Anders Strand, a grain merchant in Uppsala, who holds a note on the inn and could call it in."
+        },
+        {
+          "id": "post-ledger",
+          "kind": "habit",
+          "text": "She keeps the post-horse ledger meticulously, so she can say who hired horses for which road, and when, going back twenty years."
+        },
+        {
+          "id": "the-night-guest",
+          "kind": "secret",
+          "text": "One winter night years ago she gave shelter to a traveller who left before dawn and was never seen again; she kept his trunk, and something in it frightens her."
+        },
+        {
+          "id": "coachmen-network",
+          "kind": "connection",
+          "text": "Every coachman and post-boy between Uppsala and Gävle drinks at her bar and carries her gossip."
+        }
+      ],
+      "networkLinks": [
+        {
+          "targetId": "company",
+          "place": "Uppsala and Gävle",
+          "nature": "Feeds and lodges the timber and railway companies' men on the road north",
+          "influence": "Can learn when company agents travel and where, and can make a stranger's stay pleasant or very uncomfortable."
+        },
+        {
+          "targetId": "press",
+          "place": "Uppsala",
+          "nature": "Sells the editor small items of news for a few skilling",
+          "influence": "Can put a story about the Society into the paper, or keep one out of it, with a word."
+        },
+        {
+          "targetId": "servant-alm",
+          "place": "The Society's headquarters",
+          "nature": "Elin Alm's aunt by marriage; Elin visits on her free Sundays",
+          "influence": "Hears, sooner or later, most of what goes on in the headquarters' kitchen."
+        }
+      ],
+      "attitude": 1,
+      "attitudeReason": "Good customers who pay on time and bring interesting company, though she suspects they are worth more than they pay.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "servant-alm",
+      "definitionId": "servant-alm",
+      "name": "Elin Alm",
+      "tier": "canonical",
+      "status": "alive",
+      "importance": 2,
+      "home": "A small room behind the kitchen at the Society's headquarters near Gamla Uppsala",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 19,
+        "gender": "female",
+        "occupation": "Maid of all work at the Society's headquarters",
+        "rank": "farmhand or maid",
+        "home": "A small room behind the kitchen at the Society's headquarters near Gamla Uppsala",
+        "appearance": "Sturdy and freckled, with red, chapped hands, a plaited fair braid pinned under a cap, and very sharp grey eyes that miss nothing."
+      },
+      "personality": {
+        "openness": 4,
+        "conscientiousness": 4,
+        "extraversion": 2,
+        "agreeableness": 4,
+        "neuroticism": 4
+      },
+      "drives": [
+        {
+          "id": "passage-money",
+          "text": "Save enough for a steerage passage to join her brother Per in Minnesota.",
+          "strength": 3
+        },
+        {
+          "id": "protect-the-house",
+          "text": "Keep the household she serves safe from the things she has seen in the yard at night.",
+          "strength": 2
+        },
+        {
+          "id": "grandmother",
+          "text": "Honour what her grandmother taught her without the vicar finding out.",
+          "strength": 1
+        }
+      ],
+      "fears": [],
+      "voice": {
+        "register": "Quiet and correct with the gentlefolk, broad Hälsingland dialect when frightened or among her own.",
+        "mannerisms": [
+          "Answers a question with 'if the master wishes'",
+          "Touches the iron nail sewn into her apron hem when she is uneasy",
+          "Goes very still and listens before she speaks"
+        ],
+        "sampleLines": [
+          "If the master wishes. Only, I'd not leave the stable door open after dark this week. Not this week.",
+          "My grandmother used to put a pair of scissors under the cradle. I don't hold with such things, of course. But I've put a pair under the back step.",
+          "Someone was asking at the inn what time the gentlemen come and go. I didn't care for the look of him."
+        ]
+      },
+      "background": "Elin came south from a croft near Bollnäs after the famine of 1868 took her parents and sent her brother to America. Her grandmother was a respected wise woman who could stop blood and find lost cattle, and taught Elin far more than either of them ever told the vicar. She came to the headquarters through her aunt's connection with the inn and was hired because she did not scream on her first night. She half-has the Sight herself, keeps the house's old protections quietly in order, and is fiercely loyal, but she is also saving every coin she can, and coins come from more than one direction.",
+      "latentHooks": [
+        {
+          "id": "editors-coins",
+          "kind": "secret",
+          "text": "Editor Blom pays her a few skilling for harmless news of the household; she tells herself she gives him nothing that matters."
+        },
+        {
+          "id": "grandmothers-book",
+          "kind": "connection",
+          "text": "She keeps her grandmother's book of charms and remedies, written in a mixture of Swedish and old rune-signs, hidden in her trunk."
+        },
+        {
+          "id": "brothers-letters",
+          "kind": "habit",
+          "text": "Letters from Per in Minnesota arrive irregularly through the inn; one has not come in five months, and she fears the worst."
+        },
+        {
+          "id": "half-sight",
+          "kind": "secret",
+          "text": "She sometimes sees what the Society sees, and does not yet know whether to tell them."
+        }
+      ],
+      "networkLinks": [
+        {
+          "targetId": "innkeeper-strand",
+          "place": "The northern road",
+          "nature": "Niece by marriage; visits on free Sundays",
+          "influence": "Can pass word to or from the inn, and anything she says there travels."
+        },
+        {
+          "targetId": "editor-blom",
+          "place": "Uppsala",
+          "nature": "Paid, occasional informant",
+          "influence": "Can, without meaning harm, let slip the Society's movements to the press."
+        },
+        {
+          "targetId": "parish",
+          "place": "Gamla Uppsala",
+          "nature": "Communicant who must attend the household examination",
+          "influence": "Her answers at the catechism examination can draw the vicar's attention to the house."
+        }
+      ],
+      "attitude": 2,
+      "attitudeReason": "Loyal to the household that took her in and frightened for it, though she keeps her own counsel and her own savings.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-gustaf-nordenfelt",
+      "definitionId": null,
+      "name": "Gustaf Adolf Nordenfelt",
+      "tier": "core",
+      "status": "alive",
+      "importance": 2,
+      "home": "Uppsala",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 58,
+        "gender": "male",
+        "occupation": "Professor of medicine at Uppsala University and physician to the academic hospital",
+        "rank": "burgher",
+        "home": "A tall stone house on Trädgårdsgatan, Uppsala",
+        "appearance": "Narrow, silver-whiskered, immaculate black coat, a gold pince-nez he polishes when contradicted."
+      },
+      "personality": {
+        "openness": 2,
+        "conscientiousness": 5,
+        "extraversion": 3,
+        "agreeableness": 2,
+        "neuroticism": 3
+      },
+      "drives": [
+        {
+          "id": "dr1",
+          "text": "Prove that every so-called haunting is nerves, hunger or bad air, and make the lesson public.",
+          "strength": 8
+        },
+        {
+          "id": "dr2",
+          "text": "Protect his standing on the university board and the asylum committee.",
+          "strength": 6
+        }
+      ],
+      "fears": [],
+      "voice": {
+        "register": "Dry, precise, condescending academic Swedish with Latin tags.",
+        "mannerisms": [
+          "Polishes his pince-nez before disagreeing",
+          "Calls every strange tale 'a case'",
+          "Never raises his voice"
+        ],
+        "sampleLines": [
+          "Superstition is merely a diagnosis that has not yet been made.",
+          "Bring me the patient and leave the spirits at the door."
+        ]
+      },
+      "background": "Trained in Paris and Vienna, he built his name on the study of hysteria in country parishes. He has quietly read the Society's cases as source material and considers its members interesting patients rather than colleagues.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "ambition",
+          "text": "He is drafting a treatise on 'collective delusion in the Uppland peasantry' and would like the Society's members as unwitting case studies."
+        },
+        {
+          "id": "h2",
+          "kind": "secret",
+          "text": "Years ago he signed a death certificate for a patient with a cause that he knew was false, to avoid an inquiry into a colleague."
+        },
+        {
+          "id": "h3",
+          "kind": "connection",
+          "text": "He sits on the asylum committee and can open or close the ward doors where Editor Blom's sister lies."
+        }
+      ],
+      "networkLinks": [
+        {
+          "targetId": "university",
+          "place": "Uppsala",
+          "nature": "Senior professor and board member",
+          "influence": "Can discredit the Society's claims to scholars and can grant or refuse access to the university library."
+        },
+        {
+          "targetId": "physician",
+          "place": "Uppsala",
+          "nature": "Mentor to many district physicians",
+          "influence": "District doctors send him their odd cases and follow his reading of them."
+        }
+      ],
+      "attitude": -2,
+      "attitudeReason": "He regards the Society as a symptom of the age's credulity and wants proof of that.",
+      "relationships": [
+        {
+          "characterId": "editor-blom",
+          "nature": "Mutual wariness; the professor has twice been needled in print",
+          "sentiment": -1
+        },
+        {
+          "characterId": "docent-ekelund",
+          "nature": "Disapproving senior colleague",
+          "sentiment": -1
+        },
+        {
+          "characterId": "npc-sofia-wennerberg",
+          "nature": "Buys medical books from her and distrusts her stock",
+          "sentiment": 0
+        }
+      ],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-sofia-wennerberg",
+      "definitionId": null,
+      "name": "Sofia Wennerberg",
+      "tier": "core",
+      "status": "alive",
+      "importance": 2,
+      "home": "Uppsala",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 47,
+        "gender": "female",
+        "occupation": "Antiquarian bookseller and dealer in old manuscripts",
+        "rank": "burgher",
+        "home": "A narrow shop with rooms above on Fyristorg, Uppsala",
+        "appearance": "Stout and quick-eyed, ink on her cuffs, a shawl always pinned with a brooch of dark amber."
+      },
+      "personality": {
+        "openness": 4,
+        "conscientiousness": 3,
+        "extraversion": 4,
+        "agreeableness": 3,
+        "neuroticism": 2
+      },
+      "drives": [
+        {
+          "id": "dr1",
+          "text": "Keep the shop solvent and her late husband's name respectable.",
+          "strength": 7
+        },
+        {
+          "id": "dr2",
+          "text": "Collect rare manuscripts of folk magic and sell them to the right buyers.",
+          "strength": 6
+        }
+      ],
+      "fears": [],
+      "voice": {
+        "register": "Warm, chatty, a shopkeeper's flattery over a sharp mind.",
+        "mannerisms": [
+          "Taps the spine of a book as she talks price",
+          "Lowers her voice for anything valuable",
+          "Calls customers 'my dear'"
+        ],
+        "sampleLines": [
+          "Everything has a price, my dear, but not everything has a buyer.",
+          "I never ask where a book has been, only what it will fetch."
+        ]
+      },
+      "background": "Widowed six years, she kept the shop going through the lean years by trading in what the university's collectors would not sell openly. She likes the Society because it buys books and asks interesting questions, and she is a little afraid of what some of her volumes contain.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "debt",
+          "text": "She owes a large sum on her stock to a grain merchant in Uppsala and cannot easily meet the next instalment."
+        },
+        {
+          "id": "h2",
+          "kind": "connection",
+          "text": "She quietly sells and lends seventeenth-century spell manuscripts to Docent Ekelund and to others who ask no questions."
+        },
+        {
+          "id": "h3",
+          "kind": "secret",
+          "text": "One bundle of papers in her cellar came from a dead pastor's estate and names living families in a way that could shame them."
+        }
+      ],
+      "networkLinks": [
+        {
+          "targetId": "university",
+          "place": "Uppsala",
+          "nature": "Supplier to scholars and students",
+          "influence": "Hears which professors are hunting which texts and can steer a student to a source."
+        }
+      ],
+      "attitude": 2,
+      "attitudeReason": "The Society are good customers and make her shop feel like it matters.",
+      "relationships": [
+        {
+          "characterId": "docent-ekelund",
+          "nature": "Valued customer and gossiping friend",
+          "sentiment": 2
+        },
+        {
+          "characterId": "npc-gustaf-nordenfelt",
+          "nature": "Customer she finds tiresome",
+          "sentiment": 0
+        },
+        {
+          "characterId": "innkeeper-strand",
+          "nature": "Old acquaintance who trades news over coffee",
+          "sentiment": 1
+        }
+      ],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-per-olof-sjoberg",
+      "definitionId": null,
+      "name": "Per-Olof Sjöberg",
+      "tier": "core",
+      "status": "alive",
+      "importance": 2,
+      "home": "Sala",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 41,
+        "gender": "male",
+        "occupation": "Rural constable (länsman) of the Sala district",
+        "rank": "burgher",
+        "home": "The länsman's farm on the road north of Sala",
+        "appearance": "Heavy-shouldered, red-bearded, a cap he turns in his hands, boots always muddy."
+      },
+      "personality": {
+        "openness": 2,
+        "conscientiousness": 4,
+        "extraversion": 2,
+        "agreeableness": 2,
+        "neuroticism": 3
+      },
+      "drives": [
+        {
+          "id": "dr1",
+          "text": "Keep the district quiet and his reports tidy so the county governor leaves him alone.",
+          "strength": 8
+        },
+        {
+          "id": "dr2",
+          "text": "Get out from under the debt he owes the manor.",
+          "strength": 6
+        }
+      ],
+      "fears": [],
+      "voice": {
+        "register": "Blunt, slow country speech, wary of towns and titles.",
+        "mannerisms": [
+          "Turns his cap",
+          "Answers a question with a question",
+          "Looks at the door when anyone mentions the manor"
+        ],
+        "sampleLines": [
+          "I report what I can put my hand on. The rest is for the vicar.",
+          "Folk talk. Folk always talk. Doesn't make it so."
+        ]
+      },
+      "background": "He has policed the Sala district for eleven years, where the silver mine has gone quiet and half the young men have left for America. He has seen things at night that he does not write down.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "debt",
+          "text": "He borrowed money from the Baron at Salberga to cover his wife's illness and now cannot refuse the Baron a favour."
+        },
+        {
+          "id": "h2",
+          "kind": "secret",
+          "text": "He once closed a death as 'drowned by accident' because the real circumstances would have sent a crofter's family to ruin."
+        },
+        {
+          "id": "h3",
+          "kind": "habit",
+          "text": "He walks the old mine tracks alone at dusk, and never says why."
+        }
+      ],
+      "networkLinks": [
+        {
+          "targetId": "police",
+          "place": "Sala",
+          "nature": "Rural constable answering to the county governor",
+          "influence": "Can open or close access to inquest papers and to any crime scene in the district."
+        },
+        {
+          "targetId": "landowner",
+          "place": "Salberga manor",
+          "nature": "Debtor to the Baron",
+          "influence": "Passes on word of strangers asking questions."
+        }
+      ],
+      "attitude": -1,
+      "attitudeReason": "He distrusts anyone from Uppsala who arrives asking about local deaths.",
+      "relationships": [
+        {
+          "characterId": "constable-hagg",
+          "nature": "Exchanges terse letters; respects him cautiously",
+          "sentiment": 1
+        },
+        {
+          "characterId": "npc-carl-gyllenhammar",
+          "nature": "Debtor and reluctant servant",
+          "sentiment": -1
+        },
+        {
+          "characterId": "npc-oskar-brandt",
+          "nature": "Resents the company engineer's airs",
+          "sentiment": -1
+        }
+      ],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-lovisa-hedman",
+      "definitionId": null,
+      "name": "Lovisa Hedman",
+      "tier": "core",
+      "status": "alive",
+      "importance": 2,
+      "home": "a croft near Delsbo in Hälsingland",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 66,
+        "gender": "female",
+        "occupation": "Midwife and healer, known as a cunning woman",
+        "rank": "crofter",
+        "home": "A grey timber croft near Delsbo, Hälsingland, with herbs hanging from the rafters",
+        "appearance": "Small and bent, hands like roots, a black headscarf and very pale eyes."
+      },
+      "personality": {
+        "openness": 4,
+        "conscientiousness": 4,
+        "extraversion": 2,
+        "agreeableness": 3,
+        "neuroticism": 2
+      },
+      "drives": [
+        {
+          "id": "dr1",
+          "text": "Pass her remedies and the old rules to someone who will keep them before she dies.",
+          "strength": 8
+        },
+        {
+          "id": "dr2",
+          "text": "Keep the vicar and the doctor from taking away her trade.",
+          "strength": 5
+        }
+      ],
+      "fears": [],
+      "voice": {
+        "register": "Slow Hälsingland dialect, proverb-laden, speaks of the unseen as plain neighbours.",
+        "mannerisms": [
+          "Answers questions sideways with a proverb",
+          "Spits lightly to the side after naming a bad thing",
+          "Never says 'thank you' for a gift"
+        ],
+        "sampleLines": [
+          "What you feed in the dark will come to your door in the light.",
+          "Ask politely and give something. That is all the old rules ever were."
+        ]
+      },
+      "background": "She has delivered half the parish and buried a good part of it. She keeps the old customs of offerings and thresholds, and she remembers the Society's founders from a hard winter long ago.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "connection",
+          "text": "She knew Elin Alm's grandmother and once exchanged charms with her by letter."
+        },
+        {
+          "id": "h2",
+          "kind": "secret",
+          "text": "She has never told the vicar that she leaves milk out each Thursday on the boundary stone of the croft."
+        },
+        {
+          "id": "h3",
+          "kind": "habit",
+          "text": "She will not travel after dark and will not cross a running stream on certain days."
+        }
+      ],
+      "networkLinks": [
+        {
+          "targetId": "parish",
+          "place": "Delsbo",
+          "nature": "Tolerated by the vicar, scorned by the church council",
+          "influence": "Mothers in four parishes trust her over the district doctor."
+        },
+        {
+          "targetId": "physician",
+          "place": "Hälsingland",
+          "nature": "Rivalry with the district doctor over births",
+          "influence": "Hears of sudden deaths and strange illnesses before the authorities do."
+        }
+      ],
+      "attitude": 1,
+      "attitudeReason": "She sees the Society as heirs of people she once respected, and has not yet decided if they are worthy.",
+      "relationships": [
+        {
+          "characterId": "servant-alm",
+          "nature": "Knew her grandmother and keeps a quiet interest in the girl",
+          "sentiment": 1
+        },
+        {
+          "characterId": "npc-jonas-ryd",
+          "nature": "He calls her a witch from the pulpit stairs",
+          "sentiment": -2
+        }
+      ],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-carl-gyllenhammar",
+      "definitionId": null,
+      "name": "Carl Gustaf Gyllenhammar",
+      "tier": "core",
+      "status": "alive",
+      "importance": 2,
+      "home": "Salberga manor near Sala",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 52,
+        "gender": "male",
+        "occupation": "Baron, owner of Salberga manor and shares in the Sala silver works",
+        "rank": "nobility",
+        "home": "Salberga manor near Sala, a yellow wooden house with a mouldering park",
+        "appearance": "Tall, stooped, courtly, a faded uniform coat from his youth and a limp he hides."
+      },
+      "personality": {
+        "openness": 3,
+        "conscientiousness": 2,
+        "extraversion": 3,
+        "agreeableness": 3,
+        "neuroticism": 4
+      },
+      "drives": [
+        {
+          "id": "dr1",
+          "text": "Save the estate from bankruptcy by any means that will not shame the name.",
+          "strength": 9
+        },
+        {
+          "id": "dr2",
+          "text": "Learn whether the old bargains made by his family are still binding.",
+          "strength": 6
+        }
+      ],
+      "fears": [],
+      "voice": {
+        "register": "Gracious, old-fashioned aristocratic Swedish with French words, charm that slips into pleading.",
+        "mannerisms": [
+          "Pours wine before business",
+          "Says 'my dear sir' when he is afraid",
+          "Glances at the portrait of his grandfather"
+        ],
+        "sampleLines": [
+          "A gentleman's debts are matters of honour, and honour, alas, is expensive.",
+          "My family has always treated the land with respect. Some respect is costly."
+        ]
+      },
+      "background": "The last of his line, he inherited an estate with a mine that yields less every year and a family history of strange bargains. He welcomes the Society as helpers, but intends to use them to settle a private account.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "secret",
+          "text": "His grandfather signed an agreement with something on the estate's land in exchange for the silver, and the Baron has found the paper."
+        },
+        {
+          "id": "h2",
+          "kind": "debt",
+          "text": "He is mortgaged to the hilt to a Stockholm bank and has promised the mine to an investor he cannot satisfy."
+        },
+        {
+          "id": "h3",
+          "kind": "ambition",
+          "text": "He intends to have the Society remove, or silence, whatever haunts the old shaft so the company can reopen it."
+        }
+      ],
+      "networkLinks": [
+        {
+          "targetId": "landowner",
+          "place": "Västmanland",
+          "nature": "Old nobility with neighbours and tenants",
+          "influence": "Can grant or deny access to land, tenants and records on the estate."
+        },
+        {
+          "targetId": "company",
+          "place": "Sala",
+          "nature": "Shareholder in the silver works",
+          "influence": "Can open the mine records to the Society or lock them away."
+        }
+      ],
+      "attitude": 1,
+      "attitudeReason": "He wants the Society's help and hides that he also wants to use it.",
+      "relationships": [
+        {
+          "characterId": "npc-per-olof-sjoberg",
+          "nature": "Creditor and patron of the local constable",
+          "sentiment": 1
+        },
+        {
+          "characterId": "npc-oskar-brandt",
+          "nature": "Uneasy partner in the plan to reopen the mine",
+          "sentiment": 0
+        },
+        {
+          "characterId": "comminister-hallgren",
+          "nature": "Distant acquaintance through the archbishop's circle",
+          "sentiment": 0
+        }
+      ],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-matilda-forsberg",
+      "definitionId": null,
+      "name": "Matilda Forsberg",
+      "tier": "core",
+      "status": "alive",
+      "importance": 2,
+      "home": "Uppsala",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 26,
+        "gender": "female",
+        "occupation": "Telegraph clerk at Uppsala railway station",
+        "rank": "worker",
+        "home": "A rented attic room near the station, Uppsala",
+        "appearance": "Slight, sharp-chinned, ink-stained fingers, a tidy blue dress mended at the hem."
+      },
+      "personality": {
+        "openness": 4,
+        "conscientiousness": 4,
+        "extraversion": 3,
+        "agreeableness": 3,
+        "neuroticism": 3
+      },
+      "drives": [
+        {
+          "id": "dr1",
+          "text": "Earn enough to bring her brother's family out of poverty or to follow him to America.",
+          "strength": 8
+        },
+        {
+          "id": "dr2",
+          "text": "Be taken seriously in a post where men talk over her.",
+          "strength": 6
+        }
+      ],
+      "fears": [],
+      "voice": {
+        "register": "Quick, clipped, telegraphic, with a clerk's habit of precision.",
+        "mannerisms": [
+          "Taps on the counter in rhythm",
+          "Corrects spelling aloud",
+          "Drops her voice when a message is private"
+        ],
+        "sampleLines": [
+          "A telegram is paid for by the word, so I learn which words matter.",
+          "I don't read them. I merely see them go by."
+        ]
+      },
+      "background": "She came from a crofter family in Roslagen and learned the telegraph through a pastor's patronage. She sees every message of every important person in Uppsala and tells herself she keeps quiet about them.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "secret",
+          "text": "She passes snippets of telegrams to Editor Blom for a few riksdaler each, and has told herself it is harmless."
+        },
+        {
+          "id": "h2",
+          "kind": "connection",
+          "text": "Her brother in Minnesota writes to her about a man from Uppland who carries a sickness the doctors there cannot name."
+        },
+        {
+          "id": "h3",
+          "kind": "habit",
+          "text": "She copies unusual messages into a small notebook she keeps inside her stays."
+        }
+      ],
+      "networkLinks": [
+        {
+          "targetId": "press",
+          "place": "Uppsala",
+          "nature": "Paid informant to Editor Blom",
+          "influence": "Can tell the Society what is being wired about them, and tell the press what the Society wires."
+        },
+        {
+          "targetId": "police",
+          "place": "Uppsala station",
+          "nature": "Sends and receives constabulary telegrams",
+          "influence": "Sees police inquiries before the Society does."
+        }
+      ],
+      "attitude": 2,
+      "attitudeReason": "The Society's messages are the most interesting thing she handles, and they tip generously.",
+      "relationships": [
+        {
+          "characterId": "editor-blom",
+          "nature": "Paid informant, uneasy about it",
+          "sentiment": 0
+        },
+        {
+          "characterId": "servant-alm",
+          "nature": "Friendly acquaintance; both wait for letters from America",
+          "sentiment": 2
+        },
+        {
+          "characterId": "constable-hagg",
+          "nature": "He questions her about wires and she fears his glare",
+          "sentiment": -1
+        }
+      ],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-jonas-ryd",
+      "definitionId": null,
+      "name": "Jonas Ryd",
+      "tier": "core",
+      "status": "alive",
+      "importance": 2,
+      "home": "Gävle",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 44,
+        "gender": "male",
+        "occupation": "Shoemaker and lay preacher of a free-church congregation",
+        "rank": "worker",
+        "home": "A workshop and chapel room behind a tanner's yard in Gävle",
+        "appearance": "Lean, bright-eyed, a threadbare coat, hands stained with blacking and a battered Bible always at hand."
+      },
+      "personality": {
+        "openness": 2,
+        "conscientiousness": 4,
+        "extraversion": 4,
+        "agreeableness": 1,
+        "neuroticism": 3
+      },
+      "drives": [
+        {
+          "id": "dr1",
+          "text": "Save souls from the state church's lukewarm faith and from the devil's tricks.",
+          "strength": 9
+        },
+        {
+          "id": "dr2",
+          "text": "Expose anyone who deals with spirits as a servant of the enemy.",
+          "strength": 8
+        }
+      ],
+      "fears": [],
+      "voice": {
+        "register": "Fervent preacher's cadence, scripture quoted as weapon, warmth turning into denunciation.",
+        "mannerisms": [
+          "Quotes Deuteronomy",
+          "Points with the Bible",
+          "Pauses to let silence accuse"
+        ],
+        "sampleLines": [
+          "There is no neutral ground between the Lord and the spirits that whisper in the woods.",
+          "You carry the Sight as a gift? Brother, that is a snare."
+        ]
+      },
+      "background": "He has been fined twice for holding conventicles. He saw something as a boy that he has since called Satan, and he has devoted his life to denouncing anything that stirs the old world. He regards the Society as sorcerers.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "secret",
+          "text": "The thing he saw as a boy was real, and he has never admitted to anyone that it spoke to him kindly."
+        },
+        {
+          "id": "h2",
+          "kind": "connection",
+          "text": "His congregation includes mill-hands and dock workers who will gather at a word from him."
+        },
+        {
+          "id": "h3",
+          "kind": "ambition",
+          "text": "He hopes to be recognised as the leader of the free church in the province."
+        }
+      ],
+      "networkLinks": [
+        {
+          "targetId": "parish",
+          "place": "Gävle",
+          "nature": "Open adversary of the state clergy",
+          "influence": "Can stir a crowd against the Society and write to the free-church press."
+        },
+        {
+          "targetId": "press",
+          "place": "Gävle",
+          "nature": "Contributes tracts to a revival paper",
+          "influence": "Can brand the Society as occultists in print."
+        }
+      ],
+      "attitude": -3,
+      "attitudeReason": "He believes the Society traffics with spirits and wants them driven out.",
+      "relationships": [
+        {
+          "characterId": "npc-lovisa-hedman",
+          "nature": "Hates her trade, fears her power",
+          "sentiment": -2
+        },
+        {
+          "characterId": "comminister-hallgren",
+          "nature": "Opponent in print, secretly shares his zeal against superstition",
+          "sentiment": -1
+        }
+      ],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-erik-tallroth",
+      "definitionId": null,
+      "name": "Erik Tallroth",
+      "tier": "core",
+      "status": "alive",
+      "importance": 2,
+      "home": "Öregrund",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 55,
+        "gender": "male",
+        "occupation": "Steamboat captain on the Roslagen and Åland routes",
+        "rank": "burgher",
+        "home": "A red house by the quay at Öregrund, Roslagen",
+        "appearance": "Barrel-chested, grey-bearded, a sealskin cap and a pipe he never lights aboard."
+      },
+      "personality": {
+        "openness": 3,
+        "conscientiousness": 3,
+        "extraversion": 4,
+        "agreeableness": 3,
+        "neuroticism": 2
+      },
+      "drives": [
+        {
+          "id": "dr1",
+          "text": "Keep his boat running and his crew paid through the lean seasons.",
+          "strength": 7
+        },
+        {
+          "id": "dr2",
+          "text": "Settle a long-standing grudge with the pilots' guild.",
+          "strength": 4
+        }
+      ],
+      "fears": [],
+      "voice": {
+        "register": "Rolling coastal talk, jokes and weather, stories told as if everything were hearsay.",
+        "mannerisms": [
+          "Reads the sky before answering",
+          "Chuckles at his own warnings",
+          "Tells stories beginning 'I knew a man who'"
+        ],
+        "sampleLines": [
+          "The sea doesn't care what you believe, only whether you've reefed in time.",
+          "I knew a man who saw a light on the skerry. He's still a good deal quieter than he was."
+        ]
+      },
+      "background": "He has carried pilgrims, emigrants and contraband along the coast for thirty years. He has heard most of the sea-tales of Roslagen from men too sober to lie.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "secret",
+          "text": "He carries untaxed spirits across from Åland in the false bottom of a coal bunker."
+        },
+        {
+          "id": "h2",
+          "kind": "connection",
+          "text": "He is Brita Strand's late husband's godfather's nephew and lodges at her inn when in Uppsala."
+        },
+        {
+          "id": "h3",
+          "kind": "habit",
+          "text": "He leaves a coin on a particular skerry at every passing and says it is for luck."
+        }
+      ],
+      "networkLinks": [
+        {
+          "targetId": "company",
+          "place": "Öregrund",
+          "nature": "Contract carrier for the ironworks",
+          "influence": "Can arrange a passage for the Society on short notice and tell of cargo movements."
+        },
+        {
+          "targetId": "police",
+          "place": "Roslagen",
+          "nature": "Avoids the customs and coast police by habit",
+          "influence": "Knows which constables look away and which do not."
+        }
+      ],
+      "attitude": 1,
+      "attitudeReason": "They pay in full and ask good questions about the skerries.",
+      "relationships": [
+        {
+          "characterId": "innkeeper-strand",
+          "nature": "Lodges at her inn and brings coastal gossip",
+          "sentiment": 2
+        },
+        {
+          "characterId": "constable-hagg",
+          "nature": "Dodges him on landings",
+          "sentiment": -1
+        }
+      ],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-agnes-lindahl",
+      "definitionId": null,
+      "name": "Agnes Lindahl",
+      "tier": "core",
+      "status": "alive",
+      "importance": 2,
+      "home": "Gamla Uppsala",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 63,
+        "gender": "female",
+        "occupation": "Widowed farmer, supplier of milk, eggs and firewood to the Society's headquarters",
+        "rank": "freeholder farmer",
+        "home": "A freehold farm a short walk from the royal mounds, Gamla Uppsala",
+        "appearance": "Broad, weathered, a man's coat over her skirts, a laugh that carries across the yard."
+      },
+      "personality": {
+        "openness": 3,
+        "conscientiousness": 4,
+        "extraversion": 3,
+        "agreeableness": 3,
+        "neuroticism": 2
+      },
+      "drives": [
+        {
+          "id": "dr1",
+          "text": "Keep the farm in the family and her grandson out of the emigrant ships.",
+          "strength": 8
+        },
+        {
+          "id": "dr2",
+          "text": "Know everything that happens within sight of the mounds.",
+          "strength": 5
+        }
+      ],
+      "fears": [],
+      "voice": {
+        "register": "Plain Uppland farm speech, gruff and teasing, never flattering.",
+        "mannerisms": [
+          "Counts coins twice",
+          "Shakes her head at 'town folk'",
+          "Gestures with her chin toward the mounds"
+        ],
+        "sampleLines": [
+          "The mounds have been there longer than any of us, and they mind their own business. You should do likewise.",
+          "Milk's a penny dearer now. Cows don't care for scholars."
+        ]
+      },
+      "background": "She has lived under the mounds her whole life and speaks of them as of neighbours who are not to be pressed. She sells to the Society out of habit and gossips about its comings and goings to anyone who asks.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "habit",
+          "text": "She leaves the first sheaf of the harvest at the foot of the mound each year and tells no one."
+        },
+        {
+          "id": "h2",
+          "kind": "connection",
+          "text": "She is churchwarden for Comminister Hallgren and sees every entry in the parish rolls before it is closed."
+        },
+        {
+          "id": "h3",
+          "kind": "debt",
+          "text": "She has lent money to a neighbour's son who went to America, and the family now avoids her."
+        }
+      ],
+      "networkLinks": [
+        {
+          "targetId": "parish",
+          "place": "Gamla Uppsala",
+          "nature": "Churchwarden and long-time parishioner",
+          "influence": "Hears the parish's gossip and can vouch for the Society's good name, or withhold it."
+        },
+        {
+          "targetId": "landowner",
+          "place": "Gamla Uppsala",
+          "nature": "Neighbouring freeholder and farm supplier",
+          "influence": "Knows which tenants are leaving and which farms have lain fallow."
+        }
+      ],
+      "attitude": 0,
+      "attitudeReason": "A good customer, but she distrusts what she does not understand.",
+      "relationships": [
+        {
+          "characterId": "comminister-hallgren",
+          "nature": "Churchwarden under his authority; respects but does not fear him",
+          "sentiment": 1
+        },
+        {
+          "characterId": "servant-alm",
+          "nature": "Fond of the girl and passes her scraps and news",
+          "sentiment": 2
+        },
+        {
+          "characterId": "innkeeper-strand",
+          "nature": "Sells eggs to the inn; they gossip over the price",
+          "sentiment": 1
+        }
+      ],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-oskar-brandt",
+      "definitionId": null,
+      "name": "Oskar Brandt",
+      "tier": "core",
+      "status": "alive",
+      "importance": 2,
+      "home": "Falun",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 38,
+        "gender": "male",
+        "occupation": "Mining engineer and agent for a company with interests in Dalarna and Västmanland",
+        "rank": "burgher",
+        "home": "A company house with a brass plate in Falun",
+        "appearance": "Neat, clean-shaven, a sharp grey suit and a pocket watch he consults often."
+      },
+      "personality": {
+        "openness": 3,
+        "conscientiousness": 4,
+        "extraversion": 3,
+        "agreeableness": 2,
+        "neuroticism": 3
+      },
+      "drives": [
+        {
+          "id": "dr1",
+          "text": "Make his name by reopening the old workings profitably.",
+          "strength": 9
+        },
+        {
+          "id": "dr2",
+          "text": "Have the company's accident records kept quiet.",
+          "strength": 7
+        }
+      ],
+      "fears": [],
+      "voice": {
+        "register": "Smooth, modern, figures and schedules, impatient with folk talk.",
+        "mannerisms": [
+          "Checks his watch",
+          "Speaks in percentages",
+          "Smiles with his mouth only"
+        ],
+        "sampleLines": [
+          "Every shaft closed is capital idle. I should be glad to know what keeps this one shut.",
+          "Rumour is a cost like any other. I prefer to price it."
+        ]
+      },
+      "background": "Trained at the mining academy in Falun, he serves a Stockholm consortium that wants to reopen abandoned shafts. He has noticed that accidents cluster around certain old workings and has an unnerving interest in why.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "secret",
+          "text": "He has a private notebook of accidents that the company reported as rockfalls, with the true causes written in the margin."
+        },
+        {
+          "id": "h2",
+          "kind": "ambition",
+          "text": "He wants a seat on the consortium's board and believes the Sala shaft is his route to it."
+        },
+        {
+          "id": "h3",
+          "kind": "connection",
+          "text": "He has been courting the Baron of Salberga's investment with promises he cannot yet keep."
+        }
+      ],
+      "networkLinks": [
+        {
+          "targetId": "company",
+          "place": "Falun",
+          "nature": "Company agent with authority over foremen and records",
+          "influence": "Can open or close access to mine records, shafts and miners."
+        },
+        {
+          "targetId": "landowner",
+          "place": "Västmanland",
+          "nature": "Negotiating leases with manor owners",
+          "influence": "Can pressure estates to grant or refuse the Society access."
+        }
+      ],
+      "attitude": 0,
+      "attitudeReason": "Useful if the Society clears obstacles; a threat if it reveals the accident records.",
+      "relationships": [
+        {
+          "characterId": "npc-carl-gyllenhammar",
+          "nature": "Business partner with mutual suspicion",
+          "sentiment": 0
+        },
+        {
+          "characterId": "npc-per-olof-sjoberg",
+          "nature": "Finds the constable obstinate",
+          "sentiment": -1
+        }
+      ],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-hilda-berglund",
+      "definitionId": null,
+      "name": "Hilda Berglund",
+      "tier": "background",
+      "status": "alive",
+      "importance": 1,
+      "home": "Uppsala",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 39,
+        "gender": "female",
+        "occupation": "Baker's wife who sells bread to the Society's kitchen",
+        "rank": "burgher",
+        "home": "A bakery on Sankt Olofsgatan, Uppsala",
+        "appearance": "Floury, round-faced, busy hands."
+      },
+      "personality": {
+        "openness": 2,
+        "conscientiousness": 4,
+        "extraversion": 4,
+        "agreeableness": 4,
+        "neuroticism": 2
+      },
+      "drives": [],
+      "fears": [],
+      "voice": {
+        "register": "Cheerful, gossiping shop talk.",
+        "mannerisms": [
+          "Talks while kneading"
+        ],
+        "sampleLines": [
+          "Fresh this morning, and the news is fresher."
+        ]
+      },
+      "background": "Hears every rumour of the town across the counter.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "habit",
+          "text": "Reads the leftover newspapers used to wrap the loaves."
+        },
+        {
+          "id": "h2",
+          "kind": "debt",
+          "text": "Her husband owes the miller for two seasons of flour."
+        }
+      ],
+      "networkLinks": [],
+      "attitude": 1,
+      "attitudeReason": "Likes the steady custom.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-lars-petter-nyman",
+      "definitionId": null,
+      "name": "Lars-Petter Nyman",
+      "tier": "background",
+      "status": "alive",
+      "importance": 1,
+      "home": "Uppsala",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 50,
+        "gender": "male",
+        "occupation": "Hackney coachman at the station rank",
+        "rank": "worker",
+        "home": "A stable yard near the station, Uppsala",
+        "appearance": "Weather-beaten, whip tucked in his belt."
+      },
+      "personality": {
+        "openness": 2,
+        "conscientiousness": 3,
+        "extraversion": 4,
+        "agreeableness": 3,
+        "neuroticism": 2
+      },
+      "drives": [],
+      "fears": [],
+      "voice": {
+        "register": "Laconic, grumbling, road talk.",
+        "mannerisms": [
+          "Spits before naming a fare"
+        ],
+        "sampleLines": [
+          "Where to, and who's paying?"
+        ]
+      },
+      "background": "Knows who arrives and departs and by which train.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "habit",
+          "text": "Drinks at Strands gästgivargård every payday."
+        },
+        {
+          "id": "h2",
+          "kind": "connection",
+          "text": "Carries passengers for Editor Blom's reporters."
+        },
+        {
+          "id": "h3",
+          "kind": "secret",
+          "text": "Once drove a hooded passenger out to the mounds at night and was told to forget it."
+        }
+      ],
+      "networkLinks": [],
+      "attitude": 0,
+      "attitudeReason": "A fare is a fare.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-emma-sundin",
+      "definitionId": null,
+      "name": "Emma Sundin",
+      "tier": "background",
+      "status": "alive",
+      "importance": 1,
+      "home": "Enköping",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 29,
+        "gender": "female",
+        "occupation": "Parish schoolteacher",
+        "rank": "burgher",
+        "home": "The schoolhouse in Enköping",
+        "appearance": "Thin, spectacled, upright."
+      },
+      "personality": {
+        "openness": 4,
+        "conscientiousness": 4,
+        "extraversion": 2,
+        "agreeableness": 3,
+        "neuroticism": 3
+      },
+      "drives": [],
+      "fears": [],
+      "voice": {
+        "register": "Earnest, schoolroom diction.",
+        "mannerisms": [
+          "Corrects grammar mid-sentence"
+        ],
+        "sampleLines": [
+          "The children tell me many things they would not tell the vicar."
+        ]
+      },
+      "background": "Collects children's rhymes and tales from the parish.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "connection",
+          "text": "Sends rhyme notebooks to Docent Ekelund."
+        },
+        {
+          "id": "h2",
+          "kind": "ambition",
+          "text": "Wants to publish a collection of local folktales."
+        }
+      ],
+      "networkLinks": [],
+      "attitude": 1,
+      "attitudeReason": "Curious about anyone who studies old customs.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-johan-wallin",
+      "definitionId": null,
+      "name": "Johan Wallin",
+      "tier": "background",
+      "status": "alive",
+      "importance": 1,
+      "home": "Uppsala",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 61,
+        "gender": "male",
+        "occupation": "Apothecary",
+        "rank": "burgher",
+        "home": "The apothecary shop on Drottninggatan, Uppsala",
+        "appearance": "Stooped, gentle, brass scales at his elbow."
+      },
+      "personality": {
+        "openness": 3,
+        "conscientiousness": 5,
+        "extraversion": 2,
+        "agreeableness": 3,
+        "neuroticism": 3
+      },
+      "drives": [],
+      "fears": [],
+      "voice": {
+        "register": "Soft, measured, professional discretion.",
+        "mannerisms": [
+          "Weighs powders while speaking"
+        ],
+        "sampleLines": [
+          "I dispense what is prescribed and remember what is not."
+        ]
+      },
+      "background": "Supplies the Society's remedies and keeps his own counsel.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "secret",
+          "text": "Sells laudanum to students without a physician's note."
+        },
+        {
+          "id": "h2",
+          "kind": "habit",
+          "text": "Keeps a private ledger of unusual prescriptions."
+        }
+      ],
+      "networkLinks": [],
+      "attitude": 1,
+      "attitudeReason": "Discreet and well paid.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-kristina-ostman",
+      "definitionId": null,
+      "name": "Kristina Östman",
+      "tier": "background",
+      "status": "alive",
+      "importance": 1,
+      "home": "a farm near Mora",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 45,
+        "gender": "female",
+        "occupation": "Farm wife and dairymaid at a summer pasture",
+        "rank": "tenant farmer",
+        "home": "A farm near Mora in Dalarna",
+        "appearance": "Strong-armed, sunburnt, plain linen cap."
+      },
+      "personality": {
+        "openness": 3,
+        "conscientiousness": 4,
+        "extraversion": 3,
+        "agreeableness": 3,
+        "neuroticism": 2
+      },
+      "drives": [],
+      "fears": [],
+      "voice": {
+        "register": "Dalecarlian lilt, practical.",
+        "mannerisms": [
+          "Calls cattle by name mid-conversation"
+        ],
+        "sampleLines": [
+          "Up at the shieling, the cows know things the priest does not."
+        ]
+      },
+      "background": "Keeps the old summer pasture customs.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "habit",
+          "text": "Leaves a bowl of cream at the pasture gate."
+        },
+        {
+          "id": "h2",
+          "kind": "connection",
+          "text": "Her sister married a miner in Falun."
+        }
+      ],
+      "networkLinks": [],
+      "attitude": 0,
+      "attitudeReason": "Has not yet met them.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-anton-fahlgren",
+      "definitionId": null,
+      "name": "Anton Fahlgren",
+      "tier": "background",
+      "status": "alive",
+      "importance": 1,
+      "home": "Älvkarleby",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 57,
+        "gender": "male",
+        "occupation": "Ferryman and salmon fisher",
+        "rank": "crofter",
+        "home": "A cottage by the falls at Älvkarleby",
+        "appearance": "Short, wiry, hands scarred by line."
+      },
+      "personality": {
+        "openness": 2,
+        "conscientiousness": 3,
+        "extraversion": 2,
+        "agreeableness": 3,
+        "neuroticism": 3
+      },
+      "drives": [],
+      "fears": [],
+      "voice": {
+        "register": "Few words, river patience.",
+        "mannerisms": [
+          "Watches the water mid-sentence"
+        ],
+        "sampleLines": [
+          "The river takes what it likes. I just row."
+        ]
+      },
+      "background": "Rows travellers across the river and knows who crosses at night.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "secret",
+          "text": "Ferried a stranger across at midnight and was paid in old silver."
+        },
+        {
+          "id": "h2",
+          "kind": "debt",
+          "text": "Owes a net-maker for a season's gear."
+        }
+      ],
+      "networkLinks": [],
+      "attitude": 0,
+      "attitudeReason": "Keeps to himself.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-greta-holm",
+      "definitionId": null,
+      "name": "Greta Holm",
+      "tier": "background",
+      "status": "alive",
+      "importance": 1,
+      "home": "Uppsala",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 34,
+        "gender": "female",
+        "occupation": "Seamstress and mender of coats",
+        "rank": "worker",
+        "home": "A rented room in Svartbäcken, Uppsala",
+        "appearance": "Pale, quick fingers, a pin cushion on her wrist."
+      },
+      "personality": {
+        "openness": 3,
+        "conscientiousness": 4,
+        "extraversion": 3,
+        "agreeableness": 4,
+        "neuroticism": 3
+      },
+      "drives": [],
+      "fears": [],
+      "voice": {
+        "register": "Quiet, observant, townswoman's Swedish.",
+        "mannerisms": [
+          "Looks at hems and cuffs before faces"
+        ],
+        "sampleLines": [
+          "A coat tells me where its owner has been."
+        ]
+      },
+      "background": "Mends clothes for students, constables and the Society alike.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "connection",
+          "text": "Sews for Constable Hägg's wife and hears his household talk."
+        },
+        {
+          "id": "h2",
+          "kind": "secret",
+          "text": "Found a bloodied cuff in a coat left for mending and never reported it."
+        }
+      ],
+      "networkLinks": [],
+      "attitude": 1,
+      "attitudeReason": "Pays on time.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-nils-bjork",
+      "definitionId": null,
+      "name": "Nils Björk",
+      "tier": "background",
+      "status": "alive",
+      "importance": 1,
+      "home": "Tierp",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 48,
+        "gender": "male",
+        "occupation": "Blacksmith",
+        "rank": "freeholder farmer",
+        "home": "A smithy at the crossroads in Tierp",
+        "appearance": "Huge forearms, soot-black, soft voice."
+      },
+      "personality": {
+        "openness": 2,
+        "conscientiousness": 4,
+        "extraversion": 3,
+        "agreeableness": 3,
+        "neuroticism": 2
+      },
+      "drives": [],
+      "fears": [],
+      "voice": {
+        "register": "Slow and unhurried, fond of proverbs about iron.",
+        "mannerisms": [
+          "Hammers while thinking"
+        ],
+        "sampleLines": [
+          "Cold iron keeps more than gates shut."
+        ]
+      },
+      "background": "Makes horseshoes and charms against ill luck.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "habit",
+          "text": "Nails a horseshoe over every door he forges for."
+        },
+        {
+          "id": "h2",
+          "kind": "connection",
+          "text": "Shoes the Society's horses when they travel north."
+        }
+      ],
+      "networkLinks": [],
+      "attitude": 1,
+      "attitudeReason": "Likes honest custom.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-ulrika-skog",
+      "definitionId": null,
+      "name": "Ulrika Skog",
+      "tier": "background",
+      "status": "alive",
+      "importance": 1,
+      "home": "Uppsala",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 55,
+        "gender": "female",
+        "occupation": "Washerwoman at the Fyris river",
+        "rank": "worker",
+        "home": "A hut by the Fyris, Uppsala",
+        "appearance": "Red-handed, sturdy, shawl pinned with a nail."
+      },
+      "personality": {
+        "openness": 2,
+        "conscientiousness": 3,
+        "extraversion": 4,
+        "agreeableness": 2,
+        "neuroticism": 3
+      },
+      "drives": [],
+      "fears": [],
+      "voice": {
+        "register": "Loud, salty gossip.",
+        "mannerisms": [
+          "Wrings cloth as she speaks"
+        ],
+        "sampleLines": [
+          "The river carries more than laundry, mind."
+        ]
+      },
+      "background": "Washes linen for half the town and sees what the river brings.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "secret",
+          "text": "Found a drowned stranger's boots and sold them."
+        },
+        {
+          "id": "h2",
+          "kind": "habit",
+          "text": "Reads the stains on linen like tea leaves."
+        }
+      ],
+      "networkLinks": [],
+      "attitude": 0,
+      "attitudeReason": "Curious but wary.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-henning-aberg",
+      "definitionId": null,
+      "name": "Henning Åberg",
+      "tier": "background",
+      "status": "alive",
+      "importance": 1,
+      "home": "Uppsala",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 22,
+        "gender": "male",
+        "occupation": "Theology student and folklore collector",
+        "rank": "burgher",
+        "home": "A student room in Uppsala",
+        "appearance": "Gangly, ink on his fingers, over-large coat."
+      },
+      "personality": {
+        "openness": 4,
+        "conscientiousness": 3,
+        "extraversion": 3,
+        "agreeableness": 4,
+        "neuroticism": 3
+      },
+      "drives": [],
+      "fears": [],
+      "voice": {
+        "register": "Eager, bookish, fast.",
+        "mannerisms": [
+          "Scribbles in a notebook"
+        ],
+        "sampleLines": [
+          "May I write that down? Everyone laughs when I ask."
+        ]
+      },
+      "background": "Spends summers collecting tales for Docent Ekelund.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "connection",
+          "text": "Reports to Docent Ekelund."
+        },
+        {
+          "id": "h2",
+          "kind": "secret",
+          "text": "Has doubts about his calling and the church."
+        },
+        {
+          "id": "h3",
+          "kind": "ambition",
+          "text": "Dreams of being the first to publish a rune-stave from his parish."
+        }
+      ],
+      "networkLinks": [],
+      "attitude": 2,
+      "attitudeReason": "Admires anyone who knows old lore.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-sven-ek",
+      "definitionId": null,
+      "name": "Sven Ek",
+      "tier": "background",
+      "status": "alive",
+      "importance": 1,
+      "home": "a forest estate near Fagersta",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 43,
+        "gender": "male",
+        "occupation": "Estate forester",
+        "rank": "tenant farmer",
+        "home": "A forester's lodge near Fagersta",
+        "appearance": "Lean, silent, a rifle and a grey dog."
+      },
+      "personality": {
+        "openness": 2,
+        "conscientiousness": 4,
+        "extraversion": 1,
+        "agreeableness": 3,
+        "neuroticism": 2
+      },
+      "drives": [],
+      "fears": [],
+      "voice": {
+        "register": "Terse, few words, woodland.",
+        "mannerisms": [
+          "Whistles to his dog"
+        ],
+        "sampleLines": [
+          "The forest has its ways. I mark the trees."
+        ]
+      },
+      "background": "Knows every track and charcoal clearing on the estate.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "habit",
+          "text": "Avoids a certain clearing after dusk."
+        },
+        {
+          "id": "h2",
+          "kind": "debt",
+          "text": "Owes the estate rent for his lodge."
+        }
+      ],
+      "networkLinks": [],
+      "attitude": 0,
+      "attitudeReason": "Wary of visitors.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-maria-lisa-persdotter",
+      "definitionId": null,
+      "name": "Maria-Lisa Persdotter",
+      "tier": "background",
+      "status": "alive",
+      "importance": 1,
+      "home": "a croft outside Norrtälje",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 72,
+        "gender": "female",
+        "occupation": "Crofter's widow, storyteller",
+        "rank": "crofter",
+        "home": "A croft outside Norrtälje",
+        "appearance": "Frail, milky-eyed, a cat on her lap."
+      },
+      "personality": {
+        "openness": 4,
+        "conscientiousness": 2,
+        "extraversion": 3,
+        "agreeableness": 4,
+        "neuroticism": 2
+      },
+      "drives": [],
+      "fears": [],
+      "voice": {
+        "register": "Quavering tales, old Roslagen words.",
+        "mannerisms": [
+          "Pauses and smiles at nothing"
+        ],
+        "sampleLines": [
+          "When I was a girl, we told the neighbours' names, and they listened."
+        ]
+      },
+      "background": "Remembers tales that no one has written down.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "secret",
+          "text": "Has seen something on the shore and told no one."
+        },
+        {
+          "id": "h2",
+          "kind": "connection",
+          "text": "Her grandson works on Captain Tallroth's boat."
+        }
+      ],
+      "networkLinks": [],
+      "attitude": 1,
+      "attitudeReason": "Glad of company.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-fredrik-cederholm",
+      "definitionId": null,
+      "name": "Fredrik Cederholm",
+      "tier": "background",
+      "status": "alive",
+      "importance": 1,
+      "home": "Östhammar",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 36,
+        "gender": "male",
+        "occupation": "District physician",
+        "rank": "burgher",
+        "home": "The doctor's house in Östhammar",
+        "appearance": "Tired, spectacled, medicine bag always at his side."
+      },
+      "personality": {
+        "openness": 3,
+        "conscientiousness": 4,
+        "extraversion": 2,
+        "agreeableness": 3,
+        "neuroticism": 4
+      },
+      "drives": [],
+      "fears": [],
+      "voice": {
+        "register": "Weary, careful, official.",
+        "mannerisms": [
+          "Rubs his eyes"
+        ],
+        "sampleLines": [
+          "I write what the law permits. I wonder about the rest."
+        ]
+      },
+      "background": "A doctor with a huge district and unexplained deaths on his list.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "secret",
+          "text": "Altered a cause of death to avoid a village panic."
+        },
+        {
+          "id": "h2",
+          "kind": "connection",
+          "text": "A former pupil of Professor Nordenfelt."
+        },
+        {
+          "id": "h3",
+          "kind": "debt",
+          "text": "Owes his medical-school fees to a benefactor."
+        }
+      ],
+      "networkLinks": [],
+      "attitude": 0,
+      "attitudeReason": "Overworked and sceptical.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    },
+    {
+      "id": "npc-olle-trast",
+      "definitionId": null,
+      "name": "Olle Trast",
+      "tier": "background",
+      "status": "alive",
+      "importance": 1,
+      "home": "Roslagen",
+      "homeLevelId": null,
+      "homePlaceId": null,
+      "rosterRole": null,
+      "identity": {
+        "age": 60,
+        "gender": "male",
+        "occupation": "Itinerant pedlar of ribbons and almanacs",
+        "rank": "vagrant",
+        "home": "Roads of Roslagen, no fixed home",
+        "appearance": "Ragged, merry, a pack larger than he is."
+      },
+      "personality": {
+        "openness": 4,
+        "conscientiousness": 2,
+        "extraversion": 5,
+        "agreeableness": 3,
+        "neuroticism": 2
+      },
+      "drives": [],
+      "fears": [],
+      "voice": {
+        "register": "Patter, rhymes, travelling salesman's cheer.",
+        "mannerisms": [
+          "Sings his wares"
+        ],
+        "sampleLines": [
+          "Ribbons, pins, and news for a penny!"
+        ]
+      },
+      "background": "Walks the whole coast and knows every farm's trouble.",
+      "latentHooks": [
+        {
+          "id": "h1",
+          "kind": "habit",
+          "text": "Sleeps in barns and hears what servants whisper."
+        },
+        {
+          "id": "h2",
+          "kind": "secret",
+          "text": "Was driven from a village for selling a charm that worked too well."
+        }
+      ],
+      "networkLinks": [],
+      "attitude": 1,
+      "attitudeReason": "Likes anyone who buys.",
+      "relationships": [],
+      "memories": [],
+      "knowledge": [],
+      "beliefs": [],
+      "mysteryIds": []
+    }
+  ]
+}

@@ -149,6 +149,9 @@ public sealed class ReviewThreeTests
         Assert.Equal("npc-karret-statare", PersonIds.ForRole("Statare", "Kärret", taken));
         Assert.True(PersonIds.NamesSomeone("npc-emil-pettersson", "Rasmus Pettersson"));
         Assert.False(PersonIds.NamesSomeone("npc-karret-statare", "Rasmus Pettersson"));
+        Assert.True(PersonIds.NamesSomeone("npc-lyckan-groom-nils-per", "Nils-Per Ersson"));
+        Assert.Equal("npc-parsonage-widow", PersonIds.ForRole("widow who takes in washing for the parsonage", "parsonage", taken));
+        Assert.Equal("npc-farm-bailiff-wife", PersonIds.ForRole("bailiff's wife, runs the dairy", "farm", taken));
 
         var people = new List<CastDraft>
         {
@@ -160,6 +163,25 @@ public sealed class ReviewThreeTests
         Assert.Equal("npc-karret-statare", people[0].CharacterId);
         Assert.Equal("npc-karret-statare", people[1].Relationships[0].CharacterId);
         Assert.Equal("npc-karret-statare", map["npc-emil-pettersson"]);
+    }
+
+    [Fact]
+    public void A_replacement_never_renames_an_id()
+    {
+        var packet = ValidatorTests.SampleCase();
+        var draft = new MysteryDraft
+        {
+            Brief = new AssignmentBrief(), Pack = Pack, History = new SocietyHistory(), Level = Pack.FindLevel(packet.Brief.LevelId)!, Vaesen = Pack.FindVaesen("nack")!, Conflicts = [], Packet = packet,
+        };
+        var issue = new CoherenceIssue
+        {
+            Everywhere = true,
+            Replacements = [new TextReplacement { From = "npc-case-maid", To = "npc-anna-lind" }, new TextReplacement { From = "mill race", To = "millrace" }],
+        };
+
+        Assert.True(TextReplacements.Apply(draft, issue) > 0);
+        Assert.NotNull(draft.Packet.FindCast("npc-case-maid"));
+        Assert.Null(draft.Packet.FindCast("npc-anna-lind"));
     }
 
     [Fact]

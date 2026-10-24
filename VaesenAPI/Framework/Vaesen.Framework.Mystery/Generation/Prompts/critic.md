@@ -10,7 +10,7 @@ Give a concrete suggestedFix for every warning too: what to change, item by item
 
 When a person is called by two names, the cast's name is the right one: target the items that use the other name, never the cast member's identity. Never suggest a name that breaks the name rules.{{usedNames}}
 
-Mechanical fixes are done by the engine, not rewritten: for a rename, a date, a number or a wrong id, give replacements (the exact old text as it stands in the case, and the new text), and set everywhere true for a rename that holds across the case; otherwise the replacements apply only inside the targets. Use replacements only where exact text swaps fix it; anything that needs rewording is a suggestedFix.
+Mechanical fixes are done by the engine, not rewritten: for a rename, a date, a number or a wrong id, give replacements (the exact old text as it stands in the case, and the new text), and set everywhere true for a rename that holds across the case; otherwise the replacements apply only inside the targets. Never give a replacement for an id (npc-..., f3, c7, e4): ids are fixed, even when they read oddly or name no one. Use replacements only where exact text swaps fix it; anything that needs rewording is a suggestedFix.
 
 Set blocking true on a failed check that would break the case at the table if it stayed: a scene or the opening that shows a clue players are meant to earn, a hook that contradicts the cast or the facts (a wrong name, a fact its writer does not know), a period error players would notice, someone saying what they cannot know, an event that happens twice. Leave it false for what would only make the case better. A blocking problem left unfixed marks the case for a person to review.
 

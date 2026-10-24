@@ -12,12 +12,19 @@ namespace Vaesen.Framework.Mystery.Generation;
 /// </summary>
 public static class PersonIds
 {
+    private static readonly HashSet<string> Clause = new(StringComparer.Ordinal) { "who", "whose", "that", "which", "now", "but" };
+
     private static readonly HashSet<string> Filler = new(StringComparer.Ordinal) { "of", "the", "a", "an", "at", "and", "in", "on", "to", "for", "from", "with" };
 
     /// <summary>"npc-", the place's last word and the role's first two words, unique among <paramref name="taken"/> (which it joins).</summary>
     public static string ForRole(string? role, string? placeId, ISet<string> taken)
     {
-        var words = Slug(role ?? "").Split('-', StringSplitOptions.RemoveEmptyEntries).Where(w => !Filler.Contains(w)).Take(2).ToList();
+        // "widow who takes in washing" is a widow, "bailiff's wife" a bailiff-wife: the role stops at a clause.
+        var words = Slug(role ?? "").Split('-', StringSplitOptions.RemoveEmptyEntries)
+            .TakeWhile(w => !Clause.Contains(w))
+            .Where(w => !Filler.Contains(w) && w.Length > 1)
+            .Take(2)
+            .ToList();
         var place = (placeId ?? "").Split('-', StringSplitOptions.RemoveEmptyEntries).LastOrDefault() is { } last ? Slug(last) : "";
         var stem = string.Join('-', new[] { "npc", place }.Concat(words.Count > 0 ? words : ["person"]).Where(w => w.Length > 0));
         var id = stem;
@@ -33,8 +40,9 @@ public static class PersonIds
     /// <summary>Whether an id is built from the person's first name or surname ("npc-emil-pettersson" for Emil Pettersson).</summary>
     public static bool NamesSomeone(string id, string name)
     {
-        var parts = id.Split('-', StringSplitOptions.RemoveEmptyEntries).ToHashSet(StringComparer.Ordinal);
-        return new[] { NameRules.FirstName(name), NameRules.LastName(name) }.Select(Slug).Any(n => n.Length >= 3 && parts.Contains(n));
+        // A double name ("Nils-Per") is several parts of the id.
+        var padded = $"-{id}-";
+        return new[] { NameRules.FirstName(name), NameRules.LastName(name) }.Select(Slug).Any(n => n.Length >= 3 && padded.Contains($"-{n}-", StringComparison.Ordinal));
     }
 
     /// <summary>
@@ -68,6 +76,7 @@ public static class PersonIds
     public static string Slug(string text)
     {
         var folded = new StringBuilder();
+        text = text.Replace("'s ", " ", StringComparison.Ordinal).Replace("’s ", " ", StringComparison.Ordinal);
         foreach (var c in text.ToLowerInvariant().Normalize(NormalizationForm.FormD))
         {
             if (CharUnicodeInfo.GetUnicodeCategory(c) == UnicodeCategory.NonSpacingMark)

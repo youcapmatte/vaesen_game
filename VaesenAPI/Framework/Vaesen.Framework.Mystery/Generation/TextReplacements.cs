@@ -18,7 +18,9 @@ public static class TextReplacements
     /// <summary>Applies the issue's replacements; returns how many places changed.</summary>
     public static int Apply(MysteryDraft draft, CoherenceIssue issue)
     {
-        if (issue.Replacements is not { Count: > 0 } replacements)
+        // An id is never replaced (review 3): ids are fixed, however they read, and a critic once "fixed" role ids into names.
+        var ids = Ids(draft.Packet);
+        if (issue.Replacements?.Where(r => !ids.Contains(r.From.Trim())).ToList() is not { Count: > 0 } replacements)
         {
             return 0;
         }
@@ -56,6 +58,18 @@ public static class TextReplacements
 
         return total;
     }
+
+    /// <summary>Every id in the case: people, offstage people, facts, channels, events, beats, levers and decoy threads.</summary>
+    private static HashSet<string> Ids(CasePacket packet) =>
+        packet.Cast.Select(c => c.CharacterId)
+            .Concat(packet.OffstagePeople.Select(o => o.Id))
+            .Concat(packet.Facts.Select(f => f.Id))
+            .Concat(packet.Channels.Select(c => c.Id))
+            .Concat(packet.Truth.Escalation.Select(e => e.Id))
+            .Concat(packet.Beats.Select(b => b.Id))
+            .Concat(packet.ResolutionLevers.Select(l => l.Id))
+            .Concat(packet.Decoys.Select(d => d.ThreadId))
+            .ToHashSet(StringComparer.Ordinal);
 
     /// <summary>Whether any replaced text is still there, in the same scope: the check that the fix held.</summary>
     public static bool Holds(MysteryDraft draft, CoherenceIssue issue)
