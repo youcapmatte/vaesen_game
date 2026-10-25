@@ -2086,6 +2086,26 @@ namespace VaesenAnimSetup
 			Sword.InHand = InHand;
 		}
 
+		// The other one-handed weapons parry as the sword does until they have animations of their own: its stance
+		// (which holds the guard, and squares up when locked on), its guard and the recoils of hits taken on it.
+		{
+			const TSubclassOf<UAnimInstance> Layer = Sword.AnimLayer;
+			const TObjectPtr<UAnimMontage> Guard = Sword.Montages.Block;
+			const TArray<TObjectPtr<UAnimMontage>> Recoils = Sword.Montages.BlockImpacts;
+			for (const EVaesenWeaponCategory Borrower : { EVaesenWeaponCategory::Dagger, EVaesenWeaponCategory::OneHandedAxe, EVaesenWeaponCategory::Club,
+				EVaesenWeaponCategory::Improvised })
+			{
+				// Found, not added: adding could move the map's entries under Sword, used below.
+				FVaesenCategoryDefaults* Entry = Defaults->Categories.Find(Borrower);
+				if (Entry && (!Entry->Montages.Block || Entry->Montages.Block->GetPathName().StartsWith(SwordFolder)))
+				{
+					Entry->AnimLayer = Layer;
+					Entry->Montages.Block = Guard;
+					Entry->Montages.BlockImpacts = Recoils;
+				}
+			}
+		}
+
 		// The left-hip sheath: the hilt at the left hip by the standing body's own layout (beside the left hip joint, a
 		// little out and forward), on the pelvis so it rides the hips; turned as the draw holds the sword when it takes
 		// it (so the hang lifts it to meet the hand), measured in the body's frame (the draw twists the hips: measured on

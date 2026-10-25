@@ -758,8 +758,8 @@ void UVaesenCombatSelfTest::BuildSteps()
 	Steps.Add({ FString(), [this, ASC, AimOrBlock]()
 	{
 		Check(DummyDamage(Target) > 0.0f, FString::Printf(TEXT("punch landed (%.0f)"), DummyDamage(Target)));
-		// Parrying needs a weapon that can and the guard animation for it: the sword has one; bare hands, the dagger
-		// (no guard yet) and guns don't.
+		// Parrying needs a weapon that can and the guard animation for it: the sword has one (the other one-handed weapons
+		// borrow it); bare hands (no guard yet) and guns don't.
 		Press(AimOrBlock);
 		Check(!ASC->HasMatchingGameplayTag(VaesenTags::State_Blocking), TEXT("bare hands: no guard to raise yet, right mouse doesn't block"));
 		Release(AimOrBlock);
@@ -769,8 +769,8 @@ void UVaesenCombatSelfTest::BuildSteps()
 			const UVaesenWeaponItem* Item = Class ? Cast<UVaesenWeaponItem>(Class->GetDefaultObject()) : nullptr;
 			return Item && Item->CanParry();
 		};
-		Check(CanParry(TEXT("BP_Weapon_OldSword")) && !CanParry(TEXT("BP_Weapon_Dagger")) && !CanParry(TEXT("BP_Weapon_Revolver")) && !CanParry(TEXT("BP_Weapon_KragRifle")),
-			TEXT("parries with: the sword; not the dagger (no guard animation yet), the revolver or the rifle"));
+		Check(CanParry(TEXT("BP_Weapon_OldSword")) && CanParry(TEXT("BP_Weapon_Dagger")) && CanParry(TEXT("BP_Weapon_HandAxe")) && CanParry(TEXT("BP_Weapon_Club")) && CanParry(TEXT("BP_Weapon_ChairLeg")) && !CanParry(TEXT("BP_Weapon_Revolver")) && !CanParry(TEXT("BP_Weapon_KragRifle")),
+			TEXT("parries with: the sword, dagger, hand axe, club and chair leg (the sword's guard); not the revolver or the rifle"));
 		return 0.1f;
 	} });
 	Steps.Add({ TEXT("Sword"), [this, Tap, Holster]()
@@ -1017,6 +1017,55 @@ void UVaesenCombatSelfTest::BuildSteps()
 		Fighter->GetCharacterMovement()->StopMovementImmediately();
 		Fighter->SetActorTransform(*StandAt);
 		return 0.3f;
+	} });
+
+	// --- The hand axe parries with the sword's guard (borrowed until it has its own) ---
+	Steps.Add({ TEXT("Hand axe guard"), [this, Tap, Holster]()
+	{
+		ResetAll();
+		Controller->SetControlRotation((Attacker->GetActorLocation() - Fighter->GetActorLocation()).Rotation());
+		Check(GiveAndEquip(*Path(Weapons, TEXT("BP_Weapon_HandAxe"))), TEXT("hand axe equipped (replaces the sword)"));
+		Tap(Holster);
+		return 2.0f;
+	} });
+	Steps.Add({ FString(), [this, Equipment, ASC, AimOrBlock]()
+	{
+		const UVaesenWeaponItem* Axe = Equipment->GetDrawnWeapon();
+		Check(Axe && Axe->Category == EVaesenWeaponCategory::OneHandedAxe, FString::Printf(TEXT("the hand axe is drawn (%s)"), *GetNameSafe(Axe)));
+		Press(AimOrBlock);
+		Check(ASC->HasMatchingGameplayTag(VaesenTags::State_Blocking), TEXT("right mouse raises the guard with the hand axe"));
+		return 0.6f;
+	} });
+	Steps.Add({ FString(), [this, Equipment, ASC, AimOrBlock]()
+	{
+		Shot(TEXT("13_HandAxeGuard"), nullptr, 0.0f, true);
+		const UVaesenAnimInstance* Anim = Cast<UVaesenAnimInstance>(Fighter->GetMesh()->GetAnimInstance());
+		Check(Anim && ASC->HasMatchingGameplayTag(VaesenTags::State_Blocking) && Equipment->GetDrawnWeapon()->GetCategoryDefaults().AnimLayer != nullptr, TEXT("held: the guard stays up (the sword's stance holds it)"));
+		FVaesenDamagePacket Swing;
+		Swing.Entries.Emplace(VaesenTags::Damage_Slashing, 10.0f);
+		UVaesenCombatLibrary::ApplyDamagePacket(Attacker, Fighter, Swing, FHitResult(), nullptr);
+		const UAnimMontage* Playing = Anim ? Anim->GetCurrentActiveMontage() : nullptr;
+		const UVaesenWeaponItem* Axe = Equipment->GetDrawnWeapon();
+		Check(Axe && Playing && Axe->GetCategoryDefaults().Montages.BlockImpacts.Contains(Playing),
+			FString::Printf(TEXT("a blow on the axe's guard: it recoils (%s)"), *GetNameSafe(Playing)));
+		return 0.2f;
+	} });
+	Steps.Add({ FString(), [this, Equipment, AimOrBlock]()
+	{
+		Shot(TEXT("13b_HandAxeRecoil"), nullptr, 0.0f, true);
+		Release(AimOrBlock);
+		Equipment->RequestSheathe();
+		return 2.0f;
+	} });
+	// The sword back in the main hand, sheathed, as the steps after expect; the axe out of the bag (G would throw it first).
+	Steps.Add({ FString(), [this, Inventory]()
+	{
+		Check(GiveAndEquip(*Path(Weapons, TEXT("BP_Weapon_OldSword"))), TEXT("the sword back in the main hand"));
+		if (UClass* Axe = LoadTestClass(*Path(Weapons, TEXT("BP_Weapon_HandAxe"))))
+		{
+			Inventory->RemoveItemsOfClass(Axe, 1);
+		}
+		return 0.5f;
 	} });
 
 	// --- Throwing a stone ---
