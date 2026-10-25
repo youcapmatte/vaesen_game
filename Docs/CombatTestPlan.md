@@ -245,6 +245,18 @@ Sounds (WeaponVerse1): each revolver shot picks one of two revolver recordings, 
 
 Still missing: a real draw animation (a quick-draw with a flourish; the IK reach stands in) and a true revolver reload (swing-out cylinder, rounds by hand; the per-round piece stands in). Test: holstered on the right hip, draw each pistol (H), walk, run, crouch, aim up and down, fire, holster again. Reload (R) needs cartridges in the inventory and a gun that isn't full; with `vaesen.combat.freefire 1` (the default outside shipping) shots don't use rounds, so set it to 0 in the console, fire a few, then reload (the revolver stops at full).
 
+### 0.7f The bow (GhostSamurai Bundle)
+
+The hunting bow uses the GhostSamurai Bundle's bow set, copied onto our mannequin by `-run=VaesenAnimSetup` into `Vaesen/Animations/Bow`, and the pack's bow, string bow and arrow (`Vaesen/ThirdParty/GhostSamurai_Bundle`). The pack's own skeleton carries the bow, string and arrow on extra bones that Manny hasn't got, so the setup reads them before copying and turns them into props:
+
+- **The bow** is in the left fist (the bow category is **Held In Left Hand**: on `hand_l`, at the offset the pack's fist holds it), not on the right hand's weapon bone.
+- **The arrow** in the drawing hand is a prop (`NockedArrow` on the bow) shown and placed by curves baked into the copied animations (`BowArrow`, and its place on `hand_r`): from the quiver, nocked, drawn, gone at the release.
+- **The string** draws: the string bow (`SK_Bow_01`, given a small skeleton of its own) has its `String` bone pulled by baked `BowString` curves.
+
+The archer's stance is the pack's (`BS_Bow`: idle, walk and run in eight directions, in place), which strafes while nocked (he faces the aim then). Left mouse nocks and draws (`AM_Bow_NockAndDraw`, from the quiver to full draw), holding keeps it drawn (the pack's full-draw hold from the spine up, aimed up 33° and down 27° by `AO1D_Bow`, the legs walking under it), letting go shoots (`AM_Bow_Release`). Nocked, he walks (30% speed) and can't jump. It's carried on the back where the pack carries it (`Sheath_BowBack` on `spine_05`) and taken and put back with the pack's own motions (`AM_Bow_FromBack`, `AM_Bow_ToBack`). Hits on an archer use the pack's (front, front-left, front-right, behind; in place). Ctrl + right mouse guards with it across the chest (procedural).
+
+Not yet: a quiver on the back (the hand reaches over the shoulder for the arrow), the pack's crouched shots, and sounds. Test: draw the bow (H), walk and run, nock and hold (left mouse), aim up and down, walk while nocked (strafes, slow, no jump), let go (the arrow flies, the string snaps back), guard (Ctrl + right mouse), put it away (H).
+
 ### 0.8 How weapons are held (sockets), and the Weapon Fit rig
 
 Every weapon is held by sockets on its mesh. The rule is the same for every weapon: **X toward the muzzle, Z up**.

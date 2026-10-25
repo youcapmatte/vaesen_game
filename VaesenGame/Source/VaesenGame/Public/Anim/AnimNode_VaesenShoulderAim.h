@@ -79,6 +79,14 @@ struct FVaesenShoulderAimInput
 	FVector GuardFromChest = FVector(0.0, 30.0, -12.0);
 	FVector GuardMiddleInWeapon = FVector::ZeroVector;
 	float GuardKnock = 0.0f;
+
+	/**
+	 * The weapon is in the left fist (a bow: on hand_l, GripOnLeftHand from it), not on the weapon bone. Guarding, the
+	 * left arm takes it across the chest and the right hand (its bone, RightHandInWeapon) holds the upper limb.
+	 */
+	bool bLeftHeld = false;
+	FTransform GripOnLeftHand;
+	FTransform RightHandInWeapon;
 };
 
 /**

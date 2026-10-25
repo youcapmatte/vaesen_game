@@ -115,6 +115,17 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ranged|Bow", meta = (ClampMin = "0", EditCondition = "Category == EVaesenWeaponCategory::Bow", EditConditionHides))
 	float DrawStaminaPerSecond = 6.0f;
 
+	/** Bows: the arrow in the drawing hand, from the quiver to the release, where the animation's BowArrow curves put it. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ranged|Bow", meta = (EditCondition = "Category == EVaesenWeaponCategory::Bow", EditConditionHides))
+	TObjectPtr<UStaticMesh> NockedArrowMesh;
+
+	/**
+	 * Bows: the bow with a string that draws (a skeletal mesh with bow and String bones), shown instead of the mesh; its
+	 * String is pulled back where the animation's BowString curves put it. The mesh stays for its sockets.
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ranged|Bow", meta = (EditCondition = "Category == EVaesenWeaponCategory::Bow", EditConditionHides))
+	TObjectPtr<USkeletalMesh> StringBowMesh;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ranged|Effects")
 	FVaesenFireEffects Effects;
 

@@ -8,6 +8,7 @@
 #include "Internationalization/Regex.h"
 #include "Misc/FileHelper.h"
 #include "Misc/PackageName.h"
+#include "ObjectTools.h"
 #include "Misc/Paths.h"
 #include "UObject/Package.h"
 #include "UObject/SavePackage.h"
@@ -174,6 +175,149 @@ int32 UVaesenContentAuditCommandlet::Main(const FString& Params)
 		{
 			Reach(Package, Dependency);
 		}
+	}
+
+	// -moveback=<pack>: what's in /Game/Vaesen/ThirdParty/<pack> that our content doesn't use goes back into the pack
+	// (a move that took too much: everything a skeleton drags along). Where the pack still has its own copy, what used
+	// the vendored one is pointed at the pack's and the vendored one deleted.
+	FString MoveBack;
+	if (FParse::Value(*Params, TEXT("moveback="), MoveBack))
+	{
+		const FString PackRoot = FString(TEXT("/Game/")) / MoveBack;
+		const FString Vendored = VendoredPath(PackRoot, PackRoot);
+		TSet<FName> Needed;
+		TArray<FName> Open;
+		for (const FName Package : Packages)
+		{
+			const FString Name = Package.ToString();
+			if (IsUnder(Name, Vendored) || PackOf(Name) != INDEX_NONE || IsUnder(Name, PackRoot))
+			{
+				continue;
+			}
+			TArray<FName> Dependencies;
+			Registry.GetDependencies(Package, Dependencies, UE::AssetRegistry::EDependencyCategory::Package);
+			for (const FName Dependency : Dependencies)
+			{
+				if (IsUnder(Dependency.ToString(), Vendored) && !Needed.Contains(Dependency))
+				{
+					Needed.Add(Dependency);
+					Open.Add(Dependency);
+				}
+			}
+		}
+		while (Open.Num() > 0)
+		{
+			TArray<FName> Dependencies;
+			Registry.GetDependencies(Open.Pop(), Dependencies, UE::AssetRegistry::EDependencyCategory::Package);
+			for (const FName Dependency : Dependencies)
+			{
+				if (IsUnder(Dependency.ToString(), Vendored) && !Needed.Contains(Dependency))
+				{
+					Needed.Add(Dependency);
+					Open.Add(Dependency);
+				}
+			}
+		}
+		IAssetTools& AssetTools = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools").Get();
+		TArray<FAssetRenameData> Back;
+		TArray<UObject*> Duplicates;
+		for (const FName Package : Packages)
+		{
+			const FString Name = Package.ToString();
+			if (!IsUnder(Name, Vendored) || Needed.Contains(Package))
+			{
+				continue;
+			}
+			const FString Original = PackRoot + Name.Mid(Vendored.Len());
+			TArray<FAssetData> Assets;
+			Registry.GetAssetsByPackageName(Package, Assets);
+			for (const FAssetData& Asset : Assets)
+			{
+				// Redirectors left by an earlier pass are cleared below.
+				UObject* Object = Asset.IsRedirector() ? nullptr : Asset.GetAsset();
+				if (!Object)
+				{
+					continue;
+				}
+				if (FPackageName::DoesPackageExist(Original))
+				{
+					// The pack still has it: what used this copy uses the pack's.
+					if (UObject* Theirs = LoadObject<UObject>(nullptr, *(Original + TEXT(".") + FPackageName::GetShortName(Original))))
+					{
+						TArray<UObject*> Replace = { Object };
+						ObjectTools::ConsolidateObjects(Theirs, Replace, false);
+						Duplicates.Add(Object);
+					}
+				}
+				else
+				{
+					Back.Emplace(Object, FPackageName::GetLongPackagePath(Original), FPackageName::GetShortName(Original));
+				}
+			}
+		}
+		UE_LOG(LogVaesenContentAudit, Display, TEXT("Keeping %d packages in %s; moving %d assets back into %s; %d duplicates of the pack's own."),
+			Needed.Num(), *Vendored, Back.Num(), *PackRoot, Duplicates.Num());
+		if (Back.Num() > 0 && !AssetTools.RenameAssets(Back))
+		{
+			UE_LOG(LogVaesenContentAudit, Error, TEXT("Moving back failed."));
+			return 1;
+		}
+		int32 Saved = 0;
+		for (TObjectIterator<UPackage> It; It; ++It)
+		{
+			if (It->IsDirty() && It->GetName().StartsWith(TEXT("/Game/")) && It->FindAssetInPackage())
+			{
+				Saved += SavePackage(*It) ? 1 : 0;
+			}
+		}
+		UE_LOG(LogVaesenContentAudit, Display, TEXT("Saved %d packages."), Saved);
+
+		// What's left of the unused vendored copies are redirectors to the pack's own. Pack assets that still point
+		// through them are loaded (which follows them) and saved (which writes the pack's own place); then they go.
+		Registry.SearchAllAssets(true);
+		TArray<FAssetData> Now;
+		Registry.GetAssetsByPath(FName(*Vendored), Now, true);
+		TSet<FName> Redirectors;
+		for (const FAssetData& Asset : Now)
+		{
+			if (Asset.IsRedirector() && !Needed.Contains(Asset.PackageName))
+			{
+				Redirectors.Add(Asset.PackageName);
+			}
+		}
+		TArray<FAssetData> InPack;
+		Registry.GetAssetsByPath(FName(*PackRoot), InPack, true);
+		TSet<FName> Resave;
+		for (const FAssetData& Asset : InPack)
+		{
+			TArray<FName> Dependencies;
+			Registry.GetDependencies(Asset.PackageName, Dependencies, UE::AssetRegistry::EDependencyCategory::Package);
+			if (Dependencies.ContainsByPredicate([&Redirectors](const FName Dependency) { return Redirectors.Contains(Dependency); }))
+			{
+				Resave.Add(Asset.PackageName);
+			}
+		}
+		int32 Fixed = 0;
+		for (const FName Package : Resave)
+		{
+			if (UPackage* Loaded = LoadPackage(nullptr, *Package.ToString(), LOAD_None))
+			{
+				Loaded->MarkPackageDirty();
+				Fixed += SavePackage(Loaded) ? 1 : 0;
+			}
+		}
+		CollectGarbage(GARBAGE_COLLECTION_KEEPFLAGS);
+		int32 Deleted = 0;
+		for (const FName Package : Redirectors)
+		{
+			FString File;
+			if (FPackageName::DoesPackageExist(Package.ToString(), &File) && IFileManager::Get().Delete(*File, false, true))
+			{
+				++Deleted;
+			}
+		}
+		UE_LOG(LogVaesenContentAudit, Display, TEXT("Re-saved %d pack packages past the vendored redirectors; deleted %d redirectors."), Fixed, Deleted);
+		return 0;
 	}
 
 	// The report: each pack's size, what of it is used and by what.

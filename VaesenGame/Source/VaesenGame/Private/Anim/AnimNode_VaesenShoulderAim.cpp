@@ -115,6 +115,30 @@ void FAnimNode_VaesenShoulderAim::EvaluateSkeletalControl_AnyThread(FComponentSp
 	if (!Input.bHeld)
 	{
 		Emit(WeaponBone, WeaponBoneInHand * Hand);
+		// A bow in the left fist, guarding: the left arm takes it across the chest, the right hand to its upper limb; a
+		// blow drives it back toward the chest.
+		const float LeftGuard = Input.bLeftHeld ? FMath::Clamp(Input.GuardBlend, 0.0f, 1.0f) : 0.0f;
+		if (LeftGuard > 0.0f)
+		{
+			FTransform UpperR = Pose(UpperArmR), LowerR = Pose(LowerArmR);
+			FTransform UpperL = Pose(UpperArmL), LowerL = Pose(LowerArmL), HandLeft = Pose(HandL);
+			const float Knock = FMath::Clamp(Input.GuardKnock, 0.0f, 1.0f);
+			const FQuat Turned = FQuat(FVector::YAxisVector, FMath::DegreesToRadians(-20.0f * Knock)) * Input.GuardRotation;
+			const FVector Middle = Pose(Spine).GetLocation() + Input.GuardFromChest + FVector(0.0, -16.0 * Knock, 6.0 * Knock);
+			const FTransform Guarded(Turned, Middle - Turned.RotateVector(Input.GuardMiddleInWeapon));
+			FTransform Held;
+			Held.Blend(Input.GripOnLeftHand * HandLeft, Guarded, LeftGuard);
+			SolveArm(UpperL, LowerL, HandLeft, Input.GripOnLeftHand.Inverse() * Held);
+			FTransform RightTarget;
+			RightTarget.Blend(Hand, Input.RightHandInWeapon * Held, LeftGuard);
+			SolveArm(UpperR, LowerR, Hand, RightTarget, false);
+			Emit(UpperArmL, UpperL);
+			Emit(LowerArmL, LowerL);
+			Emit(HandL, HandLeft);
+			Emit(UpperArmR, UpperR);
+			Emit(LowerArmR, LowerR);
+			Emit(HandR, Hand);
+		}
 		OutBoneTransforms.Sort(FCompareBoneTransformIndex());
 		return;
 	}

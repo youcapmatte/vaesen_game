@@ -124,6 +124,9 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
+	/** A subclass ticking for its own reasons (a bow's nocked arrow while in hand); UpdateTickEnabled asks. */
+	virtual bool WantsTick() const { return false; }
+
 	/** Puts the item's mesh on, with its Grip at the origin. */
 	virtual void ApplyWeaponMesh();
 
@@ -167,7 +170,7 @@ private:
 	UPROPERTY(Transient)
 	TArray<TObjectPtr<AActor>> StruckThisSwing;
 
-	/** Ticks while a hit window is open or it hangs (and swings) in its sheath. */
+	/** Ticks while a hit window is open, it hangs (and swings) in its sheath, or a subclass wants it (WantsTick). */
 	void UpdateTickEnabled();
 
 	/** Sheathed at a location that hangs (HangAngle): hangs from the hilt and swings with the body (cosmetic). */

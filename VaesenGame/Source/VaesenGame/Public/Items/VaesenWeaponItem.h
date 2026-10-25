@@ -195,6 +195,9 @@ public:
 	/** Held in the off hand (a shield) rather than the main hand. */
 	bool IsHeldInOffHand() const { return Slot == EVaesenEquipmentSlot::OffHand; }
 
+	/** In the left hand: an off-hand weapon, or one its category holds there (a bow). Not on the weapon bone. */
+	bool IsHeldInLeftHand() const { return IsHeldInOffHand() || GetCategoryDefaults().bHeldInLeftHand; }
+
 	/** Whether it's a ranged weapon (guns, bows). */
 	virtual bool IsRanged() const { return false; }
 

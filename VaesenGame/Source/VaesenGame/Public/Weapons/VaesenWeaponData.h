@@ -199,6 +199,13 @@ struct FVaesenCategoryDefaults
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Category")
 	FTransform InHand;
 
+	/**
+	 * Held in the left hand though it's a main-hand weapon (a bow: the left fist holds it, the right hand draws). It's on
+	 * the hand_l bone itself, InHand from it, not on the weapon bone; the right hand is free.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Category")
+	bool bHeldInLeftHand = false;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Category")
 	FVaesenWeaponMontages Montages;
 

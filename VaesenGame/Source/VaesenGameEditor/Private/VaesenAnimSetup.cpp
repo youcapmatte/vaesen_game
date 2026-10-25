@@ -270,6 +270,178 @@ namespace VaesenAnimSetup
 			*Describe(UAnimPoseExtensions::GetRelativeTransform(Pose, TEXT("hand_r"), TEXT("hand_l"), EAnimPoseSpaces::World)));
 	}
 
+	FAnimPose PoseAt(const UAnimSequenceBase* Anim, double Time);
+
+	/**
+	 * -analyzebow: how the GhostSamurai pack rigs its bow: its character Blueprint's components (what's attached where),
+	 * the bow's and arrow's bones, and through the key animations where the weapon bone (ik_hand_gun) is from each hand,
+	 * how far the hands are apart (the draw), and their curves and notifies.
+	 */
+	void AnalyzeBow()
+	{
+		const FString Pack = TEXT("/Game/GhostSamurai_Bundle/GhostSamurai_Bundle_UE5");
+		if (const UBlueprint* Blueprint = LoadObject<UBlueprint>(nullptr, *(Pack / TEXT("Blueprints/GhostSamurai_Bow.GhostSamurai_Bow"))))
+		{
+			UE_LOG(LogVaesenAnimSetup, Display, TEXT("Blueprint %s (parent %s)"), *Blueprint->GetName(), *GetNameSafe(Blueprint->ParentClass));
+			if (Blueprint->SimpleConstructionScript)
+			{
+				for (const USCS_Node* Node : Blueprint->SimpleConstructionScript->GetAllNodes())
+				{
+					const USceneComponent* Scene = Cast<USceneComponent>(Node->ComponentTemplate);
+					FString Asset;
+					if (const UStaticMeshComponent* Static = Cast<UStaticMeshComponent>(Node->ComponentTemplate))
+					{
+						Asset = GetPathNameSafe(Static->GetStaticMesh());
+					}
+					else if (const USkeletalMeshComponent* Skinned = Cast<USkeletalMeshComponent>(Node->ComponentTemplate))
+					{
+						Asset = GetPathNameSafe(Skinned->GetSkeletalMeshAsset()) + TEXT(" anim ") + GetPathNameSafe(const_cast<USkeletalMeshComponent*>(Skinned)->GetAnimClass());
+					}
+					UE_LOG(LogVaesenAnimSetup, Display, TEXT("  %s [%s] on %s/%s socket %s  %s  %s"), *Node->GetVariableName().ToString(), *GetNameSafe(Node->ComponentClass),
+						*Node->ParentComponentOrVariableName.ToString(), *GetNameSafe(Node->GetParentComponentTemplate(const_cast<UBlueprint*>(Blueprint))), *Node->AttachToName.ToString(),
+						Scene ? *Describe(Scene->GetRelativeTransform()) : TEXT("-"), *Asset);
+				}
+			}
+			if (const ACharacter* Defaults = Blueprint->GeneratedClass ? Cast<ACharacter>(Blueprint->GeneratedClass->GetDefaultObject()) : nullptr)
+			{
+				UE_LOG(LogVaesenAnimSetup, Display, TEXT("  character mesh %s anim %s"), *GetPathNameSafe(Defaults->GetMesh()->GetSkeletalMeshAsset()), *GetPathNameSafe(Defaults->GetMesh()->GetAnimClass()));
+			}
+		}
+		for (const TCHAR* Mesh : { TEXT("Weapon/Mesh/Bow/SM_Bow_01.SM_Bow_01"), TEXT("Weapon/Mesh/Bow/SM_Bow_02.SM_Bow_02"), TEXT("Weapon/Mesh/Bow/SM_Arrow_01.SM_Arrow_01"),
+			TEXT("Weapon/Mesh/Bow/SM_Quiver_01.SM_Quiver_01") })
+		{
+			if (const UStaticMesh* Static = LoadObject<UStaticMesh>(nullptr, *(Pack / Mesh)))
+			{
+				const FBox Box = Static->GetBoundingBox();
+				FString Sockets;
+				for (const UStaticMeshSocket* Socket : Static->Sockets)
+				{
+					Sockets += Socket->SocketName.ToString() + TEXT(" ");
+				}
+				UE_LOG(LogVaesenAnimSetup, Display, TEXT("%s box %s .. %s  sockets: %s"), *Static->GetName(), *Box.Min.ToCompactString(), *Box.Max.ToCompactString(), *Sockets);
+			}
+		}
+		if (const USkeleton* PackSkeleton = LoadObject<USkeleton>(nullptr, TEXT("/Game/GhostSamurai_Bundle/Demo/Characters/Mannequins/Meshes/SK_Mannequin.SK_Mannequin")))
+		{
+			for (const USkeletalMeshSocket* Socket : PackSkeleton->Sockets)
+			{
+				UE_LOG(LogVaesenAnimSetup, Display, TEXT("Pack skeleton socket %s on %s: %s"), *Socket->SocketName.ToString(), *Socket->BoneName.ToString(),
+					*Describe(Socket->GetSocketLocalTransform()));
+			}
+		}
+		for (const TCHAR* Mesh : { TEXT("Weapon/Mesh/Bow/SK_Bow_01.SK_Bow_01"), TEXT("Weapon/Mesh/Bow/SK_Arrow_01.SK_Arrow_01") })
+		{
+			if (const USkeletalMesh* Skinned = LoadObject<USkeletalMesh>(nullptr, *(Pack / Mesh)))
+			{
+				const FReferenceSkeleton& Ref = Skinned->GetRefSkeleton();
+				FString Bones;
+				for (int32 Bone = 0; Bone < Ref.GetNum(); ++Bone)
+				{
+					// Only the extra bones (the bow, string, arrow, weapons), with their parents.
+					const FString Name = Ref.GetBoneName(Bone).ToString();
+					if (Name.Contains(TEXT("bow")) || Name.Contains(TEXT("String")) || Name.Contains(TEXT("arrow")) || Name.StartsWith(TEXT("weapon"), ESearchCase::IgnoreCase))
+					{
+						Bones += FString::Printf(TEXT("%s<-%s(%s) "), *Name, *Ref.GetBoneName(FMath::Max(Ref.GetParentIndex(Bone), 0)).ToString(),
+							*FAnimationRuntime::GetComponentSpaceTransformRefPose(Ref, Bone).GetLocation().ToCompactString());
+					}
+				}
+				UE_LOG(LogVaesenAnimSetup, Display, TEXT("%s [skeleton %s] bounds %s: %s"), *Skinned->GetName(), *GetPathNameSafe(Skinned->GetSkeleton()),
+					*Skinned->GetBounds().BoxExtent.ToCompactString(), *Bones);
+			}
+		}
+		for (const TCHAR* Name : { TEXT("Bow/Idle_Root"), TEXT("Bow/Common/Common_Idle_Root"), TEXT("Bow/Common/EquipAndUnarm/Common_Equip_Root"),
+			TEXT("Bow/Common/EquipAndUnarm/Common_Unarm_Root"), TEXT("Bow/Attack/Shoot_Start_Root"), TEXT("Bow/Attack/Shoot_Aim_Idle_Root"),
+			TEXT("Bow/Attack/Shoot_End_Root"), TEXT("Bow/Attack/Shoot_Loop_Root"), TEXT("Bow/Attack/Shoot_Cancel_Root"), TEXT("Bow/Attack/AimPose/Shoot_AimPose_F") })
+		{
+			const FString Short = FPaths::GetBaseFilename(Name);
+			const FString Path = Pack / FPaths::GetPath(Name) / TEXT("GhostSamurai_Bow_") + Short + TEXT(".GhostSamurai_Bow_") + Short;
+			const UAnimSequence* Anim = LoadObject<UAnimSequence>(nullptr, *Path);
+			if (!Anim)
+			{
+				UE_LOG(LogVaesenAnimSetup, Warning, TEXT("No %s"), *Path);
+				continue;
+			}
+			FString Curves;
+			for (const FFloatCurve& Curve : Anim->GetDataModel()->GetFloatCurves())
+			{
+				Curves += Curve.GetName().ToString() + TEXT(" ");
+			}
+			FString Notifies;
+			for (const FAnimNotifyEvent& Event : Anim->Notifies)
+			{
+				Notifies += FString::Printf(TEXT("%s@%.2f "), *Event.NotifyName.ToString(), Event.GetTriggerTime());
+			}
+			UE_LOG(LogVaesenAnimSetup, Display, TEXT("%s [%s] %.2f s  curves: %s  notifies: %s"), *Anim->GetName(), *GetPathNameSafe(Anim->GetSkeleton()), Anim->GetPlayLength(), *Curves, *Notifies);
+			const int32 Steps = 8;
+			for (int32 Step = 0; Step <= Steps; ++Step)
+			{
+				const double Time = Anim->GetPlayLength() * Step / Steps;
+				const FAnimPose Pose = PoseAt(Anim, Time);
+				const FTransform Gun = UAnimPoseExtensions::GetBonePose(Pose, TEXT("ik_hand_gun"), EAnimPoseSpaces::World);
+				const FTransform Left = UAnimPoseExtensions::GetBonePose(Pose, TEXT("hand_l"), EAnimPoseSpaces::World);
+				const FTransform Right = UAnimPoseExtensions::GetBonePose(Pose, TEXT("hand_r"), EAnimPoseSpaces::World);
+				const FTransform Bow = UAnimPoseExtensions::GetBonePose(Pose, TEXT("bow"), EAnimPoseSpaces::World);
+				const FTransform Arrow = UAnimPoseExtensions::GetBonePose(Pose, TEXT("arrow"), EAnimPoseSpaces::World);
+				const FTransform String = UAnimPoseExtensions::GetBonePose(Pose, TEXT("String"), EAnimPoseSpaces::World);
+				UE_LOG(LogVaesenAnimSetup, Display, TEXT("   t=%.2f  hands apart %.1f | bow from hand_l %s | arrow from hand_r %s scale %s | string from bow %s"), Time,
+					FVector::Dist(Left.GetLocation(), Right.GetLocation()), *Describe(Bow.GetRelativeTransform(Left)), *Describe(Arrow.GetRelativeTransform(Right)),
+					*Arrow.GetScale3D().ToCompactString(), *String.GetRelativeTransform(Bow).GetLocation().ToCompactString());
+			}
+		}
+	}
+
+	/**
+	 * -analyzefolder=/Game/...: every animation there, against Manny's plain idle (MM_Idle): its skeleton, length, how
+	 * far the root travels, and through it the hands (in the body's frame: ahead, to his right, up from the pelvis) and
+	 * how closed each fist is (the index finger's curl), to judge whether they suit other characters and weapons.
+	 */
+	void AnalyzeFolder(const FString& Folder)
+	{
+		TArray<FAssetData> Assets;
+		FModuleManager::LoadModuleChecked<FAssetRegistryModule>(TEXT("AssetRegistry")).Get().GetAssetsByPath(FName(*Folder), Assets, true);
+		const auto Report = [](const UAnimSequence* Anim)
+		{
+			const double Length = Anim->GetPlayLength();
+			const FAnimPose Start = PoseAt(Anim, 0.0);
+			const FAnimPose End = PoseAt(Anim, Length);
+			const FVector Travel = UAnimPoseExtensions::GetBonePose(End, TEXT("root"), EAnimPoseSpaces::World).GetLocation()
+				- UAnimPoseExtensions::GetBonePose(Start, TEXT("root"), EAnimPoseSpaces::World).GetLocation();
+			UE_LOG(LogVaesenAnimSetup, Display, TEXT("%s  [%s] %.2f s, root travels %s (Manny: +Y ahead, -X his right)"), *Anim->GetName(),
+				*GetNameSafe(Anim->GetSkeleton()), Length, *Travel.ToCompactString());
+			for (const double Share : { 0.0, 0.3, 0.6, 1.0 })
+			{
+				const FAnimPose Pose = PoseAt(Anim, Length * Share);
+				const FTransform Pelvis = UAnimPoseExtensions::GetBonePose(Pose, TEXT("pelvis"), EAnimPoseSpaces::World);
+				const auto Hand = [&](const TCHAR* Bone)
+				{
+					const FVector At = UAnimPoseExtensions::GetBonePose(Pose, Bone, EAnimPoseSpaces::World).GetLocation() - Pelvis.GetLocation();
+					return FVector(At.Y, -At.X, At.Z);
+				};
+				// The index finger's curl: its middle joint's bend (degrees), 0 open.
+				const auto Curl = [&](const TCHAR* Bone)
+				{
+					return UAnimPoseExtensions::GetBonePose(Pose, Bone, EAnimPoseSpaces::Local).Rotator().GetManhattanDistance(FRotator::ZeroRotator);
+				};
+				const FVector Spine = UAnimPoseExtensions::GetBonePose(Pose, TEXT("spine_05"), EAnimPoseSpaces::World).GetLocation() - Pelvis.GetLocation();
+				UE_LOG(LogVaesenAnimSetup, Display, TEXT("    %3.0f%%  hand_r %s  hand_l %s  (ahead, right, up)  index curl r %.0f l %.0f  chest lean %s"),
+					Share * 100.0, *Hand(TEXT("hand_r")).ToCompactString(), *Hand(TEXT("hand_l")).ToCompactString(),
+					Curl(TEXT("index_02_r")), Curl(TEXT("index_02_l")), *FVector(Spine.Y, -Spine.X, Spine.Z).ToCompactString());
+			}
+		};
+		if (const UAnimSequence* Idle = LoadObject<UAnimSequence>(nullptr, TEXT("/Game/Characters/Mannequins/Animations/Manny/MM_Idle.MM_Idle")))
+		{
+			UE_LOG(LogVaesenAnimSetup, Display, TEXT("Reference (plain, unarmed):"));
+			Report(Idle);
+		}
+		for (const FAssetData& Asset : Assets)
+		{
+			if (const UAnimSequence* Anim = Cast<UAnimSequence>(Asset.GetAsset()))
+			{
+				Report(Anim);
+			}
+		}
+	}
+
 	void AnalyzeRifle()
 	{
 		UE_LOG(LogVaesenAnimSetup, Display, TEXT("=== Rifle pack analysis ==="));
@@ -2780,6 +2952,568 @@ namespace VaesenAnimSetup
 			}
 		}
 	}
+
+	// --- The bow (the GhostSamurai pack) ---
+
+	const TCHAR* BowFolder = TEXT("/Game/Vaesen/Animations/Bow");
+	const TCHAR* BowPackFolder = TEXT("/Game/GhostSamurai_Bundle/GhostSamurai_Bundle_UE5");
+	const TCHAR* BowGraphPath = TEXT("/Game/Vaesen/Animations/Bow/ABP_BowLocomotion");
+
+	/** A pack animation (GhostSamurai_Bow_<Name>, in Bow/<Group>), on the pack's own skeleton (its extra bow, string and arrow bones). */
+	UAnimSequence* BowSource(const TCHAR* Group, const TCHAR* Name)
+	{
+		const FString Short = FString(TEXT("GhostSamurai_Bow_")) + Name;
+		const FString Folder = FString(BowPackFolder) / TEXT("Bow");
+		return LoadAt<UAnimSequence>(*Group ? Folder / Group / Short : Folder / Short);
+	}
+
+	/**
+	 * Our copy of a pack animation, on Manny's skeleton (made once), root locked (in place). Manny has no bow, string or
+	 * arrow bones, so the arrow (on the pack's arrow bone, under hand_r; hidden by scaling it to nothing) is baked first
+	 * into curves: BowArrow (shown) and where it is on hand_r (the six BowArrow transform curves).
+	 */
+	UAnimSequence* BowAnim(const TCHAR* Group, const TCHAR* Name)
+	{
+		const FString ShortName = FString(Name).Replace(TEXT("_Root"), TEXT(""));
+		const FString Path = FString(BowFolder) / (TEXT("AS_Bow_") + ShortName);
+		if (UAnimSequence* Existing = LoadAt<UAnimSequence>(Path))
+		{
+			return Existing;
+		}
+		UAnimSequence* Source = BowSource(Group, Name);
+		USkeleton* Skeleton = LoadObject<USkeleton>(nullptr, MannySkeletonPath);
+		if (!Source || !Skeleton)
+		{
+			UE_LOG(LogVaesenAnimSetup, Warning, TEXT("Bow pack animation %s/%s is missing."), Group, Name);
+			return nullptr;
+		}
+
+		// The arrow through the animation, 30 times a second.
+		const double Length = Source->GetPlayLength();
+		const int32 Steps = FMath::Max(1, FMath::CeilToInt(Length * 30.0));
+		TArray<FRichCurveKey> Shown;
+		TArray<FRichCurveKey> Parts[6];
+		// And the string: its pull from where it rests on the bow (the pack bow's String from its bow bone, at rest).
+		TArray<FRichCurveKey> Pull[3];
+		FVector StringRest(0.0, 0.0, 17.0);
+		if (const USkeletalMesh* PackBow = LoadAt<USkeletalMesh>(FString(BowPackFolder) / TEXT("Weapon/Mesh/Bow/SK_Bow_01")))
+		{
+			const FReferenceSkeleton& Ref = PackBow->GetRefSkeleton();
+			const int32 BowBone = Ref.FindBoneIndex(TEXT("bow"));
+			const int32 StringBone = Ref.FindBoneIndex(TEXT("String"));
+			if (BowBone != INDEX_NONE && StringBone != INDEX_NONE)
+			{
+				StringRest = FAnimationRuntime::GetComponentSpaceTransformRefPose(Ref, StringBone)
+					.GetRelativeTransform(FAnimationRuntime::GetComponentSpaceTransformRefPose(Ref, BowBone)).GetLocation();
+			}
+		}
+		FRotator Previous = FRotator::ZeroRotator;
+		for (int32 Step = 0; Step <= Steps; ++Step)
+		{
+			const double Time = Length * Step / Steps;
+			const FAnimPose Pose = PoseAt(Source, Time);
+			const FTransform ArrowWorld = UAnimPoseExtensions::GetBonePose(Pose, TEXT("arrow"), EAnimPoseSpaces::World);
+			const FTransform Arrow = ArrowWorld.GetRelativeTransform(UAnimPoseExtensions::GetBonePose(Pose, TEXT("hand_r"), EAnimPoseSpaces::World));
+			FRichCurveKey& ShownKey = Shown.Emplace_GetRef(static_cast<float>(Time), ArrowWorld.GetScale3D().X > 0.5 ? 1.0f : 0.0f);
+			ShownKey.InterpMode = RCIM_Constant;
+			// Unwound against the frame before (no 359 -> 0 jumps between keys).
+			FRotator Rotation = Arrow.Rotator();
+			if (Step > 0)
+			{
+				Rotation.Pitch = Previous.Pitch + FMath::UnwindDegrees(Rotation.Pitch - Previous.Pitch);
+				Rotation.Yaw = Previous.Yaw + FMath::UnwindDegrees(Rotation.Yaw - Previous.Yaw);
+				Rotation.Roll = Previous.Roll + FMath::UnwindDegrees(Rotation.Roll - Previous.Roll);
+			}
+			Previous = Rotation;
+			const float Values[6] = { float(Arrow.GetLocation().X), float(Arrow.GetLocation().Y), float(Arrow.GetLocation().Z),
+				float(Rotation.Pitch), float(Rotation.Yaw), float(Rotation.Roll) };
+			for (int32 Index = 0; Index < 6; ++Index)
+			{
+				Parts[Index].Emplace_GetRef(static_cast<float>(Time), Values[Index]).InterpMode = RCIM_Linear;
+			}
+			const FVector String = UAnimPoseExtensions::GetBonePose(Pose, TEXT("String"), EAnimPoseSpaces::World)
+				.GetRelativeTransform(UAnimPoseExtensions::GetBonePose(Pose, TEXT("bow"), EAnimPoseSpaces::World)).GetLocation() - StringRest;
+			for (int32 Index = 0; Index < 3; ++Index)
+			{
+				Pull[Index].Emplace_GetRef(static_cast<float>(Time), static_cast<float>(String[Index])).InterpMode = RCIM_Linear;
+			}
+		}
+
+		UPackage* Package = CreatePackage(*Path);
+		UAnimSequence* Copy = DuplicateObject<UAnimSequence>(Source, Package, FName(FPackageName::GetShortName(Path)));
+		Copy->SetFlags(RF_Public | RF_Standalone);
+		FAssetRegistryModule::AssetCreated(Copy);
+		Copy->ReplaceSkeleton(Skeleton);
+		Copy->bEnableRootMotion = false;
+		Copy->bForceRootLock = true;
+
+		IAnimationDataController& Controller = Copy->GetController();
+		Controller.OpenBracket(FText::FromString(TEXT("Bow arrow curves")), false);
+		const auto SetCurve = [&Controller](FName Name, const TArray<FRichCurveKey>& Keys)
+		{
+			const FAnimationCurveIdentifier Curve(Name, ERawCurveTrackTypes::RCT_Float);
+			Controller.AddCurve(Curve, AACF_DefaultCurve, false);
+			Controller.SetCurveKeys(Curve, Keys, false);
+		};
+		SetCurve(UVaesenAnimInstance::BowArrowCurve, Shown);
+		for (int32 Index = 0; Index < 3; ++Index)
+		{
+			SetCurve(UVaesenAnimInstance::BowStringCurves[Index], Pull[Index]);
+		}
+		for (int32 Index = 0; Index < 6; ++Index)
+		{
+			SetCurve(UVaesenAnimInstance::BowArrowTransformCurves[Index], Parts[Index]);
+		}
+		Controller.CloseBracket(false);
+		Copy->PostEditChange();
+		Save(Copy);
+		return Copy;
+	}
+
+	/** Where the pack's bow bone is from hand_l (the left fist) in a pack animation at Time. */
+	FTransform BowInFist(const UAnimSequence* Source, double Time)
+	{
+		const FAnimPose Pose = PoseAt(Source, Time);
+		FTransform Bow = UAnimPoseExtensions::GetBonePose(Pose, TEXT("bow"), EAnimPoseSpaces::World)
+			.GetRelativeTransform(UAnimPoseExtensions::GetBonePose(Pose, TEXT("hand_l"), EAnimPoseSpaces::World));
+		Bow.SetScale3D(FVector::OneVector);
+		return Bow;
+	}
+
+	/** When the bow comes into the fist (the first moment it's where the fist holds it, Held) or last leaves it. */
+	float BowHandoffTime(const UAnimSequence* Source, const FTransform& Held, bool bFirst)
+	{
+		const double Length = Source->GetPlayLength();
+		const int32 Steps = 60;
+		for (int32 Step = 0; Step <= Steps; ++Step)
+		{
+			const double Time = Length * (bFirst ? Step : Steps - Step) / Steps;
+			if (FVector::Dist(BowInFist(Source, Time).GetLocation(), Held.GetLocation()) < 1.5)
+			{
+				return static_cast<float>(Time);
+			}
+		}
+		return bFirst ? static_cast<float>(Length) : 0.0f;
+	}
+
+	/** The bow's aim offset (pitch): the pack's front aim poses (down, centre, up) at the pitch the arrow points in each. */
+	UBlendSpace* MakeBowAimOffset(bool bRebuild)
+	{
+		const FString Path = FString(BowFolder) / TEXT("AO1D_Bow");
+		UBlendSpace* Offset = LoadAt<UBlendSpace>(Path);
+		if (Offset && !bRebuild)
+		{
+			return Offset;
+		}
+		const TCHAR* Group = TEXT("Attack/AimPose");
+		UAnimSequence* Center = BowAnim(Group, TEXT("Shoot_AimPose_F"));
+		UAnimSequence* Up = BowAnim(Group, TEXT("Shoot_AimPose_Up"));
+		UAnimSequence* Down = BowAnim(Group, TEXT("Shoot_AimPose_Down"));
+		if (!Center || !Up || !Down)
+		{
+			return Offset;
+		}
+		// Where the arrow points in each pose (its bone's +Y, in the pack's own poses).
+		const auto PitchOf = [Group](const TCHAR* Name)
+		{
+			const UAnimSequence* Pose = BowSource(Group, Name);
+			if (!Pose)
+			{
+				return 0.0f;
+			}
+			const FVector Along = UAnimPoseExtensions::GetBonePose(PoseAt(Pose, 0.0), TEXT("arrow"), EAnimPoseSpaces::World).GetUnitAxis(EAxis::Y);
+			return static_cast<float>(FMath::RadiansToDegrees(FMath::Asin(FMath::Clamp(Along.Z, -1.0, 1.0))));
+		};
+		const float CenterPitch = PitchOf(TEXT("Shoot_AimPose_F"));
+		const float UpPitch = PitchOf(TEXT("Shoot_AimPose_Up")) - CenterPitch;
+		const float DownPitch = PitchOf(TEXT("Shoot_AimPose_Down")) - CenterPitch;
+		UE_LOG(LogVaesenAnimSetup, Display, TEXT("Bow aim poses: up %.0f, down %.0f degrees (from the centre's %.0f)"), UpPitch, DownPitch, CenterPitch);
+
+		for (UAnimSequence* Pose : { Center, Up, Down })
+		{
+			if (Pose->AdditiveAnimType != AAT_RotationOffsetMeshSpace)
+			{
+				Pose->AdditiveAnimType = AAT_RotationOffsetMeshSpace;
+				Pose->RefPoseType = ABPT_AnimFrame;
+				Pose->RefPoseSeq = Center;
+				Pose->RefFrameIndex = 0;
+				Pose->PostEditChange();
+				Save(Pose);
+			}
+		}
+		if (!Offset)
+		{
+			UBlendSpace* Rifle = RifleAsset<UBlendSpace>(TEXT("AO1D_Rifle_Aim"));
+			if (!Rifle)
+			{
+				return nullptr;
+			}
+			UPackage* Package = CreatePackage(*Path);
+			Offset = DuplicateObject<UBlendSpace>(Rifle, Package, FName(TEXT("AO1D_Bow")));
+			Offset->SetFlags(RF_Public | RF_Standalone);
+			FAssetRegistryModule::AssetCreated(Offset);
+		}
+		if (UpPitch > 1.0f && DownPitch < -1.0f)
+		{
+			while (Offset->GetNumberOfBlendSamples() > 0)
+			{
+				Offset->DeleteSample(0);
+			}
+			const TPair<UAnimSequence*, float> Samples[] = { { Down, DownPitch }, { Center, 0.0f }, { Up, UpPitch } };
+			for (const TPair<UAnimSequence*, float>& Sample : Samples)
+			{
+				Offset->ExpandRangeForSample(FVector(Sample.Value, 0.0, 0.0));
+				Offset->AddSample(Sample.Key, FVector(Sample.Value, 0.0, 0.0));
+			}
+			Offset->ValidateSampleData();
+			Offset->ResampleData();
+			Offset->PostEditChange();
+			Save(Offset);
+		}
+		return Offset;
+	}
+
+	/**
+	 * BS_Bow: the archer with the bow in hand, a direction/speed blend space set like the rifle's (BS_Rifle duplicated):
+	 * the pack's idle standing, its walk and run in eight directions, each at its own speed (measured in the pack's root
+	 * motion; our copies are in place). Made once; -rebuild remakes it while the pack's there.
+	 */
+	UBlendSpace* MakeBowBlendSpace(bool bRebuild)
+	{
+		const FString Path = FString(BowFolder) / TEXT("BS_Bow");
+		UBlendSpace* Space = LoadAt<UBlendSpace>(Path);
+		if (Space && (!bRebuild || !BowSource(TEXT("Movement/Walk"), TEXT("Walk_F_Root"))))
+		{
+			return Space;
+		}
+		if (!Space)
+		{
+			UBlendSpace* Rifle = RifleAsset<UBlendSpace>(TEXT("BS_Rifle"));
+			if (!Rifle)
+			{
+				return nullptr;
+			}
+			UPackage* Package = CreatePackage(*Path);
+			Space = DuplicateObject<UBlendSpace>(Rifle, Package, FName(TEXT("BS_Bow")));
+			Space->SetFlags(RF_Public | RF_Standalone);
+			FAssetRegistryModule::AssetCreated(Space);
+		}
+		while (Space->GetNumberOfBlendSamples() > 0)
+		{
+			Space->DeleteSample(0);
+		}
+		const auto Add = [Space](UAnimSequence* Anim, float Direction, float Speed)
+		{
+			if (Anim)
+			{
+				const FVector Value(Direction, Speed, 0.0);
+				Space->ExpandRangeForSample(Value);
+				Space->AddSample(Anim, Value);
+			}
+		};
+		UAnimSequence* Idle = BowAnim(TEXT(""), TEXT("Idle_Root"));
+		for (const float Direction : { -180.0f, -90.0f, 0.0f, 90.0f, 180.0f })
+		{
+			Add(Idle, Direction, 0.0f);
+		}
+		const TPair<const TCHAR*, float> Ways[] = { { TEXT("F"), 0.0f }, { TEXT("FR"), 45.0f }, { TEXT("R"), 90.0f }, { TEXT("BR"), 135.0f },
+			{ TEXT("B"), 180.0f }, { TEXT("BL"), -135.0f }, { TEXT("L"), -90.0f }, { TEXT("FL"), -45.0f } };
+		for (const TCHAR* Gait : { TEXT("Walk"), TEXT("Run") })
+		{
+			for (const TPair<const TCHAR*, float>& Way : Ways)
+			{
+				const FString Name = FString::Printf(TEXT("%s_%s_Root"), Gait, Way.Key);
+				const FString Group = FString(TEXT("Movement/")) + Gait;
+				const UAnimSequence* Source = BowSource(*Group, *Name);
+				if (!Source)
+				{
+					continue;
+				}
+				const FSwingTiming Timing = MeasureSwing(Source);
+				const float Speed = FMath::RoundToFloat(Timing.RootMove.Size2D() / FMath::Max(Timing.Length, 0.01f));
+				Add(BowAnim(*Group, *Name), Way.Value, Speed);
+				// Straight back also at -180, so the space wraps round.
+				if (Way.Value == 180.0f)
+				{
+					Add(BowAnim(*Group, *Name), -180.0f, Speed);
+				}
+			}
+		}
+		Space->ValidateSampleData();
+		Space->ResampleData();
+		Space->PostEditChange();
+		Save(Space);
+		UE_LOG(LogVaesenAnimSetup, Display, TEXT("BS_Bow: %d samples, speed up to %.0f"), Space->GetNumberOfBlendSamples(), Space->GetBlendParameter(1).Max);
+		return Space;
+	}
+
+	/**
+	 * ABP_BowLocomotion, linked into the character's graph while a bow is drawn: the pack's archer with the bow in hand
+	 * (BS_Bow: standing, walking, running, and strafing while nocked, when he faces the aim); nocked (bAiming), the pack's
+	 * full-draw hold from the spine up, aimed up and down (AimPitch), the legs walking under it. In the air, the plain
+	 * jump (ABP_Manny). The nock and draw, and the release, are montages over it.
+	 */
+	UClass* BuildBowLocomotion(USkeleton* Skeleton, bool bRebuild, UBlendSpace* Movement, UAnimSequence* Hold, UBlendSpace* AimOffset)
+	{
+		if (!bRebuild)
+		{
+			if (UAnimBlueprint* Existing = LoadAt<UAnimBlueprint>(BowGraphPath))
+			{
+				return Existing->GeneratedClass;
+			}
+		}
+		UAnimBlueprint* Blueprint = OpenAnimBlueprint(BowGraphPath, Skeleton);
+		FGraphBuilder Builder(Blueprint);
+		if (!Blueprint || !Builder.Graph)
+		{
+			return nullptr;
+		}
+		UAnimGraphNode_BlendSpacePlayer* Moving = Builder.Add<UAnimGraphNode_BlendSpacePlayer>(-1700, 0, [Movement](UAnimGraphNode_BlendSpacePlayer* Node)
+		{
+			Node->Node.SetBlendSpace(Movement);
+		});
+		Builder.Var(TEXT("Direction"), Moving, TEXT("X"));
+		Builder.Var(TEXT("Speed"), Moving, TEXT("Y"));
+		UAnimGraphNode_SaveCachedPose* MovingCache = Builder.Add<UAnimGraphNode_SaveCachedPose>(-1400, 0, [](UAnimGraphNode_SaveCachedPose* Node)
+		{
+			Node->CacheName = TEXT("BowMoving");
+		});
+		Builder.Pose(Moving, MovingCache, TEXT("Pose"));
+		const auto UseMoving = [&Builder, MovingCache](int32 Y)
+		{
+			return Builder.Add<UAnimGraphNode_UseCachedPose>(-1150, Y, [MovingCache](UAnimGraphNode_UseCachedPose* Node)
+			{
+				Node->SaveCachedPoseNode = MovingCache;
+			});
+		};
+
+		// Nocked: the full-draw hold, aimed up and down, from the spine up.
+		UAnimGraphNode_SequencePlayer* Held = Builder.Add<UAnimGraphNode_SequencePlayer>(-1600, 250, [Hold](UAnimGraphNode_SequencePlayer* Node)
+		{
+			Node->Node.SetSequence(Hold);
+		});
+		UAnimGraphNode_RotationOffsetBlendSpace* Aim = Builder.Add<UAnimGraphNode_RotationOffsetBlendSpace>(-1250, 250, [AimOffset](UAnimGraphNode_RotationOffsetBlendSpace* Node)
+		{
+			Node->Node.SetBlendSpace(AimOffset);
+		});
+		Builder.Pose(Held, Aim, TEXT("BasePose"));
+		Builder.Var(TEXT("AimPitch"), Aim, TEXT("X"));
+		UAnimGraphNode_LayeredBoneBlend* Upper = Builder.Add<UAnimGraphNode_LayeredBoneBlend>(-900, 150, [](UAnimGraphNode_LayeredBoneBlend* Node)
+		{
+			Node->Node.bMeshSpaceRotationBlend = true;
+			if (Node->Node.LayerSetup.Num() == 0)
+			{
+				Node->Node.LayerSetup.AddDefaulted();
+			}
+			FBranchFilter Filter;
+			Filter.BoneName = TEXT("spine_01");
+			Filter.BlendDepth = 0;
+			Node->Node.LayerSetup[0].BranchFilters = { Filter };
+		});
+		Builder.Pose(UseMoving(100), Upper, TEXT("BasePose"));
+		Builder.Pose(Aim, Upper, TEXT("BlendPoses_0"));
+		UEdGraphNode* Grounded = ByBool(Builder, -600, 0, TEXT("bAiming"), Upper, UseMoving(-150), 0.2f);
+
+		// In the air: the plain jump.
+		UClass* Plain = LoadObject<UClass>(nullptr, UnarmedGraphPath);
+		UAnimGraphNode_LinkedAnimGraph* PlainGraph = Builder.Add<UAnimGraphNode_LinkedAnimGraph>(-900, 450, [Plain](UAnimGraphNode_LinkedAnimGraph* Node)
+		{
+			Node->Node.InstanceClass = Plain;
+		});
+		UEdGraphNode* Final = ByBool(Builder, -300, 100, TEXT("bFalling"), PlainGraph, Grounded, 0.15f);
+		Builder.Pose(Final, Builder.Root(), TEXT("Result"));
+		CompileAndSave(Blueprint);
+		return Blueprint->GeneratedClass;
+	}
+
+	void BuildBow()
+	{
+		const bool bRebuild = FParse::Param(FCommandLine::Get(), TEXT("rebuild"));
+		USkeleton* Skeleton = LoadObject<USkeleton>(nullptr, MannySkeletonPath);
+		UVaesenWeaponCategoryDefaults* Defaults = LoadObject<UVaesenWeaponCategoryDefaults>(nullptr, TEXT("/Game/Vaesen/Combat/DA_WeaponCategoryDefaults.DA_WeaponCategoryDefaults"));
+		const UAnimSequence* HoldSource = BowSource(TEXT("Attack"), TEXT("Shoot_Aim_Idle_Root"));
+		if (!Skeleton || !Defaults || (!HoldSource && !Exists(BowGraphPath)))
+		{
+			UE_LOG(LogVaesenAnimSetup, Display, TEXT("Bow pack (/Game/GhostSamurai_Bundle) not in the project; skipping the bow."));
+			return;
+		}
+		const FString Folder = BowFolder;
+
+		// The hold: the pack's full draw (the draw ends in it, the release starts from it), the aim offset over it.
+		UAnimSequence* Hold = BowAnim(TEXT("Attack"), TEXT("Shoot_Aim_Idle_Root"));
+		UBlendSpace* AimOffset = MakeBowAimOffset(bRebuild);
+		UClass* Graph = BuildBowLocomotion(Skeleton, bRebuild, MakeBowBlendSpace(bRebuild), Hold, AimOffset);
+
+		// Taking an arrow from the quiver, nocking and drawing; the release, the bow lowered.
+		UAnimMontage* Draw = MakeMontage(Folder / TEXT("AM_Bow_NockAndDraw"), BowAnim(TEXT("Attack"), TEXT("Shoot_Start_Root")), UpperBodySlot, 0.15f, 0.15f);
+		UAnimMontage* Release = MakeMontage(Folder / TEXT("AM_Bow_Release"), BowAnim(TEXT("Attack"), TEXT("Shoot_End_Root")), UpperBodySlot, 0.05f, 0.25f);
+		for (UAnimMontage* Montage : { Draw, Release })
+		{
+			if (Montage)
+			{
+				Save(Montage);
+			}
+		}
+
+		// Hit: the archer's own (in place).
+		TArray<TObjectPtr<UAnimMontage>> Hits;
+		for (const TCHAR* Hit : { TEXT("Hit_F_Root"), TEXT("Hit_FL_Root"), TEXT("Hit_FR_Root") })
+		{
+			const FString Name = FString(TEXT("AM_Bow_")) + FString(Hit).Replace(TEXT("_Root"), TEXT(""));
+			if (UAnimMontage* Reaction = MakeMontage(Folder / Name, BowAnim(TEXT("Hit"), Hit), FAnimSlotGroup::DefaultSlotName, 0.05f, 0.25f))
+			{
+				Save(Reaction);
+				Hits.Add(Reaction);
+			}
+		}
+		UAnimMontage* HitBehind = MakeMontage(Folder / TEXT("AM_Bow_Hit_B"), BowAnim(TEXT("Hit"), TEXT("Hit_B_Root")), FAnimSlotGroup::DefaultSlotName, 0.05f, 0.25f);
+		if (HitBehind)
+		{
+			Save(HitBehind);
+		}
+
+		// The bow in the fist as the pack holds it at full draw (where the aim matters); on the back as the pack carries it.
+		const UAnimSequence* CarrySource = BowSource(TEXT("Common"), TEXT("Common_Idle_Root"));
+		const FTransform InFist = HoldSource ? BowInFist(HoldSource, 0.0) : FTransform::Identity;
+		if (CarrySource && (!Skeleton->FindSocket(TEXT("Sheath_BowBack")) || FParse::Param(FCommandLine::Get(), TEXT("resetsockets"))))
+		{
+			const FAnimPose Pose = PoseAt(CarrySource, 0.0);
+			FTransform OnBack = UAnimPoseExtensions::GetBonePose(Pose, TEXT("bow"), EAnimPoseSpaces::World)
+				.GetRelativeTransform(UAnimPoseExtensions::GetBonePose(Pose, TEXT("spine_05"), EAnimPoseSpaces::World));
+			OnBack.SetScale3D(FVector::OneVector);
+			SetSkeletonSocket(Skeleton, TEXT("Sheath_BowBack"), TEXT("spine_05"), OnBack, true);
+			Save(Skeleton);
+			UE_LOG(LogVaesenAnimSetup, Display, TEXT("Bow on the back (spine_05): %s; in the fist: %s"), *Describe(OnBack), *Describe(InFist));
+		}
+
+		// Taking it from the back and putting it there (the pack's): the bow into the fist, and out of it, where it's held.
+		UAnimMontage* FromBack = nullptr;
+		UAnimMontage* ToBack = nullptr;
+		const UAnimSequence* EquipSource = BowSource(TEXT("Common/EquipAndUnarm"), TEXT("Common_Equip_Root"));
+		const UAnimSequence* UnarmSource = BowSource(TEXT("Common/EquipAndUnarm"), TEXT("Common_Unarm_Root"));
+		if (EquipSource && UnarmSource)
+		{
+			const FTransform Fist = BowInFist(EquipSource, EquipSource->GetPlayLength());
+			const float Grab = BowHandoffTime(EquipSource, Fist, true);
+			const float Letgo = BowHandoffTime(UnarmSource, Fist, false);
+			const bool bNewFrom = !Exists(Folder / TEXT("AM_Bow_FromBack"));
+			const bool bNewTo = !Exists(Folder / TEXT("AM_Bow_ToBack"));
+			FromBack = MakeMontage(Folder / TEXT("AM_Bow_FromBack"), BowAnim(TEXT("Common/EquipAndUnarm"), TEXT("Common_Equip_Root")), UpperBodySlot, 0.1f, 0.2f);
+			ToBack = MakeMontage(Folder / TEXT("AM_Bow_ToBack"), BowAnim(TEXT("Common/EquipAndUnarm"), TEXT("Common_Unarm_Root")), UpperBodySlot, 0.1f, 0.2f);
+			if (FromBack && bNewFrom)
+			{
+				AddNotify(FromBack, NewObject<UAnimNotify_VaesenWeaponGrab>(FromBack), Grab);
+			}
+			if (ToBack && bNewTo)
+			{
+				AddNotify(ToBack, NewObject<UAnimNotify_VaesenWeaponRelease>(ToBack), Letgo);
+			}
+			if (FromBack)
+			{
+				SetSoundNotify(FromBack, EVaesenWeaponSound::Draw, FMath::Max(Grab - SoundLead, 0.0f));
+				Save(FromBack);
+			}
+			if (ToBack)
+			{
+				SetSoundNotify(ToBack, EVaesenWeaponSound::Sheath, FMath::Max(Letgo - 0.1f, 0.0f));
+				Save(ToBack);
+			}
+			UE_LOG(LogVaesenAnimSetup, Display, TEXT("Bow: taken from the back at %.2f s, let go there at %.2f s"), Grab, Letgo);
+		}
+
+		// The category: in the left fist, the locomotion and hold above, the nock and draw (the bow ability plays the
+		// reload montage for it), the release, the hits, the fist's grip.
+		FVaesenCategoryDefaults& Bow = Defaults->Categories.FindOrAdd(EVaesenWeaponCategory::Bow);
+		Bow.AnimLayer = Graph;
+		Bow.bHeldInLeftHand = true;
+		if (HoldSource)
+		{
+			Bow.InHand = InFist;
+		}
+		// The fist round the bow: a pose with none of the bow's curves (the grip's layer would put its own over the
+		// animation's, hiding the arrow and slackening the string).
+		const FString GripPath = Folder / TEXT("AS_Bow_GripPose");
+		UAnimSequence* Grip = LoadAt<UAnimSequence>(GripPath);
+		if (!Grip)
+		{
+			if (UAnimSequence* Source = BowSource(TEXT("Hit"), TEXT("Hit_F_Root")))
+			{
+				Grip = DuplicateObject<UAnimSequence>(Source, CreatePackage(*GripPath), FName(TEXT("AS_Bow_GripPose")));
+				Grip->SetFlags(RF_Public | RF_Standalone);
+				FAssetRegistryModule::AssetCreated(Grip);
+				Grip->ReplaceSkeleton(Skeleton);
+				Grip->bEnableRootMotion = false;
+				Grip->bForceRootLock = true;
+				Grip->PostEditChange();
+				Save(Grip);
+			}
+		}
+		Bow.GripPose = Grip;
+		Bow.Montages.Reload = Draw;
+		Bow.Montages.ReloadEmpty = Draw;
+		Bow.Montages.Fire = Release;
+		Bow.Montages.FireAimed = Release;
+		if (Hits.Num() > 0)
+		{
+			Bow.Montages.HitReactions = Hits;
+			Bow.Montages.HitReactionBehind = HitBehind;
+		}
+		Save(Defaults);
+
+		// The hunting bow: the pack's bow and arrow, carried on the back where the pack carries it, taken and put back with
+		// the pack's motions; the arrow leaves from the rest above the grip, toward the belly (-Z).
+		const FString PackMeshes = FString(BowPackFolder) / TEXT("Weapon/Mesh/Bow");
+		const FString OurMeshes = TEXT("/Game/Vaesen/ThirdParty/GhostSamurai_Bundle/GhostSamurai_Bundle_UE5/Weapon/Mesh/Bow");
+		UStaticMesh* BowMesh = LoadAt<UStaticMesh>(OurMeshes / TEXT("SM_Bow_01"));
+		BowMesh = BowMesh ? BowMesh : LoadAt<UStaticMesh>(PackMeshes / TEXT("SM_Bow_01"));
+		UStaticMesh* ArrowMesh = LoadAt<UStaticMesh>(OurMeshes / TEXT("SM_Arrow_01"));
+		ArrowMesh = ArrowMesh ? ArrowMesh : LoadAt<UStaticMesh>(PackMeshes / TEXT("SM_Arrow_01"));
+		USkeletalMesh* StringBow = LoadAt<USkeletalMesh>(OurMeshes / TEXT("SK_Bow_01"));
+		StringBow = StringBow ? StringBow : LoadAt<USkeletalMesh>(PackMeshes / TEXT("SK_Bow_01"));
+		// The string bow is skinned to the pack's demo mannequin (its skeleton, physics and post-process): a skeleton of
+		// its own instead (its bones, from the mesh), so it doesn't bring the whole demo character with it.
+		if (StringBow && StringBow->GetPathName().StartsWith(TEXT("/Game/Vaesen/")) && StringBow->GetSkeleton()
+			&& !StringBow->GetSkeleton()->GetPathName().StartsWith(OurMeshes))
+		{
+			USkeleton* Own = NewAsset<USkeleton>(OurMeshes / TEXT("SKEL_Bow_01"));
+			Own->MergeAllBonesToBoneTree(StringBow);
+			StringBow->SetSkeleton(Own);
+			StringBow->SetPhysicsAsset(nullptr);
+			StringBow->SetPostProcessAnimBlueprint(nullptr);
+			StringBow->SetShadowPhysicsAsset(nullptr);
+			StringBow->PostEditChange();
+			Save(Own);
+			Save(StringBow);
+			UE_LOG(LogVaesenAnimSetup, Display, TEXT("The string bow on its own skeleton (%d bones)"), Own->GetReferenceSkeleton().GetNum());
+		}
+		if (BowMesh)
+		{
+			SetMeshSocket(BowMesh, TEXT("Grip"), FTransform::Identity, false);
+			SetMeshSocket(BowMesh, TEXT("Muzzle"), FTransform(FRotator(-90.0, 0.0, 0.0), FVector(0.0, 4.0, -2.0)), false);
+		}
+		// Carried on the back, held still (it doesn't hang and swing); without the socket, on the upper back.
+		FVaesenSheathLocation& Back = Defaults->SheathLocations.FindOrAdd(TEXT("Sheath_BowBack"));
+		Back.FallbackBone = TEXT("spine_05");
+		Back.HangAngle = 0.0f;
+		Save(Defaults);
+		UBlueprint* Weapon = LoadAt<UBlueprint>(TEXT("/Game/Vaesen/Blueprints/Items/Weapons/BP_Weapon_HuntingBow"));
+		UVaesenRangedWeaponItem* Item = Weapon ? Cast<UVaesenRangedWeaponItem>(Weapon->GeneratedClass->GetDefaultObject()) : nullptr;
+		if (Item && BowMesh)
+		{
+			Item->WeaponMesh = BowMesh;
+			Item->PickupMesh = BowMesh;
+			Item->Hold.InHand = FTransform::Identity;
+			Item->SheathSocket = TEXT("Sheath_BowBack");
+			Item->SheathOffset = FTransform::Identity;
+			Item->DrawMontage = FromBack;
+			Item->SheathMontage = ToBack;
+			Item->NockedArrowMesh = ArrowMesh;
+			Item->StringBowMesh = StringBow;
+			FBlueprintEditorUtils::MarkBlueprintAsModified(Weapon);
+			FKismetEditorUtilities::CompileBlueprint(Weapon);
+			Save(Weapon);
+		}
+	}
 }
 
 UVaesenAnimSetupCommandlet::UVaesenAnimSetupCommandlet()
@@ -2794,6 +3528,17 @@ int32 UVaesenAnimSetupCommandlet::Main(const FString& Params)
 {
 	if (!VaesenAnimSetup::RetargetRiflePack())
 	{
+		return 0;
+	}
+	if (Params.Contains(TEXT("-analyzebow")))
+	{
+		VaesenAnimSetup::AnalyzeBow();
+		return 0;
+	}
+	FString AnalyzeFolderPath;
+	if (FParse::Value(*Params, TEXT("-analyzefolder="), AnalyzeFolderPath))
+	{
+		VaesenAnimSetup::AnalyzeFolder(AnalyzeFolderPath);
 		return 0;
 	}
 	if (Params.Contains(TEXT("-analyzepistolarm")))
@@ -2819,5 +3564,6 @@ int32 UVaesenAnimSetupCommandlet::Main(const FString& Params)
 	VaesenAnimSetup::BuildRifle();
 	VaesenAnimSetup::BuildSword();
 	VaesenAnimSetup::BuildPistol();
+	VaesenAnimSetup::BuildBow();
 	return 0;
 }

@@ -172,6 +172,12 @@ bool AVaesenWeaponActor::ResolveAttachment(bool bToHand, FName& OutSocket, FTran
 		OutSocket = WeaponItem->IsHeldInOffHand() ? Defaults->OffHandSocket : Defaults->MainHandSocket;
 		// The weapon's own fit, in the way its category is held (the animation pack's grip).
 		OutOffset = Hold.InHand * WeaponItem->GetCategoryDefaults().InHand;
+		// A bow is in the left fist: on the hand bone, as its animation pack holds it.
+		if (WeaponItem->GetCategoryDefaults().bHeldInLeftHand)
+		{
+			OutSocket = TEXT("hand_l");
+			return true;
+		}
 		// The right hand's weapon rides on the weapon bone (ik_hand_gun follows the palm; the anim holds it there while
 		// shouldered or working the bolt).
 		if (!WeaponItem->IsHeldInOffHand() && Body->DoesSocketExist(AVaesenWeaponActor::WeaponHeldSocket))
@@ -341,7 +347,7 @@ void AVaesenWeaponActor::EndHitWindow()
 
 void AVaesenWeaponActor::UpdateTickEnabled()
 {
-	SetActorTickEnabled(bHitWindowOpen || (bHangs && !bInHand));
+	SetActorTickEnabled(bHitWindowOpen || (bHangs && !bInHand) || WantsTick());
 }
 
 void AVaesenWeaponActor::Tick(float DeltaSeconds)

@@ -8,6 +8,8 @@
 #include "Characters/VaesenPlayerCharacter.h"
 #include "Combat/VaesenCombatLibrary.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Components/PoseableMeshComponent.h"
+#include "AnimationRuntime.h"
 #include "DrawDebugHelpers.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
@@ -59,6 +61,107 @@ namespace VaesenRanged
 
 AVaesenRangedWeaponActor::AVaesenRangedWeaponActor()
 {
+	NockedArrow = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("NockedArrow"));
+	NockedArrow->SetupAttachment(GetRootComponent());
+	NockedArrow->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	NockedArrow->SetGenerateOverlapEvents(false);
+	NockedArrow->SetHiddenInGame(true);
+
+	StringBow = CreateDefaultSubobject<UPoseableMeshComponent>(TEXT("StringBow"));
+	StringBow->SetupAttachment(GetRootComponent());
+	StringBow->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	StringBow->SetGenerateOverlapEvents(false);
+	StringBow->SetVisibility(false);
+}
+
+void AVaesenRangedWeaponActor::ApplyWeaponMesh()
+{
+	Super::ApplyWeaponMesh();
+	// A bow whose string draws: shown in place of the mesh (which stays, hidden, for its sockets), its bow bone at the
+	// grip (the actor's origin).
+	const UVaesenRangedWeaponItem* Item = GetRangedItem();
+	USkeletalMesh* Bow = Item ? Item->StringBowMesh.Get() : nullptr;
+	const int32 BowBone = Bow ? Bow->GetRefSkeleton().FindBoneIndex(TEXT("bow")) : INDEX_NONE;
+	const int32 StringBone = Bow ? Bow->GetRefSkeleton().FindBoneIndex(TEXT("String")) : INDEX_NONE;
+	if (BowBone == INDEX_NONE || StringBone == INDEX_NONE)
+	{
+		StringBow->SetSkinnedAssetAndUpdate(nullptr);
+		StringBow->SetVisibility(false);
+		return;
+	}
+	BowBoneRef = FAnimationRuntime::GetComponentSpaceTransformRefPose(Bow->GetRefSkeleton(), BowBone);
+	StringRest = FAnimationRuntime::GetComponentSpaceTransformRefPose(Bow->GetRefSkeleton(), StringBone).GetLocation();
+	StringBow->SetSkinnedAssetAndUpdate(Bow);
+	StringBow->SetRelativeTransform(BowBoneRef.Inverse());
+	StringBow->SetVisibility(true);
+	if (UMeshComponent* Mesh = GetWeaponMesh())
+	{
+		Mesh->SetVisibility(false);
+	}
+	UpdateString(false);
+}
+
+void AVaesenRangedWeaponActor::UpdateString(bool bInHandNow)
+{
+	if (!StringBow->GetSkinnedAsset())
+	{
+		return;
+	}
+	// The pull, in the bow bone's space (zero at rest, and wherever the animation has no BowString curves).
+	FVector Pull = FVector::ZeroVector;
+	const AVaesenBaseCharacter* Character = GetOwningCharacter();
+	const UAnimInstance* Anim = bInHandNow && Character ? Character->GetMesh()->GetAnimInstance() : nullptr;
+	if (Anim)
+	{
+		Pull = FVector(Anim->GetCurveValue(UVaesenAnimInstance::BowStringCurves[0]), Anim->GetCurveValue(UVaesenAnimInstance::BowStringCurves[1]),
+			Anim->GetCurveValue(UVaesenAnimInstance::BowStringCurves[2]));
+	}
+	StringBow->SetBoneLocationByName(TEXT("String"), StringRest + BowBoneRef.TransformVectorNoScale(Pull), EBoneSpaces::ComponentSpace);
+}
+
+bool AVaesenRangedWeaponActor::WantsTick() const
+{
+	// A bow in the hand: its arrow follows the drawing hand (not on a dedicated server: it's only seen); and until a
+	// shown arrow is hidden again.
+	const UVaesenRangedWeaponItem* Item = GetRangedItem();
+	return Super::WantsTick() || (IsInHand() && Item && (Item->NockedArrowMesh || Item->StringBowMesh) && GetNetMode() != NM_DedicatedServer)
+		|| (NockedArrow && !NockedArrow->bHiddenInGame);
+}
+
+void AVaesenRangedWeaponActor::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+	UpdateNockedArrow();
+	UpdateString(IsInHand());
+}
+
+void AVaesenRangedWeaponActor::UpdateNockedArrow()
+{
+	const UVaesenRangedWeaponItem* Item = GetRangedItem();
+	const AVaesenBaseCharacter* Character = GetOwningCharacter();
+	USkeletalMeshComponent* Body = Character ? Character->GetMesh() : nullptr;
+	const UAnimInstance* Anim = Body ? Body->GetAnimInstance() : nullptr;
+	const bool bShown = IsInHand() && Item && Item->NockedArrowMesh && Anim && Anim->GetCurveValue(UVaesenAnimInstance::BowArrowCurve) > 0.5f;
+	if (!bShown)
+	{
+		NockedArrow->SetHiddenInGame(true);
+		return;
+	}
+	if (NockedArrow->GetStaticMesh() != Item->NockedArrowMesh)
+	{
+		NockedArrow->SetStaticMesh(Item->NockedArrowMesh);
+	}
+	if (NockedArrow->GetAttachParent() != Body || NockedArrow->GetAttachSocketName() != TEXT("hand_r"))
+	{
+		NockedArrow->AttachToComponent(Body, FAttachmentTransformRules::SnapToTargetNotIncludingScale, TEXT("hand_r"));
+	}
+	float Values[6];
+	for (int32 Index = 0; Index < 6; ++Index)
+	{
+		Values[Index] = Anim->GetCurveValue(UVaesenAnimInstance::BowArrowTransformCurves[Index]);
+	}
+	NockedArrow->SetRelativeLocationAndRotation(FVector(Values[0], Values[1], Values[2]), FRotator(Values[3], Values[4], Values[5]));
+	NockedArrow->SetHiddenInGame(false);
 }
 
 void AVaesenRangedWeaponActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

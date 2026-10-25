@@ -85,6 +85,13 @@ public:
 	static const FName HandIKSheathCurve;
 	static const FName TriggerFingerCurve;
 
+	/** A bow's arrow in the drawing hand: shown while BowArrow is up, placed on hand_r by the six BowArrow curves (cm, degrees). */
+	static const FName BowArrowCurve;
+	static const FName BowArrowTransformCurves[6];
+
+	/** The bow's string pulled back: the String bone's move from where it rests, in the bow bone's space (cm). */
+	static const FName BowStringCurves[3];
+
 protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
 	bool bWeaponDrawn = false;

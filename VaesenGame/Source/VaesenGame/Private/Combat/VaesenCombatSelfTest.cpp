@@ -1169,12 +1169,48 @@ void UVaesenCombatSelfTest::BuildSteps()
 		Tap(Holster);
 		return 1.2f;
 	} });
+	Steps.Add({ FString(), [this, Equipment]()
+	{
+		// Taken from the back into the left fist (the bow is on hand_l, not the right hand's weapon bone).
+		Shot(TEXT("15_BowInHand"), nullptr, 0.0f, true);
+		const UVaesenWeaponItem* Bow = Equipment->GetDrawnWeapon();
+		const AVaesenWeaponActor* Actor = Bow ? Bow->GetWeaponActor() : nullptr;
+		Check(Actor && Actor->IsInHand() && Actor->GetAttachParentSocketName() == TEXT("hand_l"),
+			FString::Printf(TEXT("the bow is drawn into the left fist (on %s)"), Actor ? *Actor->GetAttachParentSocketName().ToString() : TEXT("-")));
+		return 0.1f;
+	} });
 	Steps.Add({ FString(), [this, ASC, Attack]()
 	{
 		Press(Attack);
 		Check(ASC->HasMatchingGameplayTag(VaesenTags::State_DrawingBow), TEXT("left mouse nocks and draws"));
-		return 1.6f;
+		return 0.6f;
 	} });
+	Steps.Add({ FString(), [this]()
+	{
+		Shot(TEXT("15b_BowNocking"), nullptr, 0.0f, true);
+		return 1.0f;
+	} });
+	Steps.Add({ FString(), [this, Equipment]()
+	{
+		// At full draw: slow, no jumping, the arrow on the string in the drawing hand.
+		Shot(TEXT("15c_BowDrawn"), nullptr, 0.0f, true);
+		const float Speed = Fighter->GetCharacterMovement()->MaxWalkSpeed;
+		Check(!Fighter->CanJump() && Speed < 200.0f, FString::Printf(TEXT("nocked: can't jump, walks slowly (%.0f cm/s)"), Speed));
+		const AVaesenRangedWeaponActor* Bow = Cast<AVaesenRangedWeaponActor>(Equipment->GetDrawnWeapon() ? Equipment->GetDrawnWeapon()->GetWeaponActor() : nullptr);
+		const UStaticMeshComponent* Nocked = Bow ? Bow->FindComponentByClass<UStaticMeshComponent>() : nullptr;
+		for (UActorComponent* Component : Bow ? Bow->GetComponents().Array() : TArray<UActorComponent*>())
+		{
+			if (Component->GetFName() == TEXT("NockedArrow"))
+			{
+				Nocked = Cast<UStaticMeshComponent>(Component);
+			}
+		}
+		const float FromHand = Nocked ? FVector::Dist(Nocked->GetComponentLocation(), Fighter->GetMesh()->GetSocketLocation(TEXT("hand_r"))) : -1.0f;
+		Check(Nocked && !Nocked->bHiddenInGame && FromHand < 20.0f,
+			FString::Printf(TEXT("the arrow is on the string, in the drawing hand (%.0f cm from it)"), FromHand));
+		return 0.1f;
+	} });
+	Steps.Add({ FString(), [this]() { Shot(TEXT("15d_BowDrawnSide")); return 0.1f; } });
 	Steps.Add({ FString(), [this, Attack]()
 	{
 		Release(Attack);
@@ -1198,7 +1234,7 @@ void UVaesenCombatSelfTest::BuildSteps()
 	{
 		Shot(TEXT("14_BowGuard"), nullptr, 0.0f, true);
 		const AVaesenWeaponActor* Bow = Equipment->GetDrawnWeapon() ? Equipment->GetDrawnWeapon()->GetWeaponActor() : nullptr;
-		const float Across = Bow ? FVector::DotProduct(Bow->GetActorUpVector(), -Fighter->GetActorRightVector()) : 0.0f;
+		const float Across = Bow ? FVector::DotProduct(Bow->GetActorRightVector(), -Fighter->GetActorRightVector()) : 0.0f;
 		Check(Across > 0.6f, FString::Printf(TEXT("the bow held across the chest (limbs %.2f to his left)"), Across));
 		Release(RangedGuard);
 		Equipment->RequestSheathe();

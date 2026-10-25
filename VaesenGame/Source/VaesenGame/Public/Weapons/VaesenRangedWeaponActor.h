@@ -6,6 +6,7 @@
 
 class UAnimMontage;
 class UVaesenRangedWeaponItem;
+class UPoseableMeshComponent;
 
 /** Why a shot didn't happen. */
 UENUM(BlueprintType)
@@ -115,6 +116,19 @@ protected:
 	UFUNCTION(BlueprintImplementableEvent, Category = "Weapon")
 	void OnDrawAlphaChanged(float Alpha);
 
+	virtual void Tick(float DeltaSeconds) override;
+	virtual bool WantsTick() const override;
+
+	/** A bow's arrow in the drawing hand (the item's NockedArrowMesh), shown and placed by the animation's BowArrow curves. Cosmetic. */
+	UPROPERTY(VisibleAnywhere, Category = "Weapon")
+	TObjectPtr<UStaticMeshComponent> NockedArrow;
+
+	/** A bow whose string draws (the item's StringBowMesh), its bow bone at the grip; String pulled by the BowString curves. */
+	UPROPERTY(VisibleAnywhere, Category = "Weapon")
+	TObjectPtr<UPoseableMeshComponent> StringBow;
+
+	virtual void ApplyWeaponMesh() override;
+
 private:
 	double LastDryFireTime = -100.0;
 	EVaesenFireBlock LastDryFireBlock = EVaesenFireBlock::None;
@@ -135,4 +149,14 @@ private:
 
 	/** When it last fired (server: for the fire interval; owner: for prediction). */
 	double LastFireTime = -1000.0;
+
+	/** The nocked arrow follows the drawing hand by the animation's curves (or hides). */
+	void UpdateNockedArrow();
+
+	/** The drawing bow's String: at rest, or pulled by the BowString curves (in the hand). */
+	void UpdateString(bool bInHandNow);
+
+	/** The string bow's bow bone and its String at rest (component space of the bow mesh, its reference pose). */
+	FTransform BowBoneRef;
+	FVector StringRest = FVector::ZeroVector;
 };

@@ -26,6 +26,9 @@ namespace
 
 const FName UVaesenAnimInstance::HandIKSheathCurve(TEXT("HandIK_Sheath"));
 const FName UVaesenAnimInstance::TriggerFingerCurve(TEXT("TriggerFinger"));
+const FName UVaesenAnimInstance::BowArrowCurve(TEXT("BowArrow"));
+const FName UVaesenAnimInstance::BowArrowTransformCurves[6] = { TEXT("BowArrowX"), TEXT("BowArrowY"), TEXT("BowArrowZ"), TEXT("BowArrowPitch"), TEXT("BowArrowYaw"), TEXT("BowArrowRoll") };
+const FName UVaesenAnimInstance::BowStringCurves[3] = { TEXT("BowStringX"), TEXT("BowStringY"), TEXT("BowStringZ") };
 const FName UVaesenAnimInstance::LeftHandGripSocket(TEXT("hand_l_weapon"));
 const FName UVaesenAnimInstance::ShoulderPocketSocket(TEXT("ShoulderPocket"));
 const FName UVaesenAnimInstance::EyeSocket(TEXT("Eye_R"));
@@ -155,8 +158,8 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	FVector LeftHandIKOnly;
 	const bool bLeftGrip = Held.IsValid() && Held.GetLocalSocketTransform(TEXT("LeftGrip"), LeftGrip);
 	const bool bLeftPlace = bLeftGrip || (Held.IsValid() && Held.GetLocalSocket(TEXT("LeftHandIK"), LeftHandIKOnly));
-	// A pistol takes the left hand too while aimed (a two-handed hold), where it has a LeftGrip.
-	const bool bLeftHolds = (bTwoHanded || (bOneHandedGun && bShoulderAim)) && bInHand && bHandsFree && bLeftPlace;
+	// A pistol takes the left hand too while aimed (a two-handed hold), where it has a LeftGrip. A bow is in the left hand.
+	const bool bLeftHolds = (bTwoHanded || (bOneHandedGun && bShoulderAim)) && bInHand && bHandsFree && bLeftPlace && !(Weapon && Weapon->IsHeldInLeftHand());
 	FTransform HandInWeapon;
 	if (bLeftHolds)
 	{
@@ -213,7 +216,7 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	FVaesenShoulderAimInput& In = ShoulderAimInput;
 	const USkeletalMeshSocket* PalmSocket = Body->GetSocketByName(UVaesenWeaponCategoryDefaults::Get()->MainHandSocket);
 	In.PalmOnHand = PalmSocket ? PalmSocket->GetSocketLocalTransform() : FTransform::Identity;
-	In.bHeld = bInHand && Held.IsValid() && Weapon && !Weapon->IsHeldInOffHand();
+	In.bHeld = bInHand && Held.IsValid() && Weapon && !Weapon->IsHeldInLeftHand();
 	In.GripOnWeaponBone = In.bHeld ? Held.Hold->InHand * Weapon->GetCategoryDefaults().InHand : FTransform::Identity;
 	In.bShoulder = bShoulderAim || (In.bShoulder && AimIKAlpha > 0.0f);
 	In.bLeftHand = bLeftHolds;
@@ -253,8 +256,10 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 
 	// The fingers closed round the grips, of each hand that holds the weapon.
 	GripPose = UVaesenWeaponCategoryDefaults::Get()->GetCategory(WeaponCategory).GripPose;
-	RightFingerGrip = GripPose && bInHand && bHandsFree && !bWorksBolt ? 1.0f : 0.0f;
-	LeftFingerGrip = GripPose && bLeftHolds ? 1.0f : 0.0f;
+	// A bow: the left fist round it, the right hand free (the drawing hand, its fingers as the animation has them).
+	const bool bLeftFist = bInHand && Weapon && Weapon->IsHeldInLeftHand();
+	RightFingerGrip = GripPose && bInHand && bHandsFree && !bWorksBolt && !bLeftFist ? 1.0f : 0.0f;
+	LeftFingerGrip = GripPose && (bLeftHolds || bLeftFist) ? 1.0f : 0.0f;
 	// (The Shoulder Aim node holds the left hand on the weapon.)
 	LeftHandIKAlpha = bLeftHolds ? 1.0f : 0.0f;
 	LeftHandRotationAlpha = bLeftGrip ? LeftHandIKAlpha : 0.0f;
@@ -263,29 +268,23 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 
 	// A guard held procedurally (bProceduralGuard: no guard animation, or one that turns side-on): the Shoulder Aim node
 	// holds the weapon in front of the chest (a long gun across it in both hands); a blow knocks it back.
-	const bool bGuard = bGuardUp && In.bHeld && bHandsFree && !bShoulderAim && Weapon && Weapon->GetCategoryDefaults().bProceduralGuard;
-	GuardAlpha = !In.bHeld ? 0.0f : Rig ? (bGuard ? 1.0f : 0.0f) : FMath::FInterpTo(GuardAlpha, bGuard ? 1.0f : 0.0f, DeltaSeconds, 10.0f);
+	const bool bGuard = bGuardUp && (In.bHeld || bLeftFist) && bHandsFree && !bShoulderAim && Weapon && Weapon->GetCategoryDefaults().bProceduralGuard;
+	GuardAlpha = !(In.bHeld || bLeftFist) ? 0.0f : Rig ? (bGuard ? 1.0f : 0.0f) : FMath::FInterpTo(GuardAlpha, bGuard ? 1.0f : 0.0f, DeltaSeconds, 10.0f);
 	In.GuardBlend = GuardAlpha;
-	// Manny faces +Y; his left is +X. A gun's barrel (X) goes across, its top away from him; a bow's limbs (Z) go
-	// across, its back (X, where the arrow goes) away from him, and the left hand takes the upper limb (not the string).
+	// Manny faces +Y; his left is +X. A gun's barrel (X) goes across, its top away from him. A bow (in the left fist; its
+	// limbs along Y, the string to +Z) goes across by its limbs, the string toward him, the right hand on the upper limb.
 	// A blade (or a club or an axe) held in one hand: raised in front of the right side of the chest, the blade (X)
 	// nearly upright (not across the face), the edge (Z) to the front; facing ahead, not turned side-on.
 	const FVector Across = FVector(0.85, 0.1, 0.5).GetSafeNormal();
-	const bool bBowGuard = WeaponCategory == EVaesenWeaponCategory::Bow;
 	const bool bBladeGuard = Weapon && !Weapon->IsRanged();
 	const FVector Ahead(0.0, 1.0, 0.0);
-	In.GuardRotation = (bBowGuard ? FRotationMatrix::MakeFromZX(Across, Ahead)
+	In.GuardRotation = (bLeftFist ? FRotationMatrix::MakeFromYZ(Across, -Ahead)
 		: FRotationMatrix::MakeFromXZ(bBladeGuard ? FVector(0.12, 0.3, 0.95).GetSafeNormal() : Across, Ahead)).ToQuat();
 	In.GuardFromChest = bBladeGuard && !bLeftHolds ? FVector(-16.0, 42.0, -26.0) : FVector(-2.0, 30.0, -10.0);
-	In.GuardMiddleInWeapon = bBowGuard ? FVector(0.0, 0.0, 16.0) : bLeftHolds ? LeftGrip.GetLocation() * 0.5 : bBladeGuard ? FVector::ZeroVector : FVector(20.0, 0.0, 0.0);
-	if (bBowGuard && GuardAlpha > 0.0f && In.bLeftHand)
-	{
-		// The left palm (hand_l_weapon: X along what it holds, Z to the top) round the upper limb, as round a rifle's fore-end.
-		const USkeletalMeshSocket* Palm = Body->GetSocketByName(LeftHandGripSocket);
-		const FTransform PalmOnLimb(FRotationMatrix::MakeFromXZ(FVector::UpVector, FVector::ForwardVector).ToQuat(), FVector(0.0, 0.0, 30.0));
-		In.LeftHandInWeapon = Palm ? Palm->GetSocketLocalTransform().Inverse() * PalmOnLimb : FTransform(FVector(0.0, 0.0, 30.0));
-		In.bLeftHandTurns = Palm != nullptr;
-	}
+	In.GuardMiddleInWeapon = bLeftFist ? FVector::ZeroVector : bLeftHolds ? LeftGrip.GetLocation() * 0.5 : bBladeGuard ? FVector::ZeroVector : FVector(20.0, 0.0, 0.0);
+	In.bLeftHeld = bLeftFist;
+	In.GripOnLeftHand = bLeftFist && Held.IsValid() ? Held.Hold->InHand * Weapon->GetCategoryDefaults().InHand : FTransform::Identity;
+	In.RightHandInWeapon = FTransform(FVector(0.0, 30.0, 2.0));
 	In.GuardKnock = KickAt(static_cast<float>(Now - GuardKnockTime), 0.3f);
 
 	// Drawing or sheathing: the hand reaches for the actual grip of the weapon in its sheath.
@@ -301,7 +300,7 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 			{
 				SheathTarget = Found;
 				SheathTargetInComponent = Found->GetSheathedTransform().GetRelativeTransform(Component);
-				bSheathIKLeftHand = Found->GetWeaponItem() && Found->GetWeaponItem()->IsHeldInOffHand();
+				bSheathIKLeftHand = Found->GetWeaponItem() && Found->GetWeaponItem()->IsHeldInLeftHand();
 			}
 		}
 		if (SheathTarget.IsValid())

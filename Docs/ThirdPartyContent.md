@@ -8,6 +8,7 @@ Asset packs from Fab are **not in git**. What the project uses of a pack is kept
 | --- | --- | --- | --- |
 | Food Pack 01 | `Content/ThirdParty/Food_Pack_01` | the challah mesh and its materials and textures (the rye bread) | add more food |
 | One Hand Sword Attacks And Finishers (RamsterZ) | `Content/1HM_Sword_Attacks_Finishers` | nothing (the sword animations are retargeted copies in `Vaesen/Animations/Sword`) | rerun the sword import (`-run=VaesenAnimSetup -rebuild`), self-test screenshots |
+| GhostSamurai Bundle (WeaponMaster Animset) | `Content/GhostSamurai_Bundle` | the bow, the string bow (on a skeleton of its own) and the arrow, with their materials (the bow animations are copies in `Vaesen/Animations/Bow`) | rerun the bow import (`-run=VaesenAnimSetup`) |
 | Pistol Locomotion Pack (MandB) | `Content/PistolLocomotionPack` | nothing (the pistol animations are copies in `Vaesen/Animations/Pistol`) | rerun the pistol import (`-run=VaesenAnimSetup`) |
 | Shooter Rifle Animations | `Content/RifleAnims` | the UE4 mannequin and rifle (the retargeting source), two fire animations | re-retarget the rifle animations |
 | Distance Gun Sounds: WeaponVerse1 | `Content/WeaponVerse1` | the waves, cues and attenuations the gun sounds play (rifles, revolver, rolling-block) | rebuild the gun sounds (`-run=VaesenSoundSetup -rebuild`) |
@@ -29,7 +30,7 @@ UnrealEditor-Cmd.exe VaesenGame.uproject -run=VaesenContentAudit -move -packs=<P
 UnrealEditor-Cmd.exe VaesenGame.uproject -run=VaesenContentAudit -fixrefs
 ```
 
-`-move` moves what's used (and what that needs inside the pack: materials, textures, waves) and points everything at the new places; one pack per run. `-fixrefs` re-saves anything of ours that still points at a moved asset's old place. Run the audit again afterwards: every ignored pack should show **used: 0**.
+`-move` moves what's used (and what that needs inside the pack: materials, textures, waves) and points everything at the new places; one pack per run. Watch for a skeletal mesh on the pack's own skeleton: it drags the whole demo character along (the bow did); give it a skeleton of its own first. `-moveback=<PackFolder>` returns whatever in `Vaesen/ThirdParty/<pack>` isn't used back into the pack (and clears the redirectors a move leaves). `-fixrefs` re-saves anything of ours that still points at a moved asset's old place. Run the audit again afterwards: every ignored pack should show **used: 0**.
 
 The setup tools look for a pack's assets in `Vaesen/ThirdParty` first, then in the pack.
 
