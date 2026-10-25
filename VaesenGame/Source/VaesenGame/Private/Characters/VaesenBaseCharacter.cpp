@@ -326,7 +326,9 @@ void AVaesenBaseCharacter::PlayHitReaction(const FVector& From)
 
 void AVaesenBaseCharacter::PlayBlockImpact()
 {
-	const UVaesenWeaponItem* Weapon = Equipment ? Equipment->GetDrawnWeapon() : nullptr;
+	// What took the blow: a shield in the off hand, else the weapon.
+	const UVaesenWeaponItem* Shield = Equipment ? Equipment->GetDrawnShield() : nullptr;
+	const UVaesenWeaponItem* Weapon = Shield && Shield->CanParry() ? Shield : Equipment ? Equipment->GetDrawnWeapon() : nullptr;
 	if (UAnimMontage* Impact = Weapon && GetNetMode() != NM_DedicatedServer ? PickOne(Weapon->GetCategoryDefaults().Montages.BlockImpacts) : nullptr)
 	{
 		PlayAnimMontage(Impact);

@@ -182,6 +182,9 @@ public:
 	/** How it blocks (melee weapons can override the category's). */
 	virtual const FVaesenBlockProfile& GetBlockProfile() const { return GetCategoryDefaults().BlockProfile; }
 
+	/** Can raise a guard and parry: its category can (not a gun or a bow) and has the guard animation for it. */
+	bool CanParry() const { return !IsRanged() && GetCategoryDefaults().bCanParry && GetMontage(&FVaesenWeaponMontages::Block) != nullptr; }
+
 	/** Its draw / sheath montage: its own, else the sheath location's (may be null). */
 	UAnimMontage* GetDrawMontage(bool bDraw) const;
 

@@ -164,10 +164,11 @@ const FVaesenBlockProfile* UVaesenCombatLibrary::FindBlockProfile(const AActor* 
 		return nullptr;
 	}
 
-	// A shield in the off hand blocks with its own profile; otherwise the weapon in the hand. Broken things don't block.
+	// A shield in the off hand blocks with its own profile (once it has a guard to raise); otherwise the weapon in the
+	// hand. Broken things don't block.
 	if (UVaesenMeleeWeaponItem* Shield = Equipment->GetDrawnShield())
 	{
-		if (!Shield->IsBroken())
+		if (!Shield->IsBroken() && Shield->CanParry())
 		{
 			OutBlockingItem = Shield;
 			return &Shield->GetBlockProfile();

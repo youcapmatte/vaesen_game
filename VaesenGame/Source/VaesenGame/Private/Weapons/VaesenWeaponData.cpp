@@ -106,6 +106,12 @@ void UVaesenWeaponCategoryDefaults::SetBuiltInDefaults()
 	Add(EVaesenWeaponCategory::Rifle, MakeAttack(Blunt, 8, 110, 10, 0.8f, 0.30f, 0.50f), nullptr, MakeBlock(0.3f, 0.2f, 0.3f, 0.1f));
 	Add(EVaesenWeaponCategory::Bow, MakeAttack(Blunt, 3, 90, 6, 0.6f, 0.20f, 0.35f), nullptr, MakeBlock(0.1f, 0.1f, 0.1f, 0.0f));
 	Add(EVaesenWeaponCategory::Crossbow, MakeAttack(Blunt, 6, 100, 8, 0.7f, 0.25f, 0.45f), nullptr, MakeBlock(0.2f, 0.2f, 0.2f, 0.05f));
+	// Guns and bows don't parry (right mouse aims them); the rest do, once they have the guard animation.
+	for (const EVaesenWeaponCategory Ranged : { EVaesenWeaponCategory::Pistol, EVaesenWeaponCategory::Revolver, EVaesenWeaponCategory::Rifle,
+		EVaesenWeaponCategory::Bow, EVaesenWeaponCategory::Crossbow })
+	{
+		Categories.FindOrAdd(Ranged).bCanParry = false;
+	}
 
 	// Heavy blunt blows and shield bashes push (cm/s).
 	SetKnockback(EVaesenWeaponCategory::Unarmed, 0.0f, 150.0f);

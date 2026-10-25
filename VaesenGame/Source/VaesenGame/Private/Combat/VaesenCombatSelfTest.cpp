@@ -755,9 +755,22 @@ void UVaesenCombatSelfTest::BuildSteps()
 		Tap(Attack);
 		return 1.0f;
 	} });
-	Steps.Add({ FString(), [this]()
+	Steps.Add({ FString(), [this, ASC, AimOrBlock]()
 	{
 		Check(DummyDamage(Target) > 0.0f, FString::Printf(TEXT("punch landed (%.0f)"), DummyDamage(Target)));
+		// Parrying needs a weapon that can and the guard animation for it: the sword has one; bare hands, the dagger
+		// (no guard yet) and guns don't.
+		Press(AimOrBlock);
+		Check(!ASC->HasMatchingGameplayTag(VaesenTags::State_Blocking), TEXT("bare hands: no guard to raise yet, right mouse doesn't block"));
+		Release(AimOrBlock);
+		const auto CanParry = [this](const TCHAR* Weapon)
+		{
+			UClass* Class = LoadTestClass(*Path(Weapons, Weapon));
+			const UVaesenWeaponItem* Item = Class ? Cast<UVaesenWeaponItem>(Class->GetDefaultObject()) : nullptr;
+			return Item && Item->CanParry();
+		};
+		Check(CanParry(TEXT("BP_Weapon_OldSword")) && !CanParry(TEXT("BP_Weapon_Dagger")) && !CanParry(TEXT("BP_Weapon_Revolver")) && !CanParry(TEXT("BP_Weapon_KragRifle")),
+			TEXT("parries with: the sword; not the dagger (no guard animation yet), the revolver or the rifle"));
 		return 0.1f;
 	} });
 	Steps.Add({ TEXT("Sword"), [this, Tap, Holster]()
@@ -961,6 +974,10 @@ void UVaesenCombatSelfTest::BuildSteps()
 		const float Taken = Before - ASC->GetNumericAttribute(UVaesenAttributeSet::GetHealthAttribute());
 		Check(Taken > 0.0f && Taken < 10.0f, FString::Printf(TEXT("later, a block reduces it (took %.1f of 10)"), Taken));
 		Check(Sword && Sword->GetDurability() < DurabilityBefore, TEXT("blocking wore the sword"));
+		const UAnimInstance* Anim = Fighter->GetMesh()->GetAnimInstance();
+		const UAnimMontage* Playing = Anim ? Anim->GetCurrentActiveMontage() : nullptr;
+		Check(Sword && Playing && Sword->GetCategoryDefaults().Montages.BlockImpacts.Contains(Playing),
+			FString::Printf(TEXT("the blow taken on the guard: the sword recoils (%s)"), *GetNameSafe(Playing)));
 		Release(AimOrBlock);
 		Equipment->RequestSheathe();
 		return 2.0f;

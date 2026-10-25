@@ -310,7 +310,17 @@ bool UVaesenGA_Block::CanActivateAbility(const FGameplayAbilitySpecHandle Handle
 		return false;
 	}
 	UVaesenWeaponItem* BlockingItem = nullptr;
-	return UVaesenCombatLibrary::FindBlockProfile(ActorInfo->AvatarActor.Get(), false, BlockingItem) != nullptr;
+	if (!UVaesenCombatLibrary::FindBlockProfile(ActorInfo->AvatarActor.Get(), false, BlockingItem))
+	{
+		return false;
+	}
+	// Only what can parry and has the guard animation for it; bare hands likewise (the arms, once there's a guard for them).
+	if (BlockingItem)
+	{
+		return BlockingItem->CanParry();
+	}
+	const FVaesenCategoryDefaults& Unarmed = UVaesenWeaponCategoryDefaults::Get()->GetCategory(EVaesenWeaponCategory::Unarmed);
+	return Unarmed.bCanParry && Unarmed.Montages.Block != nullptr;
 }
 
 void UVaesenGA_Block::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)

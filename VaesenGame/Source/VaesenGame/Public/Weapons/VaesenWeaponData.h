@@ -212,7 +212,14 @@ struct FVaesenCategoryDefaults
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Category", meta = (EditCondition = "bHasHeavyAttack"))
 	FVaesenMeleeAttack HeavyAttack;
 
+	/**
+	 * Raises a guard and parries with these (right mouse, held). Off = can't (a pistol, a bow). It also needs the guard
+	 * animation (Montages.Block, with BlockImpacts for the hits taken on it): without one, no guard is raised.
+	 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Category")
+	bool bCanParry = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Category", meta = (EditCondition = "bCanParry"))
 	FVaesenBlockProfile BlockProfile;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Category")

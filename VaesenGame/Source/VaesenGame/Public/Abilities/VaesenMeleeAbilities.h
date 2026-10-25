@@ -85,7 +85,8 @@ public:
  * GA_Block (right mouse held, melee or bare hands): State.Blocking while held; hits from the front are reduced by the
  * block profile (a shield in the off hand, else the weapon), and the absorbed part wears it. The first moments after
  * pressing are the parry window (State.ParryWindow): a hit then is negated and the attacker staggered. Costs stamina
- * per second; slows movement (the character does that from the tag). Broken weapons can't block.
+ * per second; slows movement (the character does that from the tag). Broken weapons can't block, nor can what can't
+ * parry (guns, bows) or has no guard animation yet (UVaesenWeaponItem::CanParry).
  */
 UCLASS()
 class VAESENGAME_API UVaesenGA_Block : public UVaesenGameplayAbility
