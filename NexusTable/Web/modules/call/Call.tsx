@@ -108,6 +108,8 @@ export interface GamemasterState {
   participant?: RemoteParticipant;
   state?: string;
   latencyMs?: number;
+  /** It moves the world after a silence at the table. */
+  nudge: boolean;
   speaking: boolean;
 }
 
@@ -119,6 +121,7 @@ export function useGamemaster(): GamemasterState {
     participant: agent,
     state: attributes?.[GmProtocol.stateAttribute],
     latencyMs: attributes?.[GmProtocol.latencyAttribute] ? Number(attributes[GmProtocol.latencyAttribute]) : undefined,
+    nudge: attributes?.[GmProtocol.nudgeAttribute] === "on",
     speaking: agent?.isSpeaking ?? false,
   };
 }

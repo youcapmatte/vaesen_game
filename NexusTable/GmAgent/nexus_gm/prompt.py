@@ -72,6 +72,22 @@ says. Never resolve the case for them, and never tell them which ending is right
 keeping with the truth and never contradict it.
 - Pace. One thing at a time. End most replies on what they see or a question from someone in the scene, rather \
 than "what do you do?".
+
+How you bring the story forward, as a game master at a table does
+- Frame scenes. Open each on something happening (a door, a voice, the weather turning); end it once its point is \
+made, and cut to where the story is next ("By evening you are at the mill..."). Skip dead time: travel, waiting and \
+searching with nothing to find take one sentence.
+- Share the spotlight. Turn to an investigator who has been quiet, by name, with something only they would notice \
+or care about: their archetype, their motivation, their trauma, a relationship.
+- Never let a missed clue stop the story. When the investigators walk past a channel, or fail its test, the fact is \
+still there to be found another way: let another of its channels come to them, a person who knows it, a trace \
+somewhere else, an overheard remark. A failed roll means a cost or a delay, not a dead end.
+- When they stall, the world moves. Let the next escalation event or beat happen as the case file has it, or let \
+someone in the case act on their own wants: the hidden hand covers tracks, a frightened witness comes to them, the \
+creature leaves a sign. Raise the stakes before you hand them an answer.
+- Keep a sense of the whole. As the investigators learn the facts the levers need, tighten towards the climax: \
+fewer new threads, more consequences. Let their choices matter, and let the endings follow from what they did.
+- Lines starting with [Scribe] are your own notes on where the mystery stands. Use them; never read them out.
 """
 
 
@@ -98,6 +114,29 @@ def _character_summary(player: dict[str, Any]) -> str:
     if character.get("description"):
         lines.append(f"  How they come across: {character['description']}")
     return "\n".join(lines)
+
+
+MOVE_ON = (
+    "[Table] The host asks you to move the story on. Look at where things stand. If the investigators are stuck or "
+    "have missed a fact they need, bring them another way in to it: another of its channels in the case file, coming to "
+    "them. If not, let the next escalation event or beat happen as the case file has it, or frame the next scene where "
+    "the story is. Say it in a few spoken sentences, then turn to one investigator by name."
+)
+
+NUDGE = (
+    "[Table] The table has been quiet for a while. Without hurrying them, let the world move a little: someone in the "
+    "scene speaks or acts, a sound, a small sign of what is wrong. Or turn to a quiet investigator by name with "
+    "something they would notice. One or two sentences."
+)
+
+
+def scribe_line(state: dict[str, Any]) -> str:
+    """The scribe's notes as a line for the Gamemaster during the session: what has happened and what is open."""
+    found = ", ".join(f["factId"] for f in state.get("factsFound") or []) or "none"
+    beats = ", ".join(state.get("beatsFired") or []) or "none"
+    deeds = ", ".join(state.get("deedsDone") or []) or "none"
+    threads = "; ".join(state.get("openThreads") or []) or "none"
+    return f"[Scribe] Now: {state.get('scene') or 'scene not noted'}. Facts found: {found}. Beats and events so far: {beats}. Deeds done: {deeds}. Open threads: {threads}."
 
 
 def build_session_block(table: dict[str, Any]) -> str:

@@ -43,7 +43,16 @@ from livekit.plugins import deepgram, elevenlabs  # noqa: E402
 
 from nexus_gm import nexus_api  # noqa: E402
 from nexus_gm.claude import MODEL, GamemasterModel, Turn  # noqa: E402
-from nexus_gm.prompt import GM_RULES, build_session_block, build_table_brief, opening_instruction, speech_keyterms  # noqa: E402
+from nexus_gm.prompt import (  # noqa: E402
+    GM_RULES,
+    MOVE_ON,
+    NUDGE,
+    build_session_block,
+    build_table_brief,
+    opening_instruction,
+    scribe_line,
+    speech_keyterms,
+)
 from nexus_gm.scribe import Scribe  # noqa: E402
 from nexus_gm.speech import NARRATOR, SpeakerParser, find_tests, strip_tags  # noqa: E402
 
@@ -72,6 +81,9 @@ LOG_RETRY_S = 5.0
 LOG_RETRY_FOR_S = 15 * 60
 ATTR_STATE = "nexus.gm.state"  # listening | thinking | speaking | paused
 ATTR_LATENCY = "nexus.gm.latencyMs"  # release of the talk key -> first audio, last turn
+ATTR_NUDGE = "nexus.gm.nudge"  # "on" or "off": the Gamemaster moves the world after a silence
+# How long the table must be quiet before a nudge; off until the host turns it on.
+NUDGE_AFTER_S = float(os.getenv("NEXUS_NUDGE_AFTER", "180"))
 
 
 def _metadata(participant: rtc.RemoteParticipant | None) -> dict[str, Any]:
@@ -213,7 +225,8 @@ async def gamemaster(ctx: agents.JobContext) -> None:
     table = await nexus_api.get_table()
     model = GamemasterModel(GM_RULES, build_table_brief(table), build_session_block(table))
     played = table.get("session") if table.get("mystery") else None
-    scribe = Scribe(table["mystery"]["caseFile"], played, nexus_api.put_state) if played else None
+    notes_changed: list[dict[str, Any]] = []
+    scribe = Scribe(table["mystery"]["caseFile"], played, nexus_api.put_state, on_change=notes_changed.append) if played else None
 
     session = AgentSession(
         # Names of the characters help Deepgram hear them right.
@@ -232,6 +245,23 @@ async def gamemaster(ctx: agents.JobContext) -> None:
     state = {"paused": False, "released_at": None, "last_reply": ""}
     outbox: list[dict[str, Any]] = []
     sending: dict[str, asyncio.Task | None] = {"task": None}
+    quiet: dict[str, Any] = {"nudge": os.getenv("NEXUS_NUDGE", "off") == "on", "timer": None}
+
+    def hush() -> None:
+        """The table did something: the silence that a nudge waits for starts again once the Gamemaster has spoken."""
+        if quiet["timer"]:
+            quiet["timer"].cancel()
+            quiet["timer"] = None
+
+    def listen_for_silence() -> None:
+        hush()
+        if quiet["nudge"] and not state["paused"]:
+            async def wait() -> None:
+                await asyncio.sleep(NUDGE_AFTER_S)
+                quiet["timer"] = None
+                if quiet["nudge"] and not state["paused"]:
+                    session.generate_reply(user_input=NUDGE)
+            quiet["timer"] = asyncio.create_task(wait())
 
     def log(kind: str, speaker: str, text: str, account_id: str | None = None, line: str | None = None) -> None:
         """Into the session's log (in the background) and the scribe's next look."""
@@ -266,6 +296,13 @@ async def gamemaster(ctx: agents.JobContext) -> None:
         chat = gm.chat_ctx.copy()
         chat.add_message(role="user", content=text)
         await gm.update_chat_ctx(chat)
+
+    async def notes_in() -> None:
+        """The scribe's latest notes, once, as a [Scribe] line in the conversation."""
+        if notes_changed:
+            latest = notes_changed[-1]
+            notes_changed.clear()
+            await remember(scribe_line(latest))
 
     def spoken(participant: rtc.RemoteParticipant | None, text: str, mode: str) -> None:
         meta = _metadata(participant)
@@ -304,8 +341,10 @@ async def gamemaster(ctx: agents.JobContext) -> None:
             note = False
         # Paused, the Gamemaster still hears and records what is said to it; it only does not answer.
         mode = TURN_NOTE if note else TURN_PAUSED if state["paused"] else TURN_SPEAK
+        hush()
         if mode == TURN_SPEAK:
             session.interrupt()
+            await notes_in()
         session.clear_user_turn()
         gm.turn_mode = mode
         gm.turn_started = time.perf_counter()
@@ -352,6 +391,14 @@ async def gamemaster(ctx: agents.JobContext) -> None:
             session.say(state["last_reply"])
         elif action == "recap":
             session.generate_reply(user_input="[Table] Give the table a short spoken recap of the story so far, then ask what they do.")
+        elif action == "move_on":
+            hush()
+            await notes_in()
+            session.generate_reply(user_input=MOVE_ON)
+        elif action in ("nudge_on", "nudge_off"):
+            quiet["nudge"] = action == "nudge_on"
+            await local.set_attributes({ATTR_NUDGE: "on" if quiet["nudge"] else "off"})
+            listen_for_silence() if quiet["nudge"] else hush()
         elif action == "end_session":
             # The play state is brought up to date before the host ends the session, so the next one resumes from here.
             session.say("And there we leave it for tonight.")
@@ -385,8 +432,10 @@ async def gamemaster(ctx: agents.JobContext) -> None:
         line = nexus_api.describe_roll(roll)
         if scribe:
             scribe.add(line)
+        hush()
         await asyncio.sleep(DICE_TUMBLE_S + DICE_STAGGER_S * len(roll.get("dice") or []) + ROLL_PAUSE_S)
         if not state["paused"]:
+            await notes_in()
             session.generate_reply(user_input=line)
 
     async def take_note(event_id: str) -> None:
@@ -432,6 +481,11 @@ async def gamemaster(ctx: agents.JobContext) -> None:
             asyncio.create_task(local.set_attributes({ATTR_LATENCY: str(ms)}))
         if new_state in ("speaking", "thinking", "listening", "idle") and not state["paused"]:
             asyncio.create_task(set_state(new_state))
+        # The silence a nudge waits for starts when the Gamemaster has finished speaking.
+        if new_state == "speaking":
+            hush()
+        elif new_state in ("idle", "listening") and getattr(event, "old_state", None) == "speaking":
+            listen_for_silence()
 
     @session.on("conversation_item_added")
     def on_item(event) -> None:
@@ -448,6 +502,7 @@ async def gamemaster(ctx: agents.JobContext) -> None:
                 scribe.poke()
 
     log("gmJoined", "The Gamemaster", "The Gamemaster joined the table.")
+    await local.set_attributes({ATTR_NUDGE: "on" if quiet["nudge"] else "off"})
     await set_state("idle")
     session.generate_reply(user_input=opening_instruction(table))
 

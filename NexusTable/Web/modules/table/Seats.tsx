@@ -2,7 +2,7 @@
 
 import { Avatar, Badge, Box, Button, Group, Menu, Stack, Text, Tooltip, UnstyledButton } from "@mantine/core";
 import { VideoTrack } from "@livekit/components-react";
-import { IconMicrophone, IconMicrophoneOff, IconPlayerPause, IconPlayerPlay, IconRepeat, IconScript, IconVideoOff, IconWaveSine, IconX } from "@tabler/icons-react";
+import { IconArrowForwardUp, IconHourglass, IconMicrophone, IconMicrophoneOff, IconPlayerPause, IconPlayerPlay, IconRepeat, IconScript, IconVideoOff, IconWaveSine, IconX } from "@tabler/icons-react";
 import { useState } from "react";
 import { CallApi } from "@/common/api/call";
 import type { SocietyMember } from "@/common/api/society";
@@ -152,6 +152,12 @@ function GamemasterSeat({ isHost }: { isHost: boolean }) {
               )}
               <Menu.Item leftSection={<IconRepeat size={14} />} onClick={() => actions.control("repeat")}>Repeat the last reply</Menu.Item>
               <Menu.Item leftSection={<IconScript size={14} />} onClick={() => actions.control("recap")}>Recap the story</Menu.Item>
+              <Menu.Item leftSection={<IconArrowForwardUp size={14} />} onClick={() => actions.control("move_on")}>
+                Move the story on
+              </Menu.Item>
+              <Menu.Item leftSection={<IconHourglass size={14} />} onClick={() => actions.control(gm.nudge ? "nudge_off" : "nudge_on")}>
+                {gm.nudge ? "Stop nudging after a silence" : "Nudge the table after a silence"}
+              </Menu.Item>
               <Menu.Divider />
               <Menu.Item color="blood.4" leftSection={<IconX size={14} />} onClick={() => actions.control("leave")}>Send the Gamemaster away</Menu.Item>
             </Menu.Dropdown>

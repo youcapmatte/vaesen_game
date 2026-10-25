@@ -39,3 +39,21 @@ def test_thinking_is_turned_off_the_way_each_model_takes_it():
     assert thinking_off("claude-sonnet-5-5") == {"type": "between_tools"}
     assert thinking_off("claude-haiku-5-5") == {"type": "disabled"}
     assert thinking_off("claude-opus-5-5") is None
+
+
+def test_the_gamemaster_is_taught_to_move_the_story_as_at_a_table():
+    from nexus_gm.prompt import MOVE_ON, NUDGE, RUNNING_A_CASE
+
+    for rule in ("Frame scenes", "Share the spotlight", "Never let a missed clue stop the story", "When they stall, the world moves"):
+        assert rule in RUNNING_A_CASE
+    assert "another of its channels" in MOVE_ON
+    assert NUDGE.startswith("[Table]")
+
+
+def test_the_scribes_notes_reach_the_gamemaster_as_a_line_it_never_reads_out():
+    from nexus_gm.prompt import RUNNING_A_CASE, scribe_line
+
+    line = scribe_line({"scene": "the mill, night", "factsFound": [{"factId": "f1"}, {"factId": "f4"}], "beatsFired": ["e2"], "openThreads": ["the locked shed"]})
+
+    assert line == "[Scribe] Now: the mill, night. Facts found: f1, f4. Beats and events so far: e2. Deeds done: none. Open threads: the locked shed."
+    assert "[Scribe] are your own notes" in RUNNING_A_CASE

@@ -81,7 +81,13 @@ def merge_found(old: dict[str, Any], new: dict[str, Any]) -> dict[str, Any]:
 class Scribe:
     """Updates the play state after the table moves on; one update at a time, the latest lines always included."""
 
-    def __init__(self, case_file: str, session: dict[str, Any], save: Callable[[str, dict[str, Any]], Awaitable[None]]) -> None:
+    def __init__(
+        self,
+        case_file: str,
+        session: dict[str, Any],
+        save: Callable[[str, dict[str, Any]], Awaitable[None]],
+        on_change: Callable[[dict[str, Any]], None] | None = None,
+    ) -> None:
         self._client = anthropic.AsyncAnthropic()
         self._system = [
             {"type": "text", "text": INSTRUCTION},
@@ -92,6 +98,8 @@ class Scribe:
         self._state: dict[str, Any] = {k: (session.get("state") or {}).get(k, [] if k not in ("summary", "scene") else "") for k in STATE_KEYS}
         self._lines: list[str] = []
         self._save = save
+        # Told when what has happened (facts, beats, deeds, threads, the scene) changes: the Gamemaster's running notes.
+        self._on_change = on_change
         self._running: asyncio.Task | None = None
         self._again = False
 
@@ -148,7 +156,10 @@ class Scribe:
             self._lines = lines + self._lines
             return
 
+        changed = any(state.get(k) != self._state.get(k) for k in ("scene", "factsFound", "beatsFired", "deedsDone", "openThreads"))
         self._state = state
+        if changed and self._on_change:
+            self._on_change(state)
         try:
             await self._save(self._session_id, state)
         except Exception as error:  # noqa: BLE001 - the table goes on; the next update saves again

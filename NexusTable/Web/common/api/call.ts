@@ -31,7 +31,13 @@ export const GmProtocol = {
   noteTopic: "nexus.note",
   stateAttribute: "nexus.gm.state",
   latencyAttribute: "nexus.gm.latencyMs",
+  /** "on" when the Gamemaster moves the world after a silence. */
+  nudgeAttribute: "nexus.gm.nudge",
 } as const;
 
-/** end_session: the Gamemaster closes the evening and its scribe brings the play state up to date. */
-export type GmControl = "pause" | "resume" | "repeat" | "recap" | "end_session" | "leave";
+/**
+ * end_session: the Gamemaster closes the evening and its scribe brings the play state up to date. move_on: it frames
+ * the next scene, lets an event happen, or brings a missed clue another way. nudge_on/off: it moves the world after
+ * a silence at the table.
+ */
+export type GmControl = "pause" | "resume" | "repeat" | "recap" | "move_on" | "nudge_on" | "nudge_off" | "end_session" | "leave";
