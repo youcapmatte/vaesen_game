@@ -258,6 +258,28 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	RecoilKick = KickAt(static_cast<float>(Now - ShotTime), Held.Hold ? Held.Hold->RecoilRecovery : 0.35f);
 	ShoulderAimInput.Kick = RecoilKick;
 
+	// Guarding with a long gun (no guard animation for it): the Shoulder Aim node holds it across the chest in both
+	// hands, the muzzle up to the left, the top away from the body; a blow knocks it back.
+	const bool bGuard = bBlocking && In.bHeld && bHandsFree && !bShoulderAim && Weapon && Weapon->GetCategoryDefaults().bProceduralGuard;
+	GuardAlpha = !In.bHeld ? 0.0f : Rig ? (bGuard ? 1.0f : 0.0f) : FMath::FInterpTo(GuardAlpha, bGuard ? 1.0f : 0.0f, DeltaSeconds, 10.0f);
+	In.GuardBlend = GuardAlpha;
+	// Manny faces +Y; his left is +X. A gun's barrel (X) goes across, its top away from him; a bow's limbs (Z) go
+	// across, its back (X, where the arrow goes) away from him, and the left hand takes the upper limb (not the string).
+	const FVector Across = FVector(0.85, 0.1, 0.5).GetSafeNormal();
+	const bool bBowGuard = WeaponCategory == EVaesenWeaponCategory::Bow;
+	In.GuardRotation = (bBowGuard ? FRotationMatrix::MakeFromZX(Across, FVector(0.0, 1.0, 0.0)) : FRotationMatrix::MakeFromXZ(Across, FVector(0.0, 1.0, 0.0))).ToQuat();
+	In.GuardFromChest = FVector(-2.0, 30.0, -10.0);
+	In.GuardMiddleInWeapon = bBowGuard ? FVector(0.0, 0.0, 16.0) : bLeftHolds ? LeftGrip.GetLocation() * 0.5 : FVector(20.0, 0.0, 0.0);
+	if (bBowGuard && GuardAlpha > 0.0f && In.bLeftHand)
+	{
+		// The left palm (hand_l_weapon: X along what it holds, Z to the top) round the upper limb, as round a rifle's fore-end.
+		const USkeletalMeshSocket* Palm = Body->GetSocketByName(LeftHandGripSocket);
+		const FTransform PalmOnLimb(FRotationMatrix::MakeFromXZ(FVector::UpVector, FVector::ForwardVector).ToQuat(), FVector(0.0, 0.0, 30.0));
+		In.LeftHandInWeapon = Palm ? Palm->GetSocketLocalTransform().Inverse() * PalmOnLimb : FTransform(FVector(0.0, 0.0, 30.0));
+		In.bLeftHandTurns = Palm != nullptr;
+	}
+	In.GuardKnock = KickAt(static_cast<float>(Now - GuardKnockTime), 0.3f);
+
 	// Drawing or sheathing: the hand reaches for the actual grip of the weapon in its sheath.
 	SheathHandIKAlpha = FMath::Clamp(GetCurveValue(HandIKSheathCurve), 0.0f, 1.0f);
 	if (SheathHandIKAlpha > 0.0f && Equipment)
@@ -318,6 +340,11 @@ void UVaesenAnimInstance::PulseTriggerFinger()
 {
 	TriggerPulse = 1.0f;
 	ShotTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0;
+}
+
+void UVaesenAnimInstance::KnockGuard()
+{
+	GuardKnockTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0;
 }
 
 float UVaesenAnimInstance::KickAt(float SinceShot, float Recovery)

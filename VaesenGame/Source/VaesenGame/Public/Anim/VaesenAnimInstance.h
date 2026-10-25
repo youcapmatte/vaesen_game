@@ -53,6 +53,15 @@ public:
 	/** A shot: the trigger finger curls and lets go (and a shouldered weapon kicks). */
 	void PulseTriggerFinger();
 
+	/** A blow on a guard held by the Shoulder Aim node (a long gun or a bow across the chest): knocks it back. */
+	void KnockGuard();
+
+	/** Guarding with a weapon held across the chest by the Shoulder Aim node, 0..1. */
+	float GetGuardBlend() const { return GuardAlpha; }
+
+	/** A blow's knock on that guard, 1 easing to 0. */
+	float GetGuardKnock() const { return ShoulderAimInput.GuardKnock; }
+
 	/** The trigger pulled on an empty or unready gun: the finger only, no kick. */
 	void PulseDryTrigger() { TriggerPulse = 1.0f; }
 
@@ -207,6 +216,8 @@ private:
 
 	/** When the last shot was fired (world seconds; negative: none yet). */
 	double ShotTime = -100.0;
+	double GuardKnockTime = -100.0;
+	float GuardAlpha = 0.0f;
 
 	FVaesenShoulderAimInput ShoulderAimInput;
 

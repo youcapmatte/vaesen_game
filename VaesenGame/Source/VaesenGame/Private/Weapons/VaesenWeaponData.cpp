@@ -115,7 +115,10 @@ void UVaesenWeaponCategoryDefaults::SetBuiltInDefaults()
 	}
 	for (const EVaesenWeaponCategory Long : { EVaesenWeaponCategory::Rifle, EVaesenWeaponCategory::Bow, EVaesenWeaponCategory::Crossbow })
 	{
-		FVaesenBlockProfile& Block = Categories.FindOrAdd(Long).BlockProfile;
+		FVaesenCategoryDefaults& Entry = Categories.FindOrAdd(Long);
+		// No guard animation for them yet: held across the chest procedurally.
+		Entry.bProceduralGuard = true;
+		FVaesenBlockProfile& Block = Entry.BlockProfile;
 		Block.WearScale = 4.0f;
 		Block.ParryWearShare = 0.5f;
 	}

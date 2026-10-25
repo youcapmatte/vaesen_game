@@ -68,6 +68,17 @@ struct FVaesenShoulderAimInput
 
 	/** A shot's kick, 1 easing to 0. */
 	float Kick = 0.0f;
+
+	/**
+	 * Guarding with a long gun (no guard animation: held so here), 0..1: the weapon across the chest in both hands,
+	 * GuardRotation (component space), its middle (GuardMiddleInWeapon, between the hands) GuardFromChest from the chest
+	 * (spine_05). A blow on it (GuardKnock, 1 easing to 0) drives it back into the chest and rocks the upper body.
+	 */
+	float GuardBlend = 0.0f;
+	FQuat GuardRotation = FQuat::Identity;
+	FVector GuardFromChest = FVector(0.0, 30.0, -12.0);
+	FVector GuardMiddleInWeapon = FVector::ZeroVector;
+	float GuardKnock = 0.0f;
 };
 
 /**

@@ -238,6 +238,37 @@ void FAnimNode_VaesenShoulderAim::EvaluateSkeletalControl_AnyThread(FComponentSp
 		Weapon = Mix(InHand, Shouldered);
 	}
 
+	// Guarding: the weapon across the chest, both hands on it; a blow drives it back and rocks the upper body back.
+	const float Guard = Blend > 0.0f || Input.bCycling ? 0.0f : FMath::Clamp(Input.GuardBlend, 0.0f, 1.0f);
+	if (Guard > 0.0f)
+	{
+		const float Knock = FMath::Clamp(Input.GuardKnock, 0.0f, 1.0f);
+		// Manny faces +Y: turning about +X leans the chest back.
+		const FQuat Rock(FVector::XAxisVector, FMath::DegreesToRadians(14.0f * Knock * Guard));
+		const FVector Chest = SpinePose.GetLocation();
+		const FTransform NewSpine(Rock * SpinePose.GetRotation(), Chest, SpinePose.GetScale3D());
+		const FQuat Turned = Rock * FQuat(FVector::YAxisVector, FMath::DegreesToRadians(-20.0f * Knock)) * Input.GuardRotation;
+		const FVector Middle = Chest + Rock.RotateVector(Input.GuardFromChest + FVector(0.0, -16.0 * Knock, 6.0 * Knock));
+		const FTransform Guarded(Turned, Middle - Turned.RotateVector(Input.GuardMiddleInWeapon));
+		const auto Mix = [Guard](const FTransform& From, const FTransform& To)
+		{
+			FTransform Out;
+			Out.Blend(From, To, Guard);
+			return Out;
+		};
+		if (Knock > 0.0f)
+		{
+			Emit(Spine, Mix(SpinePose, NewSpine));
+			Emit(Neck, Mix(NeckPose, TurnAbout(NeckPose, Rock, Chest)));
+			Emit(ClavicleR, Mix(ClaviclePose, TurnAbout(ClaviclePose, Rock, Chest)));
+			Upper = Mix(Upper, TurnAbout(Upper, Rock, Chest));
+			Lower = Mix(Lower, TurnAbout(Lower, Rock, Chest));
+			UpperL = Mix(UpperL, TurnAbout(UpperL, Rock, Chest));
+			LowerL = Mix(LowerL, TurnAbout(LowerL, Rock, Chest));
+		}
+		Weapon = Mix(Weapon, Guarded);
+	}
+
 	// The weapon on its bone.
 	Emit(WeaponBone, Input.GripOnWeaponBone.Inverse() * Weapon);
 
@@ -250,11 +281,11 @@ void FAnimNode_VaesenShoulderAim::EvaluateSkeletalControl_AnyThread(FComponentSp
 		const FTransform PalmTarget(Palm.GetRotation(), BoltPalmLocation);
 		SolveArm(Upper, Lower, Hand, Input.PalmOnHand.Inverse() * PalmTarget * Weapon);
 	}
-	else if (Blend > 0.0f)
+	else if (Blend > 0.0f || Guard > 0.0f)
 	{
 		SolveArm(Upper, Lower, Hand, PalmOnWeapon * Weapon);
 	}
-	if (Blend > 0.0f || Input.bCycling)
+	if (Blend > 0.0f || Guard > 0.0f || Input.bCycling)
 	{
 		Emit(UpperArmR, Upper);
 		Emit(LowerArmR, Lower);

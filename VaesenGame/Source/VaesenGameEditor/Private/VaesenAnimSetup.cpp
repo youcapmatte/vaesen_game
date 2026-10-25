@@ -1374,6 +1374,7 @@ namespace VaesenAnimSetup
 				if (const FVaesenCategoryDefaults* Rules = BuiltIn->Categories.Find(Pair.Key))
 				{
 					Pair.Value.bCanParry = Rules->bCanParry;
+					Pair.Value.bProceduralGuard = Rules->bProceduralGuard;
 					Pair.Value.BlockProfile.WearScale = Rules->BlockProfile.WearScale;
 					Pair.Value.BlockProfile.ParryWearShare = Rules->BlockProfile.ParryWearShare;
 				}

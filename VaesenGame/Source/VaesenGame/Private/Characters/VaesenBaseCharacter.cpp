@@ -1,5 +1,7 @@
 #include "Characters/VaesenBaseCharacter.h"
 
+#include "Anim/VaesenAnimInstance.h"
+
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -329,6 +331,15 @@ void AVaesenBaseCharacter::PlayBlockImpact()
 	// What took the blow: a shield in the off hand, else the weapon.
 	const UVaesenWeaponItem* Shield = Equipment ? Equipment->GetDrawnShield() : nullptr;
 	const UVaesenWeaponItem* Weapon = Shield && Shield->CanParry() ? Shield : Equipment ? Equipment->GetDrawnWeapon() : nullptr;
+	// A guard held procedurally (a long gun or a bow across the chest) is knocked back by the anim instance.
+	if (Weapon && Weapon->GetCategoryDefaults().bProceduralGuard)
+	{
+		if (UVaesenAnimInstance* Anim = Cast<UVaesenAnimInstance>(GetMesh()->GetAnimInstance()))
+		{
+			Anim->KnockGuard();
+		}
+		return;
+	}
 	if (UAnimMontage* Impact = Weapon && GetNetMode() != NM_DedicatedServer ? PickOne(Weapon->GetCategoryDefaults().Montages.BlockImpacts) : nullptr)
 	{
 		PlayAnimMontage(Impact);

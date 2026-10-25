@@ -183,7 +183,11 @@ public:
 	virtual const FVaesenBlockProfile& GetBlockProfile() const { return GetCategoryDefaults().BlockProfile; }
 
 	/** Can raise a guard and parry: its category can (not a handgun) and has the guard animation for it. */
-	bool CanParry() const { return GetCategoryDefaults().bCanParry && GetMontage(&FVaesenWeaponMontages::Block) != nullptr; }
+	bool CanParry() const
+	{
+		const FVaesenCategoryDefaults& Defaults = GetCategoryDefaults();
+		return Defaults.bCanParry && (Defaults.bProceduralGuard || GetMontage(&FVaesenWeaponMontages::Block) != nullptr);
+	}
 
 	/** Its draw / sheath montage: its own, else the sheath location's (may be null). */
 	UAnimMontage* GetDrawMontage(bool bDraw) const;

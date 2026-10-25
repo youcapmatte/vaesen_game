@@ -219,6 +219,13 @@ struct FVaesenCategoryDefaults
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Category")
 	bool bCanParry = true;
 
+	/**
+	 * No guard animation: the guard is held procedurally (the Shoulder Aim node puts the weapon across the chest in both
+	 * hands; a blow knocks it back). Long guns and bows, until they have animations.
+	 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Category", meta = (EditCondition = "bCanParry"))
+	bool bProceduralGuard = false;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Category", meta = (EditCondition = "bCanParry"))
 	FVaesenBlockProfile BlockProfile;
 

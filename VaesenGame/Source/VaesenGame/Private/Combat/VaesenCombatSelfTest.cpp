@@ -636,15 +636,43 @@ void UVaesenCombatSelfTest::BuildSteps()
 		{
 			Say(TEXT("INFO  the Krag has no sound set yet (install WeaponVerse1, run -run=VaesenSoundSetup)"), FColor::Yellow);
 		}
-		// Ctrl + right mouse guards with the rifle (once it has a guard animation; it wears hard doing it), and doesn't aim.
+		// Ctrl + right mouse guards with the rifle (held across the chest), and doesn't aim. Facing the attacker.
+		Controller->SetControlRotation((Attacker->GetActorLocation() - Fighter->GetActorLocation()).Rotation());
 		Press(RangedGuard);
+		Check(!ASC->HasMatchingGameplayTag(VaesenTags::State_Aiming) && ASC->HasMatchingGameplayTag(VaesenTags::State_Blocking),
+			TEXT("Ctrl + right mouse: the rifle guards rather than aims"));
+		return 0.6f;
+	} });
+	Steps.Add({ FString(), [this, Equipment, ASC]()
+	{
+		Shot(TEXT("8a_RifleGuard"), nullptr, 0.0f, true);
+		const UVaesenAnimInstance* Anim = Cast<UVaesenAnimInstance>(Fighter->GetMesh()->GetAnimInstance());
+		// Across the chest: the barrel mostly level and to his left, both hands on it.
 		const UVaesenWeaponItem* Krag = Equipment->GetDrawnWeapon();
-		Check(!ASC->HasMatchingGameplayTag(VaesenTags::State_Aiming) && Krag && Krag->GetCategoryDefaults().bCanParry
-			&& ASC->HasMatchingGameplayTag(VaesenTags::State_Blocking) == Krag->CanParry(), FString::Printf(TEXT("Ctrl + right mouse: the rifle guards rather than aims (%s; aiming %d, can parry %d, guarding %d)"),
-			Krag && Krag->CanParry() ? TEXT("guarding") : TEXT("no guard animation for rifles yet"), ASC->HasMatchingGameplayTag(VaesenTags::State_Aiming) ? 1 : 0,
-			Krag && Krag->GetCategoryDefaults().bCanParry ? 1 : 0, ASC->HasMatchingGameplayTag(VaesenTags::State_Blocking) ? 1 : 0));
+		const AVaesenWeaponActor* Actor = Krag ? Krag->GetWeaponActor() : nullptr;
+		const FVector Barrel = Actor ? Actor->GetActorForwardVector() : FVector::ZeroVector;
+		const float Across = FVector::DotProduct(Barrel, -Fighter->GetActorRightVector());
+		Check(Anim && Anim->GetGuardBlend() > 0.9f && Across > 0.6f, FString::Printf(TEXT("the rifle held across the chest (guard %.2f, barrel %.2f to his left)"),
+			Anim ? Anim->GetGuardBlend() : 0.0f, Across));
+		// A blow on it (past the parry window: a block): it's knocked back, and it wears four times as hard as a blade.
+		const float DurabilityBefore = Krag ? Krag->GetDurability() : 0.0f;
+		const float HealthBefore = ASC->GetNumericAttribute(UVaesenAttributeSet::GetHealthAttribute());
+		FVaesenDamagePacket Swing;
+		Swing.Entries.Emplace(VaesenTags::Damage_Slashing, 10.0f);
+		UVaesenCombatLibrary::ApplyDamagePacket(Attacker, Fighter, Swing, FHitResult(), nullptr);
+		const float Absorbed = 10.0f - (HealthBefore - ASC->GetNumericAttribute(UVaesenAttributeSet::GetHealthAttribute()));
+		const float Worn = Krag ? DurabilityBefore - Krag->GetDurability() : 0.0f;
+		Check(Absorbed > 0.0f && FMath::IsNearlyEqual(Worn, Absorbed * 4.0f, 0.1f), FString::Printf(TEXT("a blow on the rifle's guard: blocked (%.1f of 10), worn four times that (%.1f)"), Absorbed, Worn));
+		return 0.08f;
+	} });
+	Steps.Add({ FString(), [this, AimOrBlock, RangedGuard, ASC]()
+	{
+		Shot(TEXT("8b_RifleGuardKnocked"), nullptr, 0.0f, true);
+		const UVaesenAnimInstance* Anim = Cast<UVaesenAnimInstance>(Fighter->GetMesh()->GetAnimInstance());
+		Check(Anim && Anim->GetGuardKnock() > 0.3f, FString::Printf(TEXT("the blow knocks the rifle back into the chest (knock %.2f)"), Anim ? Anim->GetGuardKnock() : 0.0f));
 		Release(RangedGuard);
 		// Aimed (hip fire spreads 5 degrees with a rifle and can miss at 4 m).
+		Controller->SetControlRotation(FRotator::ZeroRotator);
 		Press(AimOrBlock);
 		Check(ASC->HasMatchingGameplayTag(VaesenTags::State_Aiming), TEXT("right mouse aims the rifle"));
 		Check(!Fighter->CanJump(), TEXT("aiming the rifle: can't jump"));
@@ -778,8 +806,8 @@ void UVaesenCombatSelfTest::BuildSteps()
 			const UVaesenWeaponItem* Item = Class ? Cast<UVaesenWeaponItem>(Class->GetDefaultObject()) : nullptr;
 			return Item && Item->CanParry();
 		};
-		Check(CanParry(TEXT("BP_Weapon_OldSword")) && CanParry(TEXT("BP_Weapon_Dagger")) && CanParry(TEXT("BP_Weapon_HandAxe")) && CanParry(TEXT("BP_Weapon_Club")) && CanParry(TEXT("BP_Weapon_ChairLeg")) && !CanParry(TEXT("BP_Weapon_Revolver")) && !CanParry(TEXT("BP_Weapon_KragRifle")),
-			TEXT("parries with: the sword, dagger, hand axe, club and chair leg (the sword's guard); not the revolver (too small) or, yet, the rifle (no guard animation)"));
+		Check(CanParry(TEXT("BP_Weapon_OldSword")) && CanParry(TEXT("BP_Weapon_Dagger")) && CanParry(TEXT("BP_Weapon_HandAxe")) && CanParry(TEXT("BP_Weapon_Club")) && CanParry(TEXT("BP_Weapon_ChairLeg")) && !CanParry(TEXT("BP_Weapon_Revolver")) && CanParry(TEXT("BP_Weapon_KragRifle")),
+			TEXT("parries with: the sword, dagger, hand axe, club and chair leg (the sword's guard), the rifle (held across the chest); not the revolver (too small)"));
 		return 0.1f;
 	} });
 	Steps.Add({ TEXT("Sword"), [this, Tap, Holster]()
@@ -1148,6 +1176,23 @@ void UVaesenCombatSelfTest::BuildSteps()
 	Steps.Add({ FString(), [this, Arrow, Equipment]()
 	{
 		Check(DummyDamage(Target) > 0.0f, FString::Printf(TEXT("arrow at full draw hit (%.0f, ammo says %.0f)"), DummyDamage(Target), Arrow.GetTotal()));
+		return 0.5f;
+	} });
+	// The bow guards too (Ctrl + right mouse): across the chest, the limbs to his left, both hands on it.
+	Steps.Add({ FString(), [this, ASC, RangedGuard]()
+	{
+		Controller->SetControlRotation((Attacker->GetActorLocation() - Fighter->GetActorLocation()).Rotation());
+		Press(RangedGuard);
+		Check(ASC->HasMatchingGameplayTag(VaesenTags::State_Blocking), TEXT("Ctrl + right mouse: the bow guards"));
+		return 0.6f;
+	} });
+	Steps.Add({ FString(), [this, Equipment, RangedGuard]()
+	{
+		Shot(TEXT("14_BowGuard"), nullptr, 0.0f, true);
+		const AVaesenWeaponActor* Bow = Equipment->GetDrawnWeapon() ? Equipment->GetDrawnWeapon()->GetWeaponActor() : nullptr;
+		const float Across = Bow ? FVector::DotProduct(Bow->GetActorUpVector(), -Fighter->GetActorRightVector()) : 0.0f;
+		Check(Across > 0.6f, FString::Printf(TEXT("the bow held across the chest (limbs %.2f to his left)"), Across));
+		Release(RangedGuard);
 		Equipment->RequestSheathe();
 		return 1.0f;
 	} });
