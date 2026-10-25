@@ -5,7 +5,8 @@ import { IconArrowBackUp, IconDice5 } from "@tabler/icons-react";
 import { useMemo, useState } from "react";
 import type { Account } from "@/common/api/account";
 import type { Character } from "@/common/api/character";
-import { RollApi, type Roll, type RollOutcome } from "@/common/api/roll";
+import { RollApi, type Roll, type RollOutcome, sixesNeeded, succeeded } from "@/common/api/roll";
+import type { TestRequest } from "@/common/api/session";
 import type { VaesenRules } from "@/common/api/rules";
 import { Http, useApi } from "@/common/client/core/Api";
 import { ruleNames } from "@/common/client/components/hooks";
@@ -18,11 +19,14 @@ function rollTitle(rules: VaesenRules, roll: Roll) {
   return roll.skill ? names.skill(roll.skill) : `${names.attribute(roll.attribute)} test`;
 }
 
+/** Success or failure against the sixes the roll needed; with more than one needed, how many of them came. */
 function Outcome({ roll }: { roll: Roll }) {
-  return roll.successes > 0 ? (
-    <Badge color="moss.5" variant="filled">{roll.successes} success{roll.successes > 1 ? "es" : ""}</Badge>
+  const needed = sixesNeeded(roll);
+  const count = needed > 1 ? `${roll.successes} of ${needed} sixes` : `${roll.successes} six${roll.successes === 1 ? "" : "es"}`;
+  return succeeded(roll) ? (
+    <Badge color="moss.5" variant="filled">Success · {count}</Badge>
   ) : (
-    <Badge color="blood" variant="outline">Failure</Badge>
+    <Badge color="blood" variant="outline">Failure{needed > 1 || roll.successes > 0 ? ` · ${count}` : ""}</Badge>
   );
 }
 
@@ -117,7 +121,9 @@ export function RollOnStage({ roll, rules }: { roll: Roll; rules: VaesenRules })
   const size = dice.length > 10 ? 38 : 52;
   return (
     <Stack align="center" gap="md" maw={620} px="md">
-      <Text className="nx-kicker">{roll.characterName} · {rollTitle(rules, roll)}{roll.pushed ? " · pushed" : ""}</Text>
+      <Text className="nx-kicker">
+        {roll.characterName} · {rollTitle(rules, roll)} · {dice.length} dice{sixesNeeded(roll) > 1 ? ` · ${sixesNeeded(roll)} sixes needed` : ""}{roll.pushed ? " · pushed" : ""}
+      </Text>
       <Group gap={14} justify="center" wrap="wrap">
         {dice.map((d, i) => (
           <Die
@@ -138,6 +144,57 @@ export function RollOnStage({ roll, rules }: { roll: Roll; rules: VaesenRules })
   );
 }
 
+const testTitle = (rules: VaesenRules, test: TestRequest) => {
+  const names = ruleNames(rules);
+  return test.skill ? names.skill(test.skill) : `${names.attribute(test.attribute)} test`;
+};
+
+/**
+ * A test the Gamemaster asked for: what to roll, how hard, the sixes it needs and the dice the character has. The
+ * roller (or the host) throws it with one click; the roll takes its skill, difficulty and sixes from the test.
+ */
+export function TestCard({ test, rules, canRoll, onRolled }: {
+  test: TestRequest;
+  rules: VaesenRules;
+  canRoll: boolean;
+  onRolled: (outcome: RollOutcome) => void;
+}) {
+  const call = useApi();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string>();
+  const roll = async () => {
+    setBusy(true);
+    const result = await call<RollOutcome>(Http.POST, RollApi.rolls, { characterId: test.characterId, testId: test.id });
+    setBusy(false);
+    setError(result.success ? undefined : result.errorMessage);
+    if (result.success && result.result) onRolled(result.result);
+  };
+  return (
+    <Box className="nx-parchment" p="sm" style={{ borderLeft: "3px solid var(--nx-blood)" }}>
+      <Text fz={11} className="nx-kicker" c="var(--nx-blood)">The Gamemaster asks for a test</Text>
+      <Text fz="sm" c="var(--nx-ink)" lh={1.25}>
+        <Text span className="nx-display">{test.characterName}</Text>: {testTitle(rules, test)}
+        {test.difficulty !== 0 && <> {test.difficulty > 0 ? "+" : ""}{test.difficulty}</>}
+      </Text>
+      {test.reason && <Text fz="xs" c="var(--nx-ink-soft)" className="nx-flourish">{test.reason}</Text>}
+      <Group justify="space-between" mt={6} wrap="nowrap" align="center">
+        <Group gap={6} wrap="nowrap">
+          <Tooltip label={test.pool.map((p) => `${p.label} ${p.dice > 0 ? "+" : ""}${p.dice}`).join(" · ")}>
+            <Badge color="umber.6" variant="filled">{test.poolSize} dice</Badge>
+          </Tooltip>
+          <Badge color={test.successesNeeded > 1 ? "blood" : "umber.4"} variant="outline">
+            {test.successesNeeded} six{test.successesNeeded === 1 ? "" : "es"} needed
+          </Badge>
+        </Group>
+        {canRoll && (
+          <Button size="xs" color="blood" leftSection={<IconDice5 size={14} />} loading={busy} onClick={roll}>Roll it</Button>
+        )}
+      </Group>
+      <ErrorNote message={error} />
+    </Box>
+  );
+}
+
 /** Building and throwing a roll for one's own character (the host can roll for anyone). */
 export function RollForm({ rules, characters, defaultCharacterId, onRolled }: {
   rules: VaesenRules;
@@ -151,6 +208,7 @@ export function RollForm({ rules, characters, defaultCharacterId, onRolled }: {
   const [difficulty, setDifficulty] = useState("0");
   const [bonus, setBonus] = useState(0);
   const [useAdvantage, setUseAdvantage] = useState(false);
+  const [needed, setNeeded] = useState(1);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
@@ -186,12 +244,13 @@ export function RollForm({ rules, characters, defaultCharacterId, onRolled }: {
 
   const roll = async () => {
     setBusy(true);
-    const result = await call<RollOutcome>(Http.POST, RollApi.rolls, { characterId: character.id, ...choice, reason: reason || undefined });
+    const result = await call<RollOutcome>(Http.POST, RollApi.rolls, { characterId: character.id, ...choice, successesNeeded: needed, reason: reason || undefined });
     setBusy(false);
     setError(result.success ? undefined : result.errorMessage);
     if (result.success && result.result) {
       onRolled(result.result);
       setUseAdvantage(false);
+      setNeeded(1);
       setReason("");
     }
   };
@@ -222,6 +281,7 @@ export function RollForm({ rules, characters, defaultCharacterId, onRolled }: {
       </Group>
       <Group gap="xs" align="flex-end" wrap="nowrap">
         <NumberInput size="xs" label="Gear & help" value={bonus} min={-MAX_MODIFIER} max={MAX_MODIFIER} onChange={(v) => setBonus(Number(v) || 0)} w={100} />
+        <NumberInput size="xs" label="Sixes needed" value={needed} min={1} max={5} onChange={(v) => setNeeded(Math.min(5, Math.max(1, Number(v) || 1)))} w={100} />
         <Tooltip label={character.advantage ?? "Write an Advantage on your sheet first"} disabled={false}>
           <Switch
             size="sm"
@@ -236,7 +296,7 @@ export function RollForm({ rules, characters, defaultCharacterId, onRolled }: {
       <TextInput size="xs" placeholder="Why? e.g. searching the vicarage library" value={reason} onChange={(e) => setReason(e.currentTarget.value)} />
       <Group justify="space-between" wrap="nowrap" align="flex-end">
         <Text fz="xs" c="var(--nx-parchment-2)" style={{ flex: 1 }}>
-          {pool ? <>{pool.parts.map((p) => `${p.label} ${p.dice > 0 ? "+" : ""}${p.dice}`).join(" · ")} = <b>{pool.size} dice</b></> : "Choose a skill."}
+          {pool ? <>{pool.parts.map((p) => `${p.label} ${p.dice > 0 ? "+" : ""}${p.dice}`).join(" · ")} = <b>{pool.size} dice</b>{needed > 1 ? `, ${needed} sixes needed` : ""}</> : "Choose a skill."}
         </Text>
         <Button color="blood" leftSection={<IconDice5 size={18} />} disabled={!pool} loading={busy} onClick={roll} style={{ flex: "none" }}>
           Roll

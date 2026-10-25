@@ -18,6 +18,10 @@ export interface Roll extends BaseCore {
   dice: number[];
   pushedDice?: number[];
   successes: number;
+  /** Sixes needed to succeed, as the Gamemaster set it: usually one. */
+  successesNeeded?: number;
+  /** The Gamemaster's test this roll answers. */
+  testId?: string;
   pushed: boolean;
   pushCondition?: string;
   reason?: string;
@@ -31,7 +35,14 @@ export interface RollRequest {
   bonus: number;
   useAdvantage: boolean;
   reason?: string;
+  successesNeeded?: number;
+  testId?: string;
 }
+
+/** Sixes needed for a roll (old rolls have none: one). */
+export const sixesNeeded = (roll: Pick<Roll, "successesNeeded">) => Math.max(1, roll.successesNeeded ?? 1);
+
+export const succeeded = (roll: Pick<Roll, "successes" | "successesNeeded">) => roll.successes >= sixesNeeded(roll);
 
 export interface PushRollRequest {
   condition: string;

@@ -142,6 +142,17 @@ export function useGamemasterActions() {
     startTurn: () => rpc(GmProtocol.startTurn),
     endTurn: () => rpc(GmProtocol.endTurn),
     control: (action: GmControl) => rpc(GmProtocol.control, JSON.stringify({ action })),
+    /** Dictating a note: the Gamemaster hears it, logs it and takes it in, but does not answer. */
+    startNote: () => rpc(GmProtocol.startTurn, JSON.stringify({ mode: "note" })),
+    /** A typed note, already in the log: the agent reads it back by its id. */
+    sendNote: async (eventId: string) => {
+      if (!agent) return;
+      await room.localParticipant.publishData(new TextEncoder().encode(JSON.stringify({ eventId })), {
+        reliable: true,
+        topic: GmProtocol.noteTopic,
+        destinationIdentities: [agent.identity],
+      });
+    },
     /** The agent reads the roll back from the API itself, so only the id travels. */
     reportRoll: async (rollId: string) => {
       if (!agent) return;

@@ -19,6 +19,7 @@ import {
   type CoherenceIssue,
   type StoredCase,
 } from "@/common/api/mystery";
+import { type PlaySession, SessionApi } from "@/common/api/session";
 import { Http, useApi, useApiData } from "@/common/client/core/Api";
 import { useMe } from "@/common/client/components/hooks";
 import { Corners } from "@/common/client/components/Ornament";
@@ -135,6 +136,7 @@ function CaseFile({ stored, onChanged }: { stored: StoredCase; onChanged: (next:
           <Tabs.Tab value="clues">Clues · {p.facts.length}</Tabs.Tab>
           <Tabs.Tab value="people">People · {p.cast.length}</Tabs.Tab>
           <Tabs.Tab value="endings">Beats & endings</Tabs.Tab>
+          <Tabs.Tab value="sessions">Sessions</Tabs.Tab>
           <Tabs.Tab value="review">Review</Tabs.Tab>
         </Tabs.List>
         <Box pt="lg">
@@ -143,6 +145,7 @@ function CaseFile({ stored, onChanged }: { stored: StoredCase; onChanged: (next:
           <Tabs.Panel value="clues"><CluesTab p={p} /></Tabs.Panel>
           <Tabs.Panel value="people"><PeopleTab p={p} /></Tabs.Panel>
           <Tabs.Panel value="endings"><EndingsTab p={p} /></Tabs.Panel>
+          <Tabs.Panel value="sessions"><SessionsTab p={p} /></Tabs.Panel>
           <Tabs.Panel value="review"><ReviewTab stored={stored} /></Tabs.Panel>
         </Box>
       </Tabs>
@@ -438,6 +441,71 @@ function ReviewTab({ stored }: { stored: StoredCase }) {
           </Table.Tbody>
         </Table>
       </Sheet>
+    </Stack>
+  );
+}
+
+/**
+ * The evenings this mystery has been played: when, where it stood at the end of each (the scribe's play state), and
+ * the play log to download, every session or one, for following up and for Claude to read with the case file.
+ */
+function SessionsTab({ p }: { p: CasePacket }) {
+  const call = useApi();
+  const { data: sessions, error } = useApiData<PlaySession[]>(SessionApi.forMystery(p.mysteryId));
+  const [downloadError, setDownloadError] = useState<string>();
+
+  const download = async (session?: PlaySession) => {
+    const result = await call<string>(Http.GET, SessionApi.exportMystery(p.mysteryId, session?.id));
+    if (!result.success || !result.result) {
+      setDownloadError(result.errorMessage);
+      return;
+    }
+    setDownloadError(undefined);
+    saveFile(`${p.title || p.mysteryId} - play log${session ? ` - session ${session.number}` : ""}.md`, result.result, "text/markdown");
+  };
+
+  if (error) return <ErrorNote message={error.message} />;
+  if (!sessions) return <Text fz="sm" c="var(--nx-sepia)">Reading the sessions…</Text>;
+  if (sessions.length === 0) {
+    return (
+      <Sheet>
+        <Text fz="sm">Not played yet. Bring the case to the table and start a session (bringing in the Gamemaster starts one too); each evening is a session, and the next one picks up where the last ended.</Text>
+      </Sheet>
+    );
+  }
+
+  return (
+    <Stack gap="lg">
+      <Group justify="center">
+        <Button color="gold" variant="light" leftSection={<IconDownload size={16} />} onClick={() => void download()}>
+          Download the play log, every session (Markdown)
+        </Button>
+        <ErrorNote message={downloadError} />
+      </Group>
+      {[...sessions].reverse().map((session) => {
+        const s = session.state;
+        const started = new Date(session.startedAt);
+        return (
+          <Sheet key={session.id} title={`Session ${session.number} · ${started.toLocaleDateString()} ${started.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}${session.endedAt ? ` to ${new Date(session.endedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : " · under way"}`}>
+            <Stack gap="xs">
+              <Field label="The story so far">{s.summary || "Nothing written yet."}</Field>
+              {s.scene && <Field label="Where they are">{s.scene}</Field>}
+              <Field label={`Facts found · ${s.factsFound.length}`}>
+                {s.factsFound.length ? s.factsFound.map((f) => `${f.factId} (session ${f.session}): ${f.how}`).join(" · ") : "None yet."}
+              </Field>
+              {s.peopleMet.length > 0 && <Field label="People met">{s.peopleMet.map((m) => `${m.name}: ${m.note}`).join(" · ")}</Field>}
+              {s.beatsFired.length > 0 && <Field label="Beats and events that happened">{s.beatsFired.join(", ")}</Field>}
+              {s.deedsDone.length > 0 && <Field label="Deeds done">{s.deedsDone.join(", ")}</Field>}
+              {s.openThreads.length > 0 && <Field label="Open threads">{s.openThreads.join(" · ")}</Field>}
+              <Group justify="flex-end">
+                <Button size="xs" variant="subtle" color="gold" leftSection={<IconDownload size={14} />} onClick={() => void download(session)}>
+                  This session&apos;s log
+                </Button>
+              </Group>
+            </Stack>
+          </Sheet>
+        );
+      })}
     </Stack>
   );
 }

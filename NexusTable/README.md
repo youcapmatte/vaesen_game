@@ -116,12 +116,24 @@ The loop for one turn:
 
 1. Holding the talk key sends a `start_turn` RPC to the agent, and it starts listening to that one player.
 2. Releasing it sends `end_turn`. Deepgram finishes the transcript, and the agent prefixes it with the speaker: `[Elin Gregorius, played by Ingrid]`.
-3. Claude Haiku 5.5 answers, streaming. Thinking is off, effort is low, and the rules and the table brief are prompt-cached (`nexus_gm/claude.py`).
+3. Claude Sonnet 5.5 answers, streaming (`NEXUS_GM_MODEL`; Haiku 5.5 is faster and weaker at keeping a case straight). Thinking is off, effort is low, and the rules, the table brief and where the session stands are prompt-cached (`nexus_gm/claude.py`).
 4. The reply streams to ElevenLabs as it comes. NPC lines (`<npc name="...">...</npc>`) switch to the NPC voice (`nexus_gm/speech.py`).
 
 Table talk never reaches Claude, because the agent's audio input is off outside a turn.
 
-Rolls reach the Gamemaster too. The roller's browser sends the roll id over LiveKit, and the agent reads the roll back from the API (`GET /api/agent/rolls/{id}`), so a browser can't invent results.
+Rolls reach the Gamemaster too. The roller's browser sends the roll id over LiveKit, and the agent reads the roll back from the API (`GET /api/agent/rolls/{id}`), so a browser can't invent results. It speaks once the dice have landed on everyone's screen: 2.2 s of tumbling, a little more per die, then `NEXUS_ROLL_PAUSE` (0.8 s).
+
+### Sessions, the play log and resuming
+
+A mystery may take several evenings. Each is a **session** (`/api/sessions`):
+
+- **Starting.** The host starts it from the table (or bringing in the Gamemaster starts it). It begins from the play state the last session ended with. Ending it is the host's: the Gamemaster's scribe brings the play state up to date first. Closing the case, or another case coming to the table, ends it too.
+- **The log.** Everything said to and by the Gamemaster, every roll, every test it asks for and every note goes into the session log with its time (`SessionEvent`). The table's log panel shows it, and it survives a reload.
+- **The play state.** A scribe (`nexus_gm/scribe.py`, `NEXUS_SCRIBE_MODEL`, Sonnet 5.5) rewrites where the mystery stands after each exchange, in the background, in the case file's ids: the story so far, the scene, facts found and how, people met, beats and events that happened, deeds done, open threads. A found fact is never dropped.
+- **Resuming.** When the Gamemaster joins, it gets the play state and the session's last 40 log lines. The first session opens with the hook. A later session opens with a recap. A Gamemaster that rejoins mid-session picks up where it left off.
+- **Notes to the Gamemaster.** "Note to the Gamemaster" at the table: typed, or dictated while a button is held (the talk key in note mode). Logged with the time. The Gamemaster takes notes as true and doesn't answer them aloud.
+- **Tests.** The Gamemaster asks for a test aloud and with a `<test who=".." skill=".." difficulty=".." sixes=".." why=".."/>` tag, which isn't spoken. The table shows the test with the dice the character has and the sixes it needs, and "Roll it" throws it. Rolls carry `successesNeeded` (1 to 5), and a roll short of it can be pushed.
+- **Following up.** The case file's **Sessions** tab shows each session's play state, and downloads the play log (every session, or one) as Markdown for Claude, to read with the case report.
 
 The agent reads the full table, dark secrets included, from `GET /api/agent/table` with the shared `X-Agent-Key`.
 

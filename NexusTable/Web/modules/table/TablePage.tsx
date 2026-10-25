@@ -1,14 +1,15 @@
 "use client";
 
-import { Anchor, Badge, Box, Button, Drawer, Group, Modal, Popover, Select, Stack, Switch, Text, Title, Tooltip } from "@mantine/core";
-import { IconBook2, IconMail, IconMicrophone, IconScript, IconSettings } from "@tabler/icons-react";
+import { Anchor, Badge, Box, Button, Drawer, Group, Modal, Popover, Select, Stack, Switch, Text, Textarea, Title, Tooltip } from "@mantine/core";
+import { IconBook2, IconMail, IconMicrophone, IconNotes, IconPlayerPlay, IconPlayerStop, IconScript, IconSettings } from "@tabler/icons-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Character } from "@/common/api/character";
 import { RollApi, type Roll, type RollOutcome } from "@/common/api/roll";
 import type { MysteryAtTable } from "@/common/api/society";
+import { type PlaySession, SessionApi, type SessionEvent } from "@/common/api/session";
 import type { VaesenRules } from "@/common/api/rules";
-import { useApiData } from "@/common/client/core/Api";
+import { Http, useApi, useApiData } from "@/common/client/core/Api";
 import { ruleNames, useMe, useRules, useSociety } from "@/common/client/components/hooks";
 import { Corners, Divider, SightMark } from "@/common/client/components/Ornament";
 import { ErrorNote, FullPageLoader, PageFrame } from "@/common/client/components/PageFrame";
@@ -16,7 +17,7 @@ import { useTableEvent, useTablePresence } from "@/common/client/signalr/useTabl
 import { CharacterSheet } from "@/modules/characters/CharacterSheet";
 import { CallBar, GmLine, type TranscriptLine, useTableTranscript } from "@/modules/call/CallViews";
 import { CallProvider, useGamemaster, useGamemasterActions, useSeatMedia } from "@/modules/call/Call";
-import { RollEntry, RollForm, RollOnStage } from "@/modules/dice/RollViews";
+import { RollEntry, RollForm, RollOnStage, TestCard } from "@/modules/dice/RollViews";
 import { Seats } from "./Seats";
 import styles from "./Table.module.css";
 import { keyLabel, usePushToTalk } from "./usePushToTalk";
@@ -42,6 +43,8 @@ function TableContent() {
   const media = useSeatMedia();
   const gm = useGamemasterActions();
   const transcript = useTableTranscript(view?.members ?? []);
+  const { data: session, mutate: mutateSession } = useApiData<PlaySession | null>(SessionApi.current);
+  const { data: sessionLog, mutate: mutateLog } = useApiData<SessionEvent[]>(session ? SessionApi.log(session.id) : null);
   const [onStage, setOnStage] = useState<Roll>();
   const [sheetId, setSheetId] = useState<string>();
   const stageTimer = useRef<number | undefined>(undefined);
@@ -62,6 +65,13 @@ function TableContent() {
     showOnStage(roll);
   });
 
+  // Sessions starting and ending, tests asked for and rolled; and the log as it grows.
+  useTableEvent("sessionChanged", () => void mutateSession());
+  useTableEvent("sessionEvent", (event) => {
+    if (event.sessionId !== session?.id) return;
+    void mutateLog((current = []) => [...current.filter((e) => e.id !== event.id), event], { revalidate: false });
+  });
+
   useEffect(() => () => window.clearTimeout(stageTimer.current), []);
 
   const characters = useMemo(() => view?.members.flatMap((m) => (m.character ? [m.character] : [])) ?? [], [view]);
@@ -80,14 +90,20 @@ function TableContent() {
     upsertRoll(outcome.roll);
     showOnStage(outcome.roll);
     void mutateSociety();
+    void mutateSession();
     // Only the roller tells the Gamemaster, so it hears each roll once.
     void gm.reportRoll(outcome.roll.id);
   };
-  // The log: rolls and the Gamemaster's conversation, newest first.
-  const entries: { at: number; key: string; roll?: Roll; line?: TranscriptLine }[] = [
+  // The log, newest first: rolls; the session's stored log (what was said, notes, tests asked for); and the live
+  // transcript of lines the log does not have yet.
+  const logged = (sessionLog ?? []).filter((e) => LOG_KINDS.includes(e.kind));
+  const loggedTexts = new Set(logged.map((e) => e.text.trim()));
+  const entries: { at: number; key: string; roll?: Roll; line?: TranscriptLine; event?: SessionEvent }[] = [
     ...(rolls ?? []).map((roll) => ({ at: new Date(roll.createdAt).getTime(), key: roll.id, roll })),
-    ...transcript.map((line) => ({ at: line.at, key: line.id, line })),
+    ...logged.map((event) => ({ at: new Date(event.at).getTime(), key: event.id, event })),
+    ...transcript.filter((line) => !loggedTexts.has(line.text.trim())).map((line) => ({ at: line.at, key: line.id, line })),
   ].sort((a, b) => b.at - a.at);
+  const tests = session?.pendingTests ?? [];
   const sheet = characters.find((c) => c.id === sheetId);
 
   return (
@@ -100,6 +116,7 @@ function TableContent() {
       <Box className={styles.stage}>
         <Box className={`${styles.scene} nx-panel`}>
           <Corners />
+          <SessionBar session={session ?? undefined} atTable={view.society.atTable} isHost={me.role === "Host"} onChanged={() => void mutateSession()} />
           <SceneCard headquarters={view.society.headquarters} atTable={view.society.atTable} isHost={me.role === "Host"} />
           <PushToTalkBar />
           {onStage && (
@@ -123,7 +140,9 @@ function TableContent() {
           </Group>
           <Box className={`${styles.log} nx-scroll`}>
             {entries.length ? (
-              entries.map((entry) => entry.roll ? (
+              entries.map((entry) => entry.event ? (
+                <EventLine key={entry.key} event={entry.event} />
+              ) : entry.roll ? (
                 <RollEntry
                   key={entry.key}
                   roll={entry.roll}
@@ -145,6 +164,13 @@ function TableContent() {
 
         <Box className="nx-panel" p="md">
           <Text className="nx-kicker" mb="xs">Roll the dice</Text>
+          {tests.length > 0 && (
+            <Stack gap="xs" mb="sm">
+              {tests.map((test) => (
+                <TestCard key={test.id} test={test} rules={rules} canRoll={rollable.some((c) => c.id === test.characterId)} onRolled={onRolled} />
+              ))}
+            </Stack>
+          )}
           <RollForm rules={rules} characters={rollable} defaultCharacterId={mine?.id} onRolled={onRolled} />
         </Box>
       </Box>
@@ -162,6 +188,161 @@ function TableContent() {
         )}
       </Drawer>
     </Box>
+  );
+}
+
+/** The session log lines the table shows; rolls show from the rolls themselves, the scribe's lines only to the host. */
+const LOG_KINDS: SessionEvent["kind"][] = ["playerSpoke", "gmSaid", "note", "testRequested", "sessionStarted", "sessionEnded"];
+
+/** One stored line of the session: what was said, a note, a test asked for, a session starting or ending. */
+function EventLine({ event }: { event: SessionEvent }) {
+  const time = new Date(event.at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  if (event.kind === "sessionStarted" || event.kind === "sessionEnded") {
+    return <Text py={6} fz="xs" ta="center" c="var(--nx-sepia)" className="nx-flourish">— {event.text} {time} —</Text>;
+  }
+
+  if (event.kind === "note" || event.kind === "testRequested") {
+    return (
+      <Box py={8} style={{ borderBottom: "1px solid rgba(184,149,90,0.15)" }}>
+        <Group justify="space-between" gap={4} wrap="nowrap">
+          <Text fz="sm" className="nx-display" c="var(--nx-gold)">
+            {event.kind === "note" ? `Note to the Gamemaster · ${event.speaker}` : "The Gamemaster asks for a test"}
+          </Text>
+          <Text fz={11} c="var(--nx-sepia)">{time}</Text>
+        </Group>
+        <Text fz="sm" c="var(--nx-parchment-2)" style={{ whiteSpace: "pre-wrap" }}>{event.text}</Text>
+      </Box>
+    );
+  }
+
+  const fromGm = event.kind === "gmSaid";
+  return <GmLine line={{ id: event.id, at: new Date(event.at).getTime(), fromGm, speaker: fromGm ? "The Gamemaster" : event.speaker, text: event.text }} />;
+}
+
+/**
+ * The session: which sitting of the mystery this is, and for the host, starting and ending it. Anyone can leave a note
+ * for the Gamemaster: what happened, typed or dictated. It is logged with its time and the Gamemaster takes it in.
+ */
+function SessionBar({ session, atTable, isHost, onChanged }: { session?: PlaySession; atTable?: MysteryAtTable; isHost: boolean; onChanged: () => void }) {
+  const call = useApi();
+  const gm = useGamemaster();
+  const actions = useGamemasterActions();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string>();
+  const [noting, setNoting] = useState(false);
+
+  if (!atTable) return null;
+
+  const start = async () => {
+    setBusy(true);
+    const result = await call<PlaySession>(Http.POST, SessionApi.start);
+    setBusy(false);
+    setError(result.success ? undefined : result.errorMessage);
+    onChanged();
+  };
+
+  const end = async () => {
+    if (!session) return;
+    setBusy(true);
+    // The Gamemaster closes the evening and its scribe brings the play state up to date, then the session ends.
+    if (gm.participant) await actions.control("end_session");
+    const result = await call<PlaySession>(Http.POST, SessionApi.end(session.id));
+    setBusy(false);
+    setError(result.success ? undefined : result.errorMessage);
+    onChanged();
+  };
+
+  const started = session ? new Date(session.startedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
+  return (
+    <Box style={{ position: "absolute", top: 12, left: 12, right: 12, zIndex: 2 }}>
+      <Group justify="space-between" gap="xs">
+        <Badge variant="outline" color={session ? "gold" : "umber.3"} size="lg">
+          {session ? `Session ${session.number} · since ${started}` : "No session under way"}
+        </Badge>
+        <Group gap="xs">
+          {session && (
+            <Button size="compact-sm" variant="light" color="gold" leftSection={<IconNotes size={14} />} onClick={() => setNoting(true)}>
+              Note to the Gamemaster
+            </Button>
+          )}
+          {isHost && !session && (
+            <Button size="compact-sm" color="blood" leftSection={<IconPlayerPlay size={14} />} loading={busy} onClick={start}>Start the session</Button>
+          )}
+          {isHost && session && (
+            <Button size="compact-sm" variant="outline" color="blood.4" leftSection={<IconPlayerStop size={14} />} loading={busy} onClick={end}>End the session</Button>
+          )}
+        </Group>
+      </Group>
+      <ErrorNote message={error} />
+      <NoteModal opened={noting} onClose={() => setNoting(false)} />
+    </Box>
+  );
+}
+
+/** A note to the Gamemaster: typed, or dictated while a button is held. Logged with its time; never answered aloud. */
+function NoteModal({ opened, onClose }: { opened: boolean; onClose: () => void }) {
+  const call = useApi();
+  const gm = useGamemaster();
+  const actions = useGamemasterActions();
+  const [text, setText] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [dictating, setDictating] = useState(false);
+  const [error, setError] = useState<string>();
+  const [sent, setSent] = useState<string>();
+
+  const save = async () => {
+    setBusy(true);
+    const result = await call<SessionEvent>(Http.POST, SessionApi.notes, { text });
+    setBusy(false);
+    setError(result.success ? undefined : result.errorMessage);
+    if (result.success && result.result) {
+      // The Gamemaster reads it back from the log by its id.
+      await actions.sendNote(result.result.id);
+      setText("");
+      setSent("The note is in the log, and the Gamemaster has it.");
+    }
+  };
+
+  const startDictating = () => {
+    setDictating(true);
+    setSent(undefined);
+    void actions.startNote();
+  };
+  const stopDictating = () => {
+    if (!dictating) return;
+    setDictating(false);
+    void actions.endTurn();
+    setSent("Dictated: the Gamemaster logs it and takes it in without answering.");
+  };
+
+  return (
+    <Modal opened={opened} onClose={onClose} title={<Text className="nx-kicker">A note to the Gamemaster</Text>} centered size="lg">
+      <Stack gap="sm">
+        <Text fz="sm" c="dimmed">
+          What happened, a correction, a decision the table made. It goes into the session log with the time, and the
+          Gamemaster takes it as true for the rest of the mystery. It doesn&apos;t answer notes aloud.
+        </Text>
+        <Textarea autosize minRows={3} maxRows={10} maxLength={2000} value={text} onChange={(e) => setText(e.currentTarget.value)} placeholder="e.g. Between sessions, Elin wrote to the vicar and he agreed to meet her on Sunday." />
+        <Group justify="space-between">
+          <Tooltip label={gm.participant ? "Hold while you speak; let go to finish" : "The Gamemaster isn't at the table"}>
+            <Button
+              variant={dictating ? "filled" : "light"}
+              color="blood"
+              leftSection={<IconMicrophone size={16} />}
+              disabled={!gm.participant}
+              onPointerDown={startDictating}
+              onPointerUp={stopDictating}
+              onPointerLeave={stopDictating}
+            >
+              {dictating ? "Listening… let go to finish" : "Hold to dictate"}
+            </Button>
+          </Tooltip>
+          <Button color="gold" loading={busy} disabled={!text.trim()} onClick={save}>Write it in the log</Button>
+        </Group>
+        {sent && <Text fz="sm" c="moss.4">{sent}</Text>}
+        <ErrorNote message={error} />
+      </Stack>
+    </Modal>
   );
 }
 

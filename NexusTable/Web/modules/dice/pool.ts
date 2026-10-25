@@ -1,5 +1,5 @@
 import type { Character } from "@/common/api/character";
-import type { Roll, RollPoolPart } from "@/common/api/roll";
+import { type Roll, type RollPoolPart, succeeded } from "@/common/api/roll";
 import type { VaesenRules } from "@/common/api/rules";
 
 export const ADVANTAGE_DICE = 2;
@@ -55,8 +55,9 @@ export function pushConditions(rules: VaesenRules, character: Character, roll: R
   return ofType.filter((c) => !character.conditions.includes(c.id));
 }
 
+/** A failed roll (fewer sixes than it needed) can be pushed once. */
 export function canPush(roll: Roll) {
-  return !roll.pushed && roll.successes === 0;
+  return !roll.pushed && !succeeded(roll);
 }
 
 /** The faces to show: after a push, the pushed dice. */

@@ -27,8 +27,11 @@ export const GmProtocol = {
   cancelTurn: "cancel_turn",
   control: "gm_control",
   rollTopic: "nexus.roll",
+  /** A note typed at the table: the agent reads it back from the API by its event id. */
+  noteTopic: "nexus.note",
   stateAttribute: "nexus.gm.state",
   latencyAttribute: "nexus.gm.latencyMs",
 } as const;
 
-export type GmControl = "pause" | "resume" | "repeat" | "recap" | "leave";
+/** end_session: the Gamemaster closes the evening and its scribe brings the play state up to date. */
+export type GmControl = "pause" | "resume" | "repeat" | "recap" | "end_session" | "leave";

@@ -93,7 +93,7 @@ Design: [DESIGN.md](DESIGN.md). How to run: [README.md](README.md).
 - **What it is.** A Python LiveKit Agents worker named `nexus-gm` (`agent.py`, `nexus_gm/`), pinned to Python 3.12 with dependencies locked in `uv.lock`.
 - **Push-to-talk turns.** The `start_turn` and `end_turn` RPCs, sent from the web app, decide what it hears. The rest of the time its audio input is off, so table talk never reaches Claude.
 - **Speech to text.** Deepgram nova-3, with the character names boosted. Each turn is prefixed with who is speaking.
-- **Claude.** Through the Anthropic SDK: `claude-haiku-5-5`, streaming, thinking off and low effort. The rules and the table brief are prompt-cached. A refusal is answered with a line in the fiction.
+- **Claude.** Through the Anthropic SDK: `claude-sonnet-5-5` since 2026-10-25 (was Haiku), streaming, thinking off and low effort. The rules, the table brief and the session's state are prompt-cached. A refusal is answered with a line in the fiction.
 - **Voices.** The reply streams to ElevenLabs (`eleven_flash_v2_5`) in two voices: the narrator, and a shared NPC voice for `<npc name="...">` lines.
 - **Rolls.** The agent reads each roll back from the API before narrating it.
 - **Host controls.** Pause, resume, repeat the last reply, recap, leave.
@@ -139,6 +139,22 @@ Built to the build spec, [SPEC.md](SPEC.md), milestones 3 and 4. The engine is a
   - tracking which clues the players have found (the shelf shows only the hook)
   - DynamoDB/S3 storage for case packets and worlds (files only for now)
   - seasons (spec 10), and influence at a distance through institutions
+
+## Sessions (added 2026-10-25)
+
+What it does is in the [README](README.md#sessions-the-play-log-and-resuming).
+
+- **API.** `PlaySession` and `SessionEvent` (LocalFile and DynamoDB stores), `SessionService`, `/api/sessions`, and the agent's `events`, `sessions/{id}/state` and `tests` endpoints. Rolls carry `successesNeeded` and `testId`. 3 tests:
+  - two sessions resuming from one another's state, with notes, the log and the export;
+  - a test asked for and rolled;
+  - no case at the table means no session.
+- **Agent.** The session log, the scribe, the resume openings, tabletop rules, the `<test/>` tag, notes typed or dictated, and narrating rolls once the dice land. 7 new tests.
+- **Web.** The session bar (start, end, a note to the Gamemaster), test cards with dice and sixes, "Sixes needed" on the roll form, the outcome against the sixes needed, the stored log, and the Sessions tab on the case file. Type-checked; **not clicked through in the browser** (it needs the new API running).
+- **Never run for real.** No call, scribe or test tag has run against the live services yet.
+- **Not built:**
+  - logging table talk (the Gamemaster hears only push-to-talk; recording everyone needs consent and a second transcription stream);
+  - clues on the shelf from the play state;
+  - the routing step and per-NPC contexts of SPEC 11.
 
 ## Not done yet
 

@@ -5,6 +5,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { AccountApi } from "@/common/api/account";
 import type { Character } from "@/common/api/character";
 import type { Roll } from "@/common/api/roll";
+import type { PlaySession, SessionEvent } from "@/common/api/session";
 import { fetcher, Http } from "../core/Fetcher";
 import { useSecurity } from "../security/SecurityProvider";
 import ClientAppsettings from "../settings/ClientAppsettings";
@@ -19,6 +20,10 @@ export interface TableEvents {
   characterChanged: (character: Character) => void;
   rollMade: (roll: Roll) => void;
   presenceChanged: (presence: PresenceEntry[]) => void;
+  /** A session started or ended, or its pending tests changed (no play state). */
+  sessionChanged: (session: PlaySession) => void;
+  /** A new line in the session log. */
+  sessionEvent: (event: SessionEvent) => void;
 }
 
 type ConnectionStatus = "offline" | "connecting" | "online";
