@@ -57,4 +57,4 @@ def test_messages_alternate_and_start_with_the_user():
 
 def test_describe_roll():
     roll = {"characterName": "Elin Gregorius", "skill": "learning", "poolSize": 7, "successes": 1, "pushed": True, "pushCondition": "angry"}
-    assert describe_roll(roll) == "[Dice] Elin Gregorius rolled learning: 7 dice, 1 success, pushed and took angry."
+    assert describe_roll(roll) == "[Dice] Elin Gregorius rolled learning: 7 dice, 1 six, a success, pushed and took angry."

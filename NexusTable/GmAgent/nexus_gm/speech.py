@@ -1,6 +1,7 @@
 """Who is speaking in the Gamemaster's reply.
 
-Claude marks NPC speech as <npc name="Father Lind">...</npc>; everything else is the narrator. The reply streams
+Claude marks NPC speech as <npc name="Father Lind">...</npc>; everything else is the narrator. A test it asks for is a
+<test .../> tag, never spoken (find_tests reads them from the whole reply). The reply streams
 in small chunks, so tags can be split across chunks: SpeakerParser buffers just enough to tell a tag from text and
 emits (speaker, text) pieces as early as it can, which keeps the first audio fast.
 """
@@ -14,10 +15,12 @@ NARRATOR = None
 
 _OPEN = re.compile(r'<npc\s+name\s*=\s*"([^"]{1,80})"\s*>', re.IGNORECASE)
 _CLOSE = re.compile(r"</npc\s*>", re.IGNORECASE)
-# What an unfinished <npc ...> or </npc> tag can look like while it streams in.
-_PARTIAL = re.compile(r"<(/?(n(p(c(\s[^>]*)?)?)?)?)?", re.IGNORECASE)
+_TEST = re.compile(r"<test\b([^>]*)>", re.IGNORECASE)
+_ATTRIBUTE = re.compile(r'(\w+)\s*=\s*"([^"]*)"')
+# What an unfinished <npc ...>, </npc> or <test ...> tag can look like while it streams in.
+_PARTIAL = re.compile(r"<(/?(n(p(c(\s[^>]*)?)?)?)?|t(e(s(t(\s[^>]*)?)?)?)?)?", re.IGNORECASE)
 # The longest tag we accept; a "<" with this much text after it and no ">" is plain text.
-_MAX_TAG = 100
+_MAX_TAG = 400
 
 
 @dataclass(frozen=True)
@@ -66,6 +69,8 @@ class SpeakerParser:
                 self._speaker = opened.group(1).strip()
             elif _CLOSE.fullmatch(tag):
                 self._speaker = NARRATOR
+            elif _TEST.fullmatch(tag):
+                pass  # a test for the table, not for the ear
             else:
                 pieces.append(Piece(self._speaker, tag))
             self._buffer = self._buffer[gt + 1 :]
@@ -90,3 +95,8 @@ def strip_tags(text: str) -> str:
         last = piece.speaker
         out.append(piece.text)
     return re.sub(r"[ \t]{2,}", " ", "".join(out)).strip()
+
+
+def find_tests(text: str) -> list[dict[str, str]]:
+    """The tests a reply asks for: each <test who=".." skill=".." difficulty=".." sixes=".." why=".."/> as a dict."""
+    return [dict(_ATTRIBUTE.findall(match.group(1))) for match in _TEST.finditer(text)]
