@@ -184,6 +184,9 @@ public static partial class TextReplacements
             return result;
         }
 
+        // Where the field is in the tree, by position: when it is the key the path selects by (a blame's characterId),
+        // the path finds nothing once it is set, though the field was (rerun of case 10).
+        var at = field.Path;
         field.Replace(Typed(field, set.Value));
         draft.Packet = root.ToObject<CasePacket>()!;
         draft.Packet.Validation = validation;
@@ -202,7 +205,7 @@ public static partial class TextReplacements
         KeepMinds(draft, set.Path);
 
         // The post-condition: the field reads back as the new value.
-        var back = CasePaths.Resolve(PacketTree(draft.Packet), set.Path);
+        var back = PacketTree(draft.Packet).SelectToken(at);
         result.InScope = 1;
         if (back is not JValue v || !string.Equals(v.ToString(CultureInfoInvariant), set.Value, StringComparison.Ordinal) && v.Value?.ToString() != set.Value)
         {

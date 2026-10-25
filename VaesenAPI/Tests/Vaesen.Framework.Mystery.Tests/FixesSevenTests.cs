@@ -98,6 +98,19 @@ public sealed class FixesSevenTests
     }
 
     [Fact]
+    public void A_field_the_path_selects_by_is_set_and_read_back()
+    {
+        var draft = Draft();
+        var (from, to) = (draft.Packet.Cast[0].CharacterId, draft.Packet.Cast[1].CharacterId);
+        draft.Packet.CreatureMinds[0].Blames = [new CreatureBlame { CharacterId = from, Why = "The dam." }];
+
+        var set = TextReplacements.SetField(draft, new FieldSet { Path = $"creatureMinds[vaesenId=nack].blames[characterId={from}].characterId", Value = to });
+
+        Assert.True(set.Ok, set.ToString());
+        Assert.Equal(to, Assert.Single(draft.Packet.CreatureMinds[0].Blames).CharacterId);
+    }
+
+    [Fact]
     public void A_fact_is_added_to_what_someone_knows_by_code_and_the_minds_answer_keeps_it()
     {
         var draft = Draft();
