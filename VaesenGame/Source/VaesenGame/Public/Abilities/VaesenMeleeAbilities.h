@@ -86,7 +86,7 @@ public:
  * block profile (a shield in the off hand, else the weapon), and the absorbed part wears it. The first moments after
  * pressing are the parry window (State.ParryWindow): a hit then is negated and the attacker staggered. Costs stamina
  * per second; slows movement (the character does that from the tag). Broken weapons can't block, nor can what can't
- * parry (guns, bows) or has no guard animation yet (UVaesenWeaponItem::CanParry).
+ * parry (handguns) or has no guard animation yet (UVaesenWeaponItem::CanParry). Not for guns and bows: GA_RangedGuard.
  */
 UCLASS()
 class VAESENGAME_API UVaesenGA_Block : public UVaesenGameplayAbility
@@ -102,12 +102,32 @@ public:
 	virtual void InputReleased(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) override;
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 
+protected:
+	/** Which drawn weapon (or none: bare hands) this guard is for: here melee and bare hands. */
+	virtual bool AcceptsWeapon(const UVaesenWeaponItem* Weapon) const;
+
 private:
 	void CloseParryWindow();
 	void DrainWhileHeld();
 
 	float StaminaPerSecond = 0.0f;
 	bool bParryWindowOpen = false;
+};
+
+/**
+ * GA_RangedGuard (Ctrl + right mouse held): GA_Block with a long gun or a bow, which right mouse alone aims. Handguns
+ * can't (bCanParry off); the rest wear hard doing it (their block profile's WearScale and ParryWearShare).
+ */
+UCLASS()
+class VAESENGAME_API UVaesenGA_RangedGuard : public UVaesenGA_Block
+{
+	GENERATED_BODY()
+
+public:
+	UVaesenGA_RangedGuard();
+
+protected:
+	virtual bool AcceptsWeapon(const UVaesenWeaponItem* Weapon) const override;
 };
 
 /**

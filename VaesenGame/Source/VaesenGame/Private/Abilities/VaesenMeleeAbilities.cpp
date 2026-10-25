@@ -303,9 +303,7 @@ bool UVaesenGA_Block::CanActivateAbility(const FGameplayAbilitySpecHandle Handle
 	{
 		return false;
 	}
-	// Right mouse aims a gun instead.
-	const UVaesenWeaponItem* Weapon = GetDrawnWeapon(ActorInfo);
-	if (Weapon && Weapon->IsRanged())
+	if (!AcceptsWeapon(GetDrawnWeapon(ActorInfo)))
 	{
 		return false;
 	}
@@ -350,6 +348,28 @@ void UVaesenGA_Block::ActivateAbility(const FGameplayAbilitySpecHandle Handle, c
 	const UAnimMontage* BlockMontage = BlockingItem ? BlockingItem->GetMontage(&FVaesenWeaponMontages::Block)
 		: UVaesenWeaponCategoryDefaults::Get()->GetCategory(EVaesenWeaponCategory::Unarmed).Montages.Block.Get();
 	PlayAbilityMontage(const_cast<UAnimMontage*>(BlockMontage));
+}
+
+bool UVaesenGA_Block::AcceptsWeapon(const UVaesenWeaponItem* Weapon) const
+{
+	// Right mouse aims a gun or draws a bow instead (Ctrl + right mouse guards with one: UVaesenGA_RangedGuard).
+	return !Weapon || !Weapon->IsRanged();
+}
+
+// --- Ranged guard ---
+
+UVaesenGA_RangedGuard::UVaesenGA_RangedGuard()
+{
+	InputBinding = EVaesenAbilityInput::RangedGuard;
+	for (const FGameplayTag& Tag : TArray<FGameplayTag>{ VaesenTags::State_Aiming, VaesenTags::State_DrawingBow, VaesenTags::State_Reloading })
+	{
+		ActivationBlockedTags.AddTag(Tag);
+	}
+}
+
+bool UVaesenGA_RangedGuard::AcceptsWeapon(const UVaesenWeaponItem* Weapon) const
+{
+	return Weapon && Weapon->IsRanged();
 }
 
 void UVaesenGA_Block::CloseParryWindow()

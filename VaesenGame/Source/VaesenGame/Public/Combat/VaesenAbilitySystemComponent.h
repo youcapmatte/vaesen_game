@@ -25,7 +25,9 @@ enum class EVaesenAbilityInput : uint8
 	/** Q: draw the other carried weapon. */
 	SwapWeapon,
 	/** Left Alt: dodge (the way the character is moving; back when standing still). */
-	Dodge
+	Dodge,
+	/** Ctrl + right mouse (hold): guard and parry with a long gun or a bow (right mouse alone aims it). */
+	RangedGuard
 };
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FVaesenDamageReported, const FVaesenDamageReport&, Report);

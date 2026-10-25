@@ -128,10 +128,14 @@ void UVaesenDamageExecution::Execute_Implementation(const FGameplayEffectCustomE
 		OutExecutionOutput.AddOutputModifier(FGameplayModifierEvaluatedData(UVaesenAttributeSet::GetIncomingDamageAttribute(), EGameplayModOp::Additive, Report.TotalFinal));
 	}
 
-	// What the block took wears the blocking weapon (a parry costs nothing).
-	if (BlockingItem && Report.Outcome == EVaesenHitOutcome::Blocked && Report.TotalAbsorbed > 0.0f)
+	// What the block took wears the blocking weapon, by its WearScale (a parry costs only what ParryWearShare says).
+	if (BlockingItem && Block && Report.Outcome == EVaesenHitOutcome::Blocked && Report.TotalAbsorbed > 0.0f)
 	{
-		BlockingItem->ApplyWear(Report.TotalAbsorbed);
+		BlockingItem->ApplyWear(Report.TotalAbsorbed * Block->WearScale);
+	}
+	else if (BlockingItem && Block && bParried && Block->ParryWearShare > 0.0f)
+	{
+		BlockingItem->ApplyWear(Packet.GetTotal() * Block->ParryWearShare * Block->WearScale);
 	}
 	if (AVaesenWeaponActor* BlockingActor = BlockingItem && Block ? BlockingItem->GetWeaponActor() : nullptr)
 	{

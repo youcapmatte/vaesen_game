@@ -106,11 +106,18 @@ void UVaesenWeaponCategoryDefaults::SetBuiltInDefaults()
 	Add(EVaesenWeaponCategory::Rifle, MakeAttack(Blunt, 8, 110, 10, 0.8f, 0.30f, 0.50f), nullptr, MakeBlock(0.3f, 0.2f, 0.3f, 0.1f));
 	Add(EVaesenWeaponCategory::Bow, MakeAttack(Blunt, 3, 90, 6, 0.6f, 0.20f, 0.35f), nullptr, MakeBlock(0.1f, 0.1f, 0.1f, 0.0f));
 	Add(EVaesenWeaponCategory::Crossbow, MakeAttack(Blunt, 6, 100, 8, 0.7f, 0.25f, 0.45f), nullptr, MakeBlock(0.2f, 0.2f, 0.2f, 0.05f));
-	// Guns and bows don't parry (right mouse aims them); the rest do, once they have the guard animation.
-	for (const EVaesenWeaponCategory Ranged : { EVaesenWeaponCategory::Pistol, EVaesenWeaponCategory::Revolver, EVaesenWeaponCategory::Rifle,
-		EVaesenWeaponCategory::Bow, EVaesenWeaponCategory::Crossbow })
+	// Handguns can't parry: too small (the forearm would take it). Long guns and bows can (Ctrl + right mouse; right
+	// mouse alone aims), but they aren't made for it: blocking wears them four times as hard, and even a parry wears
+	// them. The rest parry once they have the guard animation.
+	for (const EVaesenWeaponCategory Handgun : { EVaesenWeaponCategory::Pistol, EVaesenWeaponCategory::Revolver })
 	{
-		Categories.FindOrAdd(Ranged).bCanParry = false;
+		Categories.FindOrAdd(Handgun).bCanParry = false;
+	}
+	for (const EVaesenWeaponCategory Long : { EVaesenWeaponCategory::Rifle, EVaesenWeaponCategory::Bow, EVaesenWeaponCategory::Crossbow })
+	{
+		FVaesenBlockProfile& Block = Categories.FindOrAdd(Long).BlockProfile;
+		Block.WearScale = 4.0f;
+		Block.ParryWearShare = 0.5f;
 	}
 
 	// Heavy blunt blows and shield bashes push (cm/s).

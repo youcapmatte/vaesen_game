@@ -103,6 +103,14 @@ struct FVaesenBlockProfile
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Block", meta = (ClampMin = "0"))
 	float StaminaPerSecond = 5.0f;
 
+	/** How hard blocking wears it: the absorbed damage times this. Guns and bows aren't made for it (4). */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Block", meta = (ClampMin = "0"))
+	float WearScale = 1.0f;
+
+	/** A parry wears it too, by this share of the hit (times WearScale): 0 for blades; guns and bows suffer it anyway. */
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Block", meta = (ClampMin = "0", ClampMax = "1"))
+	float ParryWearShare = 0.0f;
+
 	/** How wide the front is: hits from within this angle of where the blocker faces can be blocked. */
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Block", meta = (ClampMin = "0", ClampMax = "180", Units = "Degrees"))
 	float BlockHalfAngle = 70.0f;

@@ -207,6 +207,26 @@ bool FVaesenBlockProfileTest::RunTest(const FString& Parameters)
 	return true;
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenRangedParryTest, "Vaesen.Combat.Damage.RangedParry", CombatTestFlags)
+bool FVaesenRangedParryTest::RunTest(const FString& Parameters)
+{
+	// The built-in defaults: handguns can't parry; long guns and bows can, and wear hard doing it; blades as before.
+	const UVaesenWeaponCategoryDefaults* Defaults = GetDefault<UVaesenWeaponCategoryDefaults>();
+	TestFalse(TEXT("Pistol can't parry"), Defaults->GetCategory(EVaesenWeaponCategory::Pistol).bCanParry);
+	TestFalse(TEXT("Revolver can't parry"), Defaults->GetCategory(EVaesenWeaponCategory::Revolver).bCanParry);
+	for (const EVaesenWeaponCategory Long : { EVaesenWeaponCategory::Rifle, EVaesenWeaponCategory::Bow, EVaesenWeaponCategory::Crossbow })
+	{
+		const FVaesenCategoryDefaults& Entry = Defaults->GetCategory(Long);
+		TestTrue(TEXT("Long gun or bow can parry"), Entry.bCanParry);
+		TestTrue(TEXT("Blocking wears it hard"), Entry.BlockProfile.WearScale > 1.0f);
+		TestTrue(TEXT("Even a parry wears it"), Entry.BlockProfile.ParryWearShare > 0.0f);
+	}
+	const FVaesenBlockProfile& Sword = Defaults->GetCategory(EVaesenWeaponCategory::OneHandedSword).BlockProfile;
+	TestEqual(TEXT("A sword wears as before"), Sword.WearScale, 1.0f);
+	TestEqual(TEXT("A sword's parry costs nothing"), Sword.ParryWearShare, 0.0f);
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(FVaesenFacingTest, "Vaesen.Combat.Damage.BlockFacing", CombatTestFlags)
 bool FVaesenFacingTest::RunTest(const FString& Parameters)
 {

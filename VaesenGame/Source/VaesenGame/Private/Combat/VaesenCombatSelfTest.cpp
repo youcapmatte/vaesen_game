@@ -414,6 +414,7 @@ void UVaesenCombatSelfTest::BuildSteps()
 	const uint8 Attack = static_cast<uint8>(EVaesenAbilityInput::Attack);
 	const uint8 Heavy = static_cast<uint8>(EVaesenAbilityInput::HeavyAttack);
 	const uint8 AimOrBlock = static_cast<uint8>(EVaesenAbilityInput::AimOrBlock);
+	const uint8 RangedGuard = static_cast<uint8>(EVaesenAbilityInput::RangedGuard);
 	const uint8 Reload = static_cast<uint8>(EVaesenAbilityInput::Reload);
 	const uint8 Throw = static_cast<uint8>(EVaesenAbilityInput::Throw);
 	const uint8 Holster = static_cast<uint8>(EVaesenAbilityInput::Holster);
@@ -617,7 +618,7 @@ void UVaesenCombatSelfTest::BuildSteps()
 		Tap(Reload);
 		return Rifle ? Rifle->ReloadTime + 0.3f : 0.1f;
 	} });
-	Steps.Add({ FString(), [this, Equipment, ASC, AimOrBlock]()
+	Steps.Add({ FString(), [this, Equipment, ASC, AimOrBlock, RangedGuard]()
 	{
 		const UVaesenRangedWeaponItem* Rifle = Cast<UVaesenRangedWeaponItem>(Equipment->GetDrawnWeapon());
 		Check(Rifle && Rifle->GetLoadedRounds() == Rifle->MagazineSize, TEXT("magazine loaded at once"));
@@ -635,6 +636,14 @@ void UVaesenCombatSelfTest::BuildSteps()
 		{
 			Say(TEXT("INFO  the Krag has no sound set yet (install WeaponVerse1, run -run=VaesenSoundSetup)"), FColor::Yellow);
 		}
+		// Ctrl + right mouse guards with the rifle (once it has a guard animation; it wears hard doing it), and doesn't aim.
+		Press(RangedGuard);
+		const UVaesenWeaponItem* Krag = Equipment->GetDrawnWeapon();
+		Check(!ASC->HasMatchingGameplayTag(VaesenTags::State_Aiming) && Krag && Krag->GetCategoryDefaults().bCanParry
+			&& ASC->HasMatchingGameplayTag(VaesenTags::State_Blocking) == Krag->CanParry(), FString::Printf(TEXT("Ctrl + right mouse: the rifle guards rather than aims (%s; aiming %d, can parry %d, guarding %d)"),
+			Krag && Krag->CanParry() ? TEXT("guarding") : TEXT("no guard animation for rifles yet"), ASC->HasMatchingGameplayTag(VaesenTags::State_Aiming) ? 1 : 0,
+			Krag && Krag->GetCategoryDefaults().bCanParry ? 1 : 0, ASC->HasMatchingGameplayTag(VaesenTags::State_Blocking) ? 1 : 0));
+		Release(RangedGuard);
 		// Aimed (hip fire spreads 5 degrees with a rifle and can miss at 4 m).
 		Press(AimOrBlock);
 		Check(ASC->HasMatchingGameplayTag(VaesenTags::State_Aiming), TEXT("right mouse aims the rifle"));
@@ -770,7 +779,7 @@ void UVaesenCombatSelfTest::BuildSteps()
 			return Item && Item->CanParry();
 		};
 		Check(CanParry(TEXT("BP_Weapon_OldSword")) && CanParry(TEXT("BP_Weapon_Dagger")) && CanParry(TEXT("BP_Weapon_HandAxe")) && CanParry(TEXT("BP_Weapon_Club")) && CanParry(TEXT("BP_Weapon_ChairLeg")) && !CanParry(TEXT("BP_Weapon_Revolver")) && !CanParry(TEXT("BP_Weapon_KragRifle")),
-			TEXT("parries with: the sword, dagger, hand axe, club and chair leg (the sword's guard); not the revolver or the rifle"));
+			TEXT("parries with: the sword, dagger, hand axe, club and chair leg (the sword's guard); not the revolver (too small) or, yet, the rifle (no guard animation)"));
 		return 0.1f;
 	} });
 	Steps.Add({ TEXT("Sword"), [this, Tap, Holster]()

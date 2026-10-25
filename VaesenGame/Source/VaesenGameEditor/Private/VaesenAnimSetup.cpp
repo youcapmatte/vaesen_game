@@ -1366,6 +1366,18 @@ namespace VaesenAnimSetup
 		UVaesenWeaponCategoryDefaults* Defaults = LoadObject<UVaesenWeaponCategoryDefaults>(nullptr, TEXT("/Game/Vaesen/Combat/DA_WeaponCategoryDefaults.DA_WeaponCategoryDefaults"));
 		if (Defaults)
 		{
+			// Who parries and how hard it wears them: the built-in rules (the asset keeps whole copies of each category,
+			// so new rules don't reach it by themselves).
+			const UVaesenWeaponCategoryDefaults* BuiltIn = GetDefault<UVaesenWeaponCategoryDefaults>();
+			for (TPair<EVaesenWeaponCategory, FVaesenCategoryDefaults>& Pair : Defaults->Categories)
+			{
+				if (const FVaesenCategoryDefaults* Rules = BuiltIn->Categories.Find(Pair.Key))
+				{
+					Pair.Value.bCanParry = Rules->bCanParry;
+					Pair.Value.BlockProfile.WearScale = Rules->BlockProfile.WearScale;
+					Pair.Value.BlockProfile.ParryWearShare = Rules->BlockProfile.ParryWearShare;
+				}
+			}
 			for (const EVaesenWeaponCategory Category : { EVaesenWeaponCategory::Rifle, EVaesenWeaponCategory::Crossbow })
 			{
 				FVaesenCategoryDefaults& Entry = Defaults->Categories.FindOrAdd(Category);

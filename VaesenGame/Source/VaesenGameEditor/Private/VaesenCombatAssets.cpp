@@ -589,6 +589,7 @@ namespace VaesenCombatAssets
 			{ TEXT("GA_MeleeLight"), UVaesenGA_MeleeLight::StaticClass() },
 			{ TEXT("GA_MeleeHeavy"), UVaesenGA_MeleeHeavy::StaticClass() },
 			{ TEXT("GA_Block"), UVaesenGA_Block::StaticClass() },
+			{ TEXT("GA_RangedGuard"), UVaesenGA_RangedGuard::StaticClass() },
 			{ TEXT("GA_Throw"), UVaesenGA_Throw::StaticClass() },
 			{ TEXT("GA_Holster"), UVaesenGA_Holster::StaticClass() },
 			{ TEXT("GA_SwapWeapon"), UVaesenGA_SwapWeapon::StaticClass() },
@@ -670,6 +671,8 @@ namespace VaesenCombatAssets
 		UInputAction* Heavy = GetOrCreateAction(TEXT("IA_HeavyAttack"));
 		UInputAction* Trigger = GetOrCreateAction(TEXT("IA_TriggerAttack"));
 		UInputAction* AimBlock = GetOrCreateAction(TEXT("IA_AimBlock"));
+		UInputAction* GuardModifier = GetOrCreateAction(TEXT("IA_GuardModifier"));
+		UInputAction* RangedGuard = GetOrCreateAction(TEXT("IA_RangedGuard"));
 		UInputAction* Reload = GetOrCreateAction(TEXT("IA_Reload"));
 		UInputAction* Throw = GetOrCreateAction(TEXT("IA_Throw"));
 		UInputAction* Holster = GetOrCreateAction(TEXT("IA_Holster"));
@@ -696,7 +699,35 @@ namespace VaesenCombatAssets
 		});
 		bChanged |= MapOnce(Mappings, Attack, EKeys::Gamepad_RightShoulder);
 		bChanged |= MapOnce(Mappings, Trigger, EKeys::Gamepad_RightTriggerAxis);
-		bChanged |= MapOnce(Mappings, AimBlock, EKeys::RightMouseButton);
+		// Right mouse alone aims (or guards with a melee weapon); with Ctrl held it guards with a long gun or a bow.
+		bChanged |= MapOnce(Mappings, GuardModifier, EKeys::LeftControl);
+		const auto BlockedByGuardModifier = [Mappings, GuardModifier](FEnhancedActionKeyMapping& Mapping)
+		{
+			UInputTriggerChordBlocker* Blocker = NewObject<UInputTriggerChordBlocker>(Mappings);
+			Blocker->ChordAction = GuardModifier;
+			Mapping.Triggers.Add(Blocker);
+		};
+		// The plain right-mouse mapping predates the modifier: give it the blocker once.
+		const bool bAimBlocked = Mappings->GetMappings().ContainsByPredicate([AimBlock, GuardModifier](const FEnhancedActionKeyMapping& Mapping)
+		{
+			return Mapping.Action == AimBlock && Mapping.Key == EKeys::RightMouseButton && Mapping.Triggers.ContainsByPredicate([GuardModifier](const UInputTrigger* Trigger)
+			{
+				const UInputTriggerChordBlocker* Blocker = Cast<UInputTriggerChordBlocker>(Trigger);
+				return Blocker && Blocker->ChordAction == GuardModifier;
+			});
+		});
+		if (!bAimBlocked)
+		{
+			Mappings->UnmapKey(AimBlock, EKeys::RightMouseButton);
+			bChanged = true;
+		}
+		bChanged |= MapOnce(Mappings, AimBlock, EKeys::RightMouseButton, BlockedByGuardModifier);
+		bChanged |= MapOnce(Mappings, RangedGuard, EKeys::RightMouseButton, [Mappings, GuardModifier](FEnhancedActionKeyMapping& Mapping)
+		{
+			UInputTriggerChordAction* Chord = NewObject<UInputTriggerChordAction>(Mappings);
+			Chord->ChordAction = GuardModifier;
+			Mapping.Triggers.Add(Chord);
+		});
 		bChanged |= MapOnce(Mappings, AimBlock, EKeys::Gamepad_LeftTriggerAxis);
 		bChanged |= MapOnce(Mappings, Reload, EKeys::R);
 		bChanged |= MapOnce(Mappings, Reload, EKeys::Gamepad_FaceButton_Left);
@@ -728,7 +759,7 @@ namespace VaesenCombatAssets
 		bool bCharacterChanged = false;
 		const TPair<const TCHAR*, UInputAction*> Properties[] = {
 			{ TEXT("AttackAction"), Attack }, { TEXT("HeavyAttackAction"), Heavy }, { TEXT("TriggerAttackAction"), Trigger },
-			{ TEXT("AimOrBlockAction"), AimBlock }, { TEXT("ReloadAction"), Reload }, { TEXT("ThrowAction"), Throw },
+			{ TEXT("AimOrBlockAction"), AimBlock }, { TEXT("RangedGuardAction"), RangedGuard }, { TEXT("ReloadAction"), Reload }, { TEXT("ThrowAction"), Throw },
 			{ TEXT("HolsterAction"), Holster }, { TEXT("SwapWeaponAction"), Swap },
 			{ TEXT("CrouchAction"), Crouch },
 			{ TEXT("SwitchGripAction"), SwitchGrip },

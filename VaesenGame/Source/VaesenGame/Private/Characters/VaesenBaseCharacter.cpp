@@ -61,7 +61,7 @@ AVaesenBaseCharacter::AVaesenBaseCharacter()
 	DefaultAbilities = {
 		UVaesenGA_FireWeapon::StaticClass(), UVaesenGA_Reload::StaticClass(), UVaesenGA_CycleAction::StaticClass(),
 		UVaesenGA_Aim::StaticClass(), UVaesenGA_DrawBow::StaticClass(), UVaesenGA_MeleeLight::StaticClass(),
-		UVaesenGA_MeleeHeavy::StaticClass(), UVaesenGA_Block::StaticClass(), UVaesenGA_Throw::StaticClass(),
+		UVaesenGA_MeleeHeavy::StaticClass(), UVaesenGA_Block::StaticClass(), UVaesenGA_RangedGuard::StaticClass(), UVaesenGA_Throw::StaticClass(),
 		UVaesenGA_Holster::StaticClass(), UVaesenGA_SwapWeapon::StaticClass(), UVaesenGA_Dodge::StaticClass(),
 	};
 	// Item subobjects (equipped items, and inventories on subclasses) replicate through the registered list.

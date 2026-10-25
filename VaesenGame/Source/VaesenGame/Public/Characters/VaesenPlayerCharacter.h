@@ -138,6 +138,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Input|Combat")
 	TObjectPtr<UInputAction> AimOrBlockAction;
 
+	/** Ctrl + right mouse (hold): guard and parry with a long gun or a bow. */
+	UPROPERTY(EditDefaultsOnly, Category = "Input|Combat")
+	TObjectPtr<UInputAction> RangedGuardAction;
+
 	/** R: reload, or work the bolt. */
 	UPROPERTY(EditDefaultsOnly, Category = "Input|Combat")
 	TObjectPtr<UInputAction> ReloadAction;
