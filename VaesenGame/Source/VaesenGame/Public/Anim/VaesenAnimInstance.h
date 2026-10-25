@@ -62,6 +62,9 @@ public:
 	/** A blow's knock on that guard, 1 easing to 0. */
 	float GetGuardKnock() const { return ShoulderAimInput.GuardKnock; }
 
+	/** Whether that guard was knocked within the last Seconds. */
+	bool WasGuardKnocked(float Seconds) const { return GetWorld() && GetWorld()->GetTimeSeconds() - GuardKnockTime <= Seconds; }
+
 	/** The trigger pulled on an empty or unready gun: the finger only, no kick. */
 	void PulseDryTrigger() { TriggerPulse = 1.0f; }
 

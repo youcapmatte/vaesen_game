@@ -92,7 +92,7 @@ public:
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
-	/** No jumping while aiming a ranged weapon (aiming, drawing a bow, throwing) or locked on to a target. */
+	/** No jumping while aiming a ranged weapon (aiming, drawing a bow, throwing), guarding, or locked on to a target. */
 	virtual bool CanJumpInternal_Implementation() const override;
 
 	/** Faces where it aims (strafes) rather than where it walks: aiming, blocking, drawing a bow, throwing, locked on. */
@@ -141,7 +141,7 @@ protected:
 
 	/** Speed while blocking, aiming, drawing a bow, throwing or staggered, as a share of normal. */
 	UPROPERTY(EditDefaultsOnly, Category = "Combat", meta = (ClampMin = "0", ClampMax = "1"))
-	float BlockingSpeedScale = 0.5f;
+	float BlockingSpeedScale = 0.3f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Combat", meta = (ClampMin = "0", ClampMax = "1"))
 	float AimingSpeedScale = 0.3f;

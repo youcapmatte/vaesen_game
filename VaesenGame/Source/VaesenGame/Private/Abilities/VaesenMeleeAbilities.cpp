@@ -345,6 +345,11 @@ void UVaesenGA_Block::ActivateAbility(const FGameplayAbilitySpecHandle Handle, c
 		GetTimers().SetTimer(RepeatTimer, this, &UVaesenGA_Block::DrainWhileHeld, 0.25f, true);
 	}
 
+	// A guard held procedurally (the anim instance raises it) plays no montage.
+	if (BlockingItem && BlockingItem->GetCategoryDefaults().bProceduralGuard)
+	{
+		return;
+	}
 	const UAnimMontage* BlockMontage = BlockingItem ? BlockingItem->GetMontage(&FVaesenWeaponMontages::Block)
 		: UVaesenWeaponCategoryDefaults::Get()->GetCategory(EVaesenWeaponCategory::Unarmed).Montages.Block.Get();
 	PlayAbilityMontage(const_cast<UAnimMontage*>(BlockMontage));

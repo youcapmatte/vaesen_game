@@ -73,6 +73,7 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	bool bHandsFree = true;
 	bool bInHand = false;
 	bool bCyclingNow = false;
+	bool bGuardUp = false;
 	const UVaesenEquipmentComponent* Equipment = nullptr;
 	const AVaesenWeaponActor* WeaponActor = nullptr;
 
@@ -84,15 +85,15 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		bStrafing = !Character->GetCharacterMovement()->bOrientRotationToMovement;
 		bCrouching = Character->bIsCrouched;
 		bFalling = Character->GetCharacterMovement()->IsFalling();
-		// Not squared up to fight (not strafing: no block or aim, later no target lock): weapon stances use the plain
-		// locomotion then, standing, running and jumping. The fighting stance is for squaring up.
-		bRelaxed = !bStrafing;
 		bTargetLocked = Character->IsTargetLocked();
 
 		const UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Character);
 		const auto HasTag = [ASC](const FGameplayTag& Tag) { return ASC && ASC->HasMatchingGameplayTag(Tag); };
 		bAiming = HasTag(VaesenTags::State_Aiming) || HasTag(VaesenTags::State_DrawingBow) || HasTag(VaesenTags::State_Throwing);
-		bBlocking = HasTag(VaesenTags::State_Blocking);
+		bGuardUp = HasTag(VaesenTags::State_Blocking);
+		// Not squared up to fight: weapon stances use the plain locomotion then, standing, running and jumping. The fighting
+		// stance is for squaring up (aiming, a target lock); guarding without a lock keeps the plain stance.
+		bRelaxed = !bStrafing || (bGuardUp && !bTargetLocked);
 		bReloading = HasTag(VaesenTags::State_Reloading) || HasTag(VaesenTags::State_Cycling);
 		bStaggered = HasTag(VaesenTags::State_Staggered);
 		bShouldering = HasTag(VaesenTags::State_Aiming);
@@ -118,7 +119,7 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		bTargetLocked = false;
 		bCrouching = Rig->IsCrouchPose();
 		bAiming = bShouldering = Rig->IsAimPose();
-		bFalling = bBlocking = bReloading = bStaggered = false;
+		bFalling = bGuardUp = bReloading = bStaggered = false;
 		Aim = Rig->GetAim();
 		Weapon = Rig->GetWeaponDefaults();
 		Held = Rig->GetHeldWeapon();
@@ -130,6 +131,8 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	AimPitch = FMath::Clamp(Delta.Pitch, -90.0f, 90.0f);
 	AimYaw = FMath::Clamp(Delta.Yaw, -120.0f, 120.0f);
 
+	// The weapon stance holds an animated guard (bBlocking); a procedural one is the Shoulder Aim node's (below).
+	bBlocking = bGuardUp && !(Weapon && Weapon->GetCategoryDefaults().bProceduralGuard);
 	bWeaponDrawn = Weapon != nullptr;
 	WeaponCategory = Weapon ? Weapon->Category : EVaesenWeaponCategory::Unarmed;
 	// In both hands: always (rifles, bows) or held so now (a sword or an axe with the off hand free).
@@ -258,18 +261,23 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	RecoilKick = KickAt(static_cast<float>(Now - ShotTime), Held.Hold ? Held.Hold->RecoilRecovery : 0.35f);
 	ShoulderAimInput.Kick = RecoilKick;
 
-	// Guarding with a long gun (no guard animation for it): the Shoulder Aim node holds it across the chest in both
-	// hands, the muzzle up to the left, the top away from the body; a blow knocks it back.
-	const bool bGuard = bBlocking && In.bHeld && bHandsFree && !bShoulderAim && Weapon && Weapon->GetCategoryDefaults().bProceduralGuard;
+	// A guard held procedurally (bProceduralGuard: no guard animation, or one that turns side-on): the Shoulder Aim node
+	// holds the weapon in front of the chest (a long gun across it in both hands); a blow knocks it back.
+	const bool bGuard = bGuardUp && In.bHeld && bHandsFree && !bShoulderAim && Weapon && Weapon->GetCategoryDefaults().bProceduralGuard;
 	GuardAlpha = !In.bHeld ? 0.0f : Rig ? (bGuard ? 1.0f : 0.0f) : FMath::FInterpTo(GuardAlpha, bGuard ? 1.0f : 0.0f, DeltaSeconds, 10.0f);
 	In.GuardBlend = GuardAlpha;
 	// Manny faces +Y; his left is +X. A gun's barrel (X) goes across, its top away from him; a bow's limbs (Z) go
 	// across, its back (X, where the arrow goes) away from him, and the left hand takes the upper limb (not the string).
+	// A blade (or a club or an axe) held in one hand: raised in front of the right side of the chest, the blade (X)
+	// nearly upright (not across the face), the edge (Z) to the front; facing ahead, not turned side-on.
 	const FVector Across = FVector(0.85, 0.1, 0.5).GetSafeNormal();
 	const bool bBowGuard = WeaponCategory == EVaesenWeaponCategory::Bow;
-	In.GuardRotation = (bBowGuard ? FRotationMatrix::MakeFromZX(Across, FVector(0.0, 1.0, 0.0)) : FRotationMatrix::MakeFromXZ(Across, FVector(0.0, 1.0, 0.0))).ToQuat();
-	In.GuardFromChest = FVector(-2.0, 30.0, -10.0);
-	In.GuardMiddleInWeapon = bBowGuard ? FVector(0.0, 0.0, 16.0) : bLeftHolds ? LeftGrip.GetLocation() * 0.5 : FVector(20.0, 0.0, 0.0);
+	const bool bBladeGuard = Weapon && !Weapon->IsRanged();
+	const FVector Ahead(0.0, 1.0, 0.0);
+	In.GuardRotation = (bBowGuard ? FRotationMatrix::MakeFromZX(Across, Ahead)
+		: FRotationMatrix::MakeFromXZ(bBladeGuard ? FVector(0.12, 0.3, 0.95).GetSafeNormal() : Across, Ahead)).ToQuat();
+	In.GuardFromChest = bBladeGuard && !bLeftHolds ? FVector(-16.0, 42.0, -26.0) : FVector(-2.0, 30.0, -10.0);
+	In.GuardMiddleInWeapon = bBowGuard ? FVector(0.0, 0.0, 16.0) : bLeftHolds ? LeftGrip.GetLocation() * 0.5 : bBladeGuard ? FVector::ZeroVector : FVector(20.0, 0.0, 0.0);
 	if (bBowGuard && GuardAlpha > 0.0f && In.bLeftHand)
 	{
 		// The left palm (hand_l_weapon: X along what it holds, Z to the top) round the upper limb, as round a rifle's fore-end.

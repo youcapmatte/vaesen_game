@@ -109,6 +109,13 @@ void UVaesenWeaponCategoryDefaults::SetBuiltInDefaults()
 	// Handguns can't parry: too small (the forearm would take it). Long guns and bows can (Ctrl + right mouse; right
 	// mouse alone aims), but they aren't made for it: blocking wears them four times as hard, and even a parry wears
 	// them. The rest parry once they have the guard animation.
+	// The sword pack's guard is a block to the right (the body turns side-on): one-handed weapons guard procedurally too,
+	// facing ahead, the blade raised in front of the chest.
+	for (const EVaesenWeaponCategory OneHanded : { EVaesenWeaponCategory::OneHandedSword, EVaesenWeaponCategory::Dagger, EVaesenWeaponCategory::OneHandedAxe,
+		EVaesenWeaponCategory::Club, EVaesenWeaponCategory::Improvised })
+	{
+		Categories.FindOrAdd(OneHanded).bProceduralGuard = true;
+	}
 	for (const EVaesenWeaponCategory Handgun : { EVaesenWeaponCategory::Pistol, EVaesenWeaponCategory::Revolver })
 	{
 		Categories.FindOrAdd(Handgun).bCanParry = false;

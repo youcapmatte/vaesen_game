@@ -902,9 +902,22 @@ void UVaesenCombatSelfTest::BuildSteps()
 	Steps.Add({ FString(), [this, AimOrBlock]() { Press(AimOrBlock); return 0.6f; } });
 	Steps.Add({ FString(), [this, AimOrBlock]()
 	{
-		Shot(TEXT("5_Guard"), TEXT("/Game/1HM_Sword_Attacks_Finishers/Animations/1HM_Block/1HM_BlockRight.1HM_BlockRight"), 0.54f);
+		Shot(TEXT("5_Guard"), nullptr, 0.0f, true);
 		const UVaesenAnimInstance* Anim = Cast<UVaesenAnimInstance>(Fighter->GetMesh()->GetAnimInstance());
-		Check(Anim && !Anim->IsRelaxed(), TEXT("guarding squares up: the fighting stance"));
+		// Facing ahead: the shoulders square to where he faces (the plain idle turns them a little, about 0.4; a fencer's
+		// side-on stance is near 1), the plain stance, the blade raised.
+		const FVector Shoulders = (Fighter->GetMesh()->GetSocketLocation(TEXT("clavicle_r")) - Fighter->GetMesh()->GetSocketLocation(TEXT("clavicle_l"))).GetSafeNormal();
+		const float SideOn = FMath::Abs(FVector::DotProduct(Shoulders, Fighter->GetActorForwardVector()));
+		Check(Anim && Anim->IsRelaxed() && Anim->GetGuardBlend() > 0.9f && SideOn < 0.5f,
+			FString::Printf(TEXT("the sword guard faces ahead in the plain stance (guard %.2f, shoulders %.2f side-on)"), Anim ? Anim->GetGuardBlend() : 0.0f, SideOn));
+		const FVector HandFromBody = Fighter->GetActorTransform().InverseTransformPosition(Fighter->GetMesh()->GetSocketLocation(TEXT("hand_r")));
+		Say(FString::Printf(TEXT("INFO  sword guard: the hand %.0f cm ahead, %.0f to the right, %.0f up from the middle of the body"), HandFromBody.X, HandFromBody.Y, HandFromBody.Z), FColor::Yellow);
+		Check(!Fighter->CanJump(), TEXT("guarding: can't jump"));
+		return 0.1f;
+	} });
+	Steps.Add({ FString(), [this, AimOrBlock]()
+	{
+		Shot(TEXT("5b_GuardBehind"), nullptr, 0.0f, false, true);
 		Release(AimOrBlock);
 		return 0.5f;
 	} });
@@ -1011,10 +1024,8 @@ void UVaesenCombatSelfTest::BuildSteps()
 		const float Taken = Before - ASC->GetNumericAttribute(UVaesenAttributeSet::GetHealthAttribute());
 		Check(Taken > 0.0f && Taken < 10.0f, FString::Printf(TEXT("later, a block reduces it (took %.1f of 10)"), Taken));
 		Check(Sword && Sword->GetDurability() < DurabilityBefore, TEXT("blocking wore the sword"));
-		const UAnimInstance* Anim = Fighter->GetMesh()->GetAnimInstance();
-		const UAnimMontage* Playing = Anim ? Anim->GetCurrentActiveMontage() : nullptr;
-		Check(Sword && Playing && Sword->GetCategoryDefaults().Montages.BlockImpacts.Contains(Playing),
-			FString::Printf(TEXT("the blow taken on the guard: the sword recoils (%s)"), *GetNameSafe(Playing)));
+		const UVaesenAnimInstance* Anim = Cast<UVaesenAnimInstance>(Fighter->GetMesh()->GetAnimInstance());
+		Check(Anim && Anim->WasGuardKnocked(0.1f), TEXT("the blow taken on the guard knocks the sword back"));
 		Release(AimOrBlock);
 		Equipment->RequestSheathe();
 		return 2.0f;
@@ -1056,7 +1067,7 @@ void UVaesenCombatSelfTest::BuildSteps()
 		return 0.3f;
 	} });
 
-	// --- The hand axe parries with the sword's guard (borrowed until it has its own) ---
+	// --- The hand axe guards as the sword does (in front of the chest, held procedurally) ---
 	Steps.Add({ TEXT("Hand axe guard"), [this, Tap, Holster]()
 	{
 		ResetAll();
@@ -1077,14 +1088,11 @@ void UVaesenCombatSelfTest::BuildSteps()
 	{
 		Shot(TEXT("13_HandAxeGuard"), nullptr, 0.0f, true);
 		const UVaesenAnimInstance* Anim = Cast<UVaesenAnimInstance>(Fighter->GetMesh()->GetAnimInstance());
-		Check(Anim && ASC->HasMatchingGameplayTag(VaesenTags::State_Blocking) && Equipment->GetDrawnWeapon()->GetCategoryDefaults().AnimLayer != nullptr, TEXT("held: the guard stays up (the sword's stance holds it)"));
+		Check(Anim && ASC->HasMatchingGameplayTag(VaesenTags::State_Blocking) && Anim->GetGuardBlend() > 0.9f, TEXT("held: the guard stays up, the axe raised in front of the chest"));
 		FVaesenDamagePacket Swing;
 		Swing.Entries.Emplace(VaesenTags::Damage_Slashing, 10.0f);
 		UVaesenCombatLibrary::ApplyDamagePacket(Attacker, Fighter, Swing, FHitResult(), nullptr);
-		const UAnimMontage* Playing = Anim ? Anim->GetCurrentActiveMontage() : nullptr;
-		const UVaesenWeaponItem* Axe = Equipment->GetDrawnWeapon();
-		Check(Axe && Playing && Axe->GetCategoryDefaults().Montages.BlockImpacts.Contains(Playing),
-			FString::Printf(TEXT("a blow on the axe's guard: it recoils (%s)"), *GetNameSafe(Playing)));
+		Check(Anim && Anim->WasGuardKnocked(0.1f), TEXT("a blow on the axe's guard knocks it back"));
 		return 0.2f;
 	} });
 	Steps.Add({ FString(), [this, Equipment, AimOrBlock]()

@@ -195,7 +195,7 @@ bool AVaesenBaseCharacter::WantsToFaceAim() const
 bool AVaesenBaseCharacter::CanJumpInternal_Implementation() const
 {
 	static const FGameplayTagContainer AimingStates = FGameplayTagContainer::CreateFromArray(TArray<FGameplayTag>{
-		VaesenTags::State_Aiming, VaesenTags::State_DrawingBow, VaesenTags::State_Throwing });
+		VaesenTags::State_Aiming, VaesenTags::State_DrawingBow, VaesenTags::State_Throwing, VaesenTags::State_Blocking });
 	if (LockTarget || (AbilitySystem && AbilitySystem->HasAnyMatchingGameplayTags(AimingStates)))
 	{
 		return false;
