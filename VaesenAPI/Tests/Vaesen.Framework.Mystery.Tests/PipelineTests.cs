@@ -80,7 +80,7 @@ public sealed class PipelineTests
         Assert.DoesNotContain("\"reveal\"", model.Instructions[model.Calls.IndexOf("hook")], StringComparison.Ordinal);
 
         // Order is fixed, and the critic's objection to the hook sent back only the hook sub-step.
-        Assert.Equal(["world", "roster", "conflict", "escalation", "humans", "facts", "minds", "arc", "creature", "hook", "critic", "hook", "critic"], model.Calls);
+        Assert.Equal(["world", "roster", "conflict", "novelty", "escalation", "humans", "facts", "minds", "arc", "creature", "hook", "critic", "hook", "critic"], model.Calls);
         Assert.Contains(result.Result.Case.Log, e => e.Step == "critic" && !e.Passed);
         Assert.Contains(packet.Facts, f => f.Giveaway && f.Id == "f8");
         Assert.Contains(packet.Facts, f => f.DeepLore && f.Id == "f7");
@@ -201,7 +201,7 @@ public sealed class PipelineTests
 
         // One rework of the clues, never back to the conflict although the critic names the truth; then the case passes.
         Assert.True(result.Success, result.ErrorMessage);
-        Assert.Equal(["world", "roster", "conflict", "escalation", "humans", "facts", "minds", "arc", "creature", "hook", "critic", "minds", "critic"], model.Calls);
+        Assert.Equal(["world", "roster", "conflict", "novelty", "escalation", "humans", "facts", "minds", "arc", "creature", "hook", "critic", "minds", "critic"], model.Calls);
         var packet = result.Result!.Case.Packet;
         Assert.True(packet.Validation.Passed);
         var kept = Assert.Single(packet.Validation.Issues, i => i.Code == "critic." + CriticChecks.WorldConsistency);
@@ -226,7 +226,7 @@ public sealed class PipelineTests
 
         // The objection is split: the motive to the conflict, the channel to minds and channels, the warning on r1 to the
         // arc, in pipeline order. Nothing downstream is regenerated. The second review's warning goes to the arc, light.
-        Assert.Equal(["world", "roster", "conflict", "escalation", "humans", "facts", "minds", "arc", "creature", "hook", "critic", "conflict", "minds", "arc", "critic", "arc", "verify"], model.Calls);
+        Assert.Equal(["world", "roster", "conflict", "novelty", "escalation", "humans", "facts", "minds", "arc", "creature", "hook", "critic", "conflict", "minds", "arc", "critic", "arc", "verify"], model.Calls);
         var log = result.Result!.Case.Log;
         var afterReview = log.SkipWhile(e => e.Step != "critic").Skip(1).Where(e => e.Kind != LogEntryKinds.Check).ToList();
         Assert.Equal([LogEntryKinds.Fix, LogEntryKinds.Patch, LogEntryKinds.Patch], afterReview.Take(3).Select(e => e.Kind));
@@ -289,7 +289,7 @@ public sealed class PipelineTests
             Contexts.Add(request.Context);
             Assert.False(string.IsNullOrWhiteSpace(request.System));
             // The re-check sees only the items it is asked about (fixes 5, section 4), not the case.
-            if (request.Step is not (WorldSeeder.StepName or RosterBuilder.StepName or FixVerifier.StepName))
+            if (request.Step is not (WorldSeeder.StepName or RosterBuilder.StepName or FixVerifier.StepName or NoveltyCheck.StepName))
             {
                 Assert.Contains("# The assignment", request.Context, StringComparison.Ordinal);
             }
@@ -324,6 +324,7 @@ public sealed class PipelineTests
                 },
                 "critic" => Critic(),
                 FixVerifier.StepName => Verify(request.Instruction),
+                NoveltyCheck.StepName => new PlotSignatureOutput { Provocation = PlotProvocations.HarmToItsPlace, Bond = PlotBonds.None, Victim = PlotVictims.Worker, Cure = PlotCures.Restore, OneLine = "A water spirit drowns the men who dammed its race." },
                 _ => throw new InvalidOperationException(request.Step),
             };
 

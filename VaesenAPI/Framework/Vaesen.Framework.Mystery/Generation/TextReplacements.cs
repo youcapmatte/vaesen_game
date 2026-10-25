@@ -45,7 +45,7 @@ public sealed class CodeFixResult
 public static partial class TextReplacements
 {
     /// <summary>The keys that name an item in the packet and the outputs, to find a target's object.</summary>
-    private static readonly string[] IdKeys = ["characterId", "id", "threadId", "vaesenId"];
+    private static readonly string[] IdKeys = CasePaths.IdKeys;
 
     /// <summary>Applies the issue's replacements, one pair at a time; one result per pair.</summary>
     public static List<CodeFixResult> Apply(MysteryDraft draft, CoherenceIssue issue)
@@ -163,8 +163,9 @@ public static partial class TextReplacements
     }
 
     /// <summary>
-    /// Sets a field by path (fixes 5, section 1): "cast[id=npc-x].identity.rank", "channels[id=c66].placeId". Items in a
-    /// list are found by their id, never their index. A value from a fixed list is checked first; the field is read back.
+    /// Sets a field by path (fixes 5, section 1): "cast[id=npc-x].identity.rank", "channels[id=c66].placeId",
+    /// "creatureMinds[vaesenId=skogsra].knows[factId=f9].when". Items in a list are found by their id, never their
+    /// index (see <see cref="CasePaths"/>). A value from a fixed list is checked first; the field is read back.
     /// </summary>
     public static CodeFixResult SetField(MysteryDraft draft, FieldSet set)
     {
@@ -177,13 +178,13 @@ public static partial class TextReplacements
 
         var validation = draft.Packet.Validation;
         var root = PacketTree(draft.Packet);
-        if (Resolve(root, set.Path) is not { } field)
+        if (CasePaths.Resolve(root, set.Path) is not JValue field)
         {
             result.Failed = $"No field at {set.Path}.";
             return result;
         }
 
-        field.Value = Typed(field.Value, set.Value);
+        field.Replace(Typed(field, set.Value));
         draft.Packet = root.ToObject<CasePacket>()!;
         draft.Packet.Validation = validation;
 
@@ -191,23 +192,247 @@ public static partial class TextReplacements
         foreach (var (step, output) in draft.Outputs.ToList())
         {
             var tree = JToken.FromObject(output);
-            var hit = Resolve(tree, set.Path) ?? (set.Path.StartsWith("cast[", StringComparison.Ordinal) ? Resolve(tree, "residents" + set.Path[4..]) : null);
-            if (hit is not null)
+            if (CasePaths.ResolveInOutput(tree, set.Path) is JValue hit)
             {
-                hit.Value = Typed(hit.Value, set.Value);
+                hit.Replace(Typed(hit, set.Value));
                 draft.Outputs[step] = tree.ToObject(output.GetType())!;
             }
         }
 
+        KeepMinds(draft, set.Path);
+
         // The post-condition: the field reads back as the new value.
-        var back = Resolve(PacketTree(draft.Packet), set.Path);
+        var back = CasePaths.Resolve(PacketTree(draft.Packet), set.Path);
         result.InScope = 1;
-        if (back?.Value is not JValue v || !string.Equals(v.ToString(CultureInfoInvariant), set.Value, StringComparison.Ordinal) && v.Value?.ToString() != set.Value)
+        if (back is not JValue v || !string.Equals(v.ToString(CultureInfoInvariant), set.Value, StringComparison.Ordinal) && v.Value?.ToString() != set.Value)
         {
             result.Failed = $"{set.Path} does not read back as \"{set.Value}\".";
         }
 
         return result;
+    }
+
+    /// <summary>
+    /// A list edit by code (fixes 7, section 2): add an item to a list, remove one, or add a channel's requirement. The
+    /// item is checked first (a fact that exists, a source that reads, no second entry for one fact), the packet and
+    /// the step outputs that hold the list change alike, and the list is read back.
+    /// </summary>
+    public static CodeFixResult Edit(MysteryDraft draft, ListEdit edit)
+    {
+        var result = new CodeFixResult { Op = edit.Op, What = $"{edit.Target} {edit.Value}".Trim() };
+        var path = edit.Op == ListEditOps.AddRequirement ? RequiresPath(edit.Target) : edit.Target.Trim();
+        var validation = draft.Packet.Validation;
+        var root = PacketTree(draft.Packet);
+        if (CasePaths.Resolve(root, path) is not JArray list)
+        {
+            result.Failed = $"No list at {path}.";
+            return result;
+        }
+
+        var name = CasePaths.Parse(path)?[^1].Name ?? "";
+        var (change, why) = edit.Op switch
+        {
+            ListEditOps.AddRequirement => AddRequirement(draft.Packet, edit.Value),
+            ListEditOps.AddTo when name == "requires" => AddRequirement(draft.Packet, edit.Value),
+            ListEditOps.AddTo => AddItem(draft.Packet, list, name, edit),
+            ListEditOps.RemoveFrom => (l => Remove(l, edit.Value), null),
+            _ => ((Func<JArray, string?>)(_ => null), $"Unknown list operation '{edit.Op}'.{CoherenceIssue.Allowed(ListEditOps.All)}"),
+        };
+        why ??= change(list);
+        if (why is not null)
+        {
+            result.Failed = why;
+            return result;
+        }
+
+        draft.Packet = root.ToObject<CasePacket>()!;
+        draft.Packet.Validation = validation;
+        foreach (var (step, output) in draft.Outputs.ToList())
+        {
+            var tree = JToken.FromObject(output);
+            if (CasePaths.ResolveInOutput(tree, path) is JArray held)
+            {
+                change(held);
+                draft.Outputs[step] = tree.ToObject(output.GetType())!;
+            }
+        }
+
+        KeepMinds(draft, path);
+
+        // The post-condition: the list reads back with the item in it, or without it.
+        var back = CasePaths.Resolve(PacketTree(draft.Packet), path) as JArray;
+        result.InScope = 1;
+        var removing = edit.Op == ListEditOps.RemoveFrom;
+        if (back is null || back.Any(i => Is(i, removing ? edit.Value : ItemKey(edit, name))) == removing)
+        {
+            result.Failed = $"{path} does not read back as changed.";
+        }
+
+        return result;
+    }
+
+    /// <summary>A requirement goes on the channel's access list, however the target names the channel ("c19" too).</summary>
+    private static string RequiresPath(string target)
+    {
+        var t = target.Trim();
+        foreach (var tail in new[] { ".access.requires", ".access", ".requires" })
+        {
+            if (t.EndsWith(tail, StringComparison.Ordinal))
+            {
+                t = t[..^tail.Length];
+                break;
+            }
+        }
+
+        return (t.Contains('[', StringComparison.Ordinal) ? t : $"channels[id={t}]") + ".access.requires";
+    }
+
+    /// <summary>
+    /// A requirement from the access vocabulary. One of a kind that holds one value (trust, a roll, a time, a place)
+    /// replaces the one there: "trust>=0" becomes "trust>=1".
+    /// </summary>
+    private static (Func<JArray, string?> Change, string? Why) AddRequirement(CasePacket packet, string value)
+    {
+        if (AccessRequirement.Parse(value) is not { } wanted)
+        {
+            return (_ => null, $"'{value}' is not a requirement. Write knowsFact:<factId>, trust>=<n>, roll:<skill>, time:<time>, place:<placeId>, item:<thing> or afterBeat:<beatId>.");
+        }
+
+        if (wanted.Kind == AccessRequirement.KnowsFact && packet.FindFact(wanted.Value) is null)
+        {
+            return (_ => null, $"There is no fact {wanted.Value}.");
+        }
+
+        var text = Written(wanted);
+        var single = wanted.Kind is AccessRequirement.Trust or AccessRequirement.Roll or AccessRequirement.Time or AccessRequirement.Place;
+        return (list =>
+        {
+            if (list.Any(i => Is(i, text)))
+            {
+                return $"The channel already requires {text}.";
+            }
+
+            foreach (var weaker in list.Where(i => single && i.Type == JTokenType.String && AccessRequirement.Parse((string?)i)?.Kind == wanted.Kind).ToList())
+            {
+                weaker.Remove();
+            }
+
+            list.Add(text);
+            return null;
+        }, null);
+    }
+
+    private static string Written(AccessRequirement r) => r.Kind == AccessRequirement.Trust ? $"trust>={r.Threshold}" : $"{r.Kind}:{r.Value}";
+
+    /// <summary>
+    /// An item for a list: a knowledge entry ({factId, source, when}) for a "knows" list, the text itself for a list of
+    /// text (wants, terms, red lines, witnesses). Other items have fields of their own and need their step's patch.
+    /// </summary>
+    private static (Func<JArray, string?> Change, string? Why) AddItem(CasePacket packet, JArray list, string name, ListEdit edit)
+    {
+        var value = edit.Value.Trim();
+        if (name == "knows")
+        {
+            if (packet.FindFact(value) is null)
+            {
+                return (_ => null, $"There is no fact {value}.");
+            }
+
+            var source = string.IsNullOrWhiteSpace(edit.Source) ? KnowledgeSources.Witnessed : edit.Source.Trim();
+            if (KnowledgeSources.Problem(packet, source) is { } bad)
+            {
+                return (_ => null, bad);
+            }
+
+            return (l =>
+            {
+                if (l.OfType<JObject>().Any(k => (string?)k["factId"] == value))
+                {
+                    return $"{value} is in that list already.";
+                }
+
+                l.Add(JObject.FromObject(new CastKnowledge { FactId = value, Source = source, When = edit.When.Trim() }));
+                return null;
+            }, null);
+        }
+
+        if (list.Any(i => i.Type != JTokenType.String))
+        {
+            return (_ => null, $"A {name} item has fields of its own: its step patches it.");
+        }
+
+        return (l =>
+        {
+            if (l.Any(i => Is(i, value)))
+            {
+                return $"\"{value}\" is in that list already.";
+            }
+
+            l.Add(value);
+            return null;
+        }, null);
+    }
+
+    /// <summary>Removes the items that are the text, or carry it as their id, fact or what they are about.</summary>
+    private static string? Remove(JArray list, string match)
+    {
+        var gone = list.Where(i => Is(i, match)).ToList();
+        if (gone.Count == 0)
+        {
+            return $"Nothing in the list matches \"{match}\".";
+        }
+
+        foreach (var item in gone)
+        {
+            item.Remove();
+        }
+
+        return null;
+    }
+
+    /// <summary>An item is the text, carries it as a key, or (a belief) holds it, when it is long enough to be one.</summary>
+    private static bool Is(JToken item, string match)
+    {
+        var m = match.Trim();
+        return item switch
+        {
+            JValue { Type: JTokenType.String } v => string.Equals(((string)v.Value!).Trim(), m, StringComparison.Ordinal),
+            JObject o => new[] { "factId", "about", "id", "characterId" }.Any(k => (string?)o[k] == m)
+                || (m.Length >= 12 && o["belief"] is JValue { Type: JTokenType.String } b && ((string)b.Value!).Contains(m, StringComparison.OrdinalIgnoreCase)),
+            _ => false,
+        };
+    }
+
+    /// <summary>What reads back after an add: the fact of a knowledge entry, a requirement as written, or the text.</summary>
+    private static string ItemKey(ListEdit edit, string name) =>
+        name == "knows" ? edit.Value.Trim()
+        : (edit.Op == ListEditOps.AddRequirement || name == "requires") && AccessRequirement.Parse(edit.Value) is { } r ? Written(r)
+        : edit.Value.Trim();
+
+    /// <summary>
+    /// What a person knows, thinks and lies about lives in the minds step's answer too, and the next minds patch
+    /// rebuilds them from it: a code change to it goes there, or that patch brings the old version back. A person with
+    /// no mind in it yet (a hook-giver whose knowledge the hook added) is given one.
+    /// </summary>
+    private static void KeepMinds(MysteryDraft draft, string path)
+    {
+        if (!path.StartsWith("cast[", StringComparison.Ordinal)
+            || draft.Packet.FindCast(CasePaths.ItemOf(path).Split('.')[0]) is not { } member
+            || !draft.Outputs.TryGetValue(MindsStep.StepName, out var kept)
+            || kept is not MindsOutput minds)
+        {
+            return;
+        }
+
+        var mind = minds.Minds.Find(m => m.CharacterId == member.CharacterId);
+        if (mind is null)
+        {
+            minds.Minds.Add(mind = new CastMind { CharacterId = member.CharacterId });
+        }
+
+        mind.Knows = [.. member.Knows];
+        mind.Thinks = [.. member.Thinks];
+        mind.Lies = [.. member.Lies];
     }
 
     private static readonly IFormatProvider CultureInfoInvariant = System.Globalization.CultureInfo.InvariantCulture;
@@ -231,42 +456,6 @@ public static partial class TextReplacements
             _ => null,
         };
     }
-
-    /// <summary>The field a path names, or null: "cast[id=npc-x].identity.rank".</summary>
-    private static JProperty? Resolve(JToken root, string path)
-    {
-        JToken? node = root;
-        JProperty? last = null;
-        foreach (var part in path.Split('.'))
-        {
-            var m = PathPart().Match(part);
-            if (!m.Success || node is not JObject obj)
-            {
-                return null;
-            }
-
-            last = obj.Property(m.Groups["name"].Value, StringComparison.Ordinal);
-            node = last?.Value;
-            if (m.Groups["id"].Success)
-            {
-                // [id=x] finds an item by any of its id keys; [factId=f2] a knowledge entry by its fact.
-                var id = m.Groups["id"].Value;
-                string[] keys = m.Groups["key"].Value == "factId" ? ["factId"] : IdKeys;
-                node = (node as JArray)?.OfType<JObject>().FirstOrDefault(o => keys.Any(k => o[k] is JValue { Type: JTokenType.String } v && (string)v.Value! == id));
-                last = null;
-            }
-
-            if (node is null)
-            {
-                return null;
-            }
-        }
-
-        return last;
-    }
-
-    [GeneratedRegex(@"^(?<name>[A-Za-z]+)(\[(?<key>id|characterId|factId)=(?<id>[^\]]+)\])?$")]
-    private static partial Regex PathPart();
 
     /// <summary>The new value in the old one's type: a bool stays a bool, a number a number.</summary>
     private static JToken Typed(JToken old, string value) => old.Type switch

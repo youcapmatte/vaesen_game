@@ -16,7 +16,30 @@ public static partial class CriticRouting
         ConflictStep.StepName, EscalationStep.StepName, HumansStep.StepName, ResidentsStep.StepName, FactsStep.StepName, MindsStep.StepName, ArcStep.StepName, CreatureStep.StepName, HookStep.StepName,
     ];
 
-    private static readonly HashSet<string> MindParts = new(StringComparer.OrdinalIgnoreCase) { "knows", "thinks", "lies" };
+    /// <summary>
+    /// The parts of a person the minds step writes, read from its answer's schema (fixes 7, section 1): what is in a
+    /// <see cref="CastMind"/> besides the id. The rest of a person (identity, home, wants, secrets, relationships) is
+    /// the humans step's answer, <see cref="CastDraft"/>.
+    /// </summary>
+    public static readonly IReadOnlySet<string> MindParts = JsonNames(typeof(CastMind)).Where(n => n != "characterId").ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>The items each step's answer holds, by the lists in its schema: the ownership table, generated.</summary>
+    public static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> Owns = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal)
+    {
+        [ConflictStep.StepName] = JsonNames(typeof(ConflictOutput)).Select(n => "truth." + n).ToList(),
+        [EscalationStep.StepName] = JsonNames(typeof(EscalationOutput)),
+        [HumansStep.StepName] = JsonNames(typeof(CastDraft)).Where(n => !MindParts.Contains(n)).Select(n => "cast." + n).ToList(),
+        [ResidentsStep.StepName] = ["residents"],
+        [FactsStep.StepName] = JsonNames(typeof(FactsOutput)),
+        [MindsStep.StepName] = [.. MindParts.Select(n => "cast." + n), .. JsonNames(typeof(MindsOutput)).Where(n => n != "minds")],
+        [ArcStep.StepName] = JsonNames(typeof(ArcOutput)),
+        [CreatureStep.StepName] = JsonNames(typeof(CreatureMind)).Select(n => "creatureMinds." + n).ToList(),
+        [HookStep.StepName] = JsonNames(typeof(HookOutput)),
+    };
+
+    private static List<string> JsonNames(Type type) =>
+        type.GetProperties().Select(p => p.GetCustomAttributes(typeof(Newtonsoft.Json.JsonPropertyAttribute), false).OfType<Newtonsoft.Json.JsonPropertyAttribute>().FirstOrDefault()?.PropertyName)
+            .OfType<string>().ToList();
 
     /// <summary>The issues grouped by owning step, in pipeline order; each part keeps a link to the issue it came from.</summary>
     public static List<(string Step, List<(CoherenceIssue Part, CoherenceIssue Original)> Issues)> Route(IEnumerable<CoherenceIssue> issues)
@@ -47,10 +70,23 @@ public static partial class CriticRouting
     /// <summary>The id of the one creature mind as a patch item.</summary>
     public const string CreatureItem = "mind";
 
-    /// <summary>The step that owns a target id, and the issue location that names it for a patch ("lever:r3").</summary>
+    /// <summary>
+    /// The step that owns a target in this case: a target on the creature's own id ("skogsra.thinks") is the creature
+    /// step's, not a person's.
+    /// </summary>
+    public static (string Step, string Location) Owner(string target, CasePacket packet) => Owner(CasePaths.ItemOf(target, CreatureIds(packet)));
+
+    /// <summary>The ids a creature of this case goes by.</summary>
+    public static IEnumerable<string> CreatureIds(CasePacket packet) =>
+        packet.CreatureMinds.Select(m => m.VaesenId).Concat(packet.Brief.VaesenIds).Where(id => id.Length > 0).Distinct();
+
+    /// <summary>
+    /// The step that owns a target id, and the issue location that names it for a patch ("lever:r3"). A path
+    /// ("channels[id=c19].access.requires") is read as the item it is about.
+    /// </summary>
     public static (string Step, string Location) Owner(string target)
     {
-        var t = target.Trim();
+        var t = CasePaths.ItemOf(target);
         if (t.StartsWith("truth.", StringComparison.Ordinal))
         {
             return (ConflictStep.StepName, t);
@@ -103,9 +139,10 @@ public static partial class CriticRouting
         }
 
         // A person, with the part meant: what they know and say is minds and channels', who they are is humans'.
-        var dot = t.LastIndexOf('.');
+        // "npc-x.identity.rank" is npc-x's identity: the person is the id before the first dot, the part the word after it.
+        var dot = t.IndexOf('.');
         var person = dot > 0 ? t[..dot] : t;
-        var part = dot > 0 ? t[(dot + 1)..] : "";
+        var part = dot > 0 ? t[(dot + 1)..].Split('.')[0] : "";
         return MindParts.Contains(part) ? (MindsStep.StepName, $"cast:{person}") : (HumansStep.StepName, $"cast:{person}");
     }
 

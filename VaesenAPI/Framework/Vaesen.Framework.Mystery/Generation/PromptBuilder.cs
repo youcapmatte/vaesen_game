@@ -64,6 +64,31 @@ public static class PromptBuilder
         });
     }
 
+    /// <summary>
+    /// The Society's earlier plots (fixes 7, sections 4 and 5), each with its signature, labelled as plots and never as
+    /// things that happened: an unplayed case's felled tree is not this world's felled tree.
+    /// </summary>
+    public static string PlotsUsed(MysteryDraft draft)
+    {
+        if (draft.EarlierPlots.Count == 0)
+        {
+            return "";
+        }
+
+        var text = new StringBuilder();
+        text.AppendLine("# Plots already used for this Society: do not repeat");
+        text.AppendLine("These are plots, not events. Nothing in them happened in this Society's world unless it appears in the world overlay or in what is settled about this place.");
+        foreach (var plot in draft.EarlierPlots)
+        {
+            var same = plot.VaesenId == draft.Vaesen.Id ? $"the same creature, conflict {plot.ConflictArchetypeId}" : $"{plot.VaesenId}, at this place";
+            var signature = plot.Signature is { } sig ? $" Signature: provocation {sig.Provocation}, bond {sig.Bond}, victim {sig.Victim}, cure {sig.Cure}." : "";
+            text.AppendLine($"- \"{plot.Title}\" ({(plot.Year > 0 ? new InWorldDate(plot.Year, plot.Month).ToString() : "before the calendar")}, {same}{(plot.Played ? ", played" : ", not played")}): {plot.Signature?.OneLine ?? plot.Summary}{signature}");
+        }
+
+        text.AppendLine("Do not repeat these plots: not the same binding or provocation, the same kind of victim and how they were taken, the same people's roles (the one who warned, the one who took the money), the same signs or the same cure. Draw on other lore of the creature.");
+        return text.ToString();
+    }
+
     /// <summary>Everything the case is made from: the brief, the level, the creature, the conflicts and the people on offer.</summary>
     /// <param name="step">The step it is for; null (or the critic) gets everything.</param>
     public static string CaseContext(MysteryDraft draft, string? step = null)
@@ -160,17 +185,10 @@ public static class PromptBuilder
             text.AppendLine();
         }
 
-        // The plot memory (review of case 09, problem 5): without it the creature's strongest lore tells the same story twice.
-        if (draft.EarlierPlots.Count > 0 && For(ConflictStep.StepName, EscalationStep.StepName, FactsStep.StepName))
+        // The plot memory (review of case 09, problem 5): the conflict step has it in its instruction, where the log shows it.
+        if (draft.EarlierPlots.Count > 0 && For(EscalationStep.StepName, FactsStep.StepName))
         {
-            text.AppendLine("# The Society's earlier cases with this creature or at this place (tell a different story)");
-            foreach (var plot in draft.EarlierPlots)
-            {
-                var same = plot.VaesenId == draft.Vaesen.Id ? $"the same creature, conflict {plot.ConflictArchetypeId}" : $"{plot.VaesenId}, at this place";
-                text.AppendLine($"- \"{plot.Title}\" ({(plot.Year > 0 ? new InWorldDate(plot.Year, plot.Month).ToString() : "before the calendar")}, {same}{(plot.Played ? ", played" : ", queued")}): {plot.Summary}");
-            }
-
-            text.AppendLine("Do not repeat these plots: not the same binding or provocation, the same kind of victim and how they were taken, the same people's roles (the one who warned, the one who took the money), the same signs or the same cure. Draw on other lore of the creature.");
+            text.Append(PlotsUsed(draft));
             text.AppendLine();
         }
 
@@ -234,7 +252,10 @@ public static class PromptBuilder
     private static List<string> SettledAbout(MysteryDraft draft)
     {
         var lines = draft.SettledPublicFacts
-            .Select(s => $"- {s.PublicFactId} ({s.Fact}) is explained{(s.Played ? "" : " in a case not yet played")}: {s.Explanation}")
+            // An unplayed case's explanation is a plan, not history (fixes 7, section 5): it reserves the fact, nothing more.
+            .Select(s => s.Played
+                ? $"- {s.PublicFactId} ({s.Fact}) is explained: {s.Explanation}"
+                : $"- {s.PublicFactId} ({s.Fact}) is reserved by a case not yet played: leave it unexplained here. Nothing of that case has happened.")
             .ToList();
         if (draft.Brief.ReturnVisit && draft.Brief.PreviousMysteryIds.Count > 0)
         {

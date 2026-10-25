@@ -749,6 +749,10 @@ public sealed partial class CaseValidator : ICoherenceValidator
                         {
                             Error(IssueCodes.Provenance, at, $"Knows {k.FactId} from a bystander with no role.", "Write told:bystander:<role>, such as told:bystander:carter.");
                         }
+                        else if (source.Length == KnowledgeSources.PressPrefix.Length)
+                        {
+                            Error(IssueCodes.Provenance, at, $"Knows {k.FactId} from a paper with no name.", "Write told:press:<paper>, such as told:press:upsala.");
+                        }
                     }
                     else if (source.StartsWith(KnowledgeSources.ToldPrefix, StringComparison.Ordinal))
                     {
@@ -774,8 +778,8 @@ public sealed partial class CaseValidator : ICoherenceValidator
                     }
                     else
                     {
-                        Error(IssueCodes.Provenance, at, $"Knows {k.FactId} from an unreadable source '{source}'. Allowed: witnessed, self, lore, told:<characterId>, told:offstage:<id>, told:bystander:<role>, found:<channelId>.",
-                            "Use witnessed, self, lore, told:<characterId>, told:offstage:<id>, told:bystander:<role> or found:<channelId>.");
+                        Error(IssueCodes.Provenance, at, $"Knows {k.FactId} from an unreadable source '{source}'. Allowed: {KnowledgeSources.Forms}.",
+                            $"Use one of: {KnowledgeSources.Forms}.");
                     }
                 }
             }

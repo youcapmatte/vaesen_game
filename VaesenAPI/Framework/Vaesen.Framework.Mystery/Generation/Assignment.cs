@@ -68,8 +68,15 @@ public static class Assignment
             }
             else
             {
-                brief.Notes.Add($"No level for {date} fits any eligible creature; levels of other months were allowed.");
-                choice = Choose(pack, candidates, levels, random);
+                // No level is written for this month (fixes 7, section 8): the nearest month's level off cooldown stands
+                // in, the nearest on cooldown only after that, and the variant it lacks is asked of the content tool.
+                choice = Nearest(pack, candidates, levels.Where(l => brief.ReturnVisit || LevelCooldown(l.Id, history, date, pack.Setting, options) is null).ToList(), date.Month, random)
+                    ?? Nearest(pack, candidates, levels, date.Month, random);
+                if (choice is { } stand)
+                {
+                    brief.WantedVariants.Add($"{stand.Item2.Id}@{date.Month}");
+                    brief.Notes.Add($"No level for {date} fits any eligible creature; {stand.Item2.Id} stands in, and a variant of it for month {date.Month} is wanted.");
+                }
             }
         }
 
@@ -163,6 +170,22 @@ public static class Assignment
             .ThenBy(x => x.tiebreak)
             .Select(x => x.v)
             .ToList();
+    }
+
+    /// <summary>The choice among the levels written for the months nearest <paramref name=month/>, nearest first.</summary>
+    private static (VaesenDefinition, LevelDefinition, List<ConflictArchetype>)? Nearest(
+        ContentPack pack, List<VaesenDefinition> candidates, List<LevelDefinition> levels, int month, Random random)
+    {
+        static int Distance(LevelDefinition l, int month) => l.Months.Min(m => Math.Min(Math.Abs(m - month), 12 - Math.Abs(m - month)));
+        foreach (var group in levels.GroupBy(l => Distance(l, month)).OrderBy(g => g.Key))
+        {
+            if (Choose(pack, candidates, group.ToList(), random) is { } choice)
+            {
+                return choice;
+            }
+        }
+
+        return null;
     }
 
     private static (VaesenDefinition, LevelDefinition, List<ConflictArchetype>)? Choose(

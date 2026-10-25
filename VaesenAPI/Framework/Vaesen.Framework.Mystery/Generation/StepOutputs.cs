@@ -405,6 +405,10 @@ public sealed class CriticCheck
     [JsonProperty("setFields")]
     public List<FieldSet> SetFields { get; set; } = [];
 
+    /// <summary>List edits by code: a fact added to what someone knows, a requirement added to a channel, an item removed.</summary>
+    [JsonProperty("listEdits")]
+    public List<ListEdit> ListEdits { get; set; } = [];
+
     /// <summary>The parts that need rewording by the step that owns each target.</summary>
     [JsonProperty("patches")]
     public List<PatchAsk> Patches { get; set; } = [];

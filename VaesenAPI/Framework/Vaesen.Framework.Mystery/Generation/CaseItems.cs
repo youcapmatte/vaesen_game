@@ -10,7 +10,7 @@ namespace Vaesen.Framework.Mystery.Generation;
 /// </summary>
 public static class CaseItems
 {
-    private static readonly string[] IdKeys = ["characterId", "id", "threadId", "vaesenId"];
+    private static readonly string[] IdKeys = CasePaths.IdKeys;
 
     /// <summary>The packet as a tree, without its validation, to look items up in many times.</summary>
     public static JToken Tree(CasePacket packet)
@@ -26,7 +26,8 @@ public static class CaseItems
     /// </summary>
     public static string? Json(JToken root, string target)
     {
-        var t = target.Trim();
+        // A path ("channels[id=c19].access.requires") names the item it is about (fixes 7, section 3).
+        var t = CasePaths.ItemOf(target, root["creatureMinds"]?.Select(m => (string?)m["vaesenId"]).OfType<string>());
         JToken? item = t switch
         {
             "" => null,

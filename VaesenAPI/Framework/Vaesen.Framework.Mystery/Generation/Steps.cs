@@ -28,6 +28,12 @@ public static class StepErrorCodes
 
     /// <summary>The model said the focus does not suit this creature here; only the focus is re-rolled.</summary>
     public const string RerollFocus = "reroll_focus";
+
+    /// <summary>
+    /// The last round was asked for something only a whole-step revision could do, which is past its budget: the parts
+    /// are skipped, not failed (fixes 7, section 1).
+    /// </summary>
+    public const string SkippedBudget = "skipped_budget";
 }
 
 /// <summary>
@@ -48,6 +54,12 @@ public interface IFixableStep
     /// </summary>
     /// <param name="light">The cheap round for the critic's last warnings: the light model at low effort.</param>
     Task<ResultBase> FixAsync(MysteryDraft draft, IReadOnlyList<CoherenceIssue> issues, int caseAttempt, bool light, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Whether this step's answer holds the item at an issue location ("channel:c19", "cast:npc-x", "new:channel"): the
+    /// ownership table, read from what the step produced, so a part is sent only where a patch can answer it.
+    /// </summary>
+    bool Holds(MysteryDraft draft, string location);
 }
 
 /// <summary>
@@ -111,7 +123,27 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
 
         // Work on a copy: a fix that does not pass leaves the passed output untouched.
         var copy = Newtonsoft.Json.JsonConvert.DeserializeObject<TOutput>(Newtonsoft.Json.JsonConvert.SerializeObject(passed))!;
+        Seed(draft, copy, issues);
         return await LoopAsync(draft, issues.ToList(), copy, caseAttempt, light ? Mode.FixLight : Mode.Fix, 1, cancellationToken);
+    }
+
+    public virtual bool Holds(MysteryDraft draft, string location)
+    {
+        if (!draft.Outputs.TryGetValue(Name, out var kept) || kept is not TOutput output)
+        {
+            return false;
+        }
+
+        // A step with no lists to patch (the conflict, the hook) is revised as a whole: whatever is routed to it is its.
+        var lists = PatchLists(output);
+        return lists.Count == 0 || (location.StartsWith(Patch.NewItem, StringComparison.Ordinal)
+            ? lists.Any(l => l.Prefix == location[Patch.NewItem.Length..])
+            : Patch.Find(lists, location) is not null);
+    }
+
+    /// <summary>Gives a fix's copy the items its issues name that the step's answer does not have yet but should.</summary>
+    protected virtual void Seed(MysteryDraft draft, TOutput copy, IReadOnlyList<CoherenceIssue> issues)
+    {
     }
 
     private async Task<ResultBase> LoopAsync(
@@ -126,11 +158,17 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
         // A fix names its items, so it is always a patch when it can be: answering a few dozen items beats rewriting all.
         var patchErrors = last is not null && Patch.Patchable(PatchLists(last), issues, fixing ? 1.0 : options.PatchShare, anyCode: fixing) ? issues : [];
 
-        // The last round never rewrites a whole step: what cannot be a patch is left as it is, and stays a warning.
+        // The last round never rewrites a whole step: what cannot be a patch is skipped, and stays open for review.
         if (mode == Mode.FixLight && patchErrors.Count == 0 && last is not null && PatchLists(last).Count > 0)
         {
-            return ret.Fail($"Not a patch of {Name}'s items; left for the game master.", StepErrorCodes.StepFailed);
+            return ret.Fail($"Skipped (budget): the last round patches the {Name} step's items, and this would need the whole step revised.", StepErrorCodes.SkippedBudget);
         }
+
+        // After a step's first answer, a fix of it is a patch of the items it names (fixes 7, section 7). A whole revision
+        // is only for issues that name none of its items: a judgement of the step's design as a whole, logged as such.
+        var whole = fixing && patchErrors.Count == 0 && last is not null && PatchLists(last).Count > 0
+            ? $"A whole-step revision: the issues name no item of the {Name} step ({string.Join(", ", issues.Select(i => i.Location).Distinct())})."
+            : null;
 
         for (var attempt = 0; attempt <= retries; attempt++)
         {
@@ -141,6 +179,7 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
                 Step = Name,
                 Attempt = attempt,
                 Kind = patching ? LogEntryKinds.Patch : fixing ? LogEntryKinds.Fix : mode == Mode.Fresh && attempt == 0 ? LogEntryKinds.Fresh : LogEntryKinds.Full,
+                Why = patching ? null : whole,
             };
             draft.Log.Add(entry);
 
@@ -204,7 +243,9 @@ public abstract class ModelStep<TIn, TOut, TOutput>(IMysteryModel model, ICohere
                 // New items are welcome (a decoy thread a fact points to, a channel asked for), but not new people:
                 // a person who comes back from a patch with another id is the same person renamed.
                 var asked = patchErrors.Select(e => e.Location).Where(l => l.StartsWith(Patch.NewItem, StringComparison.Ordinal)).ToHashSet(StringComparer.Ordinal);
-                Patch.Merge(PatchLists(last!), PatchLists(output), allowNew: prefix => prefix != "cast" || asked.Contains(Patch.NewItem + prefix));
+                // Only the items asked about change: one it was not asked to touch is kept as it was (fixes 7, section 7).
+                Patch.Merge(PatchLists(last!), PatchLists(output), allowNew: prefix => prefix != "cast" || asked.Contains(Patch.NewItem + prefix),
+                    only: patchErrors.Select(e => e.Location).ToHashSet(StringComparer.Ordinal));
                 output = last!;
             }
 
@@ -291,7 +332,7 @@ public sealed class ConflictStep(IMysteryModel model, ICoherenceValidator valida
         {
             ["originLine"] = origin is null ? "" : $", and the origin of the affliction ({origin.Description})",
             ["handLine"] = PromptBuilder.HandLineForConflict(draft.Brief),
-        });
+        }) + (draft.EarlierPlots.Count > 0 ? "\n" + PromptBuilder.PlotsUsed(draft) : "");
     }
 
     protected override List<CoherenceIssue> Apply(MysteryDraft draft, CasePacket packet, ConflictOutput output)
@@ -670,6 +711,25 @@ public sealed class MindsStep(IMysteryModel model, ICoherenceValidator validator
             ["giveawayRule"] = PromptBuilder.GiveawayRuleForChannels(draft.Brief),
         });
 
+    /// <summary>
+    /// Every person's mind is this step's, even one its answer has no entry for yet (a hook-giver the hook gave what
+    /// the letter says): a fix to what they know is a patch of their mind here, not a failure (review of case 10).
+    /// </summary>
+    public override bool Holds(MysteryDraft draft, string location) =>
+        base.Holds(draft, location)
+        || (draft.Outputs.ContainsKey(Name) && location.StartsWith("cast:", StringComparison.Ordinal) && draft.Packet.FindCast(location[5..]) is not null);
+
+    protected override void Seed(MysteryDraft draft, MindsOutput copy, IReadOnlyList<CoherenceIssue> issues)
+    {
+        foreach (var id in issues.Select(i => i.Location).Where(l => l.StartsWith("cast:", StringComparison.Ordinal)).Select(l => l[5..]).Distinct())
+        {
+            if (!copy.Minds.Exists(m => m.CharacterId == id) && draft.Packet.FindCast(id) is { } member)
+            {
+                copy.Minds.Add(new CastMind { CharacterId = id, Knows = [.. member.Knows], Thinks = [.. member.Thinks], Lies = [.. member.Lies] });
+            }
+        }
+    }
+
     protected override List<CoherenceIssue> Apply(MysteryDraft draft, CasePacket packet, MindsOutput output)
     {
         var issues = new List<CoherenceIssue>();
@@ -695,6 +755,10 @@ public sealed class MindsStep(IMysteryModel model, ICoherenceValidator validator
         }
 
         packet.Channels = output.Channels;
+
+        // Minds rebuilt after the hook keep what the hook-giver's letter says (review of case 10): without this, every
+        // minds fix after the hook took it from them again.
+        HookStep.GiverKnows(draft, packet);
         return issues;
     }
 
@@ -807,21 +871,34 @@ public sealed class HookStep(IMysteryModel model, ICoherenceValidator validator,
             AssertedFactIds = output.Hook.AssertedFactIds,
             OpeningEventIds = output.Hook.OpeningEventIds,
         };
-        // The writer of the hook knows what it states (review 3, item 3): a fact the minds step did not give them is
-        // something they heard, so the runtime does not have them deny their own letter. Hearsay never counts as a way in.
-        if (packet.FindCast(packet.Hook.HookGiverId) is { } giver)
-        {
-            foreach (var factId in packet.Hook.AssertedFactIds.Where(f => packet.FindFact(f) is not null && !giver.Knows.Exists(k => k.FactId == f)).Distinct())
-            {
-                giver.Knows.Add(new CastKnowledge { FactId = factId, Source = KnowledgeSources.BystanderPrefix + "parish-talk", When = "before sending for the Society" });
-            }
-        }
-
+        GiverKnows(draft, packet);
         packet.Level.PlacesUsed = output.PlacesUsed;
         packet.Level.SceneDescriptions = output.SceneDescriptions
             .GroupBy(s => s.PlaceId)
             .ToDictionary(g => g.Key, g => g.First().Text);
         return [];
+    }
+
+    /// <summary>
+    /// The writer of the hook knows what it states (review 3, item 3): a fact the minds step did not give them is
+    /// something they heard, so the runtime does not have them deny their own letter. A forwarded cutting was read in
+    /// the paper (fixes 7, section 9), so the game master can say so. Hearsay never counts as a way in.
+    /// </summary>
+    public static void GiverKnows(MysteryDraft draft, CasePacket packet)
+    {
+        if (packet.FindCast(packet.Hook.HookGiverId) is not { } giver)
+        {
+            return;
+        }
+
+        var channel = draft.Brief.HookChannelId;
+        var press = channel.Contains("newspaper", StringComparison.OrdinalIgnoreCase) || channel.Contains("press", StringComparison.OrdinalIgnoreCase);
+        foreach (var factId in packet.Hook.AssertedFactIds.Where(f => packet.FindFact(f) is not null && !giver.Knows.Exists(k => k.FactId == f)).Distinct())
+        {
+            giver.Knows.Add(press
+                ? new CastKnowledge { FactId = factId, Source = KnowledgeSources.Press(channel), When = "in the cutting they sent" }
+                : new CastKnowledge { FactId = factId, Source = KnowledgeSources.BystanderPrefix + "parish-talk", When = "before sending for the Society" });
+        }
     }
 
     protected override CluesStage Next(MysteryDraft draft) => new(draft);
@@ -848,17 +925,94 @@ public sealed class CriticStep(IMysteryModel model, MysteryOptions options)
         });
 
         entry.Instruction = PromptBuilder.WithCaseAndFeedback(instruction, draft.Packet, [], null) + Earlier(earlier);
+
+        // The second look checks the fixes against its own list: it does not need to think as hard as the first.
+        var reply = await AskAsync(draft, entry, earlier is null ? options.CriticEffort : options.StandardEffort, cancellationToken);
+        if (!reply.Success)
+        {
+            return ret.Fail(reply.ErrorMessage, reply.ErrorCode);
+        }
+
+        var checks = reply.Result!.Checks;
+
+        // Every check gets an answer (fixes 7, section 6): the ones left out are asked again, alone, in a small call on
+        // the same context. One still unanswered blocks, as not answered: it was never judged.
+        var missing = Missing(checks);
+        if (missing.Count > 0)
+        {
+            var again = new GenerationLogEntry { CaseAttempt = caseAttempt, Step = Name, Attempt = 1, Kind = LogEntryKinds.Patch };
+            draft.Log.Add(again);
+            again.Instruction = entry.Instruction + Only(missing);
+            var answer = await AskAsync(draft, again, options.LightEffort, cancellationToken);
+            if (answer.Success)
+            {
+                checks = [.. checks, .. answer.Result!.Checks.Where(c => missing.Contains(c.Check))];
+            }
+        }
+
+        var issues = checks
+            .Where(c => !c.Passed)
+            .Select(c => new CoherenceIssue
+            {
+                Code = "critic." + c.Check,
+                Severity = c.Severity == IssueSeverities.Warning ? IssueSeverities.Warning : IssueSeverities.Error,
+                Location = c.Location,
+                Explanation = c.Explanation,
+                SuggestedFix = c.SuggestedFix,
+                Source = IssueSources.Critic,
+                Targets = c.Targets.Where(t => !string.IsNullOrWhiteSpace(t)).Select(t => t.Trim()).ToList(),
+                Replacements = c.Replacements.Where(r => r.From.Length > 0 && r.From != r.To).ToList() is { Count: > 0 } replacements ? replacements : null,
+                Everywhere = c.Everywhere,
+                SetFields = c.SetFields.Where(f => f.Path.Length > 0).ToList() is { Count: > 0 } fields ? fields : null,
+                ListEdits = c.ListEdits.Where(e => e.Target.Length > 0 && e.Value.Length > 0).ToList() is { Count: > 0 } edits ? edits : null,
+                Patches = c.Patches.Where(p => p.Target.Length > 0).ToList() is { Count: > 0 } patches ? patches : null,
+
+                Blocking = BlockingOf(c),
+                ImpactReason = string.IsNullOrWhiteSpace(c.ImpactReason) || c.Impact == CriticImpacts.Default ? null : c.ImpactReason,
+            })
+            .ToList();
+
+        foreach (var unanswered in Missing(checks))
+        {
+            issues.Add(new CoherenceIssue
+            {
+                Code = "critic." + unanswered,
+                Severity = IssueSeverities.Warning,
+                Location = "critic",
+                Explanation = "Not answered: the critic left this check out twice, so it was never judged.",
+                Source = IssueSources.Critic,
+                Blocking = true,
+            });
+        }
+
+        entry.Issues = issues;
+
+        // A critic run passes only when it raised nothing blocking (fixes 5, section 5).
+        entry.Passed = !issues.Exists(i => i.IsError || i.Blocking);
+        draft.Packet.Validation.Runs++;
+        return ret.Ok(issues);
+    }
+
+    /// <summary>The checks the critic's answer leaves out.</summary>
+    public static List<string> Missing(IReadOnlyList<CriticCheck> checks) =>
+        CriticChecks.All.Where(name => !checks.Any(c => c.Check == name)).ToList();
+
+    /// <summary>The re-ask of the checks left out: the same review, answering only these.</summary>
+    public static string Only(IReadOnlyList<string> missing) =>
+        $"\n\n# Only these checks\nYour answer left out {string.Join(", ", missing)}. Answer only {(missing.Count == 1 ? "that check" : "these checks")}, one entry each, in the same form: passed or not, and if not, the fix.";
+
+    private async Task<ResultBase<CriticOutput>> AskAsync(MysteryDraft draft, GenerationLogEntry entry, string effort, CancellationToken cancellationToken)
+    {
+        var ret = new ResultBase<CriticOutput>();
         var reply = await model.GenerateAsync<CriticOutput>(new ModelRequest
         {
             Step = Name,
             Model = options.CriticModel,
-
-            // The second look checks the fixes against its own list: it does not need to think as hard as the first.
-            Effort = earlier is null ? options.CriticEffort : options.StandardEffort,
+            Effort = effort,
             MaxTokens = Math.Min(options.MaxOutputTokens, 32000),
             System = draft.SystemPrompt,
             Context = draft.ContextFor(Name),
-            Instruction = entry.Instruction,
+            Instruction = entry.Instruction!,
 
             // The critic usually looks twice with the same schema and context: the second look reads the cache.
             Cache = true,
@@ -880,46 +1034,8 @@ public sealed class CriticStep(IMysteryModel model, MysteryOptions options)
         entry.PrefixHash = answer.PrefixHash;
         entry.CostUsd = ModelPrices.Cost(answer.Model, answer.InputTokens, answer.CacheWriteTokens, answer.CacheReadTokens, answer.OutputTokens);
         entry.Output = answer.RawJson;
-
-        var issues = answer.Value.Checks
-            .Where(c => !c.Passed)
-            .Select(c => new CoherenceIssue
-            {
-                Code = "critic." + c.Check,
-                Severity = c.Severity == IssueSeverities.Warning ? IssueSeverities.Warning : IssueSeverities.Error,
-                Location = c.Location,
-                Explanation = c.Explanation,
-                SuggestedFix = c.SuggestedFix,
-                Source = IssueSources.Critic,
-                Targets = c.Targets.Where(t => !string.IsNullOrWhiteSpace(t)).Select(t => t.Trim()).ToList(),
-                Replacements = c.Replacements.Where(r => r.From.Length > 0 && r.From != r.To).ToList() is { Count: > 0 } replacements ? replacements : null,
-                Everywhere = c.Everywhere,
-                SetFields = c.SetFields.Where(f => f.Path.Length > 0).ToList() is { Count: > 0 } fields ? fields : null,
-                Patches = c.Patches.Where(p => p.Target.Length > 0).ToList() is { Count: > 0 } patches ? patches : null,
-
-                Blocking = BlockingOf(c),
-                ImpactReason = string.IsNullOrWhiteSpace(c.ImpactReason) || c.Impact == CriticImpacts.Default ? null : c.ImpactReason,
-            })
-            .ToList();
-
-        foreach (var missing in CriticChecks.All.Where(name => !answer.Value.Checks.Exists(c => c.Check == name)))
-        {
-            issues.Add(new CoherenceIssue
-            {
-                Code = "critic." + missing,
-                Severity = IssueSeverities.Warning,
-                Location = "critic",
-                Explanation = "The critic did not answer this check.",
-                Source = IssueSources.Critic,
-            });
-        }
-
-        entry.Issues = issues;
-
-        // A critic run passes only when it raised nothing blocking (fixes 5, section 5).
-        entry.Passed = !issues.Exists(i => i.IsError || i.Blocking);
-        draft.Packet.Validation.Runs++;
-        return ret.Ok(issues);
+        entry.Passed = true;
+        return ret.Ok(answer.Value);
     }
 
     /// <summary>

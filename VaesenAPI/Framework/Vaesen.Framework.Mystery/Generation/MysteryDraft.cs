@@ -148,7 +148,7 @@ public sealed class CluesStage : DraftStage
 public sealed record SettledPublicFact(string PublicFactId, string Fact, string Explanation, string MysteryId, bool Played);
 
 /// <summary>An earlier case of the Society, as the plot memory tells it: what it was about, never how it was solved.</summary>
-public sealed record EarlierPlot(string MysteryId, string Title, string VaesenId, string LevelId, int Year, int Month, string ConflictArchetypeId, string Summary, bool Played);
+public sealed record EarlierPlot(string MysteryId, string Title, string VaesenId, string LevelId, int Year, int Month, string ConflictArchetypeId, string Summary, bool Played, PlotSignature? Signature = null);
 
 public sealed class GenerationLogEntry
 {
@@ -204,6 +204,10 @@ public sealed class GenerationLogEntry
     public List<CoherenceIssue> Issues { get; set; } = [];
 
     /// <summary>The step's instruction as sent (the system prompt and case context are kept once, in the stored case).</summary>
+    /// <summary>Why a call was what it was, when that needs saying (a whole-step revision rather than a patch).</summary>
+    [JsonProperty("why", NullValueHandling = NullValueHandling.Ignore)]
+    public string? Why { get; set; }
+
     [JsonProperty("instruction")]
     public string? Instruction { get; set; }
 

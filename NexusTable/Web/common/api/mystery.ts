@@ -87,13 +87,15 @@ export interface CoherenceIssue {
 export type FixLabel = "fixed (verified)" | "fixed (unverified)" | "did not hold" | "not fixed";
 
 export interface FixPart {
-  kind: "replace" | "setField" | "patch";
+  /** listEdit: a list changed by code (a fact added to what someone knows, a requirement added to a channel). */
+  kind: "replace" | "setField" | "listEdit" | "patch";
   owner: string;
   target: string;
   /** A patch that adds rather than rewords: a new channel for the target fact, or a new person. */
   change?: "addChannel" | "addPerson" | null;
   detail: string;
-  status: "pending" | "done" | "failed" | "undone" | "unrouted";
+  /** skipped (budget): the last round only patches items, and this needed a whole step revised. */
+  status: "pending" | "done" | "failed" | "undone" | "unrouted" | "skipped (budget)";
   note?: string | null;
 }
 
@@ -208,13 +210,28 @@ export interface CasePacket {
   publicFactsExplained?: { publicFactId: string; fact: string; explanation: string }[];
   tension: { start: number };
   validation: { passed: boolean; issues: CoherenceIssue[]; runs: number; needsReview?: boolean };
+  /** The plot in a few values, to tell later cases from this one. */
+  plotSignature?: PlotSignature | null;
+}
+
+export interface PlotSignature {
+  vaesenId: string;
+  reasonKind: string;
+  conflictArchetypeId: string;
+  provocation: string;
+  bond: string;
+  victim: string;
+  cure: string;
+  oneLine: string;
 }
 
 export interface GenerationLogEntry {
   caseAttempt: number;
   step: string;
   /** full: the whole step; fresh: a restart after it gave up; patch: only the items with problems; check: the whole-case checks. */
-  kind: "full" | "fresh" | "patch" | "fix" | "check" | "rename" | "roster";
+  kind: "full" | "fresh" | "patch" | "fix" | "check" | "rename" | "roster" | "replace" | "undo";
+  /** Why the call was what it was, when that needs saying (a whole-step revision rather than a patch). */
+  why?: string | null;
   /** The call's cost in USD at list prices. */
   costUsd?: number;
   attempt: number;
@@ -254,7 +271,8 @@ export interface CaseClosing {
 
 export interface StoredCase {
   packet: CasePacket;
-  brief: { notes: string[] };
+  /** wantedVariants: month variants the content tool should write ("level-forsby-october@11"). */
+  brief: { notes: string[]; wantedVariants?: string[] };
   log: GenerationLogEntry[];
   prompts: { system: string; context: string };
   status: CaseStatus;

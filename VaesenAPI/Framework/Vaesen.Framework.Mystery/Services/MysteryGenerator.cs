@@ -175,7 +175,7 @@ public sealed class MysteryGenerator(
             var draft = NewDraft(pack, request.History, brief, caseWorld);
             draft.Log.AddRange(rosterLog);
             draft.SettledPublicFacts = await SettledPublicFactsAsync(request.History, brief.LevelId, world, cancellationToken);
-            draft.EarlierPlots = await EarlierPlotsAsync(request.History, brief, cancellationToken);
+            draft.EarlierPlots = await EarlierPlotsAsync(draft, request.History, brief, caseAttempt, cancellationToken);
             progress?.Report(new GenerationProgress(caseAttempt, "assignment",
                 $"{draft.Vaesen.Name} at {draft.Level.Name}, {new InWorldDate(brief.Year, brief.Month)}, focus {brief.Focus}{(brief.HiddenHand ? ", with a hidden hand" : "")}{(brief.ReturnVisit ? ", a return visit" : "")}."));
 
@@ -311,13 +311,24 @@ public sealed class MysteryGenerator(
     public const int EarlierPlotCount = 6;
 
     /// <summary>
-    /// The plot memory (review of case 09, problem 5): the Society's latest cases with this creature or at this level,
-    /// played or queued, each as its title and the first sentences of its truth.
+    /// The plot memory (review of case 09, problem 5; fixes 7, section 4): the Society's latest cases with this creature
+    /// or at this level, from its history and from every case stored for it (queued, in play, finished, or made in the
+    /// case lab), each as its title, the first sentences of its truth and its signature. A case stored without a
+    /// signature is read into one now and saved with it.
     /// </summary>
-    private async Task<List<EarlierPlot>> EarlierPlotsAsync(SocietyHistory history, AssignmentBrief brief, CancellationToken ct)
+    private async Task<List<EarlierPlot>> EarlierPlotsAsync(MysteryDraft draft, SocietyHistory history, AssignmentBrief brief, int caseAttempt, CancellationToken ct)
     {
+        var finished = history.Mysteries.Where(m => m.Finished).Select(m => m.MysteryId).ToHashSet(StringComparer.Ordinal);
+        var listed = (await cases.ListAsync(history.SocietyId, ct)).Result ?? [];
+        var candidates = history.Mysteries.Select(m => (m.MysteryId, m.VaesenIds, m.LevelId, Order: m.Year * 12 + m.Month))
+            .Concat(listed.Where(s => s.Status != CaseStatuses.Rejected).Select(s => (s.MysteryId, s.VaesenIds, s.LevelId, Order: s.Year * 12 + s.Month)))
+            .Where(c => c.VaesenIds.Contains(brief.VaesenId) || c.LevelId == brief.LevelId)
+            .DistinctBy(c => c.MysteryId)
+            .OrderByDescending(c => c.Order)
+            .Take(EarlierPlotCount);
+
         var plots = new List<EarlierPlot>();
-        foreach (var past in history.Mysteries.Where(m => m.VaesenIds.Contains(brief.VaesenId) || m.LevelId == brief.LevelId).Reverse().Take(EarlierPlotCount))
+        foreach (var past in candidates)
         {
             var stored = await cases.GetAsync(history.SocietyId, past.MysteryId, ct);
             if (stored.Result?.Packet is not { } packet)
@@ -325,9 +336,22 @@ public sealed class MysteryGenerator(
                 continue;
             }
 
+            if (packet.PlotSignature is null && Options.UseCritic)
+            {
+                var signed = await new NoveltyCheck(model, Options).SignAsync(packet, past.VaesenIds.FirstOrDefault() ?? "", draft.Log, caseAttempt, draft.SystemPrompt, ct);
+                if (signed.Success)
+                {
+                    packet.PlotSignature = signed.Result;
+                    if (!(await cases.SaveAsync(stored.Result, ct)).Success)
+                    {
+                        logger.LogWarning("The plot signature of {MysteryId} was not kept", past.MysteryId);
+                    }
+                }
+            }
+
             var summary = packet.Truth.Summary.Length <= 600 ? packet.Truth.Summary : packet.Truth.Summary[..600].TrimEnd() + "…";
-            plots.Add(new EarlierPlot(past.MysteryId, packet.Title, past.VaesenIds.FirstOrDefault() ?? "", past.LevelId, past.Year, past.Month,
-                packet.Brief.ConflictArchetypeId, summary, past.Finished));
+            plots.Add(new EarlierPlot(past.MysteryId, packet.Title, past.VaesenIds.FirstOrDefault() ?? "", past.LevelId, packet.Brief.Year, packet.Brief.Month,
+                packet.Brief.ConflictArchetypeId, summary, finished.Contains(past.MysteryId), packet.PlotSignature));
         }
 
         return plots;
@@ -486,11 +510,50 @@ public sealed class MysteryGenerator(
         var o = Options;
         return stage switch
         {
-            0 => await RunStepAsync(new ConflictStep(model, validator, o), new AssignedStage(draft), feedback, caseAttempt, "Building the conflict.", progress, ct),
+            0 => await RunConflictAsync(draft, feedback, caseAttempt, progress, ct),
             1 => await RunStepAsync(new EscalationStep(model, validator, o), new ConflictStage(draft), feedback, caseAttempt, "Writing what has happened.", progress, ct),
             2 => await RunPeopleAsync(draft, feedback, caseAttempt, progress, ct),
             _ => await RunCluesAsync(draft, feedback, caseAttempt, progress, ct),
         };
+    }
+
+    /// <summary>How many times the conflict is re-rolled when its plot repeats an earlier one.</summary>
+    public const int NoveltyRerolls = 1;
+
+    /// <summary>
+    /// The conflict, then the structural novelty check on it (fixes 7, section 4): its plot is read into a signature and
+    /// compared with the Society's earlier plots. A repeat re-rolls the conflict once, with the overlap named. A repeat
+    /// that survives is left for the critic's novelty check, which then blocks.
+    /// </summary>
+    private async Task<ResultBase> RunConflictAsync(MysteryDraft draft, IReadOnlyList<CoherenceIssue> feedback, int caseAttempt, IProgress<GenerationProgress>? progress, CancellationToken ct)
+    {
+        var o = Options;
+        var conflict = new ConflictStep(model, validator, o);
+        var result = await RunStepAsync(conflict, new AssignedStage(draft), feedback, caseAttempt, "Building the conflict.", progress, ct);
+        for (var reroll = 0; result.Success && o.UseCritic; reroll++)
+        {
+            progress?.Report(new GenerationProgress(caseAttempt, NoveltyCheck.StepName, "Checking the plot against the Society's earlier cases."));
+            var signed = await new NoveltyCheck(model, o).SignAsync(draft.Packet, draft.Vaesen.Id, draft.Log, caseAttempt, draft.SystemPrompt, ct);
+            if (!signed.Success)
+            {
+                logger.LogWarning("The plot could not be read into a signature: {Error}", signed.ErrorMessage);
+                break;
+            }
+
+            draft.Packet.PlotSignature = signed.Result;
+            var repeats = NoveltyCheck.Overlaps(signed.Result!, draft.EarlierPlots);
+            draft.Log[^1].Issues = repeats;
+            draft.Log[^1].Passed = repeats.Count == 0;
+            if (repeats.Count == 0 || reroll >= NoveltyRerolls)
+            {
+                break;
+            }
+
+            logger.LogInformation("The conflict repeats an earlier plot; re-rolling it: {Repeats}", string.Join(" ", repeats));
+            result = await RunStepAsync(conflict, new AssignedStage(draft), [.. feedback, .. repeats], caseAttempt, "Building another conflict.", progress, ct);
+        }
+
+        return result;
     }
 
     /// <summary>
@@ -709,7 +772,7 @@ public sealed class MysteryGenerator(
     /// <summary>A critic issue that names its items and says how to fix them.</summary>
     private static bool Fixable(CoherenceIssue issue) =>
         issue.Targets is { Count: > 0 } && !string.IsNullOrWhiteSpace(issue.SuggestedFix)
-        || issue.Replacements is { Count: > 0 } || issue.SetFields is { Count: > 0 } || issue.Patches is { Count: > 0 };
+        || issue.Replacements is { Count: > 0 } || issue.SetFields is { Count: > 0 } || issue.ListEdits is { Count: > 0 } || issue.Patches is { Count: > 0 };
 
     private static CoherenceIssue AsWarning(CoherenceIssue issue) => new()
     {
@@ -724,6 +787,7 @@ public sealed class MysteryGenerator(
         Everywhere = issue.Everywhere,
         Blocking = issue.Blocking,
         SetFields = issue.SetFields,
+        ListEdits = issue.ListEdits,
         Patches = issue.Patches,
         ImpactReason = issue.ImpactReason,
     };
@@ -749,6 +813,10 @@ public sealed class MysteryGenerator(
         var scope = string.Join(", ", issue.Everywhere ? ["everywhere"] : issue.Targets ?? []);
         parts.AddRange((issue.Replacements ?? []).Select(r => new FixPart { Kind = FixPartKinds.Replace, Owner = "code", Target = scope, Detail = $"\"{r.From}\" → \"{r.To}\"" }));
         parts.AddRange((issue.SetFields ?? []).Select(f => new FixPart { Kind = FixPartKinds.SetField, Owner = "code", Target = f.Path, Detail = f.Value }));
+        parts.AddRange((issue.ListEdits ?? []).Select(e => new FixPart
+        {
+            Kind = FixPartKinds.ListEdit, Owner = "code", Target = e.Target, Detail = $"{e.Op} {e.Value}{(e.Source.Length > 0 ? $" ({e.Source})" : "")}",
+        }));
         var asks = issue.Patches is { Count: > 0 } patches
             ? patches.Select(p => (p.Target, Fix: string.IsNullOrWhiteSpace(p.Fix) ? issue.SuggestedFix ?? "" : p.Fix, p.Change)).ToList()
             : parts.Count == 0 ? (issue.Targets ?? []).Select(t => (Target: t, Fix: issue.SuggestedFix ?? "", Change: PatchChanges.Reword)).ToList() : [];
@@ -760,7 +828,7 @@ public sealed class MysteryGenerator(
             {
                 PatchChanges.AddChannel => (MindsStep.StepName, Patch.NewItem + "channel"),
                 PatchChanges.AddPerson => (HumansStep.StepName, Patch.NewItem + "cast"),
-                _ => CriticRouting.Owner(target),
+                _ => CriticRouting.Owner(target, packet),
             };
             var known = location.StartsWith(Patch.NewItem, StringComparison.Ordinal) || CaseItems.Json(tree, target) is not null;
             parts.Add(new FixPart
@@ -856,8 +924,14 @@ public sealed class MysteryGenerator(
             var codeParts = issue.Parts!.Where(p => p.Owner == "code").ToList();
             var pairs = issue.Replacements ?? [];
             var fields = issue.SetFields ?? [];
+            var edits = issue.ListEdits ?? [];
             var units = codeParts.Select((part, i) => (Part: part, Index: i))
-                .GroupBy(x => x.Part.Kind == FixPartKinds.Replace ? $"pair:{x.Index}" : "field:" + ItemOf(x.Part.Target))
+                .GroupBy(x => x.Part.Kind switch
+                {
+                    FixPartKinds.Replace => $"pair:{x.Index}",
+                    FixPartKinds.ListEdit => $"edit:{x.Index}",
+                    _ => "field:" + ItemOf(x.Part.Target),
+                })
                 .Select(g => g.ToList());
             foreach (var unit in units)
             {
@@ -865,9 +939,12 @@ public sealed class MysteryGenerator(
                 var failed = false;
                 foreach (var (part, i) in unit)
                 {
-                    var result = part.Kind == FixPartKinds.Replace
-                        ? TextReplacements.Apply(draft, new CoherenceIssue { Targets = issue.Targets, Everywhere = issue.Everywhere, Replacements = [pairs[i]] })[0]
-                        : TextReplacements.SetField(draft, fields[i - pairs.Count]);
+                    var result = part.Kind switch
+                    {
+                        FixPartKinds.Replace => TextReplacements.Apply(draft, new CoherenceIssue { Targets = issue.Targets, Everywhere = issue.Everywhere, Replacements = [pairs[i]] })[0],
+                        FixPartKinds.SetField => TextReplacements.SetField(draft, fields[i - pairs.Count]),
+                        _ => TextReplacements.Edit(draft, edits[i - pairs.Count - fields.Count]),
+                    };
                     draft.Log.Add(new GenerationLogEntry
                     {
                         CaseAttempt = caseAttempt,
@@ -922,7 +999,7 @@ public sealed class MysteryGenerator(
                 {
                     PatchChanges.AddChannel => Patch.NewItem + "channel",
                     PatchChanges.AddPerson => Patch.NewItem + "cast",
-                    _ => part.Target.Length == 0 ? issue.Location : CriticRouting.Owner(part.Target).Location,
+                    _ => part.Target.Length == 0 ? issue.Location : CriticRouting.Owner(part.Target, draft.Packet).Location,
                 };
                 var step = part.Owner == HumansStep.StepName && residents.Contains(location) ? ResidentsStep.StepName : part.Owner;
                 var ask = new CoherenceIssue
@@ -945,6 +1022,7 @@ public sealed class MysteryGenerator(
             }
         }
 
+        Reroute(draft, routed, steps, light);
         foreach (var step in CriticRouting.PipelineOrder)
         {
             if (!routed.TryGetValue(step, out var asks) || asks.Count == 0)
@@ -974,10 +1052,11 @@ public sealed class MysteryGenerator(
 
             if (!result.Success)
             {
+                var skipped = result.ErrorCode == StepErrorCodes.SkippedBudget;
                 foreach (var (part, _) in asks.Where(a => a.Part.Status == FixPartStatuses.Pending))
                 {
-                    part.Status = FixPartStatuses.Failed;
-                    part.Note = $"The {step} patch did not pass that step's checks: {result.ErrorMessage}";
+                    part.Status = skipped ? FixPartStatuses.Skipped : FixPartStatuses.Failed;
+                    part.Note = skipped ? result.ErrorMessage : $"The {step} patch did not pass that step's checks: {result.ErrorMessage}";
                 }
 
                 logger.LogWarning("The fix for {Step} did not pass its checks and was not applied: {Error}", step, result.ErrorMessage);
@@ -1040,6 +1119,54 @@ public sealed class MysteryGenerator(
         }
 
         return new FixRound(issues.Where(i => i.Code != IssueCodes.Consistency && i.Parts!.TrueForAll(p => p.Status == FixPartStatuses.Done)).ToList());
+    }
+
+    /// <summary>
+    /// Each part goes to the step whose answer holds its item (review of case 10, problem 1): one no step holds fails
+    /// alone, with why, and never sinks the parts sent with it. A part that names no item asks for its step to be
+    /// revised whole, which the last round has no budget for: it is skipped there, and stays open for review.
+    /// </summary>
+    private static void Reroute(MysteryDraft draft, Dictionary<string, List<(FixPart Part, CoherenceIssue Ask)>> routed, Dictionary<string, IFixableStep> steps, bool light)
+    {
+        foreach (var (step, asks) in routed.ToList())
+        {
+            foreach (var ask in asks.ToList())
+            {
+                if (ask.Part.Target.Length == 0)
+                {
+                    if (light && !steps[step].Holds(draft, ask.Ask.Location))
+                    {
+                        asks.Remove(ask);
+                        ask.Part.Status = FixPartStatuses.Skipped;
+                        ask.Part.Note = $"Skipped (budget): it names no item, so it needs the whole {step} step revised, and the last round only patches items.";
+                    }
+
+                    continue;
+                }
+
+                if (steps[step].Holds(draft, ask.Ask.Location))
+                {
+                    continue;
+                }
+
+                asks.Remove(ask);
+                var holder = CriticRouting.PipelineOrder.FirstOrDefault(s => steps[s].Holds(draft, ask.Ask.Location));
+                if (holder is null)
+                {
+                    ask.Part.Status = FixPartStatuses.Failed;
+                    ask.Part.Note = $"No step's answer holds {ask.Ask.Location} ({ask.Part.Target}).";
+                    continue;
+                }
+
+                ask.Part.Owner = holder;
+                if (!routed.TryGetValue(holder, out var list))
+                {
+                    routed[holder] = list = [];
+                }
+
+                list.Add(ask);
+            }
+        }
     }
 
     /// <summary>
@@ -1388,11 +1515,25 @@ public sealed class MysteryGenerator(
                 $"Step {draft.FailedStep ?? "unknown"} did not complete, so the case after it is missing."));
         }
 
-        packet.Validation.Issues = structural.Concat(critic).ToList();
+        // A repeat the conflict's re-roll did not shake off blocks on its own (fixes 7, section 4); the critic's novelty
+        // check then blocks only when this one found nothing and the critic still sees a repeat.
+        var repeats = packet.PlotSignature is { } signature
+            ? NoveltyCheck.Overlaps(signature, draft.EarlierPlots).Select(r => new CoherenceIssue
+            {
+                Code = r.Code, Severity = IssueSeverities.Warning, Location = r.Location, Explanation = r.Explanation, SuggestedFix = r.SuggestedFix,
+                Source = IssueSources.Structural, Blocking = true,
+            }).ToList()
+            : [];
+        foreach (var novelty in critic.Where(i => i.Code == "critic." + CriticChecks.Novelty && repeats.Count > 0))
+        {
+            novelty.Blocking = false;
+        }
+
+        packet.Validation.Issues = structural.Concat(repeats).Concat(critic).ToList();
         packet.Validation.Passed = passed && !structural.Exists(i => i.IsError);
 
-        // A blocking critic issue not fixed (review 3, item 3; fixes 5, section 5): the case is kept, but needs review.
-        packet.Validation.NeedsReview = packet.Validation.Passed && critic.Exists(i => i.Blocking && !FixLabels.IsFixed(i.Label));
+        // A blocking issue not fixed (review 3, item 3; fixes 5, section 5): the case is kept, but needs review.
+        packet.Validation.NeedsReview = packet.Validation.Passed && packet.Validation.Issues.Exists(i => i.Blocking && !FixLabels.IsFixed(i.Label));
         packet.Validation.Runs++;
     }
 }

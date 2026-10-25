@@ -154,4 +154,11 @@ public sealed class AssignmentBrief
     /// <summary>Things the assignment had to relax (no level for the month, every creature on cooldown).</summary>
     [JsonProperty("notes")]
     public List<string> Notes { get; set; } = [];
+
+    /// <summary>
+    /// Month variants the content tool should write (fixes 7, section 8): "level-forsby-october@11" when no level was
+    /// written for the case's month and another month's version stood in for it.
+    /// </summary>
+    [JsonProperty("wantedVariants")]
+    public List<string> WantedVariants { get; set; } = [];
 }

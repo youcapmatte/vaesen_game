@@ -58,6 +58,10 @@ public sealed class CoherenceIssue
     [JsonProperty("setFields", NullValueHandling = NullValueHandling.Ignore)]
     public List<FieldSet>? SetFields { get; set; }
 
+    /// <summary>List edits by code (fixes 7, section 2): a fact added to what someone knows, a requirement added to a channel.</summary>
+    [JsonProperty("listEdits", NullValueHandling = NullValueHandling.Ignore)]
+    public List<ListEdit>? ListEdits { get; set; }
+
     /// <summary>The parts that need a model, each with its own target and instruction (fixes 5, section 3).</summary>
     [JsonProperty("patches", NullValueHandling = NullValueHandling.Ignore)]
     public List<PatchAsk>? Patches { get; set; }
@@ -115,6 +119,45 @@ public sealed class FieldSet
 
     [JsonProperty("value")]
     public string Value { get; set; } = "";
+}
+
+/// <summary>
+/// A list edit by code (fixes 7, section 2). "addTo" adds to the list at <see cref="Target"/>: a knowledge entry to a
+/// "knows" list (the fact in <see cref="Value"/>, with <see cref="Source"/> and <see cref="When"/>), or the text itself
+/// to a list of text. "removeFrom" removes the items that are <see cref="Value"/> or carry it as their id or fact.
+/// "addRequirement" adds <see cref="Value"/> to the channel's access, replacing a weaker one of its kind.
+/// </summary>
+public sealed class ListEdit
+{
+    /// <summary>One of <see cref="ListEditOps"/>.</summary>
+    [OneOf(typeof(ListEditOps))]
+    [JsonProperty("op")]
+    public string Op { get; set; } = ListEditOps.AddTo;
+
+    /// <summary>The list ("cast[id=npc-x].knows"), or for a requirement the channel ("channels[id=c19]").</summary>
+    [JsonProperty("target")]
+    public string Target { get; set; } = "";
+
+    /// <summary>The fact id, the text, the requirement, or what to remove.</summary>
+    [JsonProperty("value")]
+    public string Value { get; set; } = "";
+
+    /// <summary>For a knowledge entry: how they learned it ("witnessed", "told:npc-x", "told:press:upsala").</summary>
+    [JsonProperty("source")]
+    public string Source { get; set; } = "";
+
+    /// <summary>For a knowledge entry: when they learned it.</summary>
+    [JsonProperty("when")]
+    public string When { get; set; } = "";
+}
+
+public static class ListEditOps
+{
+    public const string AddTo = "addTo";
+    public const string RemoveFrom = "removeFrom";
+    public const string AddRequirement = "addRequirement";
+
+    public static readonly IReadOnlyList<string> All = [AddTo, RemoveFrom, AddRequirement];
 }
 
 /// <summary>A part of a critic issue that needs a model: the item to patch and what to change in it.</summary>
@@ -188,6 +231,10 @@ public static class FixPartKinds
 {
     public const string Replace = "replace";
     public const string SetField = "setField";
+
+    /// <summary>A list edit by code: <see cref="ListEditOps"/>.</summary>
+    public const string ListEdit = "listEdit";
+
     public const string Patch = "patch";
 }
 
@@ -206,6 +253,12 @@ public static class FixPartStatuses
 
     /// <summary>No step owns it: no target, or a target the case does not have.</summary>
     public const string Unrouted = "unrouted";
+
+    /// <summary>
+    /// Skipped (budget): the last round patches the items it names and never rewrites a whole step, so a part that would
+    /// need one is not sent (fixes 7, section 1). It stays open, and a blocking issue left open puts the case in review.
+    /// </summary>
+    public const string Skipped = "skipped (budget)";
 }
 
 /// <summary>The only four labels a fixed issue carries (fixes 5, section 4).</summary>

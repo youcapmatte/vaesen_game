@@ -23,6 +23,10 @@ public sealed class CasePacket
     [JsonProperty("seasonId")]
     public string? SeasonId { get; set; }
 
+    /// <summary>The plot in a few values, to tell a later case from this one (fixes 7, section 4); null in older cases.</summary>
+    [JsonProperty("plotSignature", NullValueHandling = NullValueHandling.Ignore)]
+    public PlotSignature? PlotSignature { get; set; }
+
     [JsonProperty("title")]
     public string Title { get; set; } = "";
 
@@ -600,8 +604,52 @@ public static class KnowledgeSources
     /// <summary>Told by a named person who never appears ("told:offstage:greta"): hearsay too, by the same rules.</summary>
     public const string OffstagePrefix = "told:offstage:";
 
+    /// <summary>
+    /// Read in a newspaper ("told:press:upsala", fixes 7, section 9): what a forwarded cutting asserts, which its reader
+    /// knows only from print. Hearsay too: never a fact's own way in.
+    /// </summary>
+    public const string PressPrefix = "told:press:";
+
+    public static string Press(string paper) => PressPrefix + paper;
+
     public static bool IsHearsay(string? source) =>
-        source?.StartsWith(BystanderPrefix, StringComparison.Ordinal) == true || source?.StartsWith(OffstagePrefix, StringComparison.Ordinal) == true;
+        source?.StartsWith(BystanderPrefix, StringComparison.Ordinal) == true || source?.StartsWith(OffstagePrefix, StringComparison.Ordinal) == true
+        || source?.StartsWith(PressPrefix, StringComparison.Ordinal) == true;
+
+    /// <summary>Every form a source may take, for an error that says what to write.</summary>
+    public const string Forms = "witnessed, self, lore, told:<characterId>, told:offstage:<id>, told:bystander:<role>, told:press:<paper>, found:<channelId>";
+
+    /// <summary>Why a source does not read in this case (a teller not in the cast, a channel it does not have), or null.</summary>
+    public static string? Problem(CasePacket packet, string source)
+    {
+        if (source is Witnessed or Self or Lore)
+        {
+            return null;
+        }
+
+        foreach (var prefix in new[] { OffstagePrefix, BystanderPrefix, PressPrefix })
+        {
+            if (source.StartsWith(prefix, StringComparison.Ordinal))
+            {
+                var who = source[prefix.Length..];
+                return who.Length == 0 ? $"'{source}' names no one. Allowed: {Forms}."
+                    : prefix == OffstagePrefix && !packet.OffstagePeople.Exists(o => o.Id == who) ? $"'{who}' is not among the offstage people."
+                    : null;
+            }
+        }
+
+        if (source.StartsWith(FoundPrefix, StringComparison.Ordinal))
+        {
+            return packet.FindChannel(source[FoundPrefix.Length..]) is null ? $"There is no channel {source[FoundPrefix.Length..]}." : null;
+        }
+
+        if (source.StartsWith(ToldPrefix, StringComparison.Ordinal))
+        {
+            return packet.FindCast(source[ToldPrefix.Length..]) is null ? $"'{source[ToldPrefix.Length..]}' is not in the cast." : null;
+        }
+
+        return $"'{source}' is not a source. Allowed: {Forms}.";
+    }
     public const string FoundPrefix = "found:";
 
     public static string Told(string characterId) => ToldPrefix + characterId;

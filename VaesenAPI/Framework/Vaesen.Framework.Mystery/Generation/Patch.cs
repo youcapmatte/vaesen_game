@@ -75,7 +75,8 @@ public static class Patch
     /// Replaces each item of <paramref name="original"/> that the patch answered, by id, and adds the ones with new ids
     /// (a problem asked for them). Others are left alone.
     /// </summary>
-    public static void Merge(IReadOnlyList<PatchList> original, IReadOnlyList<PatchList> patch, Func<string, bool>? allowNew = null)
+    /// <param name="only">The "prefix:id" of the items asked about: an existing item outside it is not replaced.</param>
+    public static void Merge(IReadOnlyList<PatchList> original, IReadOnlyList<PatchList> patch, Func<string, bool>? allowNew = null, IReadOnlySet<string>? only = null)
     {
         foreach (var answered in patch)
         {
@@ -93,7 +94,11 @@ public static class Patch
                 {
                     if (target.Id(target.Items[i]!) == id)
                     {
-                        target.Items[i] = item;
+                        if (only is null || only.Contains($"{answered.Prefix}:{id}"))
+                        {
+                            target.Items[i] = item;
+                        }
+
                         replaced = true;
                     }
                 }
@@ -156,7 +161,7 @@ public static class Patch
         return text.ToString();
     }
 
-    private static (PatchList List, object Item)? Find(IReadOnlyList<PatchList> lists, string location)
+    public static (PatchList List, object Item)? Find(IReadOnlyList<PatchList> lists, string location)
     {
         var colon = location.IndexOf(':', StringComparison.Ordinal);
         if (colon <= 0)
