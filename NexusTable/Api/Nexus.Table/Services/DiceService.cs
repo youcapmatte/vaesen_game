@@ -8,7 +8,8 @@ namespace Nexus.Table.Services;
 /// <summary>
 /// Skill tests by the Vaesen rules (chapter 3), rolled on the server:
 ///   pool = attribute + skill + difficulty + bonus (+2 for the Advantage) - 1 per Condition of the matching type,
-///   at least one die; every six is a success. A failed roll can be pushed once: every die that isn't a six is
+///   at least one die; every six is a success, and one is usually enough, but the Gamemaster may ask for more
+///   (successesNeeded). A roll of a test the Gamemaster asked for takes its skill, difficulty and sixes. A failed roll can be pushed once: every die that isn't a six is
 ///   thrown again, and the character suffers a Condition of the roll's type, which takes effect after the push.
 /// </summary>
 public interface IDiceService
@@ -33,6 +34,7 @@ public sealed class DiceService : IDiceService
     private readonly IDiceRoller _dice;
     private readonly ITableNotifier _notifier;
     private readonly IOptions<NexusOptions> _options;
+    private readonly ISessionService _sessions;
 
     public DiceService(
         IRollStore rolls,
@@ -41,8 +43,10 @@ public sealed class DiceService : IDiceService
         IRulesService rules,
         IDiceRoller dice,
         ITableNotifier notifier,
-        IOptions<NexusOptions> options)
+        IOptions<NexusOptions> options,
+        ISessionService sessions)
     {
+        _sessions = sessions;
         _rolls = rolls;
         _characters = characters;
         _society = society;
@@ -64,6 +68,28 @@ public sealed class DiceService : IDiceService
         }
 
         var sheet = character.Result!;
+
+        // A test the Gamemaster asked for sets what is rolled, how hard, and how many sixes it takes.
+        if (request.TestId is { Length: > 0 } testId)
+        {
+            var test = await _sessions.FindPendingTestAsync(testId, cancellationToken).ConfigureAwait(false);
+            if (test is null || test.CharacterId != sheet.Id)
+            {
+                return ret.Fail("That test is no longer waiting for this character.", ErrorCodes.Invalid);
+            }
+
+            request.Skill = test.Skill;
+            request.Attribute = test.Skill is null ? test.Attribute : null;
+            request.Difficulty = test.Difficulty;
+            request.SuccessesNeeded = test.SuccessesNeeded;
+            request.Reason ??= test.Reason;
+        }
+
+        if (request.SuccessesNeeded is < 1 or > SessionService.MaxSuccessesNeeded)
+        {
+            return ret.Fail($"Sixes needed are 1 to {SessionService.MaxSuccessesNeeded}.", ErrorCodes.Invalid);
+        }
+
         if (sheet.PhysicallyBroken || sheet.MentallyBroken)
         {
             return ret.Fail($"{sheet.Name} is Broken and can't succeed at anything until their Conditions are treated.", ErrorCodes.Invalid);
@@ -108,6 +134,8 @@ public sealed class DiceService : IDiceService
             PoolSize = size,
             Dice = dice,
             Successes = CountSuccesses(dice, rules),
+            SuccessesNeeded = request.SuccessesNeeded,
+            TestId = string.IsNullOrEmpty(request.TestId) ? null : request.TestId,
             Reason = Trim(request.Reason),
             CreatedBy = caller.Id,
         };
@@ -119,6 +147,7 @@ public sealed class DiceService : IDiceService
         }
 
         await _notifier.RollMadeAsync(created.Result!, cancellationToken).ConfigureAwait(false);
+        await _sessions.RollMadeAsync(created.Result!, cancellationToken).ConfigureAwait(false);
         return ret.Ok(new RollOutcome { Roll = created.Result!, Character = sheet });
     }
 
@@ -184,6 +213,7 @@ public sealed class DiceService : IDiceService
 
         await _notifier.RollMadeAsync(savedRoll.Result!, cancellationToken).ConfigureAwait(false);
         await _notifier.CharacterChangedAsync(savedCharacter.Result!, cancellationToken).ConfigureAwait(false);
+        await _sessions.RollMadeAsync(savedRoll.Result!, cancellationToken).ConfigureAwait(false);
         return ret.Ok(new RollOutcome { Roll = savedRoll.Result!, Character = savedCharacter.Result! });
     }
 

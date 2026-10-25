@@ -90,6 +90,14 @@ public sealed class GmTable
     /// <summary>The case at the table, whole: what the Gamemaster runs. Null between mysteries.</summary>
     [JsonProperty("mystery", NullValueHandling = NullValueHandling.Ignore)]
     public GmMystery? Mystery { get; set; }
+
+    /// <summary>The open session, with the play state it resumes from. Null when none is open.</summary>
+    [JsonProperty("session", NullValueHandling = NullValueHandling.Ignore)]
+    public PlaySession? Session { get; set; }
+
+    /// <summary>The open session's latest log lines, oldest first: what the Gamemaster rejoins mid-session with.</summary>
+    [JsonProperty("recentLog")]
+    public List<string> RecentLog { get; set; } = [];
 }
 
 public sealed class GmMystery
@@ -150,12 +158,16 @@ public sealed class CallService : ICallService
     public const string HttpClientName = "livekit";
     public const string NotConfigured = "call_not_configured";
 
+    /// <summary>How many of the open session's log lines the Gamemaster rejoins with.</summary>
+    public const int RecentLogLines = 40;
+
     private readonly IOptions<LiveKitOptions> _options;
     private readonly IOptions<NexusOptions> _nexus;
     private readonly ISocietyService _society;
     private readonly ICharacterStore _characters;
     private readonly IAccountStore _accounts;
     private readonly ICasePacketStore _cases;
+    private readonly ISessionService _sessions;
     private readonly IHttpClientFactory _http;
     private readonly TimeProvider _timeProvider;
     private readonly ILogger<CallService> _logger;
@@ -167,6 +179,7 @@ public sealed class CallService : ICallService
         ICharacterStore characters,
         IAccountStore accounts,
         ICasePacketStore cases,
+        ISessionService sessions,
         IHttpClientFactory http,
         TimeProvider timeProvider,
         ILogger<CallService> logger)
@@ -177,6 +190,7 @@ public sealed class CallService : ICallService
         _characters = characters;
         _accounts = accounts;
         _cases = cases;
+        _sessions = sessions;
         _http = http;
         _timeProvider = timeProvider;
         _logger = logger;
@@ -229,6 +243,17 @@ public sealed class CallService : ICallService
         if (!options.IsConfigured)
         {
             return ret.Fail("The call isn't set up yet: LiveKit:Url, ApiKey and ApiSecret are missing.", NotConfigured);
+        }
+
+        // With a case at the table, the Gamemaster plays a session of it: the next one, unless one is open.
+        var society = await _society.GetAsync(cancellationToken).ConfigureAwait(false);
+        if (society.Result?.AtTable is not null)
+        {
+            var session = await _sessions.EnsureOpenAsync(caller.Id, cancellationToken).ConfigureAwait(false);
+            if (!session.Success)
+            {
+                return ret.Fail(session.ErrorMessage, session.ErrorCode);
+            }
         }
 
         // LiveKit's server API is Twirp: JSON over POST, authorized by a token with roomAdmin on the room.
@@ -297,10 +322,14 @@ public sealed class CallService : ICallService
             }
         }
 
+        var open = mystery is null ? null : await _sessions.GetOpenAsync(cancellationToken).ConfigureAwait(false);
+        var recent = open is null ? [] : await _sessions.RecentAsync(open.Id, RecentLogLines, cancellationToken).ConfigureAwait(false);
         return ret.Ok(new GmTable
         {
             Society = society.Result,
             Mystery = mystery,
+            Session = open,
+            RecentLog = recent.Where(e => !e.HostOnly).Select(e => $"{e.At:HH:mm} {SessionService.Line(e)}").ToList(),
             Players = accounts.Select(a => new GmPlayer
             {
                 AccountId = a.Id,

@@ -203,4 +203,10 @@ public interface ITableNotifier
     Task CharacterChangedAsync(Character character, CancellationToken cancellationToken = default);
 
     Task RollMadeAsync(Roll roll, CancellationToken cancellationToken = default);
+
+    /// <summary>A session started or ended, or its pending tests changed. Players get it without the play state.</summary>
+    Task SessionChangedAsync(PlaySession session, CancellationToken cancellationToken = default);
+
+    /// <summary>Something new in the session log.</summary>
+    Task SessionEventAsync(SessionEvent sessionEvent, CancellationToken cancellationToken = default);
 }

@@ -47,6 +47,14 @@ public sealed class Roll : BaseCore
     [JsonProperty("successes")]
     public int Successes { get; set; }
 
+    /// <summary>Sixes needed to succeed, as the Gamemaster set it: usually one.</summary>
+    [JsonProperty("successesNeeded")]
+    public int SuccessesNeeded { get; set; } = 1;
+
+    /// <summary>The test the Gamemaster asked for that this roll answers, if any.</summary>
+    [JsonProperty("testId", NullValueHandling = NullValueHandling.Ignore)]
+    public string? TestId { get; set; }
+
     [JsonProperty("pushed")]
     public bool Pushed { get; set; }
 
@@ -59,7 +67,7 @@ public sealed class Roll : BaseCore
     public string? Reason { get; set; }
 
     [JsonIgnore]
-    public bool Succeeded => Successes > 0;
+    public bool Succeeded => Successes >= Math.Max(1, SuccessesNeeded);
 }
 
 public sealed class RollPoolPart
@@ -97,6 +105,14 @@ public sealed class RollRequest
 
     [JsonProperty("reason")]
     public string? Reason { get; set; }
+
+    /// <summary>Sixes needed to succeed, 1 to 5; taken from the test when <see cref="TestId"/> is set.</summary>
+    [JsonProperty("successesNeeded")]
+    public int SuccessesNeeded { get; set; } = 1;
+
+    /// <summary>The Gamemaster's test this roll answers: its skill, difficulty and sixes needed are used.</summary>
+    [JsonProperty("testId")]
+    public string? TestId { get; set; }
 }
 
 /// <summary>Pushes a roll: rethrows every die that isn't a six, at the cost of a Condition.</summary>

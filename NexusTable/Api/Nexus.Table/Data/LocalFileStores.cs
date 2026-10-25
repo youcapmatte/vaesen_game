@@ -168,6 +168,32 @@ public sealed class LocalCharacterStore(IOptions<LocalDataOptions> options, Time
     }
 }
 
+public sealed class LocalSessionStore(IOptions<LocalDataOptions> options, TimeProvider timeProvider)
+    : LocalFileStore<PlaySession>(options, timeProvider), ISessionStore
+{
+    public Task<IReadOnlyList<PlaySession>> ListByMysteryAsync(string mysteryId, CancellationToken cancellationToken = default)
+    {
+        lock (Sync)
+        {
+            IReadOnlyList<PlaySession> sessions = All().Where(s => s.MysteryId == mysteryId).OrderBy(s => s.Number).ToList();
+            return Task.FromResult(sessions);
+        }
+    }
+}
+
+public sealed class LocalSessionEventStore(IOptions<LocalDataOptions> options, TimeProvider timeProvider)
+    : LocalFileStore<SessionEvent>(options, timeProvider), ISessionEventStore
+{
+    public Task<IReadOnlyList<SessionEvent>> ListBySessionAsync(string sessionId, CancellationToken cancellationToken = default)
+    {
+        lock (Sync)
+        {
+            IReadOnlyList<SessionEvent> events = All().Where(e => e.SessionId == sessionId).OrderBy(e => e.At).ThenBy(e => e.CreatedAt).ToList();
+            return Task.FromResult(events);
+        }
+    }
+}
+
 public sealed class LocalRollStore(IOptions<LocalDataOptions> options, TimeProvider timeProvider)
     : LocalFileStore<Roll>(options, timeProvider), IRollStore
 {

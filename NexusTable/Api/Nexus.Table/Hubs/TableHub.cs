@@ -16,6 +16,8 @@ namespace Nexus.Table.Hubs;
 ///   "characterChanged"(character)        a sheet changed (Conditions, notes, ...), dark secret left out
 ///   "rollMade"(roll)                     a roll or a push, to animate the dice for everyone
 ///   "presenceChanged"(presence[])        who is at the table now, and who holds push-to-talk
+///   "sessionChanged"(session)            a session started or ended, or a test was asked for or rolled (no play state)
+///   "sessionEvent"(event)                a new line in the session log (host-only lines are not sent)
 /// Clients to server:
 ///   SetPushToTalk(bool)                  the player holds (or released) the talk-to-the-Gamemaster key
 /// The token goes in the access_token query parameter (browsers can't set headers on WebSockets).
@@ -114,4 +116,12 @@ public sealed class SignalRTableNotifier(IHubContext<TableHub> hub) : ITableNoti
 
     public Task RollMadeAsync(Roll roll, CancellationToken cancellationToken = default) =>
         hub.Clients.Group(TableHub.GroupOf(roll.SocietyId)).SendAsync("rollMade", roll, cancellationToken);
+
+    public Task SessionChangedAsync(PlaySession session, CancellationToken cancellationToken = default) =>
+        hub.Clients.Group(TableHub.GroupOf(session.SocietyId)).SendAsync("sessionChanged", session.ForPlayers(), cancellationToken);
+
+    public Task SessionEventAsync(SessionEvent sessionEvent, CancellationToken cancellationToken = default) =>
+        sessionEvent.HostOnly
+            ? Task.CompletedTask
+            : hub.Clients.Group(TableHub.GroupOf(sessionEvent.SocietyId)).SendAsync("sessionEvent", sessionEvent, cancellationToken);
 }

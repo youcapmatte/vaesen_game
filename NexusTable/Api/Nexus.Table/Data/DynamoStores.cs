@@ -13,6 +13,8 @@ namespace Nexus.Table.Data.Dynamo;
 ///   SUBJECT#{subject} / SUBJECT          reservation: one account per token subject
 ///   GSI1 SOCIETY#{societyId} / CHAR#{name}      a Society's characters
 ///   GSI1 SOCIETY#{societyId} / ROLL#{createdAt} a Society's rolls
+///   GSI1 MYSTERY#{mysteryId} / SESSION#{number}  a mystery's sessions
+///   GSI1 SESSION#{sessionId} / EVENT#{at}#{id}   a session's log
 /// </summary>
 public abstract class DynamoStore<T>(IAmazonDynamoDB dynamoDb, IOptions<DataServiceOptions> options, TimeProvider timeProvider)
     : BaseRepository<T>(dynamoDb, options, timeProvider), IStore<T>
@@ -65,6 +67,30 @@ public sealed class CharacterRepository(IAmazonDynamoDB dynamoDb, IOptions<DataS
 
     protected override (string PartitionKey, string SortKey)? GetIndexKeys(Character item) =>
         (SocietyIndexKey(item.SocietyId), SortPrefix + item.Name.ToLowerInvariant());
+}
+
+public sealed class SessionRepository(IAmazonDynamoDB dynamoDb, IOptions<DataServiceOptions> options, TimeProvider timeProvider)
+    : DynamoStore<PlaySession>(dynamoDb, options, timeProvider), ISessionStore
+{
+    private const string SortPrefix = "SESSION#";
+
+    public async Task<IReadOnlyList<PlaySession>> ListByMysteryAsync(string mysteryId, CancellationToken cancellationToken = default) =>
+        (await QueryIndexAsync($"MYSTERY#{mysteryId}", SortPrefix, cancellationToken).ConfigureAwait(false)).OrderBy(s => s.Number).ToList();
+
+    protected override (string PartitionKey, string SortKey)? GetIndexKeys(PlaySession item) =>
+        ($"MYSTERY#{item.MysteryId}", SortPrefix + item.Number.ToString("D4", System.Globalization.CultureInfo.InvariantCulture));
+}
+
+public sealed class SessionEventRepository(IAmazonDynamoDB dynamoDb, IOptions<DataServiceOptions> options, TimeProvider timeProvider)
+    : DynamoStore<SessionEvent>(dynamoDb, options, timeProvider), ISessionEventStore
+{
+    private const string SortPrefix = "EVENT#";
+
+    public async Task<IReadOnlyList<SessionEvent>> ListBySessionAsync(string sessionId, CancellationToken cancellationToken = default) =>
+        (await QueryIndexAsync($"SESSION#{sessionId}", SortPrefix, cancellationToken).ConfigureAwait(false)).OrderBy(e => e.At).ThenBy(e => e.CreatedAt).ToList();
+
+    protected override (string PartitionKey, string SortKey)? GetIndexKeys(SessionEvent item) =>
+        ($"SESSION#{item.SessionId}", $"{SortPrefix}{item.At:o}#{item.Id}");
 }
 
 public sealed class RollRepository(IAmazonDynamoDB dynamoDb, IOptions<DataServiceOptions> options, TimeProvider timeProvider)

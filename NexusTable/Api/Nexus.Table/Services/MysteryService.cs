@@ -180,6 +180,7 @@ public sealed class MysteryService(
     ICharacterService characters,
     IWorldService worlds,
     IContentStore content,
+    ISessionService sessions,
     Microsoft.Extensions.Options.IOptions<Vaesen.Framework.Mystery.MysteryOptions> options,
     Microsoft.Extensions.Options.IOptions<NexusOptions> nexus,
     IHostApplicationLifetime lifetime,
@@ -413,6 +414,13 @@ public sealed class MysteryService(
             }
         }
 
+        // Another case coming to the table ends the session of the one there.
+        var there = await society.GetAsync(cancellationToken).ConfigureAwait(false);
+        if (there.Result?.AtTable is { } before && before.MysteryId != packet.MysteryId)
+        {
+            await sessions.EndOpenAsync(caller.Id, cancellationToken).ConfigureAwait(false);
+        }
+
         return await society.SetAtTableAsync(caller, new MysteryAtTable
         {
             MysteryId = packet.MysteryId,
@@ -422,8 +430,15 @@ public sealed class MysteryService(
         }, cancellationToken).ConfigureAwait(false);
     }
 
-    public Task<ResultBase<Society>> ClearTableAsync(Account caller, CancellationToken cancellationToken = default) =>
-        society.SetAtTableAsync(caller, null, cancellationToken);
+    public async Task<ResultBase<Society>> ClearTableAsync(Account caller, CancellationToken cancellationToken = default)
+    {
+        if (caller.Role == AccountRole.Host)
+        {
+            await sessions.EndOpenAsync(caller.Id, cancellationToken).ConfigureAwait(false);
+        }
+
+        return await society.SetAtTableAsync(caller, null, cancellationToken).ConfigureAwait(false);
+    }
 
     public async Task<ResultBase<StoredCase>> GetAsync(Account caller, string mysteryId, CancellationToken cancellationToken = default)
     {
@@ -470,7 +485,8 @@ public sealed class MysteryService(
         var closed = await worlds.CloseMysteryAsync(current.Result!.Id, mysteryId, request, cancellationToken).ConfigureAwait(false);
         if (closed.Success && current.Result.AtTable?.MysteryId == mysteryId)
         {
-            // A closed case leaves the table; the next one is chosen fresh.
+            // A closed case leaves the table, its session ended; the next one is chosen fresh.
+            await sessions.EndOpenAsync(caller.Id, cancellationToken).ConfigureAwait(false);
             await society.SetAtTableAsync(caller, null, cancellationToken).ConfigureAwait(false);
         }
 

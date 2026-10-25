@@ -42,6 +42,18 @@ public interface IRollStore : IStore<Roll>
     Task<IReadOnlyList<Roll>> ListRecentBySocietyAsync(string societyId, int limit, CancellationToken cancellationToken = default);
 }
 
+public interface ISessionStore : IStore<PlaySession>
+{
+    /// <summary>A mystery's sessions, first first.</summary>
+    Task<IReadOnlyList<PlaySession>> ListByMysteryAsync(string mysteryId, CancellationToken cancellationToken = default);
+}
+
+public interface ISessionEventStore : IStore<SessionEvent>
+{
+    /// <summary>A session's log, in the order it happened.</summary>
+    Task<IReadOnlyList<SessionEvent>> ListBySessionAsync(string sessionId, CancellationToken cancellationToken = default);
+}
+
 /// <summary>Error codes of the Nexus stores and services.</summary>
 public static class NexusErrorCodes
 {

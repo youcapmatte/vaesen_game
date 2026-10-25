@@ -131,6 +131,47 @@ public sealed class RollController(IAccountService accounts, IDiceService dice) 
         AsCallerAsync(caller => dice.PushAsync(caller, rollId, request ?? new PushRollRequest(), cancellationToken), cancellationToken);
 }
 
+/// <summary>
+/// Sessions of play on the mystery at the table: starting and ending them, notes to the Gamemaster, and the log.
+/// </summary>
+[Route("api/sessions")]
+public sealed class SessionController(IAccountService accounts, ISessionService sessions) : NexusControllerBase(accounts)
+{
+    /// <summary>The open session, or null. Players get it without the play state.</summary>
+    [HttpGet("current")]
+    public Task<ActionResult<ResultBase<PlaySession?>>> Current(CancellationToken cancellationToken) =>
+        AsCallerAsync(caller => sessions.GetCurrentAsync(caller, cancellationToken), cancellationToken);
+
+    /// <summary>Host only: the next session of the mystery at the table, resuming where the last one ended.</summary>
+    [HttpPost("start")]
+    public Task<ActionResult<ResultBase<PlaySession>>> Start(CancellationToken cancellationToken) =>
+        AsCallerAsync(caller => sessions.StartAsync(caller, cancellationToken), cancellationToken);
+
+    /// <summary>Host only.</summary>
+    [HttpPost("{sessionId}/end")]
+    public Task<ActionResult<ResultBase<PlaySession>>> End([FromRoute] string sessionId, CancellationToken cancellationToken) =>
+        AsCallerAsync(caller => sessions.EndAsync(caller, sessionId, cancellationToken), cancellationToken);
+
+    /// <summary>A note to the Gamemaster about what happened, logged with its time. The web app also hands it to the Gamemaster.</summary>
+    [HttpPost("current/notes")]
+    public Task<ActionResult<ResultBase<SessionEvent>>> AddNote([FromBody] NoteRequest? request, CancellationToken cancellationToken) =>
+        AsCallerAsync(caller => sessions.AddNoteAsync(caller, request ?? new NoteRequest(), cancellationToken), cancellationToken);
+
+    [HttpGet("{sessionId}/log")]
+    public Task<ActionResult<ResultBase<IReadOnlyList<SessionEvent>>>> Log([FromRoute] string sessionId, CancellationToken cancellationToken) =>
+        AsCallerAsync(caller => sessions.GetLogAsync(caller, sessionId, cancellationToken), cancellationToken);
+
+    /// <summary>Host only: a mystery's sessions with their play state.</summary>
+    [HttpGet("mystery/{mysteryId}")]
+    public Task<ActionResult<ResultBase<IReadOnlyList<PlaySession>>>> ForMystery([FromRoute] string mysteryId, CancellationToken cancellationToken) =>
+        AsCallerAsync(caller => sessions.ListAsync(caller, mysteryId, cancellationToken), cancellationToken);
+
+    /// <summary>Host only: every session of the mystery (or one, with sessionId) as one Markdown play log.</summary>
+    [HttpGet("mystery/{mysteryId}/export")]
+    public Task<ActionResult<ResultBase<string>>> Export([FromRoute] string mysteryId, [FromQuery] string? sessionId, CancellationToken cancellationToken) =>
+        AsCallerAsync(caller => sessions.ExportAsync(caller, mysteryId, sessionId, cancellationToken), cancellationToken);
+}
+
 /// <summary>Development-only login with seed players. Answers 404 in every other environment.</summary>
 [DevelopmentOnly]
 [AllowAnonymous]
@@ -251,7 +292,7 @@ public sealed class WorldController(IAccountService accounts, IMysteryService my
 [AllowAnonymous]
 [ApiController]
 [Route("api/agent")]
-public sealed class AgentController(ICallService call, IRollStore rolls, IOptions<LiveKitOptions> options) : ControllerBase
+public sealed class AgentController(ICallService call, IRollStore rolls, ISessionService sessions, IOptions<LiveKitOptions> options) : ControllerBase
 {
     public const string KeyHeader = "X-Agent-Key";
 
@@ -279,6 +320,31 @@ public sealed class AgentController(ICallService call, IRollStore rolls, IOption
         var roll = Roll.IsValidId<Roll>(rollId) ? await rolls.GetAsync(rollId, cancellationToken).ConfigureAwait(false) : null;
         return this.ToActionResult(roll is null ? ret.Fail("Roll not found.", ErrorCodes.NotFound) : ret.Ok(roll));
     }
+
+    /// <summary>What was said to and by the Gamemaster, and notes it was dictated, for the open session's log.</summary>
+    [HttpPost("events")]
+    public Task<ActionResult<ResultBase<int>>> Events([FromBody] AgentEventsRequest? request, CancellationToken cancellationToken) =>
+        AsAgentAsync(() => sessions.AppendFromAgentAsync(request ?? new AgentEventsRequest(), cancellationToken));
+
+    /// <summary>A logged event (a note the host typed), read back so the Gamemaster never relies on what a browser claims.</summary>
+    [HttpGet("events/{eventId}")]
+    public Task<ActionResult<ResultBase<SessionEvent>>> Event([FromRoute] string eventId, CancellationToken cancellationToken) =>
+        AsAgentAsync(async () => await sessions.GetEventAsync(eventId, cancellationToken).ConfigureAwait(false) is { } e
+            ? new ResultBase<SessionEvent>().Ok(e)
+            : new ResultBase<SessionEvent>().Fail("Event not found.", ErrorCodes.NotFound));
+
+    /// <summary>The scribe's new play state for the session.</summary>
+    [HttpPut("sessions/{sessionId}/state")]
+    public Task<ActionResult<ResultBase<PlaySession>>> State([FromRoute] string sessionId, [FromBody] PlayState? state, CancellationToken cancellationToken) =>
+        AsAgentAsync(() => sessions.UpdateStateAsync(sessionId, state ?? new PlayState(), cancellationToken));
+
+    /// <summary>A test the Gamemaster asks for: shown at the table with the dice the character has and the sixes it takes.</summary>
+    [HttpPost("tests")]
+    public Task<ActionResult<ResultBase<TestRequest>>> Test([FromBody] TestRequestInput? input, CancellationToken cancellationToken) =>
+        AsAgentAsync(() => sessions.RequestTestAsync(input ?? new TestRequestInput(), cancellationToken));
+
+    private async Task<ActionResult<ResultBase<T>>> AsAgentAsync<T>(Func<Task<ResultBase<T>>> action) =>
+        IsAgent() ? this.ToActionResult(await action().ConfigureAwait(false)) : Unauthorized(new ResultBase<T>().Fail("Unknown agent.", "unauthorized"));
 
     private bool IsAgent()
     {

@@ -36,6 +36,8 @@ public static class NexusServiceExtensions
             services.AddSingleton<ISocietyStore, LocalSocietyStore>();
             services.AddSingleton<ICharacterStore, LocalCharacterStore>();
             services.AddSingleton<IRollStore, LocalRollStore>();
+            services.AddSingleton<ISessionStore, LocalSessionStore>();
+            services.AddSingleton<ISessionEventStore, LocalSessionEventStore>();
         }
         else
         {
@@ -43,6 +45,8 @@ public static class NexusServiceExtensions
             services.AddSingleton<ISocietyStore, SocietyRepository>();
             services.AddSingleton<ICharacterStore, CharacterRepository>();
             services.AddSingleton<IRollStore, RollRepository>();
+            services.AddSingleton<ISessionStore, SessionRepository>();
+            services.AddSingleton<ISessionEventStore, SessionEventRepository>();
         }
 
         services.AddSingleton<IDiceRoller, CryptoDiceRoller>();
@@ -52,6 +56,7 @@ public static class NexusServiceExtensions
         services.AddSingleton<ISocietyService, SocietyService>();
         services.AddSingleton<IAccountService, AccountService>();
         services.AddSingleton<ICharacterService, CharacterService>();
+        services.AddSingleton<ISessionService, SessionService>();
         services.AddSingleton<IDiceService, DiceService>();
         services.AddSingleton<IDevLoginService, DevLoginService>();
 
