@@ -92,6 +92,9 @@ public:
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
+	/** No jumping while aiming a ranged weapon (aiming, drawing a bow, throwing) or locked on to a target. */
+	virtual bool CanJumpInternal_Implementation() const override;
+
 	/** Faces where it aims (strafes) rather than where it walks: aiming, blocking, drawing a bow, throwing, locked on. */
 	virtual bool WantsToFaceAim() const;
 

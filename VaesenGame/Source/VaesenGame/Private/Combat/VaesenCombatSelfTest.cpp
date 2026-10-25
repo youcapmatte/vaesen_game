@@ -559,6 +559,7 @@ void UVaesenCombatSelfTest::BuildSteps()
 	Steps.Add({ FString(), [this, Equipment, AimOrBlock]()
 	{
 		Shot(TEXT("12_RevolverAim"), nullptr, 0.0f, true);
+		Check(!Fighter->CanJump(), TEXT("aiming the revolver: can't jump"));
 		const UVaesenWeaponItem* Revolver = Equipment->GetDrawnWeapon();
 		const AVaesenWeaponActor* Actor = Revolver ? Revolver->GetWeaponActor() : nullptr;
 		FTransform Muzzle, Sight;
@@ -637,6 +638,7 @@ void UVaesenCombatSelfTest::BuildSteps()
 		// Aimed (hip fire spreads 5 degrees with a rifle and can miss at 4 m).
 		Press(AimOrBlock);
 		Check(ASC->HasMatchingGameplayTag(VaesenTags::State_Aiming), TEXT("right mouse aims the rifle"));
+		Check(!Fighter->CanJump(), TEXT("aiming the rifle: can't jump"));
 		return 0.8f;
 	} });
 	Steps.Add({ FString(), [this, Equipment, Tap, Attack, AimOrBlock]()
@@ -917,6 +919,7 @@ void UVaesenCombatSelfTest::BuildSteps()
 		Fighter->ToggleTargetLock();
 		Check(Fighter->GetLockTarget() != nullptr, FString::Printf(TEXT("locks onto the fighter ahead (%s)"), *GetNameSafe(Fighter->GetLockTarget())));
 		Check(Fighter->WantsToFaceAim(), TEXT("locked: faces the target (strafes)"));
+		Check(!Fighter->CanJump(), TEXT("locked: can't jump"));
 		return 0.5f;
 	} });
 	Steps.Add({ FString(), [this]()
@@ -925,6 +928,7 @@ void UVaesenCombatSelfTest::BuildSteps()
 		Check(Anim && !Anim->IsRelaxed(), TEXT("locked: the sword's fighting stance"));
 		Fighter->ToggleTargetLock();
 		Check(!Fighter->IsTargetLocked() && !Fighter->WantsToFaceAim(), TEXT("pressed again: lets go"));
+		Check(Fighter->CanJump(), TEXT("let go: can jump again"));
 		return 0.3f;
 	} });
 
