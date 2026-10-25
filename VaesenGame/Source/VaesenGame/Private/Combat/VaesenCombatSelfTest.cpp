@@ -1177,6 +1177,9 @@ void UVaesenCombatSelfTest::BuildSteps()
 		const AVaesenWeaponActor* Actor = Bow ? Bow->GetWeaponActor() : nullptr;
 		Check(Actor && Actor->IsInHand() && Actor->GetAttachParentSocketName() == TEXT("hand_l"),
 			FString::Printf(TEXT("the bow is drawn into the left fist (on %s)"), Actor ? *Actor->GetAttachParentSocketName().ToString() : TEXT("-")));
+		// Not nocked, the plain stance: it hangs at his side, the limbs nearly upright.
+		const float Upright = Actor ? static_cast<float>(Actor->GetActorRightVector().Z) : 0.0f;
+		Check(Upright > 0.8f, FString::Printf(TEXT("carried in the plain stance, the bow hangs upright at his side (limbs %.2f up)"), Upright));
 		return 0.1f;
 	} });
 	Steps.Add({ FString(), [this, ASC, Attack]()

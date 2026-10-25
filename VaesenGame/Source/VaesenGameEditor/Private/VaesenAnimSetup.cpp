@@ -3248,10 +3248,10 @@ namespace VaesenAnimSetup
 	}
 
 	/**
-	 * ABP_BowLocomotion, linked into the character's graph while a bow is drawn: the pack's archer with the bow in hand
-	 * (BS_Bow: standing, walking, running, and strafing while nocked, when he faces the aim); nocked (bAiming), the pack's
-	 * full-draw hold from the spine up, aimed up and down (AimPitch), the legs walking under it. In the air, the plain
-	 * jump (ABP_Manny). The nock and draw, and the release, are montages over it.
+	 * ABP_BowLocomotion, linked into the character's graph while a bow is drawn: the plain locomotion (ABP_Manny), the bow
+	 * hanging at his side; nocked (bAiming), the pack's full-draw hold from the spine up, aimed up and down (AimPitch),
+	 * over the pack's archer's legs (BS_Bow: he strafes then, facing the aim). The nock and draw, and the release, are
+	 * montages over it.
 	 */
 	UClass* BuildBowLocomotion(USkeleton* Skeleton, bool bRebuild, UBlendSpace* Movement, UAnimSequence* Hold, UBlendSpace* AimOffset)
 	{
@@ -3312,15 +3312,13 @@ namespace VaesenAnimSetup
 		});
 		Builder.Pose(UseMoving(100), Upper, TEXT("BasePose"));
 		Builder.Pose(Aim, Upper, TEXT("BlendPoses_0"));
-		UEdGraphNode* Grounded = ByBool(Builder, -600, 0, TEXT("bAiming"), Upper, UseMoving(-150), 0.2f);
-
-		// In the air: the plain jump.
+		// Not nocked: the plain locomotion (ABP_Manny), standing, walking, running and jumping, the bow hanging at his side.
 		UClass* Plain = LoadObject<UClass>(nullptr, UnarmedGraphPath);
 		UAnimGraphNode_LinkedAnimGraph* PlainGraph = Builder.Add<UAnimGraphNode_LinkedAnimGraph>(-900, 450, [Plain](UAnimGraphNode_LinkedAnimGraph* Node)
 		{
 			Node->Node.InstanceClass = Plain;
 		});
-		UEdGraphNode* Final = ByBool(Builder, -300, 100, TEXT("bFalling"), PlainGraph, Grounded, 0.15f);
+		UEdGraphNode* Final = ByBool(Builder, -300, 100, TEXT("bAiming"), Upper, PlainGraph, 0.2f);
 		Builder.Pose(Final, Builder.Root(), TEXT("Result"));
 		CompileAndSave(Blueprint);
 		return Blueprint->GeneratedClass;
