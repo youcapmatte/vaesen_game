@@ -23,6 +23,7 @@ import time
 from collections.abc import AsyncIterable
 from typing import Any
 
+import aiohttp
 from dotenv import load_dotenv
 
 load_dotenv(".env.local")
@@ -60,6 +61,15 @@ NOTE_TOPIC = "nexus.note"
 DICE_TUMBLE_S = 2.2
 DICE_STAGGER_S = 0.07
 ROLL_PAUSE_S = float(os.getenv("NEXUS_ROLL_PAUSE", "0.8"))
+
+TURN_SPEAK = "speak"
+TURN_NOTE = "note"
+TURN_PAUSED = "paused"
+# A talk key held this long with nothing transcribed is logged: speech to text failed, or the microphone was off.
+HELD_WITHOUT_WORDS_S = 1.5
+# Log lines the API did not take are sent again, every few seconds, for a while.
+LOG_RETRY_S = 5.0
+LOG_RETRY_FOR_S = 15 * 60
 ATTR_STATE = "nexus.gm.state"  # listening | thinking | speaking | paused
 ATTR_LATENCY = "nexus.gm.latencyMs"  # release of the talk key -> first audio, last turn
 
@@ -90,26 +100,31 @@ class Gamemaster(Agent):
         super().__init__(instructions="You are the Gamemaster of a Vaesen game.")
         self.model = model
         self.speaker: rtc.RemoteParticipant | None = None
-        # The talk key held to dictate a note to the Gamemaster, not to speak to it.
-        self.note_mode = False
-        self.on_spoken: Any = None  # (speaker, text, is_note) -> None, set once the session is up
+        # What the held talk key is for: speaking to the Gamemaster, dictating a note, or speaking while it is
+        # paused. Every one is recorded in the log; only the first is answered.
+        self.turn_mode = TURN_SPEAK
+        self.turn_started: float | None = None
+        self.on_spoken: Any = None  # (speaker, text, mode) -> None, set once the session is up
         self.narrator_tts = elevenlabs.TTS(voice_id=NARRATOR_VOICE, model=TTS_MODEL)
         self.npc_tts = elevenlabs.TTS(voice_id=NPC_VOICE, model=TTS_MODEL)
 
     async def on_user_turn_completed(self, turn_ctx: llm.ChatContext, new_message: llm.ChatMessage) -> None:
         text = (new_message.text_content or "").strip()
+        mode, self.turn_mode = self.turn_mode, TURN_SPEAK
+        held = time.perf_counter() - self.turn_started if self.turn_started else 0.0
         if not text:
-            # The talk key was held without words: no reply.
+            # The talk key was held without words: no reply. Held a while, it is logged, so a failed transcript shows.
+            if held >= HELD_WITHOUT_WORDS_S and self.on_spoken:
+                self.on_spoken(self.speaker, "", mode)
             raise StopResponse()
-        if self.note_mode:
-            # A note is remembered, logged and not answered.
-            self.note_mode = False
+        if mode != TURN_SPEAK:
+            # A note, or words while the Gamemaster is paused: recorded and remembered, not answered.
             if self.on_spoken:
-                self.on_spoken(self.speaker, text, True)
+                self.on_spoken(self.speaker, text, mode)
             raise StopResponse()
         new_message.content = [f"{speaker_label(self.speaker)} {text}"]
         if self.on_spoken:
-            self.on_spoken(self.speaker, text, False)
+            self.on_spoken(self.speaker, text, mode)
 
     async def llm_node(
         self, chat_ctx: llm.ChatContext, tools: list[llm.FunctionTool], model_settings: ModelSettings
@@ -215,6 +230,8 @@ async def gamemaster(ctx: agents.JobContext) -> None:
 
     local = ctx.room.local_participant
     state = {"paused": False, "released_at": None, "last_reply": ""}
+    outbox: list[dict[str, Any]] = []
+    sending: dict[str, asyncio.Task | None] = {"task": None}
 
     def log(kind: str, speaker: str, text: str, account_id: str | None = None, line: str | None = None) -> None:
         """Into the session's log (in the background) and the scribe's next look."""
@@ -223,13 +240,26 @@ async def gamemaster(ctx: agents.JobContext) -> None:
         if not played:
             return
 
-        async def send() -> None:
-            try:
-                await nexus_api.log_events([{"kind": kind, "speaker": speaker, "text": text, "accountId": account_id, "at": time_now()}])
-            except nexus_api.NexusApiError as error:
-                logger.warning("could not log %s: %s", kind, error)
+        outbox.append({"kind": kind, "speaker": speaker, "text": text, "accountId": account_id, "at": time_now()})
+        if not sending["task"] or sending["task"].done():
+            sending["task"] = asyncio.create_task(send_log())
 
-        asyncio.create_task(send())
+    async def send_log() -> None:
+        """Sends what is waiting, in order; what the API does not take is sent again until it does, or gives up after a while."""
+        give_up = time.monotonic() + LOG_RETRY_FOR_S
+        while outbox:
+            batch = list(outbox)
+            try:
+                await nexus_api.log_events(batch)
+            except (nexus_api.NexusApiError, aiohttp.ClientError, asyncio.TimeoutError) as error:
+                if time.monotonic() > give_up:
+                    logger.error("gave up logging %d line(s) after %d s: %s; they were: %s", len(batch), LOG_RETRY_FOR_S, error, batch)
+                    outbox.clear()
+                    return
+                logger.warning("could not log %d line(s), trying again: %s", len(batch), error)
+                await asyncio.sleep(LOG_RETRY_S)
+                continue
+            del outbox[: len(batch)]
 
     async def remember(text: str) -> None:
         """Adds a line to the conversation without a reply: a note from the table."""
@@ -237,17 +267,25 @@ async def gamemaster(ctx: agents.JobContext) -> None:
         chat.add_message(role="user", content=text)
         await gm.update_chat_ctx(chat)
 
-    def spoken(participant: rtc.RemoteParticipant | None, text: str, is_note: bool) -> None:
+    def spoken(participant: rtc.RemoteParticipant | None, text: str, mode: str) -> None:
         meta = _metadata(participant)
         who = meta.get("characterName") or meta.get("displayName") or "someone"
-        if is_note:
+        label = f"{who} ({meta.get('displayName', '')})" if meta.get("characterName") else who
+        if not text:
+            log("playerSpoke", label, "(held the talk key; nothing was transcribed)", meta.get("accountId"))
+            return
+        if mode == TURN_PAUSED:
+            log("playerSpoke", label, f"(while the Gamemaster was paused) {text}", meta.get("accountId"))
+            asyncio.create_task(remember(f"{speaker_label(participant)} (said while you were paused; do not answer it) {text}"))
+            return
+        if mode == TURN_NOTE:
             name = f"{meta.get('displayName', who)} (the host)" if meta.get("role") == "Host" else who
             log("note", name, text, meta.get("accountId"), line=f"[Note from {name}] {text}")
             asyncio.create_task(remember(f"[Note from {name}] {text}"))
             if scribe:
                 scribe.poke()
         else:
-            log("playerSpoke", f"{who} ({meta.get('displayName', '')})" if meta.get("characterName") else who, text, meta.get("accountId"))
+            log("playerSpoke", label, text, meta.get("accountId"))
 
     async def set_state(value: str) -> None:
         await local.set_attributes({ATTR_STATE: value})
@@ -264,12 +302,13 @@ async def gamemaster(ctx: agents.JobContext) -> None:
             note = json.loads(data.payload or "{}").get("mode") == "note"
         except json.JSONDecodeError:
             note = False
-        if state["paused"] and not note:
-            return "paused"
-        if not note:
+        # Paused, the Gamemaster still hears and records what is said to it; it only does not answer.
+        mode = TURN_NOTE if note else TURN_PAUSED if state["paused"] else TURN_SPEAK
+        if mode == TURN_SPEAK:
             session.interrupt()
         session.clear_user_turn()
-        gm.note_mode = note
+        gm.turn_mode = mode
+        gm.turn_started = time.perf_counter()
         gm.speaker = caller(data)
         session.room_io.set_participant(data.caller_identity)
         session.input.set_audio_enabled(True)
@@ -279,13 +318,10 @@ async def gamemaster(ctx: agents.JobContext) -> None:
     @local.register_rpc_method("end_turn")
     async def end_turn(data: rtc.RpcInvocationData) -> str:
         session.input.set_audio_enabled(False)
-        if state["paused"] and not gm.note_mode:
-            session.clear_user_turn()
-            return "paused"
-        if gm.note_mode:
-            # The flag is cleared where the transcript lands (on_user_turn_completed), which may be after this returns.
+        if gm.turn_mode != TURN_SPEAK:
+            # Recorded, not answered. The mode is cleared where the transcript lands (on_user_turn_completed).
             await session.commit_user_turn(transcript_timeout=5.0, stt_flush_duration=1.0)
-            return "noted"
+            return "noted" if gm.turn_mode == TURN_NOTE else "paused"
         state["released_at"] = time.perf_counter()
         await set_state("thinking")
         transcript = await session.commit_user_turn(transcript_timeout=5.0, stt_flush_duration=1.0)
@@ -296,7 +332,7 @@ async def gamemaster(ctx: agents.JobContext) -> None:
     async def cancel_turn(data: rtc.RpcInvocationData) -> str:
         session.input.set_audio_enabled(False)
         session.clear_user_turn()
-        gm.note_mode = False
+        gm.turn_mode = TURN_SPEAK
         return "ok"
 
     @local.register_rpc_method("gm_control")
@@ -326,6 +362,12 @@ async def gamemaster(ctx: agents.JobContext) -> None:
             log("gmLeft", "The Gamemaster", "The Gamemaster left the table.")
             if scribe:
                 await scribe.flush()
+            # Whatever the log has not taken yet goes before the Gamemaster does.
+            if sending["task"] and not sending["task"].done():
+                try:
+                    await asyncio.wait_for(asyncio.shield(sending["task"]), timeout=20)
+                except asyncio.TimeoutError:
+                    logger.error("left with %d log line(s) not taken by the API: %s", len(outbox), outbox)
             await asyncio.sleep(4)
             ctx.shutdown(reason="host closed the Gamemaster")
         else:
