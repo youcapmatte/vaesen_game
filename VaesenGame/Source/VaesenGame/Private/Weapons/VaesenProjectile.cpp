@@ -90,7 +90,9 @@ void AVaesenProjectile::OnRep_Ammo()
 	const UVaesenAmmoItem* AmmoDefaults = Ammo ? Ammo->GetDefaultObject<UVaesenAmmoItem>() : nullptr;
 	UStaticMesh* Shown = AmmoDefaults && AmmoDefaults->ProjectileMesh ? AmmoDefaults->ProjectileMesh.Get() : LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Sphere.Sphere"));
 	Mesh->SetStaticMesh(Shown);
-	Mesh->SetRelativeScale3D(AmmoDefaults ? AmmoDefaults->ProjectileScale : FVector(0.05));
+	FTransform Offset = AmmoDefaults ? AmmoDefaults->ProjectileMeshOffset : FTransform::Identity;
+	Offset.SetScale3D(AmmoDefaults ? AmmoDefaults->ProjectileScale : FVector(0.05));
+	Mesh->SetRelativeTransform(Offset);
 	Movement->ProjectileGravityScale = AmmoDefaults ? AmmoDefaults->GravityScale : 1.0f;
 
 	if (HasAuthority() && !Collision->OnComponentHit.IsAlreadyBound(this, &AVaesenProjectile::OnProjectileHit))
@@ -146,7 +148,16 @@ void AVaesenProjectile::OnProjectileHit(UPrimitiveComponent* HitComponent, AActo
 		const TSubclassOf<AVaesenPickup> PickupClass = Inventory && Inventory->DropPickupClass ? Inventory->DropPickupClass : TSubclassOf<AVaesenPickup>(AVaesenPickup::StaticClass());
 		FActorSpawnParameters Params;
 		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
-		if (AVaesenPickup* Pickup = GetWorld()->SpawnActor<AVaesenPickup>(PickupClass, FTransform(Rotation, Hit.ImpactPoint), Params))
+		// The pickup shows the arrow as it flew when it's the same mesh (placed as on the projectile, its point a little
+		// into what it hit); otherwise the pickup's own mesh at the point.
+		FTransform StuckAt(Rotation, Hit.ImpactPoint);
+		if (AmmoDefaults->PickupMesh && AmmoDefaults->PickupMesh == AmmoDefaults->ProjectileMesh)
+		{
+			FTransform Offset = AmmoDefaults->ProjectileMeshOffset;
+			Offset.SetScale3D(AmmoDefaults->ProjectileScale);
+			StuckAt = Offset * FTransform(Rotation, Hit.ImpactPoint + Rotation.Vector() * 6.0);
+		}
+		if (AVaesenPickup* Pickup = GetWorld()->SpawnActor<AVaesenPickup>(PickupClass, StuckAt, Params))
 		{
 			Pickup->InitializePickup(Ammo, 1);
 			if (AActor* StuckIn = Hit.GetActor(); StuckIn && StuckIn->IsRootComponentMovable())

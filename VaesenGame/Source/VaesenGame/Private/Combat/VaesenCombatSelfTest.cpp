@@ -38,6 +38,7 @@
 #include "UObject/StrongObjectPtr.h"
 #include "Weapons/VaesenCasing.h"
 #include "Weapons/VaesenRangedWeaponActor.h"
+#include "Weapons/VaesenProjectile.h"
 #include "Weapons/VaesenWeaponActor.h"
 #include "Weapons/VaesenWeaponData.h"
 #include "Anim/VaesenAnimInstance.h"
@@ -1162,10 +1163,20 @@ void UVaesenCombatSelfTest::BuildSteps()
 		ResetAll();
 		Target->SetActorLocation(Origin + FVector(500.0, 0.0, -10.0));
 		Check(GiveAndEquip(*Path(Weapons, TEXT("BP_Weapon_HuntingBow"))), TEXT("bow equipped"));
+		// On the back it lies flat: its thin side (X) into the back.
+		const UVaesenWeaponItem* OnBack = Fighter->GetEquipment()->GetWeaponInSlot(EVaesenEquipmentSlot::MainHand);
+		const AVaesenWeaponActor* Carried = OnBack ? OnBack->GetWeaponActor() : nullptr;
+		const float Flat = Carried ? static_cast<float>(FMath::Abs(FVector::DotProduct(Carried->GetActorForwardVector(), Fighter->GetActorForwardVector()))) : 0.0f;
+		Check(Carried && !Carried->IsInHand() && Flat > 0.8f, FString::Printf(TEXT("on the back the bow lies flat against it (%.2f)"), Flat));
 		if (UClass* Arrows = LoadTestClass(*Path(Ammo, TEXT("BP_Ammo_Arrow"))))
 		{
 			Inventory->TryAddItemOfClass(Arrows, 5);
 		}
+		return 0.3f;
+	} });
+	Steps.Add({ FString(), [this, Tap, Holster]()
+	{
+		Shot(TEXT("15a_BowOnBack"), nullptr, 0.0f, false, true);
 		Tap(Holster);
 		return 1.2f;
 	} });
@@ -1180,6 +1191,8 @@ void UVaesenCombatSelfTest::BuildSteps()
 		// Not nocked, the plain stance: it hangs at his side, the limbs nearly upright.
 		const float Upright = Actor ? static_cast<float>(Actor->GetActorRightVector().Z) : 0.0f;
 		Check(Upright > 0.8f, FString::Printf(TEXT("carried in the plain stance, the bow hangs upright at his side (limbs %.2f up)"), Upright));
+		const float StringBack = Actor ? static_cast<float>(-FVector::DotProduct(Actor->GetActorUpVector(), Fighter->GetActorForwardVector())) : 0.0f;
+		Check(StringBack > 0.8f, FString::Printf(TEXT("its string to the back, its face forward (%.2f)"), StringBack));
 		return 0.1f;
 	} });
 	Steps.Add({ FString(), [this, ASC, Attack]()
@@ -1223,6 +1236,18 @@ void UVaesenCombatSelfTest::BuildSteps()
 	Steps.Add({ FString(), [this, Arrow, Equipment]()
 	{
 		Check(DummyDamage(Target) > 0.0f, FString::Printf(TEXT("arrow at full draw hit (%.0f, ammo says %.0f)"), DummyDamage(Target), Arrow.GetTotal()));
+		// What flew and stuck is the arrow itself, not a placeholder: stuck, it's a pickup showing it, near the target.
+		FString Stuck = TEXT("-");
+		for (TActorIterator<AVaesenPickup> It(World.Get()); It; ++It)
+		{
+			const UStaticMeshComponent* Shown = It->FindComponentByClass<UStaticMeshComponent>();
+			if (Shown && FVector::Dist(It->GetActorLocation(), Target->GetActorLocation()) < 150.0f)
+			{
+				Stuck = GetNameSafe(Shown->GetStaticMesh());
+			}
+		}
+		Check(Stuck == TEXT("SM_Arrow_01"), FString::Printf(TEXT("the arrow flies and sticks as an arrow (%s)"), *Stuck));
+		Shot(TEXT("15e_ArrowStuck"), nullptr, 0.0f, true);
 		return 0.5f;
 	} });
 	// The bow guards too (Ctrl + right mouse): across the chest, the limbs to his left, both hands on it.

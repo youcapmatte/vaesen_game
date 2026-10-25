@@ -147,8 +147,8 @@ void AVaesenRangedWeaponActor::UpdateCarry()
 		return;
 	}
 	// As the animation pack's fist holds it; carried in the plain stance, it hangs at his left side instead: the grip in
-	// the fist, the limbs nearly upright (the top a little forward), the string toward him (Manny faces +Y, his left
-	// is +X).
+	// the fist, the limbs nearly upright (the top a little forward), the string to the back, its face forward as when
+	// shooting (Manny faces +Y).
 	const FTransform Held = Hold.InHand * Item->GetCategoryDefaults().InHand;
 	const float Carry = Anim->GetBowCarry();
 	if (Carry <= 0.0f)
@@ -156,7 +156,7 @@ void AVaesenRangedWeaponActor::UpdateCarry()
 		SetActorRelativeTransform(Held);
 		return;
 	}
-	const FQuat Hanging = Body->GetComponentQuat() * FRotationMatrix::MakeFromYZ(FVector(0.0, 0.3, 0.95), FVector(-1.0, 0.0, 0.0)).ToQuat();
+	const FQuat Hanging = Body->GetComponentQuat() * FRotationMatrix::MakeFromYZ(FVector(0.0, 0.3, 0.95), FVector(0.0, -1.0, 0.0)).ToQuat();
 	const FTransform Hand = Body->GetSocketTransform(TEXT("hand_l"));
 	FTransform Carried(Hand.GetRotation().Inverse() * Hanging, Held.GetLocation());
 	FTransform Blended;

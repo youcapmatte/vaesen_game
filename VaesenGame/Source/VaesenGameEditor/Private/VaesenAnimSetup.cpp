@@ -57,6 +57,7 @@
 #include "Factories/AnimBlueprintFactory.h"
 #include "Factories/AnimMontageFactory.h"
 #include "Inventory/VaesenEquipmentComponent.h"
+#include "Items/VaesenAmmoItem.h"
 #include "Items/VaesenRangedWeaponItem.h"
 #include "K2Node_VariableGet.h"
 #include "Kismet2/BlueprintEditorUtils.h"
@@ -3373,14 +3374,27 @@ namespace VaesenAnimSetup
 		// The bow in the fist as the pack holds it at full draw (where the aim matters); on the back as the pack carries it.
 		const UAnimSequence* CarrySource = BowSource(TEXT("Common"), TEXT("Common_Idle_Root"));
 		const FTransform InFist = HoldSource ? BowInFist(HoldSource, 0.0) : FTransform::Identity;
-		if (CarrySource && (!Skeleton->FindSocket(TEXT("Sheath_BowBack")) || FParse::Param(FCommandLine::Get(), TEXT("resetsockets"))))
+		// Where the pack carries it, but lying flat against the back (its thin side, X, into the back; the pack's stands
+		// out from it), the limbs as the pack has them.
+		if (CarrySource)
 		{
 			const FAnimPose Pose = PoseAt(CarrySource, 0.0);
-			FTransform OnBack = UAnimPoseExtensions::GetBonePose(Pose, TEXT("bow"), EAnimPoseSpaces::World)
-				.GetRelativeTransform(UAnimPoseExtensions::GetBonePose(Pose, TEXT("spine_05"), EAnimPoseSpaces::World));
+			const FTransform Bow = UAnimPoseExtensions::GetBonePose(Pose, TEXT("bow"), EAnimPoseSpaces::World);
+			const FTransform Chest = UAnimPoseExtensions::GetBonePose(Pose, TEXT("spine_05"), EAnimPoseSpaces::World);
+			const FVector Limbs = Bow.GetUnitAxis(EAxis::Y);
+			const FVector ToBack = FVector::VectorPlaneProject(Chest.GetLocation() - Bow.GetLocation(), Limbs).GetSafeNormal();
+			FTransform OnBack = FTransform(FRotationMatrix::MakeFromYX(Limbs, ToBack).ToQuat(), Bow.GetLocation()).GetRelativeTransform(Chest);
 			OnBack.SetScale3D(FVector::OneVector);
-			SetSkeletonSocket(Skeleton, TEXT("Sheath_BowBack"), TEXT("spine_05"), OnBack, true);
-			Save(Skeleton);
+			const USkeletalMeshSocket* Existing = Skeleton->FindSocket(TEXT("Sheath_BowBack"));
+			if (Existing && Existing->GetSocketLocalTransform().Equals(OnBack, 0.01))
+			{
+				OnBack = Existing->GetSocketLocalTransform();
+			}
+			else
+			{
+				SetSkeletonSocket(Skeleton, TEXT("Sheath_BowBack"), TEXT("spine_05"), OnBack, true);
+				Save(Skeleton);
+			}
 			UE_LOG(LogVaesenAnimSetup, Display, TEXT("Bow on the back (spine_05): %s; in the fist: %s"), *Describe(OnBack), *Describe(InFist));
 		}
 
@@ -3494,6 +3508,23 @@ namespace VaesenAnimSetup
 		Back.FallbackBone = TEXT("spine_05");
 		Back.HangAngle = 0.0f;
 		Save(Defaults);
+		// The arrow in flight: the pack's (along its Y from the nock), turned along the projectile's X, its point at the front.
+		UBlueprint* ArrowItem = LoadAt<UBlueprint>(TEXT("/Game/Vaesen/Blueprints/Items/Ammo/BP_Ammo_Arrow"));
+		UVaesenAmmoItem* Arrows = ArrowItem ? Cast<UVaesenAmmoItem>(ArrowItem->GeneratedClass->GetDefaultObject()) : nullptr;
+		if (Arrows && ArrowMesh)
+		{
+			const double Length = ArrowMesh->GetBoundingBox().Max.Y;
+			Arrows->ProjectileMesh = ArrowMesh;
+			Arrows->ProjectileScale = FVector::OneVector;
+			Arrows->ProjectileMeshOffset = FTransform(FRotator(0.0, -90.0, 0.0), FVector(-Length, 0.0, 0.0));
+			// Stuck (it becomes a pickup) and on the ground, the same arrow.
+			Arrows->PickupMesh = ArrowMesh;
+			Arrows->PickupScale = FVector::OneVector;
+			FBlueprintEditorUtils::MarkBlueprintAsModified(ArrowItem);
+			FKismetEditorUtilities::CompileBlueprint(ArrowItem);
+			Save(ArrowItem);
+		}
+
 		UBlueprint* Weapon = LoadAt<UBlueprint>(TEXT("/Game/Vaesen/Blueprints/Items/Weapons/BP_Weapon_HuntingBow"));
 		UVaesenRangedWeaponItem* Item = Weapon ? Cast<UVaesenRangedWeaponItem>(Weapon->GeneratedClass->GetDefaultObject()) : nullptr;
 		if (Item && BowMesh)

@@ -33,6 +33,10 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ammo|Projectile")
 	FVector ProjectileScale = FVector(0.05);
 
+	/** Where the mesh sits on the projectile (it flies along X, its point at the origin): for a mesh modelled another way. */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ammo|Projectile")
+	FTransform ProjectileMeshOffset;
+
 	/** 1 = normal gravity; lower flies flatter. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ammo|Projectile", meta = (ClampMin = "0"))
 	float GravityScale = 1.0f;
