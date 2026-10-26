@@ -131,37 +131,8 @@ bool AVaesenRangedWeaponActor::WantsTick() const
 void AVaesenRangedWeaponActor::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-	UpdateCarry();
 	UpdateNockedArrow();
 	UpdateString(IsInHand());
-}
-
-void AVaesenRangedWeaponActor::UpdateCarry()
-{
-	const UVaesenWeaponItem* Item = GetWeaponItem();
-	const AVaesenBaseCharacter* Character = GetOwningCharacter();
-	USkeletalMeshComponent* Body = Character ? Character->GetMesh() : nullptr;
-	const UVaesenAnimInstance* Anim = Body ? Cast<UVaesenAnimInstance>(Body->GetAnimInstance()) : nullptr;
-	if (!IsInHand() || !Item || !Anim || !Item->GetCategoryDefaults().bHeldInLeftHand)
-	{
-		return;
-	}
-	// As the animation pack's fist holds it; carried in the plain stance, it hangs at his left side instead: the grip in
-	// the fist, the limbs nearly upright (the top a little forward), the string to the back, its face forward as when
-	// shooting (Manny faces +Y).
-	const FTransform Held = Hold.InHand * Item->GetCategoryDefaults().InHand;
-	const float Carry = Anim->GetBowCarry();
-	if (Carry <= 0.0f)
-	{
-		SetActorRelativeTransform(Held);
-		return;
-	}
-	const FQuat Hanging = Body->GetComponentQuat() * FRotationMatrix::MakeFromYZ(FVector(0.0, 0.3, 0.95), FVector(0.0, -1.0, 0.0)).ToQuat();
-	const FTransform Hand = Body->GetSocketTransform(TEXT("hand_l"));
-	FTransform Carried(Hand.GetRotation().Inverse() * Hanging, Held.GetLocation());
-	FTransform Blended;
-	Blended.Blend(Held, Carried, Carry);
-	SetActorRelativeTransform(Blended);
 }
 
 void AVaesenRangedWeaponActor::UpdateNockedArrow()
@@ -170,7 +141,13 @@ void AVaesenRangedWeaponActor::UpdateNockedArrow()
 	const AVaesenBaseCharacter* Character = GetOwningCharacter();
 	USkeletalMeshComponent* Body = Character ? Character->GetMesh() : nullptr;
 	const UAnimInstance* Anim = Body ? Body->GetAnimInstance() : nullptr;
-	const bool bShown = IsInHand() && Item && Item->NockedArrowMesh && Anim && Anim->GetCurveValue(UVaesenAnimInstance::BowArrowCurve) > 0.5f;
+	const bool bCurveShows = Anim && Anim->GetCurveValue(UVaesenAnimInstance::BowArrowCurve) > 0.5f;
+	// Loosed: hidden until the animation has put the arrow away too (the next is taken from the quiver).
+	if (bArrowLoosed && !bCurveShows)
+	{
+		bArrowLoosed = false;
+	}
+	const bool bShown = IsInHand() && Item && Item->NockedArrowMesh && bCurveShows && !bArrowLoosed;
 	if (!bShown)
 	{
 		NockedArrow->SetHiddenInGame(true);
@@ -318,6 +295,7 @@ bool AVaesenRangedWeaponActor::ServerFire(const FVector& AimOrigin, const FVecto
 	AActor* Shooter = GetOwner();
 	if (!HasAuthority() || !Item || !Shooter || GetFireBlock() != EVaesenFireBlock::None)
 	{
+		UE_LOG(LogVaesenCombat, Display, TEXT("%s: shot refused (%s)"), *GetNameSafe(Shooter), Item ? *UEnum::GetValueAsString(GetFireBlock()) : TEXT("no weapon"));
 		return false;
 	}
 
@@ -416,7 +394,8 @@ bool AVaesenRangedWeaponActor::ServerFire(const FVector& AimOrigin, const FVecto
 		Params.bDeferConstruction = true;
 		Params.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 		const FTransform SpawnTransform(ShotDirection.Rotation(), Muzzle);
-		UE_LOG(LogVaesenCombat, Verbose, TEXT("%s fires a projectile from %s toward %s (aim from %s)"), *GetNameSafe(Shooter), *Muzzle.ToCompactString(), *AimPoint.ToCompactString(), *AimOrigin.ToCompactString());
+		UE_LOG(LogVaesenCombat, Display, TEXT("%s fires a %s from %s toward %s (aim from %s)"), *GetNameSafe(Shooter), *GetNameSafe(AmmoClass), *Muzzle.ToCompactString(),
+			*AimPoint.ToCompactString(), *AimOrigin.ToCompactString());
 		if (AVaesenProjectile* Projectile = GetWorld()->SpawnActor<AVaesenProjectile>(AVaesenProjectile::StaticClass(), SpawnTransform, Params))
 		{
 			const float Speed = Item->LaunchSpeed * (Item->IsBow() ? FMath::Lerp(0.35f, 1.0f, FMath::Clamp(DrawStrength, 0.0f, 1.0f)) : 1.0f);
@@ -524,6 +503,9 @@ void AVaesenRangedWeaponActor::MulticastMisfire_Implementation()
 void AVaesenRangedWeaponActor::PlayFireCosmetics(UAnimMontage* FireMontage)
 {
 	LastFireTime = GetWorld()->GetTimeSeconds();
+	// A bow: the arrow has left the string; the one in the drawing hand is gone at once (the release animation would carry
+	// it back with the hand a moment longer).
+	bArrowLoosed = true;
 	const UVaesenRangedWeaponItem* Item = GetRangedItem();
 	if (Item && Item->HasCycleStep() && IsOwnersMachine() && !HasAuthority())
 	{

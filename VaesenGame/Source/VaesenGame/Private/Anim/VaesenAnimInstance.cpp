@@ -287,10 +287,11 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	In.RightHandInWeapon = FTransform(FVector(0.0, 30.0, 2.0));
 	In.GuardKnock = KickAt(static_cast<float>(Now - GuardKnockTime), 0.3f);
 
-	// A bow carried in the plain stance hangs at his side (the bow actor turns it so); in the bow's own motions (taking
-	// it from the back, nocking, the hold) it's held as the pack holds it.
+	// A bow carried in the plain stance hangs at his side (the Shoulder Aim node brings the fist to it); in the bow's
+	// own motions (taking it from the back, nocking, the hold) the arm is the animation's.
 	const bool bCarried = bLeftFist && !bAiming && !bGuard && !IsAnyMontagePlaying();
 	BowCarryAlpha = Rig ? (bCarried ? 1.0f : 0.0f) : FMath::FInterpTo(BowCarryAlpha, bCarried ? 1.0f : 0.0f, DeltaSeconds, 10.0f);
+	In.LeftCarryBlend = BowCarryAlpha;
 
 	// Drawing or sheathing: the hand reaches for the actual grip of the weapon in its sheath.
 	SheathHandIKAlpha = FMath::Clamp(GetCurveValue(HandIKSheathCurve), 0.0f, 1.0f);

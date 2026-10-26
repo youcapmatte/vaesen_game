@@ -511,6 +511,8 @@ void UVaesenGA_DrawBow::InputReleased(const FGameplayAbilitySpecHandle Handle, c
 	const UVaesenRangedWeaponItem* Item = GetRangedItem(ActorInfo);
 	AVaesenRangedWeaponActor* Actor = GetRangedActor(ActorInfo);
 	const float Fraction = GetDrawFraction();
+	UE_LOG(LogVaesenCombat, Display, TEXT("%s releases the bow at %.0f%% draw (%s)"), *GetNameSafe(GetAvatarActorFromActorInfo()), Fraction * 100.0f,
+		Item && Actor && Fraction >= Item->MinDrawToShoot ? TEXT("shoots") : TEXT("too little: lets it down"));
 	if (!Item || !Actor || Fraction < Item->MinDrawToShoot)
 	{
 		// Let down without a shot.

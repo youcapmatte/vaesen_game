@@ -139,6 +139,22 @@ void FAnimNode_VaesenShoulderAim::EvaluateSkeletalControl_AnyThread(FComponentSp
 			Emit(LowerArmR, LowerR);
 			Emit(HandR, Hand);
 		}
+		// Carried in the plain stance: the bow hangs upright at his left side, a little forward of where the hand hangs,
+		// the top limb leaning forward, the string to the back; the left arm brings the fist to it, gripping it as its
+		// pack does (Manny's hanging fist would hold it sideways). Manny faces +Y.
+		const float LeftCarry = Input.bLeftHeld && LeftGuard <= 0.0f ? FMath::Clamp(Input.LeftCarryBlend, 0.0f, 1.0f) : 0.0f;
+		if (LeftCarry > 0.0f)
+		{
+			FTransform UpperL = Pose(UpperArmL), LowerL = Pose(LowerArmL), HandLeft = Pose(HandL);
+			const FQuat Hanging = FRotationMatrix::MakeFromYZ(FVector(0.0, 0.42, 0.91), FVector(0.0, -1.0, 0.0)).ToQuat();
+			const FTransform Bow(Hanging, HandLeft.GetLocation() + FVector(5.0, 12.0, 8.0));
+			FTransform Target;
+			Target.Blend(HandLeft, Input.GripOnLeftHand.Inverse() * Bow, LeftCarry);
+			SolveArm(UpperL, LowerL, HandLeft, Target);
+			Emit(UpperArmL, UpperL);
+			Emit(LowerArmL, LowerL);
+			Emit(HandL, HandLeft);
+		}
 		OutBoneTransforms.Sort(FCompareBoneTransformIndex());
 		return;
 	}

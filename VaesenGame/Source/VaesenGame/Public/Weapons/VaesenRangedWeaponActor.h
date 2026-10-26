@@ -153,13 +153,13 @@ private:
 	/** The nocked arrow follows the drawing hand by the animation's curves (or hides). */
 	void UpdateNockedArrow();
 
-	/** A bow in the left fist: held as its animation pack holds it, or hanging at his side in the plain stance (GetBowCarry). */
-	void UpdateCarry();
-
 	/** The drawing bow's String: at rest, or pulled by the BowString curves (in the hand). */
 	void UpdateString(bool bInHandNow);
 
 	/** The string bow's bow bone and its String at rest (component space of the bow mesh, its reference pose). */
 	FTransform BowBoneRef;
 	FVector StringRest = FVector::ZeroVector;
+
+	/** A bow's arrow has just been loosed: the one in the hand stays hidden until the animation hides it too. */
+	bool bArrowLoosed = false;
 };

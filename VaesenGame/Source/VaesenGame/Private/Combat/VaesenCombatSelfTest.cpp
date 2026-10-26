@@ -1250,6 +1250,54 @@ void UVaesenCombatSelfTest::BuildSteps()
 		Shot(TEXT("15e_ArrowStuck"), nullptr, 0.0f, true);
 		return 0.5f;
 	} });
+	// As a player shoots it: the player controller and its third-person camera aim (not the AI's eyes).
+	const TSharedRef<TWeakObjectPtr<APawn>> PlayerPawn = MakeShared<TWeakObjectPtr<APawn>>();
+	const TSharedRef<float> DamageBefore = MakeShared<float>(0.0f);
+	Steps.Add({ FString(), [this, PlayerPawn, DamageBefore]()
+	{
+		APlayerController* Player = World->GetFirstPlayerController();
+		if (!Player)
+		{
+			Say(TEXT("INFO  no player controller: the bow isn't shot as a player"), FColor::Yellow);
+			return 0.1f;
+		}
+		*PlayerPawn = Player->GetPawn();
+		*DamageBefore = DummyDamage(Target);
+		Controller->UnPossess();
+		Player->Possess(Fighter);
+		Player->SetViewTarget(Fighter);
+		Player->SetControlRotation((Target->GetActorLocation() + FVector(0.0, 0.0, 40.0) - Fighter->GetActorLocation()).Rotation());
+		return 0.5f;
+	} });
+	Steps.Add({ FString(), [this, Attack]()
+	{
+		// The crosshair (the camera's view) on the target.
+		if (APlayerController* Player = World->GetFirstPlayerController(); Player && Player->PlayerCameraManager)
+		{
+			Player->SetControlRotation((Target->GetActorLocation() + FVector(0.0, 0.0, 30.0) - Player->PlayerCameraManager->GetCameraLocation()).Rotation());
+		}
+		Press(Attack);
+		return 1.6f;
+	} });
+	Steps.Add({ FString(), [this, Attack]() { Release(Attack); return 0.03f; } });
+	Steps.Add({ FString(), [this]() { Shot(TEXT("16_ArrowLeaving"), nullptr, 0.0f, false, true); return 0.06f; } });
+	Steps.Add({ FString(), [this]() { Shot(TEXT("16b_ArrowFlying")); return 1.0f; } });
+	Steps.Add({ FString(), [this, PlayerPawn, DamageBefore]()
+	{
+		APlayerController* Player = World->GetFirstPlayerController();
+		if (Player && Player->GetPawn() == Fighter)
+		{
+			Check(DummyDamage(Target) > *DamageBefore, FString::Printf(TEXT("shot as a player (the camera's aim), the arrow hits (%.0f more)"), DummyDamage(Target) - *DamageBefore));
+			Player->UnPossess();
+			if (APawn* Original = PlayerPawn->Get())
+			{
+				Player->Possess(Original);
+			}
+			Controller->Possess(Fighter);
+			Controller->SetControlRotation(FRotator::ZeroRotator);
+		}
+		return 0.3f;
+	} });
 	// The bow guards too (Ctrl + right mouse): across the chest, the limbs to his left, both hands on it.
 	Steps.Add({ FString(), [this, ASC, RangedGuard]()
 	{

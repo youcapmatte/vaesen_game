@@ -59,7 +59,7 @@ public:
 	/** Guarding with a weapon held across the chest by the Shoulder Aim node, 0..1. */
 	float GetGuardBlend() const { return GuardAlpha; }
 
-	/** A bow in the left fist, carried in the plain stance (not nocked, guarding or in one of the bow's motions), 0..1: it hangs at his side. */
+	/** A bow in the left fist, carried in the plain stance (not nocked, guarding or in one of the bow's motions), 0..1: the arm holds it hanging at his side. */
 	float GetBowCarry() const { return BowCarryAlpha; }
 
 	/** A blow's knock on that guard, 1 easing to 0. */

@@ -87,6 +87,9 @@ struct FVaesenShoulderAimInput
 	bool bLeftHeld = false;
 	FTransform GripOnLeftHand;
 	FTransform RightHandInWeapon;
+
+	/** That weapon carried in the plain stance, 0..1: the left arm holds it hanging upright at his side (the fist as its pack grips it). */
+	float LeftCarryBlend = 0.0f;
 };
 
 /**
