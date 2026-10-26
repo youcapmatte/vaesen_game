@@ -98,6 +98,13 @@ public sealed class GmTable
     /// <summary>The open session's latest log lines, oldest first: what the Gamemaster rejoins mid-session with.</summary>
     [JsonProperty("recentLog")]
     public List<string> RecentLog { get; set; } = [];
+
+    /// <summary>
+    /// The session clock as this was read, in seconds since the session started: the agent runs it on from here with
+    /// its own monotonic clock, so its times are the API's whatever the agent machine's clock says.
+    /// </summary>
+    [JsonProperty("sessionTime", NullValueHandling = NullValueHandling.Ignore)]
+    public double? SessionTime { get; set; }
 }
 
 public sealed class GmMystery
@@ -329,7 +336,8 @@ public sealed class CallService : ICallService
             Society = society.Result,
             Mystery = mystery,
             Session = open,
-            RecentLog = recent.Where(e => !e.HostOnly).Select(e => $"{e.At:HH:mm} {SessionService.Line(e)}").ToList(),
+            SessionTime = open is null ? null : (_timeProvider.GetUtcNow().UtcDateTime - open.StartedAt).TotalSeconds,
+            RecentLog = recent.Where(e => !e.HostOnly).Select(e => $"[{SessionClock.Stamp(e.SessionTime)}] {SessionService.Line(e)}").ToList(),
             Players = accounts.Select(a => new GmPlayer
             {
                 AccountId = a.Id,

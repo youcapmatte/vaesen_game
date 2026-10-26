@@ -40,6 +40,11 @@ decide it, then stay with it.
 - Lines starting with [Table] are instructions from the host, not part of the fiction. Follow them.
 - Lines starting with [Note from ...] are notes from the table about what happened: something played out while you \
 were away, a correction, a decision the players made. Take them as true and keep to them. Do not answer a note aloud.
+- Lines from the table start with the time on the session clock, like [0:41:55]: hours, minutes and seconds since \
+the session began, the same for everyone at the table. A note says when what it is about happened ("about 0:41:55") \
+and what was being said at that moment: place it there in the story. If it changes something you narrated after that \
+moment, carry on from the corrected story without making a point of it. Never say these times aloud and never write \
+them in your replies.
 """
 
 NO_MYSTERY = """\

@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Nexus.Table.Api;
+using Nexus.Table.Data;
 using Nexus.Table.Models;
 using Nexus.Table.Services;
 using Vaesen.Framework.Mystery.Data;
@@ -99,6 +100,62 @@ public sealed class SessionTests : IDisposable
         Assert.Contains("**Note from Mattias (the host):** We agreed Elin keeps the ferryman's key.", export, StringComparison.Ordinal);
         Assert.Contains("f1 (session 1): the ferryman told Elin", export, StringComparison.Ordinal);
         Assert.Equal(2, (await NexusApiFactory.ResultAsync<List<PlaySession>>(await host.GetAsync("/api/sessions/mystery/mystery-bells"))).Count);
+    }
+
+    [Fact]
+    public async Task Everything_in_the_log_has_its_time_on_one_session_clock_and_a_note_is_placed_where_it_was_begun()
+    {
+        var host = await HostWithCaseAsync();
+        var agent = Agent();
+        var started = await NexusApiFactory.ResultAsync<PlaySession>(await host.PostAsync("/api/sessions/start", null));
+
+        // The session has been under way for 45 minutes.
+        var store = _factory.Services.GetRequiredService<ISessionStore>();
+        var session = (await store.GetAsync(started.Id))!;
+        session.StartedAt = DateTime.UtcNow.AddMinutes(-45);
+        Assert.True((await store.UpdateAsync(session)).Success);
+
+        // The agent places what was said by its session clock, not by its machine's clock.
+        await agent.PostAsJsonAsync("/api/agent/events", new AgentEventsRequest
+        {
+            Events =
+            [
+                new() { Kind = SessionEventKinds.PlayerSpoke, Speaker = "Elin Gregorius (Ingrid)", Text = "I go down to the ferry.", SessionTime = 2400, At = new DateTime(1999, 1, 1, 0, 0, 0, DateTimeKind.Utc) },
+                new() { Kind = SessionEventKinds.GmSaid, Speaker = "The Gamemaster", Text = "The ferryman watches you come.", SessionTime = 2410.4 },
+            ],
+        });
+
+        // A note begun 75 seconds before it was sent is placed when it was begun; one sent at once just now.
+        var late = await NexusApiFactory.ResultAsync<SessionEvent>(await host.PostAsJsonAsync("/api/sessions/current/notes", new { text = "Elin took the ferryman's key.", secondsAgo = 75 }));
+        Assert.InRange(late.SessionTime, 2700 - 75 - 3, 2700 - 75 + 3);
+        Assert.NotNull(late.SentAt);
+        Assert.InRange((late.SentAt!.Value - late.At).TotalSeconds, 74, 76);
+        var quick = await NexusApiFactory.ResultAsync<SessionEvent>(await host.PostAsJsonAsync("/api/sessions/current/notes", new { text = "We rest for the night." }));
+        Assert.InRange(quick.SessionTime, 2700 - 3, 2700 + 3);
+        Assert.Null(quick.SentAt);
+        // Never before the session began.
+        var early = await NexusApiFactory.ResultAsync<SessionEvent>(await host.PostAsJsonAsync("/api/sessions/current/notes", new { text = "Before we began, Elin wrote to the vicar.", secondsAgo = 99999 }));
+        Assert.Equal(0, early.SessionTime);
+
+        var log = await NexusApiFactory.ResultAsync<List<SessionEvent>>(await host.GetAsync($"/api/sessions/{started.Id}/log"));
+        var spoke = log.Single(e => e.Kind == SessionEventKinds.PlayerSpoke);
+        Assert.Equal(2400, spoke.SessionTime);
+        Assert.Equal(session.StartedAt.AddSeconds(2400), spoke.At, TimeSpan.FromMilliseconds(1));
+        Assert.Equal(2410, log.Single(e => e.Kind == SessionEventKinds.GmSaid).SessionTime);
+        // In the order things happened at the table, the late note among them (the start line was logged before the
+        // test moved the start back).
+        var played = log.Where(e => e.Kind != SessionEventKinds.SessionStarted).ToList();
+        Assert.Equal(played.OrderBy(e => e.SessionTime).Select(e => e.Id), played.Select(e => e.Id));
+
+        // The Gamemaster gets the clock's reading to run on from, and its log lines on the clock.
+        var table = await NexusApiFactory.ResultAsync<GmTable>(await agent.GetAsync("/api/agent/table"));
+        Assert.InRange(table.SessionTime!.Value, 2700 - 3, 2700 + 3);
+        Assert.Contains("[0:40:00] **Elin Gregorius (Ingrid)** to the Gamemaster: I go down to the ferry.", table.RecentLog);
+
+        var export = await NexusApiFactory.ResultAsync<string>(await host.GetAsync("/api/sessions/mystery/mystery-bells/export"));
+        Assert.Contains("session clock", export, StringComparison.Ordinal);
+        Assert.Contains("- [0:40:00] ", export, StringComparison.Ordinal);
+        Assert.Matches(@"\*\*Note from Mattias \(the host\):\*\* Elin took the ferryman's key\. \*\(sent at \d\d:\d\d:\d\d\)\*", export);
     }
 
     [Fact]

@@ -76,6 +76,12 @@ public sealed class SessionService(
     public const int MaxEventLength = 4000;
     public const int MaxSuccessesNeeded = 5;
 
+    /// <summary>A note may be about a moment this long before it is sent (the writer took their time).</summary>
+    public const double MaxNoteSecondsAgo = 60 * 60;
+
+    /// <summary>A note sent this long after the moment it is about says when it was sent, too.</summary>
+    public const double NoteSentLateSeconds = 10;
+
     private DateTime Now => time.GetUtcNow().UtcDateTime;
 
     public async Task<PlaySession?> GetOpenAsync(CancellationToken cancellationToken = default)
@@ -201,8 +207,13 @@ public sealed class SessionService(
             return ret.Fail("No session is open: start one to keep notes in its log.", ErrorCodes.Invalid);
         }
 
+        // Placed when the writer began it, on the session clock: that is the moment it is about.
+        var now = Now;
+        var ago = Math.Clamp(request.SecondsAgo ?? 0, 0, MaxNoteSecondsAgo);
+        var at = open.TimeAt((now - open.StartedAt).TotalSeconds - ago, now);
+        var sentAt = (now - at).TotalSeconds >= NoteSentLateSeconds ? now : (DateTime?)null;
         var who = await NameOfAsync(caller, cancellationToken).ConfigureAwait(false);
-        return ret.Ok(await LogAsync(open, SessionEventKinds.Note, text, caller.Id, who, cancellationToken).ConfigureAwait(false));
+        return ret.Ok(await LogAsync(open, SessionEventKinds.Note, text, caller.Id, who, cancellationToken, at, sentAt: sentAt).ConfigureAwait(false));
     }
 
     public async Task<ResultBase<IReadOnlyList<PlaySession>>> ListAsync(Account caller, string mysteryId, CancellationToken cancellationToken = default)
@@ -252,7 +263,7 @@ public sealed class SessionService(
         var inv = CultureInfo.InvariantCulture;
         text.AppendLine(inv, $"# Play log: \"{list[0].MysteryTitle}\"");
         text.AppendLine();
-        text.AppendLine(inv, $"Mystery `{mysteryId}`. {list.Count} session(s). Times are UTC. The case file itself is exported from its case page; fact, channel, event and lever ids below are the case file's.");
+        text.AppendLine(inv, $"Mystery `{mysteryId}`. {list.Count} session(s). Each line has its time on the session clock (hours:minutes:seconds since the session began), then the time in UTC. A note is placed at the moment it is about. The case file itself is exported from its case page; fact, channel, event and lever ids below are the case file's.");
         foreach (var session in list)
         {
             text.AppendLine();
@@ -264,7 +275,7 @@ public sealed class SessionService(
             text.AppendLine("### The log");
             foreach (var e in await events.ListBySessionAsync(session.Id, cancellationToken).ConfigureAwait(false))
             {
-                text.AppendLine(inv, $"- {e.At:HH:mm:ss} {Line(e)}");
+                text.AppendLine(inv, $"- [{SessionClock.Stamp(e.SessionTime)}] {e.At:HH:mm:ss} {Line(e)}");
             }
         }
 
@@ -291,7 +302,7 @@ public sealed class SessionService(
     {
         SessionEventKinds.PlayerSpoke => $"**{e.Speaker}** to the Gamemaster: {e.Text}",
         SessionEventKinds.GmSaid => $"**The Gamemaster:** {e.Text}",
-        SessionEventKinds.Note => $"**Note from {e.Speaker}:** {e.Text}",
+        SessionEventKinds.Note => $"**Note from {e.Speaker}:** {e.Text}{(e.SentAt is { } sent ? $" *(sent at {sent:HH:mm:ss})*" : "")}",
         SessionEventKinds.Roll => $"**Dice:** {e.Text}",
         SessionEventKinds.TestRequested => $"**Test asked for:** {e.Text}",
         SessionEventKinds.StateUpdated => $"*(play state updated: {e.Text})*",
@@ -311,7 +322,9 @@ public sealed class SessionService(
         var count = 0;
         foreach (var e in request.Events.Where(e => SessionEventKinds.FromAgent.Contains(e.Kind) && !string.IsNullOrWhiteSpace(e.Text)))
         {
-            await LogAsync(open, e.Kind, Cut(e.Text.Trim(), MaxEventLength), e.AccountId, e.Speaker, cancellationToken, e.At).ConfigureAwait(false);
+            // The agent's session clock places it; a bare time is taken as it is.
+            var at = e.SessionTime is { } clock ? open.TimeAt(clock, Now) : e.At;
+            await LogAsync(open, e.Kind, Cut(e.Text.Trim(), MaxEventLength), e.AccountId, e.Speaker, cancellationToken, at).ConfigureAwait(false);
             count++;
         }
 
@@ -461,14 +474,17 @@ public sealed class SessionService(
 
     private async Task<SessionEvent> LogAsync(
         PlaySession session, string kind, string text, string? accountId, string speaker, CancellationToken cancellationToken,
-        DateTime? at = null, bool hostOnly = false, string? rollId = null, TestRequest? test = null)
+        DateTime? at = null, bool hostOnly = false, string? rollId = null, TestRequest? test = null, DateTime? sentAt = null)
     {
+        var when = at ?? Now;
         var e = new SessionEvent
         {
             SessionId = session.Id,
             MysteryId = session.MysteryId,
             SocietyId = session.SocietyId,
-            At = at ?? Now,
+            At = when,
+            SessionTime = session.ClockAt(when),
+            SentAt = sentAt,
             Kind = kind,
             AccountId = accountId,
             Speaker = speaker,

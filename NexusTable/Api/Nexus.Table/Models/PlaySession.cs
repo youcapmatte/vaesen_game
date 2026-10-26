@@ -31,6 +31,19 @@ public sealed class PlaySession : BaseCore
     [JsonIgnore]
     public bool IsOpen => EndedAt is null;
 
+    /// <summary>
+    /// The session clock: seconds since the session started, by the API's own clock, so it is the same for every
+    /// browser and for the Gamemaster whatever their computers' clocks say.
+    /// </summary>
+    public int ClockAt(DateTime at) => (int)Math.Max(0, Math.Floor((at - StartedAt).TotalSeconds));
+
+    /// <summary>The time at a reading of the session clock: never before the start, never after now.</summary>
+    public DateTime TimeAt(double seconds, DateTime now)
+    {
+        var at = StartedAt.AddSeconds(Math.Max(0, seconds));
+        return at > now ? now : at;
+    }
+
     /// <summary>Where the mystery stands: kept up to date by the Gamemaster's scribe, carried into the next session.</summary>
     [JsonProperty("state")]
     public PlayState State { get; set; } = new();
@@ -202,9 +215,17 @@ public sealed class SessionEvent : BaseCore
     [JsonProperty("societyId")]
     public string SocietyId { get; set; } = "";
 
-    /// <summary>When it happened at the table.</summary>
+    /// <summary>When it happened at the table. For a note, when what it is about happened: when its writer began it.</summary>
     [JsonProperty("at")]
     public DateTime At { get; set; }
+
+    /// <summary>When it happened on the session clock: seconds since the session started (<see cref="SessionClock"/>).</summary>
+    [JsonProperty("sessionTime")]
+    public int SessionTime { get; set; }
+
+    /// <summary>A note sent a while after the moment it is about: when it was sent.</summary>
+    [JsonProperty("sentAt", NullValueHandling = NullValueHandling.Ignore)]
+    public DateTime? SentAt { get; set; }
 
     /// <summary>One of <see cref="SessionEventKinds"/>.</summary>
     [JsonProperty("kind")]
@@ -257,10 +278,28 @@ public static class SessionEventKinds
     public static readonly IReadOnlyList<string> FromAgent = [PlayerSpoke, GmSaid, Note, GmJoined, GmLeft];
 }
 
+/// <summary>The session clock as people and the Gamemaster read it.</summary>
+public static class SessionClock
+{
+    /// <summary>"0:41:55": hours, minutes and seconds since the session started.</summary>
+    public static string Stamp(int seconds)
+    {
+        var t = TimeSpan.FromSeconds(Math.Max(0, seconds));
+        return $"{(int)t.TotalHours}:{t.Minutes:D2}:{t.Seconds:D2}";
+    }
+}
+
 public sealed class NoteRequest
 {
     [JsonProperty("text")]
     public string Text { get; set; } = "";
+
+    /// <summary>
+    /// How long ago, in seconds, the writer began the note, by their own browser's clock: the note is placed at that
+    /// moment on the session clock. Only a duration crosses, so a computer whose clock is wrong still places it right.
+    /// </summary>
+    [JsonProperty("secondsAgo")]
+    public double? SecondsAgo { get; set; }
 }
 
 /// <summary>Events the agent logs, in the order they happened.</summary>
@@ -277,6 +316,10 @@ public sealed class AgentEvent
 
     [JsonProperty("at")]
     public DateTime? At { get; set; }
+
+    /// <summary>When on the session clock (seconds since it started), as the agent keeps it; wins over <see cref="At"/>.</summary>
+    [JsonProperty("sessionTime")]
+    public double? SessionTime { get; set; }
 
     [JsonProperty("accountId")]
     public string? AccountId { get; set; }

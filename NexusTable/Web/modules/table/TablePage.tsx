@@ -7,7 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Character } from "@/common/api/character";
 import { RollApi, type Roll, type RollOutcome } from "@/common/api/roll";
 import type { MysteryAtTable } from "@/common/api/society";
-import { type PlaySession, SessionApi, type SessionEvent } from "@/common/api/session";
+import { noteBody, type PlaySession, SessionApi, type SessionEvent, sessionStamp } from "@/common/api/session";
 import type { VaesenRules } from "@/common/api/rules";
 import { Http, useApi, useApiData } from "@/common/client/core/Api";
 import { ruleNames, useMe, useRules, useSociety } from "@/common/client/components/hooks";
@@ -208,7 +208,7 @@ function EventLine({ event }: { event: SessionEvent }) {
           <Text fz="sm" className="nx-display" c="var(--nx-gold)">
             {event.kind === "note" ? `Note to the Gamemaster · ${event.speaker}` : "The Gamemaster asks for a test"}
           </Text>
-          <Text fz={11} c="var(--nx-sepia)">{time}</Text>
+          <Text fz={11} c="var(--nx-sepia)" title={`Session clock ${sessionStamp(event.sessionTime)}${event.sentAt ? `; sent at ${new Date(event.sentAt).toLocaleTimeString()}` : ""}`}>{time}</Text>
         </Group>
         <Text fz="sm" c="var(--nx-parchment-2)" style={{ whiteSpace: "pre-wrap" }}>{event.text}</Text>
       </Box>
@@ -289,15 +289,26 @@ function NoteModal({ opened, onClose }: { opened: boolean; onClose: () => void }
   const [dictating, setDictating] = useState(false);
   const [error, setError] = useState<string>();
   const [sent, setSent] = useState<string>();
+  // When the note was begun (opening it, or starting the next one): the moment it is about, on the session clock.
+  const begunAt = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    begunAt.current = opened ? performance.now() : undefined;
+  }, [opened]);
+
+  const write = (value: string) => {
+    if (begunAt.current === undefined && value.trim()) begunAt.current = performance.now();
+    setText(value);
+  };
 
   const save = async () => {
     setBusy(true);
-    const result = await call<SessionEvent>(Http.POST, SessionApi.notes, { text });
+    const result = await call<SessionEvent>(Http.POST, SessionApi.notes, noteBody(text, begunAt.current));
     setBusy(false);
     setError(result.success ? undefined : result.errorMessage);
     if (result.success && result.result) {
       // The Gamemaster reads it back from the log by its id.
       await actions.sendNote(result.result.id);
+      begunAt.current = undefined;
       setText("");
       setSent("The note is in the log, and the Gamemaster has it.");
     }
@@ -319,10 +330,11 @@ function NoteModal({ opened, onClose }: { opened: boolean; onClose: () => void }
     <Modal opened={opened} onClose={onClose} title={<Text className="nx-kicker">A note to the Gamemaster</Text>} centered size="lg">
       <Stack gap="sm">
         <Text fz="sm" c="dimmed">
-          What happened, a correction, a decision the table made. It goes into the session log with the time, and the
-          Gamemaster takes it as true for the rest of the mystery. It doesn&apos;t answer notes aloud.
+          What happened, a correction, a decision the table made. It goes into the session log at the moment you
+          began it, so the Gamemaster knows where in the story it belongs, and takes it as true for the rest of the
+          mystery. It doesn&apos;t answer notes aloud.
         </Text>
-        <Textarea autosize minRows={3} maxRows={10} maxLength={2000} value={text} onChange={(e) => setText(e.currentTarget.value)} placeholder="e.g. Between sessions, Elin wrote to the vicar and he agreed to meet her on Sunday." />
+        <Textarea autosize minRows={3} maxRows={10} maxLength={2000} value={text} onChange={(e) => write(e.currentTarget.value)} placeholder="e.g. Between sessions, Elin wrote to the vicar and he agreed to meet her on Sunday." />
         <Group justify="space-between">
           <Tooltip label={gm.participant ? "Hold while you speak; let go to finish" : "The Gamemaster isn't at the table"}>
             <Button

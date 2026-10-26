@@ -43,6 +43,7 @@ from livekit.plugins import deepgram, elevenlabs  # noqa: E402
 
 from nexus_gm import nexus_api  # noqa: E402
 from nexus_gm.claude import MODEL, GamemasterModel, Turn  # noqa: E402
+from nexus_gm.clock import SessionClock, Timeline, note_line, timed  # noqa: E402
 from nexus_gm.prompt import (  # noqa: E402
     GM_RULES,
     MOVE_ON,
@@ -93,11 +94,6 @@ def _metadata(participant: rtc.RemoteParticipant | None) -> dict[str, Any]:
         return {}
 
 
-def time_now() -> str:
-    """Now, as the API reads a time: ISO 8601 in UTC."""
-    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-
-
 def speaker_label(participant: rtc.RemoteParticipant | None) -> str:
     """[Elin Gregorius, played by Ingrid], from the metadata the API put in the join token."""
     meta = _metadata(participant)
@@ -116,27 +112,30 @@ class Gamemaster(Agent):
         # paused. Every one is recorded in the log; only the first is answered.
         self.turn_mode = TURN_SPEAK
         self.turn_started: float | None = None
-        self.on_spoken: Any = None  # (speaker, text, mode) -> None, set once the session is up
+        # When the talk key went down, on the session clock: what is said is placed there, not when the words landed.
+        self.turn_at = 0.0
+        self.on_spoken: Any = None  # (speaker, text, mode, at) -> None, set once the session is up
         self.narrator_tts = elevenlabs.TTS(voice_id=NARRATOR_VOICE, model=TTS_MODEL)
         self.npc_tts = elevenlabs.TTS(voice_id=NPC_VOICE, model=TTS_MODEL)
 
     async def on_user_turn_completed(self, turn_ctx: llm.ChatContext, new_message: llm.ChatMessage) -> None:
         text = (new_message.text_content or "").strip()
         mode, self.turn_mode = self.turn_mode, TURN_SPEAK
+        at = self.turn_at
         held = time.perf_counter() - self.turn_started if self.turn_started else 0.0
         if not text:
             # The talk key was held without words: no reply. Held a while, it is logged, so a failed transcript shows.
             if held >= HELD_WITHOUT_WORDS_S and self.on_spoken:
-                self.on_spoken(self.speaker, "", mode)
+                self.on_spoken(self.speaker, "", mode, at)
             raise StopResponse()
         if mode != TURN_SPEAK:
             # A note, or words while the Gamemaster is paused: recorded and remembered, not answered.
             if self.on_spoken:
-                self.on_spoken(self.speaker, text, mode)
+                self.on_spoken(self.speaker, text, mode, at)
             raise StopResponse()
-        new_message.content = [f"{speaker_label(self.speaker)} {text}"]
+        new_message.content = [timed(at, f"{speaker_label(self.speaker)} {text}")]
         if self.on_spoken:
-            self.on_spoken(self.speaker, text, mode)
+            self.on_spoken(self.speaker, text, mode, at)
 
     async def llm_node(
         self, chat_ctx: llm.ChatContext, tools: list[llm.FunctionTool], model_settings: ModelSettings
@@ -225,6 +224,9 @@ async def gamemaster(ctx: agents.JobContext) -> None:
     table = await nexus_api.get_table()
     model = GamemasterModel(GM_RULES, build_table_brief(table), build_session_block(table))
     played = table.get("session") if table.get("mystery") else None
+    # The session clock, run on from the API's reading; with no session, it counts from the Gamemaster joining.
+    clock = SessionClock(float(table.get("sessionTime") or 0.0))
+    timeline = Timeline()
     notes_changed: list[dict[str, Any]] = []
     scribe = Scribe(table["mystery"]["caseFile"], played, nexus_api.put_state, on_change=notes_changed.append) if played else None
 
@@ -242,7 +244,7 @@ async def gamemaster(ctx: agents.JobContext) -> None:
     session.input.set_audio_enabled(False)
 
     local = ctx.room.local_participant
-    state = {"paused": False, "released_at": None, "last_reply": ""}
+    state: dict[str, Any] = {"paused": False, "released_at": None, "last_reply": "", "speaking_at": None}
     outbox: list[dict[str, Any]] = []
     sending: dict[str, asyncio.Task | None] = {"task": None}
     quiet: dict[str, Any] = {"nudge": os.getenv("NEXUS_NUDGE", "off") == "on", "timer": None}
@@ -263,14 +265,15 @@ async def gamemaster(ctx: agents.JobContext) -> None:
                     session.generate_reply(user_input=NUDGE)
             quiet["timer"] = asyncio.create_task(wait())
 
-    def log(kind: str, speaker: str, text: str, account_id: str | None = None, line: str | None = None) -> None:
-        """Into the session's log (in the background) and the scribe's next look."""
+    def log(kind: str, speaker: str, text: str, account_id: str | None = None, line: str | None = None, at: float | None = None) -> None:
+        """Into the session's log (in the background) and the scribe's next look, at its time on the session clock."""
+        when = clock.now() if at is None else at
         if scribe:
-            scribe.add(line or f"{speaker}: {text}")
+            scribe.add(timed(when, line or f"{speaker}: {text}"))
         if not played:
             return
 
-        outbox.append({"kind": kind, "speaker": speaker, "text": text, "accountId": account_id, "at": time_now()})
+        outbox.append({"kind": kind, "speaker": speaker, "text": text, "accountId": account_id, "sessionTime": round(when, 1)})
         if not sending["task"] or sending["task"].done():
             sending["task"] = asyncio.create_task(send_log())
 
@@ -302,27 +305,31 @@ async def gamemaster(ctx: agents.JobContext) -> None:
         if notes_changed:
             latest = notes_changed[-1]
             notes_changed.clear()
-            await remember(scribe_line(latest))
+            await remember(timed(clock.now(), scribe_line(latest)))
 
-    def spoken(participant: rtc.RemoteParticipant | None, text: str, mode: str) -> None:
+    def spoken(participant: rtc.RemoteParticipant | None, text: str, mode: str, at: float) -> None:
+        """What a held talk key brought, placed on the session clock where the key went down."""
         meta = _metadata(participant)
         who = meta.get("characterName") or meta.get("displayName") or "someone"
         label = f"{who} ({meta.get('displayName', '')})" if meta.get("characterName") else who
         if not text:
-            log("playerSpoke", label, "(held the talk key; nothing was transcribed)", meta.get("accountId"))
+            log("playerSpoke", label, "(held the talk key; nothing was transcribed)", meta.get("accountId"), at=at)
             return
         if mode == TURN_PAUSED:
-            log("playerSpoke", label, f"(while the Gamemaster was paused) {text}", meta.get("accountId"))
-            asyncio.create_task(remember(f"{speaker_label(participant)} (said while you were paused; do not answer it) {text}"))
+            timeline.add(at, who, text)
+            log("playerSpoke", label, f"(while the Gamemaster was paused) {text}", meta.get("accountId"), at=at)
+            asyncio.create_task(remember(timed(at, f"{speaker_label(participant)} (said while you were paused; do not answer it) {text}")))
             return
         if mode == TURN_NOTE:
             name = f"{meta.get('displayName', who)} (the host)" if meta.get("role") == "Host" else who
-            log("note", name, text, meta.get("accountId"), line=f"[Note from {name}] {text}")
-            asyncio.create_task(remember(f"[Note from {name}] {text}"))
+            line = note_line(name, text, at, clock.now(), timeline)
+            log("note", name, text, meta.get("accountId"), line=line, at=at)
+            asyncio.create_task(remember(line))
             if scribe:
                 scribe.poke()
         else:
-            log("playerSpoke", label, text, meta.get("accountId"))
+            timeline.add(at, who, text)
+            log("playerSpoke", label, text, meta.get("accountId"), at=at)
 
     async def set_state(value: str) -> None:
         await local.set_attributes({ATTR_STATE: value})
@@ -348,6 +355,7 @@ async def gamemaster(ctx: agents.JobContext) -> None:
         session.clear_user_turn()
         gm.turn_mode = mode
         gm.turn_started = time.perf_counter()
+        gm.turn_at = clock.now()
         gm.speaker = caller(data)
         session.room_io.set_participant(data.caller_identity)
         session.input.set_audio_enabled(True)
@@ -429,7 +437,7 @@ async def gamemaster(ctx: agents.JobContext) -> None:
         except nexus_api.NexusApiError as error:
             logger.warning("could not read roll %s: %s", roll_id, error)
             return
-        line = nexus_api.describe_roll(roll)
+        line = timed(clock.now(), nexus_api.describe_roll(roll))
         if scribe:
             scribe.add(line)
         hush()
@@ -445,7 +453,9 @@ async def gamemaster(ctx: agents.JobContext) -> None:
         except nexus_api.NexusApiError as error:
             logger.warning("could not read note %s: %s", event_id, error)
             return
-        text = f"[Note from {event.get('speaker', 'the table')}] {event.get('text', '')}"
+        # The API placed it where its writer began it; what the Gamemaster was saying then goes with it.
+        about = float(event.get("sessionTime", clock.now()))
+        text = note_line(event.get("speaker", "the table"), event.get("text", ""), about, clock.now(), timeline)
         await remember(text)
         if scribe:
             scribe.add(text)
@@ -474,6 +484,9 @@ async def gamemaster(ctx: agents.JobContext) -> None:
     @session.on("agent_state_changed")
     def on_state(event) -> None:
         new_state = getattr(event, "new_state", None)
+        if new_state == "speaking" and state["speaking_at"] is None:
+            # A reply is logged where it began to be spoken.
+            state["speaking_at"] = clock.now()
         if new_state == "speaking" and state["released_at"] is not None:
             ms = round((time.perf_counter() - state["released_at"]) * 1000)
             state["released_at"] = None
@@ -494,8 +507,11 @@ async def gamemaster(ctx: agents.JobContext) -> None:
             state["last_reply"] = item.text_content or ""
             plain = strip_tags(state["last_reply"])
             logger.info("gm: %s", plain)
+            began = state["speaking_at"] if state["speaking_at"] is not None else clock.now()
+            state["speaking_at"] = None
             if plain:
-                log("gmSaid", "The Gamemaster", plain)
+                timeline.add(began, "The Gamemaster", plain, from_gm=True)
+                log("gmSaid", "The Gamemaster", plain, at=began)
             if find_tests(state["last_reply"]):
                 asyncio.create_task(put_tests(state["last_reply"]))
             if scribe:

@@ -150,6 +150,7 @@ What it does is in the [README](README.md#sessions-the-play-log-and-resuming).
   - no case at the table means no session.
 - **Agent.** The session log, the scribe, the resume openings, tabletop rules, the `<test/>` tag, notes typed or dictated, and narrating rolls once the dice land. 7 new tests.
 - **Web.** The session bar (start, end, a note to the Gamemaster), test cards with dice and sixes, "Sixes needed" on the roll form, the outcome against the sixes needed, the stored log, and the Sessions tab on the case file. Type-checked; **not clicked through in the browser** (it needs the new API running).
+- **The session clock** (2026-10-26). One clock for the table, counted from the session's start by the API; every log line and every line in the Gamemaster's conversation carries it, and notes are placed where they were begun, with what was being said then. Tests: 1 API, 4 agent, 2 web.
 - **Never run for real.** No call, scribe or test tag has run against the live services yet.
 - **Not built:**
   - logging table talk (the Gamemaster hears only push-to-talk; recording everyone needs consent and a second transcription stream);

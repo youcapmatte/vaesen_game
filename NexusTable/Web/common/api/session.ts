@@ -50,7 +50,12 @@ export type SessionEventKind =
 export interface SessionEvent extends BaseCore {
   sessionId: string;
   mysteryId: string;
+  /** When it happened; for a note, when what it is about happened (when its writer began it). */
   at: string;
+  /** Seconds since the session started, on the API's clock: the same for everyone at the table and the Gamemaster. */
+  sessionTime: number;
+  /** A note sent a while after the moment it is about: when it was sent. */
+  sentAt?: string;
   kind: SessionEventKind;
   accountId?: string;
   speaker: string;
@@ -58,6 +63,20 @@ export interface SessionEvent extends BaseCore {
   rollId?: string;
   test?: TestRequest;
   hostOnly: boolean;
+}
+
+/** The session clock as the log and the Gamemaster write it: "0:41:55". */
+export function sessionStamp(seconds: number): string {
+  const s = Math.max(0, Math.floor(seconds));
+  return `${Math.floor(s / 3600)}:${String(Math.floor((s % 3600) / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+}
+
+/**
+ * The body of a note: its text, and how long ago its writer began it, by this browser's clock. Only the duration
+ * crosses, so the API places the note on the session clock right even when this computer's clock is wrong.
+ */
+export function noteBody(text: string, begunAt: number | undefined, now: number = performance.now()) {
+  return { text, secondsAgo: begunAt === undefined ? 0 : Math.max(0, (now - begunAt) / 1000) };
 }
 
 export const SessionApi = {
