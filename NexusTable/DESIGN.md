@@ -91,7 +91,7 @@ One DynamoDB table for this project (single-table design), separate from the gam
 
 ## Session lifecycle
 
-1. **Joining:** no lobby. Like Teams or Zoom, the host opens the call for a mystery and players pop up as they connect. Camera and mic status shows on each tile, and anyone not yet connected is shown as missing.
+1. **Joining:** the lobby (changed 2026-10-26; this used to say no lobby). Everyone who joins the call lands in the lobby and talks freely; nothing goes to the Gamemaster. The host brings a case to the table from there, and the lobby becomes the mystery for everyone on the same call. Seats show only who is on the call right now, at most five people. New sign-ins wait until the host approves them on the Admin page.
 2. **Start:** when the host is happy with who's there, they press Start. The AI game master joins and resumes from the mystery's saved state, with a short recap if it isn't the first session.
 3. **Play:** push-to-talk to the GM, table talk recorded but not sent to the AI. State is saved continuously, not only at the end.
 4. **Disconnects:** a dropped player just reconnects and pops back in. The host can pause the GM until they're back.
@@ -137,7 +137,7 @@ One DynamoDB table for this project (single-table design), separate from the gam
 - ElevenLabs for voices. One narrator voice and one shared NPC voice to start.
 - Haiku for NPC dialogue and routing; Sonnet or Opus for mystery generation and narration.
 - Push-to-talk (hold, configurable key) to address the GM; table talk is logged but never sent to the AI.
-- No lobby: Teams/Zoom-style joining, host starts the GM and can close the call.
+- A lobby on the call: the host brings a case to the table from it, starts the GM and can close the call. Up to five players; the host approves new accounts.
 - Players roll animated dice in the UI; results decided server-side.
 
 ## Getting started with Claude Code

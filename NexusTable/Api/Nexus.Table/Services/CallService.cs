@@ -158,6 +158,9 @@ public interface ICallService
     Task<ResultBase<bool>> StartGamemasterAsync(Account caller, CancellationToken cancellationToken = default);
 
     Task<ResultBase<GmTable>> GetGmTableAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>Takes someone out of the call (the host turned their account away). False if LiveKit refused.</summary>
+    Task<bool> RemoveAsync(string accountId, CancellationToken cancellationToken = default);
 }
 
 public sealed class CallService : ICallService
@@ -167,6 +170,11 @@ public sealed class CallService : ICallService
 
     /// <summary>How many of the open session's log lines the Gamemaster rejoins with.</summary>
     public const int RecentLogLines = 40;
+
+    /// <summary>People on the call at once, the host among them; the Gamemaster is the extra seat.</summary>
+    public const int MaxPlayers = 5;
+
+    public const string TableFull = "table_full";
 
     private readonly IOptions<LiveKitOptions> _options;
     private readonly IOptions<NexusOptions> _nexus;
@@ -212,6 +220,13 @@ public sealed class CallService : ICallService
         if (!options.IsConfigured)
         {
             return ret.Fail("The call isn't set up yet: LiveKit:Url, ApiKey and ApiSecret are missing.", NotConfigured);
+        }
+
+        // Five at the table: someone already on the call (another tab, a reconnect) always gets back in.
+        var onCall = await PlayersOnCallAsync(cancellationToken).ConfigureAwait(false);
+        if (onCall.Count >= MaxPlayers && !onCall.Contains(caller.Id))
+        {
+            return ret.Fail($"The table is full: {MaxPlayers} people are on the call. Try again when someone leaves.", TableFull);
         }
 
         var character = caller.ActiveCharacterId is null
@@ -263,28 +278,12 @@ public sealed class CallService : ICallService
             }
         }
 
-        // LiveKit's server API is Twirp: JSON over POST, authorized by a token with roomAdmin on the room.
-        var adminToken = CreateToken("nexus-api", "Nexus Table API", null, new Dictionary<string, object>
+        using var response = await TwirpAsync("livekit.AgentDispatchService/CreateDispatch", new
         {
-            ["room"] = RoomName,
-            ["roomAdmin"] = true,
-            ["roomCreate"] = true,
-        });
-        using var request = new HttpRequestMessage(HttpMethod.Post, $"{options.HttpUrl}/twirp/livekit.AgentDispatchService/CreateDispatch")
-        {
-            Content = new StringContent(
-                JsonConvert.SerializeObject(new
-                {
-                    agent_name = options.AgentName,
-                    room = RoomName,
-                    metadata = JsonConvert.SerializeObject(new { societyId = _nexus.Value.SocietyId, startedBy = caller.Id }),
-                }),
-                Encoding.UTF8,
-                "application/json"),
-        };
-        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
-
-        using var response = await _http.CreateClient(HttpClientName).SendAsync(request, cancellationToken).ConfigureAwait(false);
+            agent_name = options.AgentName,
+            room = RoomName,
+            metadata = JsonConvert.SerializeObject(new { societyId = _nexus.Value.SocietyId, startedBy = caller.Id }),
+        }, cancellationToken).ConfigureAwait(false);
         if (!response.IsSuccessStatusCode)
         {
             var body = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
@@ -346,6 +345,76 @@ public sealed class CallService : ICallService
                 Character = a.ActiveCharacterId is not null && characters.TryGetValue(a.ActiveCharacterId, out var c) ? c : null,
             }).ToList(),
         });
+    }
+
+    public async Task<bool> RemoveAsync(string accountId, CancellationToken cancellationToken = default)
+    {
+        if (!_options.Value.IsConfigured)
+        {
+            return true;
+        }
+
+        try
+        {
+            using var response = await TwirpAsync("livekit.RoomService/RemoveParticipant", new { room = RoomName, identity = accountId }, cancellationToken).ConfigureAwait(false);
+            // Not found: they were not on the call.
+            return response.IsSuccessStatusCode || response.StatusCode == System.Net.HttpStatusCode.NotFound;
+        }
+        catch (HttpRequestException error)
+        {
+            _logger.LogWarning(error, "Could not take {AccountId} out of the call", accountId);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// The accounts on the call now, by their identity (the account id); the Gamemaster and other agents are not
+    /// counted. Empty when LiveKit can't say (no room yet, or not reachable), so a hiccup never locks the table.
+    /// </summary>
+    private async Task<HashSet<string>> PlayersOnCallAsync(CancellationToken cancellationToken)
+    {
+        var players = new HashSet<string>(StringComparer.Ordinal);
+        try
+        {
+            using var response = await TwirpAsync("livekit.RoomService/ListParticipants", new { room = RoomName }, cancellationToken).ConfigureAwait(false);
+            if (!response.IsSuccessStatusCode)
+            {
+                return players;
+            }
+
+            var body = JsonConvert.DeserializeObject<Newtonsoft.Json.Linq.JObject>(await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false));
+            foreach (var participant in body?["participants"] ?? new Newtonsoft.Json.Linq.JArray())
+            {
+                var identity = participant.Value<string>("identity") ?? "";
+                if (Account.IsValidId<Account>(identity))
+                {
+                    players.Add(identity);
+                }
+            }
+        }
+        catch (Exception error) when (error is HttpRequestException or JsonException)
+        {
+            _logger.LogWarning(error, "Could not read who is on the call");
+        }
+
+        return players;
+    }
+
+    /// <summary>LiveKit's server API is Twirp: JSON over POST, authorized by a token with roomAdmin on the room.</summary>
+    private async Task<HttpResponseMessage> TwirpAsync(string method, object body, CancellationToken cancellationToken)
+    {
+        var adminToken = CreateToken("nexus-api", "Nexus Table API", null, new Dictionary<string, object>
+        {
+            ["room"] = RoomName,
+            ["roomAdmin"] = true,
+            ["roomCreate"] = true,
+        });
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"{_options.Value.HttpUrl}/twirp/{method}")
+        {
+            Content = new StringContent(JsonConvert.SerializeObject(body), Encoding.UTF8, "application/json"),
+        };
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+        return await _http.CreateClient(HttpClientName).SendAsync(request, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>A LiveKit access token: HS256 with the API secret, the API key as issuer, grants under "video".</summary>

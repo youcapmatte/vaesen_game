@@ -340,6 +340,11 @@ export function attitudeName(attitude: number) {
   return ["Hostile", "Resentful", "Wary", "Indifferent", "Friendly", "Loyal", "Devoted"][Math.max(-3, Math.min(3, attitude)) + 3];
 }
 
+/** Cases the host can bring to the table: validated, and not yet played to their end. */
+export function playableCases(cases: CaseSummary[]): CaseSummary[] {
+  return cases.filter((c) => c.passed && c.status === "generated");
+}
+
 export const MysteryApi = {
   list: "/api/mysteries",
   labList: "/api/mysteries?lab=true",

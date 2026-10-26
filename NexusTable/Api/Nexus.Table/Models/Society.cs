@@ -19,6 +19,10 @@ public sealed class Society : BaseCore
     [JsonProperty("memberAccountIds")]
     public List<string> MemberAccountIds { get; set; } = [];
 
+    /// <summary>Accounts that signed in and wait for the host to let them in (or were turned away): not members.</summary>
+    [JsonProperty("pendingAccountIds")]
+    public List<string> PendingAccountIds { get; set; } = [];
+
     /// <summary>Mysteries played or being played, oldest first.</summary>
     [JsonProperty("mysteryIds")]
     public List<string> MysteryIds { get; set; } = [];

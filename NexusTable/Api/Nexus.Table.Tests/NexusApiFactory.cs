@@ -28,12 +28,16 @@ public sealed class NexusApiFactory : WebApplicationFactory<Program>
     /// <summary>Set before the first request to run without LiveKit settings.</summary>
     public bool WithoutLiveKit { get; init; }
 
+    /// <summary>Set before the first request: dev players wait for the host's approval like a Discord sign-in.</summary>
+    public bool PlayersWaitForApproval { get; init; }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
         builder.UseSetting("DataService:Provider", NexusServiceExtensions.LocalFileProvider);
         builder.UseSetting("LocalData:Directory", _dataDirectory);
         builder.UseSetting("Mystery:CasePacketPath", Path.Combine(_dataDirectory, "cases"));
+        builder.UseSetting("Nexus:AutoApproveDevPlayers", PlayersWaitForApproval ? "false" : "true");
         if (!WithoutLiveKit)
         {
             builder.UseSetting("LiveKit:Url", "wss://nexus-test.livekit.cloud");
@@ -86,16 +90,26 @@ public sealed class NexusApiFactory : WebApplicationFactory<Program>
     }
 }
 
-/// <summary>Answers every LiveKit server API call with 200 and keeps the requests.</summary>
+/// <summary>Answers every LiveKit server API call with 200 and keeps the requests; ListParticipants says who is on the call.</summary>
 public sealed class FakeLiveKit : HttpMessageHandler
 {
     public List<(Uri Uri, string? Authorization, string Body)> Requests { get; } = [];
+
+    /// <summary>The identities on the call, as ListParticipants answers.</summary>
+    public List<string> OnCall { get; } = [];
+
+    /// <summary>The requests other than the participant lists the API reads before each join.</summary>
+    public IEnumerable<(Uri Uri, string? Authorization, string Body)> Changes =>
+        Requests.Where(r => !r.Uri.AbsolutePath.EndsWith("/ListParticipants", StringComparison.Ordinal));
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         var body = request.Content is null ? "" : await request.Content.ReadAsStringAsync(cancellationToken);
         Requests.Add((request.RequestUri!, request.Headers.Authorization?.Parameter, body));
-        return new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new StringContent("{}") };
+        var answer = request.RequestUri!.AbsolutePath.EndsWith("/ListParticipants", StringComparison.Ordinal)
+            ? JsonConvert.SerializeObject(new { participants = OnCall.Select(identity => new { identity }) })
+            : "{}";
+        return new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new StringContent(answer) };
     }
 }
 

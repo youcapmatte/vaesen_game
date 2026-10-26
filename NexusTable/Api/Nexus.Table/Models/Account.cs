@@ -25,6 +25,13 @@ public sealed class Account : BaseCore
     [JsonConverter(typeof(StringEnumConverter))]
     public AccountRole Role { get; set; } = AccountRole.Player;
 
+    /// <summary>
+    /// Let in by the host. A new sign-in waits until the host approves it on the Admin page; until then it can only read
+    /// its own account. Accounts stored before approval existed have no such field and read as approved.
+    /// </summary>
+    [JsonProperty("isApproved")]
+    public bool IsApproved { get; set; } = true;
+
     /// <summary>The character this person plays at the table, if they have made one.</summary>
     [JsonProperty("activeCharacterId", NullValueHandling = NullValueHandling.Ignore)]
     public string? ActiveCharacterId { get; set; }

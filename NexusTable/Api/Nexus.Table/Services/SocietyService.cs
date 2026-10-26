@@ -13,7 +13,11 @@ public interface ISocietyService
     /// <summary>The Society with its members and their active characters, as <paramref name="viewer"/> may see them.</summary>
     Task<ResultBase<SocietyView>> GetViewAsync(Account viewer, CancellationToken cancellationToken = default);
 
-    Task<ResultBase<Society>> AddMemberAsync(string accountId, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// An approved account is a member of the Society; one waiting for the host (or turned away) is on the pending list
+    /// instead, so it never shows at the table. Writes only when something changes.
+    /// </summary>
+    Task<ResultBase<Society>> SetMembershipAsync(string accountId, bool approved, CancellationToken cancellationToken = default);
 
     /// <summary>Host only.</summary>
     Task<ResultBase<Society>> UpdateAsync(Account caller, UpdateSocietyRequest request, CancellationToken cancellationToken = default);
@@ -101,20 +105,32 @@ public sealed class SocietyService : ISocietyService
         return ret.Ok(new SocietyView { Society = society.Result, Members = members });
     }
 
-    public async Task<ResultBase<Society>> AddMemberAsync(string accountId, CancellationToken cancellationToken = default)
+    public async Task<ResultBase<Society>> SetMembershipAsync(string accountId, bool approved, CancellationToken cancellationToken = default)
     {
         var society = await GetAsync(cancellationToken).ConfigureAwait(false);
-        if (!society.Success || society.Result!.MemberAccountIds.Contains(accountId, StringComparer.Ordinal))
+        if (!society.Success)
         {
             return society;
         }
 
-        society.Result.MemberAccountIds.Add(accountId);
-        var updated = await _societies.UpdateAsync(society.Result, cancellationToken).ConfigureAwait(false);
+        var s = society.Result!;
+        var (into, outOf) = approved ? (s.MemberAccountIds, s.PendingAccountIds) : (s.PendingAccountIds, s.MemberAccountIds);
+        if (into.Contains(accountId, StringComparer.Ordinal) && !outOf.Contains(accountId, StringComparer.Ordinal))
+        {
+            return society;
+        }
+
+        outOf.RemoveAll(id => id == accountId);
+        if (!into.Contains(accountId, StringComparer.Ordinal))
+        {
+            into.Add(accountId);
+        }
+
+        var updated = await _societies.UpdateAsync(s, cancellationToken).ConfigureAwait(false);
         if (updated.ErrorCode == ErrorCodes.Conflict)
         {
-            // Someone else joined at the same moment: read again and retry once.
-            return await AddMemberAsync(accountId, cancellationToken).ConfigureAwait(false);
+            // Someone else joined at the same moment: read again and retry.
+            return await SetMembershipAsync(accountId, approved, cancellationToken).ConfigureAwait(false);
         }
 
         if (updated.Success)

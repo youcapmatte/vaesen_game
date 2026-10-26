@@ -71,6 +71,7 @@ Design: [DESIGN.md](DESIGN.md). How to run: [README.md](README.md).
 - **Look.** Like the rulebook: umber pages, parchment cards, IM Fell and EB Garamond type, ornaments drawn in SVG, nothing copied from the book.
 - **Sign-in.** Discord through `@auth0/nextjs-auth0` once the `AUTH0_*` settings are in place. Otherwise a dev seat picker; each browser tab keeps its own seat, so one browser can be several players.
 - **Society hall.** Members, their characters and empty chairs. The host can edit the Society.
+- **The lobby, call-only seats and approval** (2026-10-26). The Table page is a lobby until a case is on the table, and the host brings one in from there. Seats show only who is on the call, at most five (the API checks LiveKit's participant list before giving a join token). New Discord sign-ins wait for the host on the Admin page; accounts from before read as approved. Tests: 3 API, 3 web. **Not clicked through in the browser** (it needs the new API running).
 - **Character wizard.** The 12 rulebook steps on 9 pages:
   - live point budgets
   - suggestions per archetype

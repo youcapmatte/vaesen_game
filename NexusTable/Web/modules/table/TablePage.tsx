@@ -18,6 +18,7 @@ import { CharacterSheet } from "@/modules/characters/CharacterSheet";
 import { CallBar, GmLine, type TranscriptLine, useTableTranscript } from "@/modules/call/CallViews";
 import { CallProvider, useGamemaster, useGamemasterActions, useSeatMedia } from "@/modules/call/Call";
 import { RollEntry, RollForm, RollOnStage, TestCard } from "@/modules/dice/RollViews";
+import { Lobby } from "./Lobby";
 import { Seats } from "./Seats";
 import styles from "./Table.module.css";
 import { keyLabel, usePushToTalk } from "./usePushToTalk";
@@ -84,6 +85,8 @@ function TableContent() {
   }
 
   const names = ruleNames(rules);
+  // No case on the table: the lobby. Bringing one in turns the same page, on the same call, into the mystery.
+  const atTable = view.society.atTable;
   const mine = characters.find((c) => c.id === me.activeCharacterId);
   const rollable = me.role === "Host" ? characters : mine ? [mine] : [];
   const onRolled = (outcome: RollOutcome) => {
@@ -110,22 +113,28 @@ function TableContent() {
     <Box className={styles.layout}>
       <Stack gap="sm" style={{ minHeight: 0 }}>
         <CallBar />
-        <Seats members={view.members} presence={presence} media={media} archetypeName={names.archetype} isHost={me.role === "Host"} onOpenSheet={setSheetId} />
+        <Seats members={view.members} presence={presence} media={media} archetypeName={names.archetype} isHost={me.role === "Host"} withGamemaster={Boolean(atTable)} onOpenSheet={setSheetId} />
       </Stack>
 
       <Box className={styles.stage}>
         <Box className={`${styles.scene} nx-panel`}>
           <Corners />
-          <SessionBar session={session ?? undefined} atTable={view.society.atTable} isHost={me.role === "Host"} onChanged={() => void mutateSession()} />
-          <SceneCard headquarters={view.society.headquarters} atTable={view.society.atTable} isHost={me.role === "Host"} />
-          <PushToTalkBar />
+          {atTable ? (
+            <>
+              <SessionBar session={session ?? undefined} atTable={atTable} isHost={me.role === "Host"} onChanged={() => void mutateSession()} />
+              <SceneCard headquarters={view.society.headquarters} atTable={atTable} isHost={me.role === "Host"} />
+              <PushToTalkBar />
+            </>
+          ) : (
+            <Lobby headquarters={view.society.headquarters} isHost={me.role === "Host"} onBrought={() => void mutateSociety()} />
+          )}
           {onStage && (
             <Box className={styles.diceOverlay} onClick={() => setOnStage(undefined)}>
               <RollOnStage roll={onStage} rules={rules} />
             </Box>
           )}
         </Box>
-        <ClueShelf atTable={view.society.atTable} />
+        {atTable && <ClueShelf atTable={atTable} />}
       </Box>
 
       <Box className={styles.side}>

@@ -2,11 +2,11 @@
 
 import { HubConnectionBuilder, HubConnectionState, LogLevel, type HubConnection } from "@microsoft/signalr";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { AccountApi } from "@/common/api/account";
+import { type Account, AccountApi } from "@/common/api/account";
 import type { Character } from "@/common/api/character";
 import type { Roll } from "@/common/api/roll";
 import type { PlaySession, SessionEvent } from "@/common/api/session";
-import { fetcher, Http } from "../core/Fetcher";
+import { useApiData } from "../core/Api";
 import { useSecurity } from "../security/SecurityProvider";
 import ClientAppsettings from "../settings/ClientAppsettings";
 
@@ -44,6 +44,9 @@ const TableContext = createContext<TableConnection>({ status: "offline", presenc
  */
 export function TableConnectionProvider({ children }: { children: React.ReactNode }) {
   const { status: signInStatus, identity, getToken } = useSecurity();
+  // Only someone the host has let in gets the table (the hub turns others away).
+  const { data: me } = useApiData<Account>(AccountApi.me);
+  const approved = me?.isApproved === true;
   const [status, setStatus] = useState<ConnectionStatus>("offline");
   const [connection, setConnection] = useState<HubConnection>();
   const [presence, setPresence] = useState<PresenceEntry[]>([]);
@@ -51,7 +54,7 @@ export function TableConnectionProvider({ children }: { children: React.ReactNod
   getTokenRef.current = getToken;
 
   useEffect(() => {
-    if (signInStatus !== "signedIn") {
+    if (signInStatus !== "signedIn" || !approved) {
       return;
     }
 
@@ -79,11 +82,7 @@ export function TableConnectionProvider({ children }: { children: React.ReactNod
     setStatus("connecting");
     void (async () => {
       try {
-        // The hub knows people by their account, which the first /api/me creates.
-        await fetcher(AccountApi.me, Http.GET, await getTokenRef.current());
-        if (stopped) {
-          return;
-        }
+        // The hub knows people by their account, which the first /api/me (above) created.
         await hub.start();
         await refresh();
       } catch {
@@ -98,7 +97,7 @@ export function TableConnectionProvider({ children }: { children: React.ReactNod
       setPresence([]);
       void hub.stop();
     };
-  }, [signInStatus, identity]);
+  }, [signInStatus, identity, approved]);
 
   const setPushToTalk = useCallback((active: boolean) => {
     if (connection?.state === HubConnectionState.Connected) {

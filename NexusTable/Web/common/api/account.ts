@@ -7,6 +7,8 @@ export interface Account extends BaseCore {
   displayName: string;
   avatarUrl?: string;
   role: AccountRole;
+  /** Let in by the host. Until then the account can read only itself, and the web app shows that it is waiting. */
+  isApproved: boolean;
   activeCharacterId?: string;
 }
 
@@ -33,4 +35,7 @@ export const AccountApi = {
   profile: "/api/me/profile",
   devPlayers: "/api/dev/players",
   devLogin: "/api/dev/login",
+  /** Host only: everyone who has signed in, those waiting first. */
+  adminAccounts: "/api/admin/accounts",
+  approval: (accountId: string) => `/api/admin/accounts/${accountId}/approval`,
 };

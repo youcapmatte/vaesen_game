@@ -46,7 +46,7 @@ public sealed class CallTests : IDisposable
 
         Assert.Equal(HttpStatusCode.Forbidden, refused.StatusCode);
         Assert.Equal(HttpStatusCode.OK, started.StatusCode);
-        var (uri, authorization, body) = Assert.Single(_factory.LiveKit.Requests);
+        var (uri, authorization, body) = Assert.Single(_factory.LiveKit.Changes);
         Assert.Equal("https://nexus-test.livekit.cloud/twirp/livekit.AgentDispatchService/CreateDispatch", uri.ToString());
         Assert.Equal("nexus-gm", JObject.Parse(body)["agent_name"]!.ToString());
         var admin = new JsonWebTokenHandler().ReadJsonWebToken(authorization);

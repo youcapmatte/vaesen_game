@@ -18,6 +18,12 @@ public sealed class NexusOptions
     /// </summary>
     public List<string> HostSubjects { get; set; } = [];
 
+    /// <summary>
+    /// In Development, the dev login's seed players ("dev|...") are let in without the host approving them. Tests turn
+    /// it off to see an account wait.
+    /// </summary>
+    public bool AutoApproveDevPlayers { get; set; } = true;
+
     /// <summary>How many recent rolls the table log shows.</summary>
     public int RecentRolls { get; set; } = 50;
 

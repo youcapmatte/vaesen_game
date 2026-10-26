@@ -11,37 +11,40 @@ import { ErrorNote } from "@/common/client/components/PageFrame";
 import { SightMark } from "@/common/client/components/Ornament";
 import type { PresenceEntry } from "@/common/client/signalr/useTable";
 import { type SeatMedia, useGamemaster, useGamemasterActions } from "@/modules/call/Call";
+import { seatedOnCall } from "./seating";
 import styles from "./Table.module.css";
 
-const SEATS = 4;
-
 /**
- * The camera tiles down the side: one per member, missing ones shown as empty chairs, then the Gamemaster
- * (audio only). Video and speaking come from the call; who is at the table and who holds push-to-talk from the hub.
+ * The camera tiles down the side: one for each person on the call right now (at most five), then the Gamemaster
+ * (audio only) once a case is on the table. Video and speaking come from the call; who holds push-to-talk from the hub.
  */
-export function Seats({ members, presence, media, archetypeName, isHost, onOpenSheet }: {
+export function Seats({ members, presence, media, archetypeName, isHost, withGamemaster, onOpenSheet }: {
   members: SocietyMember[];
   presence: PresenceEntry[];
   media: Map<string, SeatMedia>;
   archetypeName: (id?: string) => string;
   isHost: boolean;
+  /** In the lobby there is no Gamemaster's seat: it comes with the case. */
+  withGamemaster: boolean;
   onOpenSheet: (characterId: string) => void;
 }) {
   const here = new Map(presence.map((p) => [p.accountId, p]));
-  const seated = [...members].sort((a, b) => Number(here.has(b.accountId)) - Number(here.has(a.accountId))).slice(0, SEATS);
+  const seated = seatedOnCall(members, media.keys());
 
   return (
     <Stack gap="sm" className={`${styles.seats} nx-scroll`}>
+      {seated.length === 0 && (
+        <Text fz="sm" c="var(--nx-sepia)" className="nx-flourish" ta="center" p="sm">Join the call to take a seat.</Text>
+      )}
       {seated.map((member) => {
         const presenceEntry = here.get(member.accountId);
         const seat = media.get(member.accountId);
-        const connected = Boolean(presenceEntry) || Boolean(seat);
         const talking = presenceEntry?.talkingToGm ?? false;
         const character = member.character;
         return (
           <UnstyledButton
             key={member.accountId}
-            className={`${styles.tile} ${talking ? styles.talking : seat?.speaking ? styles.speaking : ""} ${connected ? "" : styles.missing}`}
+            className={`${styles.tile} ${talking ? styles.talking : seat?.speaking ? styles.speaking : ""}`}
             onClick={() => character && onOpenSheet(character.id)}
             disabled={!character}
           >
@@ -54,14 +57,14 @@ export function Seats({ members, presence, media, archetypeName, isHost, onOpenS
                   size={64}
                   radius="50%"
                   color="umber"
-                  style={{ filter: connected ? "sepia(0.55)" : "grayscale(1) brightness(0.6)" }}
+                  style={{ filter: "sepia(0.55)" }}
                 >
                   {(character?.name ?? member.displayName)[0]}
                 </Avatar>
               )}
               <Group gap={4} className={styles.tileIcons}>
                 {!seat?.camera && (
-                  <Tooltip label={seat ? "Camera off" : "Not in the call"}><IconVideoOff size={14} /></Tooltip>
+                  <Tooltip label="Camera off"><IconVideoOff size={14} /></Tooltip>
                 )}
                 {seat?.micOn ? <IconMicrophone size={14} /> : <IconMicrophoneOff size={14} />}
               </Group>
@@ -75,20 +78,13 @@ export function Seats({ members, presence, media, archetypeName, isHost, onOpenS
               <Text className="nx-display" fz="md" lh={1.15} truncate>{character?.name ?? member.displayName}</Text>
               <Text fz={11} c="var(--nx-sepia)" truncate>
                 {character ? `${archetypeName(character.archetype)} · ${member.displayName}` : "No character yet"}
-                {!connected && " · not here"}
               </Text>
             </Box>
           </UnstyledButton>
         );
       })}
 
-      {Array.from({ length: Math.max(0, SEATS - seated.length) }, (_, i) => (
-        <Box key={`empty-${i}`} className={`${styles.tile} ${styles.missing}`}>
-          <Box className={styles.video}><Text className="nx-flourish" c="var(--nx-sepia)" fz="sm">An empty chair</Text></Box>
-        </Box>
-      ))}
-
-      <GamemasterSeat isHost={isHost} />
+      {withGamemaster && <GamemasterSeat isHost={isHost} />}
     </Stack>
   );
 }

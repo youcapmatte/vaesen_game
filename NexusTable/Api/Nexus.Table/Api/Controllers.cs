@@ -22,13 +22,23 @@ public abstract class NexusControllerBase(IAccountService accounts) : Controller
 {
     protected IAccountService Accounts { get; } = accounts;
 
-    /// <summary>Runs <paramref name="action"/> as the caller's account, or returns why there is none.</summary>
-    protected async Task<ActionResult<ResultBase<T>>> AsCallerAsync<T>(Func<Account, Task<ResultBase<T>>> action, CancellationToken cancellationToken)
+    public const string NotApproved = "Your account is waiting for the host to let you in.";
+
+    /// <summary>
+    /// Runs <paramref name="action"/> as the caller's account, or returns why there is none. An account the host has not
+    /// approved gets nothing but its own account (<paramref name="evenIfWaiting"/>).
+    /// </summary>
+    protected async Task<ActionResult<ResultBase<T>>> AsCallerAsync<T>(Func<Account, Task<ResultBase<T>>> action, CancellationToken cancellationToken, bool evenIfWaiting = false)
     {
         var account = await Accounts.GetOrCreateAsync(Caller.From(User), cancellationToken).ConfigureAwait(false);
         if (!account.Success)
         {
             return this.ToActionResult(new ResultBase<T>().Fail(account.ErrorMessage, account.ErrorCode));
+        }
+
+        if (!account.Result!.IsApproved && !evenIfWaiting)
+        {
+            return this.ToActionResult(new ResultBase<T>().Fail(NotApproved, ErrorCodes.Forbidden));
         }
 
         return this.ToActionResult(await action(account.Result!).ConfigureAwait(false));
@@ -39,15 +49,33 @@ public abstract class NexusControllerBase(IAccountService accounts) : Controller
 [Route("api/me")]
 public sealed class MeController(IAccountService accounts) : NexusControllerBase(accounts)
 {
-    /// <summary>The caller's account; the first call creates it and joins the Society.</summary>
+    /// <summary>
+    /// The caller's account; the first call creates it. Approved, it is a member of the Society; otherwise isApproved is
+    /// false and the web app shows that the host has to let them in.
+    /// </summary>
     [HttpGet]
     public Task<ActionResult<ResultBase<Account>>> Get(CancellationToken cancellationToken) =>
-        AsCallerAsync(account => Task.FromResult(new ResultBase<Account>().Ok(account)), cancellationToken);
+        AsCallerAsync(account => Task.FromResult(new ResultBase<Account>().Ok(account)), cancellationToken, evenIfWaiting: true);
 
     /// <summary>Stores the name and avatar from the sign-in (the web app sends them from the Discord profile).</summary>
     [HttpPut("profile")]
     public async Task<ActionResult<ResultBase<Account>>> UpdateProfile([FromBody] UpdateProfileRequest? request, CancellationToken cancellationToken) =>
         this.ToActionResult(await Accounts.UpdateProfileAsync(Caller.From(User), request ?? new UpdateProfileRequest(), cancellationToken).ConfigureAwait(false));
+}
+
+/// <summary>Host only: who may use the table. New sign-ins wait here until the host lets them in.</summary>
+[Route("api/admin")]
+public sealed class AdminController(IAccountService accounts, IAdminService admin) : NexusControllerBase(accounts)
+{
+    /// <summary>Everyone who has signed in: waiting for approval first, then the Society's members.</summary>
+    [HttpGet("accounts")]
+    public Task<ActionResult<ResultBase<IReadOnlyList<Account>>>> Accounts(CancellationToken cancellationToken) =>
+        AsCallerAsync(caller => admin.ListAccountsAsync(caller, cancellationToken), cancellationToken);
+
+    /// <summary>Lets an account in, or turns it away (it leaves the Society and the call).</summary>
+    [HttpPut("accounts/{accountId}/approval")]
+    public Task<ActionResult<ResultBase<Account>>> SetApproval([FromRoute] string accountId, [FromBody] ApprovalRequest? request, CancellationToken cancellationToken) =>
+        AsCallerAsync(caller => admin.SetApprovalAsync(caller, accountId, request?.Approved ?? false, cancellationToken), cancellationToken);
 }
 
 /// <summary>The rules the character wizard is built from. Public: they are the same for everyone.</summary>

@@ -29,16 +29,18 @@ public sealed class TableHub(IOptions<NexusOptions> options, IAccountStore accou
 
     public override async Task OnConnectedAsync()
     {
+        // The account exists by now: the web app reads /api/me before it connects. Only accounts the host let in get the table.
+        var account = await accounts.GetBySubjectAsync(Context.User!.GetSubject(), Context.ConnectionAborted).ConfigureAwait(false);
+        if (account is not { IsApproved: true })
+        {
+            Context.Abort();
+            return;
+        }
+
         var group = GroupOf(options.Value.SocietyId);
         await Groups.AddToGroupAsync(Context.ConnectionId, group).ConfigureAwait(false);
-
-        // The account exists by now: the web app reads /api/me before it connects.
-        var account = await accounts.GetBySubjectAsync(Context.User!.GetSubject(), Context.ConnectionAborted).ConfigureAwait(false);
-        if (account is not null)
-        {
-            presence.Join(Context.ConnectionId, account.Id);
-            await Clients.Group(group).SendAsync("presenceChanged", presence.Snapshot()).ConfigureAwait(false);
-        }
+        presence.Join(Context.ConnectionId, account.Id);
+        await Clients.Group(group).SendAsync("presenceChanged", presence.Snapshot()).ConfigureAwait(false);
 
         await base.OnConnectedAsync().ConfigureAwait(false);
     }

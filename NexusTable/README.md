@@ -1,6 +1,6 @@
 # Nexus Table
 
-A web tabletop where Claude is the Gamemaster and up to four friends play Vaesen mysteries by voice.
+A web tabletop where Claude is the Gamemaster and up to five friends play Vaesen mysteries by voice.
 The design is in [DESIGN.md](DESIGN.md). This folder has the web app and API around the table (milestone 1) and
 the voice Gamemaster (milestone 2: LiveKit call, push-to-talk, a Python agent running Deepgram, then Claude, then ElevenLabs).
 
@@ -42,7 +42,8 @@ cd NexusTable/Web && npm test && npm run lint
 
 ## What works
 
-- **Sign-in.** Discord through Auth0 (`@auth0/nextjs-auth0`, straight to the Discord connection), or the dev login. The API creates the account on first call and seats it in the Society. Hosts are listed in `Nexus:HostSubjects`.
+- **Sign-in.** Discord through Auth0 (`@auth0/nextjs-auth0`, straight to the Discord connection), or the dev login. The API creates the account on first call. Hosts are listed in `Nexus:HostSubjects`.
+- **Approval.** A new sign-in waits for the host: until the host lets it in on the **Admin** page (`/admin`, `GET /api/admin/accounts`, `PUT /api/admin/accounts/{id}/approval`), it sees only a waiting page, every other endpoint answers 403, the table hub turns it away, and it is not a member of the Society. Turning someone away takes them out of the Society and the call. The host is always let in; accounts stored before approval existed read as approved; in Development the dev login's players are let in by themselves (`Nexus:AutoApproveDevPlayers`).
 - **The Society.** One guild (`Nexus:SocietyId`), its members and their characters. The host can rename it and its headquarters.
 - **Character creation by the book.** Twelve steps on nine pages:
   - archetype, one per Society
@@ -58,8 +59,9 @@ cd NexusTable/Web && npm test && npm run lint
   
   The API validates everything again (`CharacterRules.cs`). The browser keeps the draft across a reload.
 - **The character sheet.** Shown on parchment, with Conditions (Broken after the fourth of a type), notes and the Advantage. The dark secret is shown only to its owner and the host: the API leaves it out for everyone else, including in broadcasts.
+- **The lobby.** With no case on the table, the Table page is the lobby: everyone on the call talks freely, and nothing goes to the Gamemaster. The host picks a ready case there and brings it to the table, and the same page, on the same call, becomes the mystery for everyone. When the case leaves the table, everyone is back in the lobby.
 - **The table, Roll20-style.**
-  - Seats down the side show who is connected, plus a Gamemaster seat.
+  - Seats down the side show who is on the call right now (at most five; the API refuses a sixth), plus the Gamemaster's seat once a case is on the table. Nobody who is not on the call has a seat, and there are no empty chairs.
   - A scene stage with a clue shelf sits in the middle.
   - On the right are the log and the dice tray.
   - The sheet is one click away.
@@ -72,7 +74,7 @@ cd NexusTable/Web && npm test && npm run lint
 - **The call (LiveKit).**
   - Players join from the table and appear in their seats on camera.
   - Everyone hears everyone.
-  - The host brings in the Gamemaster as an audio-only fifth seat, then controls it from there: pause, resume, repeat, recap, send away.
+  - The host brings in the Gamemaster as an audio-only extra seat, then controls it from there: pause, resume, repeat, recap, send away.
   - The Gamemaster's seat shows what it is doing, and the time from releasing the talk key to its first word.
   - The log shows what was said to and by the Gamemaster.
 

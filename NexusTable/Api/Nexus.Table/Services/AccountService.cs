@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using Nexus.Table.Data;
@@ -41,13 +42,20 @@ public sealed class AccountService : IAccountService
     private readonly IAccountStore _accounts;
     private readonly ISocietyService _society;
     private readonly IOptions<NexusOptions> _options;
+    private readonly IHostEnvironment _environment;
 
-    public AccountService(IAccountStore accounts, ISocietyService society, IOptions<NexusOptions> options)
+    public AccountService(IAccountStore accounts, ISocietyService society, IOptions<NexusOptions> options, IHostEnvironment environment)
     {
         _accounts = accounts;
         _society = society;
         _options = options;
+        _environment = environment;
     }
+
+    /// <summary>Let in without waiting for the host: the host, and in Development the dev login's seed players.</summary>
+    private bool ApprovedFromTheStart(string subject) =>
+        _options.Value.HostSubjects.Contains(subject, StringComparer.Ordinal)
+        || (_environment.IsDevelopment() && _options.Value.AutoApproveDevPlayers && subject.StartsWith("dev|", StringComparison.Ordinal));
 
     public async Task<ResultBase<Account>> GetOrCreateAsync(Caller caller, CancellationToken cancellationToken = default)
     {
@@ -60,6 +68,8 @@ public sealed class AccountService : IAccountService
                 Subject = caller.Subject,
                 DisplayName = Clean(caller.Name, MaxNameLength) ?? "Unnamed traveller",
                 AvatarUrl = Clean(caller.Picture, MaxUrlLength),
+                // A new sign-in waits for the host.
+                IsApproved = ApprovedFromTheStart(caller.Subject),
                 CreatedBy = caller.Subject,
             }, cancellationToken).ConfigureAwait(false);
 
@@ -85,9 +95,11 @@ public sealed class AccountService : IAccountService
 
         // The host list lives in configuration, so the role follows it rather than being stored once.
         var role = _options.Value.HostSubjects.Contains(caller.Subject, StringComparer.Ordinal) ? AccountRole.Host : AccountRole.Player;
-        if (account.Role != role)
+        if (account.Role != role || (role == AccountRole.Host && !account.IsApproved))
         {
             account.Role = role;
+            // The host is always let in.
+            account.IsApproved |= role == AccountRole.Host;
             var updated = await _accounts.UpdateAsync(account, cancellationToken).ConfigureAwait(false);
             if (!updated.Success)
             {
@@ -95,7 +107,7 @@ public sealed class AccountService : IAccountService
             }
         }
 
-        var joined = await _society.AddMemberAsync(account.Id, cancellationToken).ConfigureAwait(false);
+        var joined = await _society.SetMembershipAsync(account.Id, account.IsApproved, cancellationToken).ConfigureAwait(false);
         return joined.Success ? ret.Ok(account) : ret.Fail(joined.ErrorMessage, joined.ErrorCode);
     }
 

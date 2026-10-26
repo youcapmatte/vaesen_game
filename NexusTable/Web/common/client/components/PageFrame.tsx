@@ -1,10 +1,12 @@
 "use client";
 
 import { Anchor, Avatar, Badge, Box, Button, Center, Group, Loader, Menu, Stack, Text, Title, UnstyledButton } from "@mantine/core";
-import { IconBuildingCastle, IconCandle, IconCards, IconChevronDown, IconDice5, IconLogout, IconScript, IconUserPlus, IconUsers } from "@tabler/icons-react";
+import { IconBuildingCastle, IconCandle, IconCards, IconChevronDown, IconDice5, IconHourglass, IconLogout, IconScript, IconShieldCheck, IconUserPlus, IconUsers } from "@tabler/icons-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { type Account, AccountApi } from "@/common/api/account";
+import { useApiData } from "../core/Api";
 import { useSecurity } from "../security/SecurityProvider";
 import { useTableStatus } from "../signalr/useTable";
 import { useMe } from "./hooks";
@@ -16,6 +18,7 @@ const NAV = [
   { href: "/mysteries", label: "Case Files", icon: IconScript, hostOnly: true },
   { href: "/world", label: "World", icon: IconUsers, hostOnly: true },
   { href: "/dice", label: "Dice", icon: IconDice5 },
+  { href: "/admin", label: "Admin", icon: IconShieldCheck, hostOnly: true },
 ];
 
 /** The frame of every signed-in page: header with navigation and the player menu. Sends signed-out visitors home. */
@@ -25,7 +28,8 @@ export function PageFrame({ children, fullBleed }: { children: React.ReactNode; 
   const pathname = usePathname();
   const { data: me } = useMe();
   const live = useTableStatus();
-  const nav = NAV.filter((item) => !("hostOnly" in item) || me?.role === "Host");
+  const waiting = me?.isApproved === false;
+  const nav = waiting ? [] : NAV.filter((item) => !("hostOnly" in item) || me?.role === "Host");
 
   useEffect(() => {
     if (status === "signedOut") {
@@ -91,7 +95,7 @@ export function PageFrame({ children, fullBleed }: { children: React.ReactNode; 
                 {nav.map(({ href, label, icon: Icon }) => (
                   <Menu.Item key={href} hiddenFrom="sm" component={Link} href={href} leftSection={<Icon size={16} />}>{label}</Menu.Item>
                 ))}
-                {me?.activeCharacterId ? (
+                {waiting ? null : me?.activeCharacterId ? (
                   <Menu.Item component={Link} href={`/characters/${me.activeCharacterId}`} leftSection={<IconCards size={16} />}>My character</Menu.Item>
                 ) : (
                   <Menu.Item component={Link} href="/characters/new" leftSection={<IconUserPlus size={16} />}>Create a character</Menu.Item>
@@ -104,10 +108,32 @@ export function PageFrame({ children, fullBleed }: { children: React.ReactNode; 
         </Group>
       </Box>
 
-      <Box component="main" style={{ flex: 1, minHeight: 0 }} px={fullBleed ? 0 : "md"} py={fullBleed ? 0 : "xl"}>
-        {children}
+      <Box component="main" style={{ flex: 1, minHeight: 0 }} px={fullBleed && !waiting ? 0 : "md"} py={fullBleed && !waiting ? 0 : "xl"}>
+        {waiting ? <WaitingRoom /> : children}
       </Box>
     </Box>
+  );
+}
+
+/**
+ * A new sign-in, until the host lets them in on the Admin page. It checks again every few seconds, so the table opens
+ * by itself once they are approved.
+ */
+function WaitingRoom() {
+  useApiData<Account>(AccountApi.me, { refreshInterval: 10000 });
+  return (
+    <Center mih="60vh">
+      <Stack align="center" gap="sm" maw={520} ta="center">
+        <IconHourglass size={36} color="var(--nx-gold)" stroke={1.2} />
+        <Text className="nx-kicker">At the door</Text>
+        <Title order={2}>Waiting for the host</Title>
+        <Divider width={200} />
+        <Text className="nx-flourish" c="var(--nx-parchment-2)">
+          You have signed in, but the host has to let you in before you can join the Society. Tell them you are here;
+          this page opens the table by itself once they have.
+        </Text>
+      </Stack>
+    </Center>
   );
 }
 
