@@ -51,7 +51,16 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile")
 	TObjectPtr<UProjectileMovementComponent> Movement;
 
+	/** The faint streak behind it in flight (its ammo's StreakMaterial), so the eye can follow it. */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile")
+	TObjectPtr<UStaticMeshComponent> Streak;
+
 private:
+	/** The streak as long as the flight so far allows (it grows out from the bow, not behind it). */
+	void UpdateStreak();
+
+	FVector LaunchLocation = FVector::ZeroVector;
+
 	UFUNCTION()
 	void OnProjectileHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 

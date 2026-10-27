@@ -3,6 +3,9 @@
 #include "CoreMinimal.h"
 #include "Combat/VaesenDamageTypes.h"
 #include "Items/VaesenItem.h"
+
+class UMaterialInterface;
+
 #include "VaesenAmmoItem.generated.h"
 
 /**
@@ -36,6 +39,23 @@ public:
 	/** Where the mesh sits on the projectile (it flies along X, its point at the origin): for a mesh modelled another way. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ammo|Projectile")
 	FTransform ProjectileMeshOffset;
+
+	/**
+	 * A faint streak behind it in flight, so the eye can follow it (an arrow from behind is a speck): this material on a
+	 * thin rod StreakLength long, starting StreakBehind behind the point (the arrow's length). It grows out over the
+	 * first StreakLength of flight and goes when it sticks. No material = none.
+	 */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ammo|Projectile")
+	TObjectPtr<UMaterialInterface> StreakMaterial;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ammo|Projectile", meta = (ClampMin = "0", Units = "cm"))
+	float StreakLength = 250.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ammo|Projectile", meta = (ClampMin = "0", Units = "cm"))
+	float StreakWidth = 1.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ammo|Projectile", meta = (ClampMin = "0", Units = "cm"))
+	float StreakBehind = 0.0f;
 
 	/** 1 = normal gravity; lower flies flatter. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ammo|Projectile", meta = (ClampMin = "0"))

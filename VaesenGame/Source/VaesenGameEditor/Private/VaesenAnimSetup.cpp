@@ -52,6 +52,12 @@
 #include "Animation/AnimData/CurveIdentifier.h"
 #include "Animation/AnimData/IAnimationDataController.h"
 #include "AnimationRuntime.h"
+#include "MaterialEditingLibrary.h"
+#include "Materials/Material.h"
+#include "Materials/MaterialExpressionCustom.h"
+#include "Materials/MaterialExpressionLocalPosition.h"
+#include "Materials/MaterialExpressionScalarParameter.h"
+#include "Materials/MaterialExpressionVectorParameter.h"
 #include "Characters/VaesenPlayerCharacter.h"
 #include "EdGraphSchema_K2.h"
 #include "Factories/AnimBlueprintFactory.h"
@@ -3325,6 +3331,50 @@ namespace VaesenAnimSetup
 		return Blueprint->GeneratedClass;
 	}
 
+	/**
+	 * M_ArrowStreak: the faint streak behind an arrow in flight. Unlit and see-through, a warm off-white; along the rod
+	 * (the engine cylinder's local Z, -50 to 50) it fades from the arrow's end (Opacity) to nothing at the tail.
+	 */
+	UMaterialInterface* MakeStreakMaterial()
+	{
+		const FString Path = TEXT("/Game/Vaesen/Materials/M_ArrowStreak");
+		if (UMaterial* Existing = LoadAt<UMaterial>(Path))
+		{
+			return Existing;
+		}
+		UMaterial* Material = NewAsset<UMaterial>(Path);
+		Material->BlendMode = BLEND_Translucent;
+		Material->SetShadingModel(MSM_Unlit);
+		Material->TwoSided = true;
+		const auto Add = [Material](TSubclassOf<UMaterialExpression> Class, int32 X, int32 Y)
+		{
+			return UMaterialEditingLibrary::CreateMaterialExpression(Material, Class, X, Y);
+		};
+		UMaterialExpressionVectorParameter* Color = CastChecked<UMaterialExpressionVectorParameter>(Add(UMaterialExpressionVectorParameter::StaticClass(), -500, -100));
+		Color->ParameterName = TEXT("Color");
+		Color->DefaultValue = FLinearColor(1.0f, 0.92f, 0.78f);
+		UMaterialExpressionScalarParameter* Opacity = CastChecked<UMaterialExpressionScalarParameter>(Add(UMaterialExpressionScalarParameter::StaticClass(), -500, 150));
+		Opacity->ParameterName = TEXT("Opacity");
+		Opacity->DefaultValue = 0.35f;
+		UMaterialExpressionLocalPosition* Local = CastChecked<UMaterialExpressionLocalPosition>(Add(UMaterialExpressionLocalPosition::StaticClass(), -500, 300));
+		UMaterialExpressionCustom* Fade = CastChecked<UMaterialExpressionCustom>(Add(UMaterialExpressionCustom::StaticClass(), -250, 200));
+		Fade->Description = TEXT("Fade");
+		Fade->OutputType = CMOT_Float1;
+		Fade->Inputs.Reset();
+		for (const TCHAR* Name : { TEXT("Local"), TEXT("Opacity") })
+		{
+			Fade->Inputs.AddDefaulted_GetRef().InputName = Name;
+		}
+		Fade->Code = TEXT("float Along = saturate((Local.z + 50.0) / 100.0);\nreturn Along * Along * Opacity;");
+		UMaterialEditingLibrary::ConnectMaterialExpressions(Local, TEXT(""), Fade, TEXT("Local"));
+		UMaterialEditingLibrary::ConnectMaterialExpressions(Opacity, TEXT(""), Fade, TEXT("Opacity"));
+		UMaterialEditingLibrary::ConnectMaterialProperty(Color, TEXT(""), MP_EmissiveColor);
+		UMaterialEditingLibrary::ConnectMaterialProperty(Fade, TEXT(""), MP_Opacity);
+		UMaterialEditingLibrary::RecompileMaterial(Material);
+		Save(Material);
+		return Material;
+	}
+
 	void BuildBow()
 	{
 		const bool bRebuild = FParse::Param(FCommandLine::Get(), TEXT("rebuild"));
@@ -3520,6 +3570,11 @@ namespace VaesenAnimSetup
 			// Stuck (it becomes a pickup) and on the ground, the same arrow.
 			Arrows->PickupMesh = ArrowMesh;
 			Arrows->PickupScale = FVector::OneVector;
+			// A faint streak behind it in flight, from its nock back (the arrow's length behind the point).
+			Arrows->StreakMaterial = MakeStreakMaterial();
+			Arrows->StreakLength = 250.0f;
+			Arrows->StreakWidth = 1.0f;
+			Arrows->StreakBehind = Length;
 			FBlueprintEditorUtils::MarkBlueprintAsModified(ArrowItem);
 			FKismetEditorUtilities::CompileBlueprint(ArrowItem);
 			Save(ArrowItem);

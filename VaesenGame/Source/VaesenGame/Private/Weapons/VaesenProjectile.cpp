@@ -38,6 +38,13 @@ AVaesenProjectile::AVaesenProjectile()
 	Mesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	Mesh->SetCanEverAffectNavigation(false);
 
+	Streak = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Streak"));
+	Streak->SetupAttachment(Collision);
+	Streak->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+	Streak->SetCanEverAffectNavigation(false);
+	Streak->SetCastShadow(false);
+	Streak->SetVisibility(false);
+
 	Movement = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("Movement"));
 	Movement->UpdatedComponent = Collision;
 	Movement->bRotationFollowsVelocity = true;
@@ -73,6 +80,7 @@ void AVaesenProjectile::BeginPlay()
 	Super::BeginPlay();
 	SetLifeSpan(MaxFlightTime);
 	LastDebugLocation = GetActorLocation();
+	LaunchLocation = GetActorLocation();
 	if (AActor* Shooter = GetOwner())
 	{
 		Collision->IgnoreActorWhenMoving(Shooter, true);
@@ -95,6 +103,16 @@ void AVaesenProjectile::OnRep_Ammo()
 	Mesh->SetRelativeTransform(Offset);
 	Movement->ProjectileGravityScale = AmmoDefaults ? AmmoDefaults->GravityScale : 1.0f;
 
+	// The streak: a thin rod (the engine's cylinder, 100 tall along Z, 50 round) laid along -X behind it.
+	const bool bStreak = AmmoDefaults && AmmoDefaults->StreakMaterial && AmmoDefaults->StreakLength > 0.0f && GetNetMode() != NM_DedicatedServer;
+	if (bStreak && !Streak->GetStaticMesh())
+	{
+		Streak->SetStaticMesh(LoadObject<UStaticMesh>(nullptr, TEXT("/Engine/BasicShapes/Cylinder.Cylinder")));
+		Streak->SetMaterial(0, AmmoDefaults->StreakMaterial);
+	}
+	Streak->SetVisibility(false);
+	UpdateStreak();
+
 	if (HasAuthority() && !Collision->OnComponentHit.IsAlreadyBound(this, &AVaesenProjectile::OnProjectileHit))
 	{
 		Collision->OnComponentHit.AddDynamic(this, &AVaesenProjectile::OnProjectileHit);
@@ -110,6 +128,7 @@ void AVaesenProjectile::Tick(float DeltaSeconds)
 	{
 		DrawDebugLine(GetWorld(), LastDebugLocation, GetActorLocation(), FColor::Yellow, false, 4.0f, 0, 1.0f);
 	}
+	UpdateStreak();
 	UpdateFlyby();
 	LastDebugLocation = GetActorLocation();
 }
@@ -174,6 +193,7 @@ void AVaesenProjectile::OnProjectileHit(UPrimitiveComponent* HitComponent, AActo
 void AVaesenProjectile::MulticastStuck_Implementation(FVector_NetQuantize Location, FRotator Rotation, const FHitResult& Hit)
 {
 	bHasHit = true;
+	Streak->SetVisibility(false);
 	Movement->StopMovementImmediately();
 	Movement->ProjectileGravityScale = 0.0f;
 	Collision->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -190,6 +210,27 @@ void AVaesenProjectile::MulticastStuck_Implementation(FVector_NetQuantize Locati
 	{
 		UGameplayStatics::PlaySoundAtLocation(this, Sound, Location);
 	}
+}
+
+void AVaesenProjectile::UpdateStreak()
+{
+	const UVaesenAmmoItem* AmmoDefaults = Ammo ? Ammo->GetDefaultObject<UVaesenAmmoItem>() : nullptr;
+	if (!AmmoDefaults || bHasHit || !Streak->GetStaticMesh())
+	{
+		return;
+	}
+	// Behind the arrow, as long as the flight so far allows (it grows out from the bow rather than reaching back past it).
+	const float Length = FMath::Clamp(static_cast<float>(FVector::Dist(LaunchLocation, GetActorLocation())) - AmmoDefaults->StreakBehind, 0.0f, AmmoDefaults->StreakLength);
+	if (Length < 1.0f)
+	{
+		Streak->SetVisibility(false);
+		return;
+	}
+	const float Width = AmmoDefaults->StreakWidth / 100.0f;
+	// Its Z (the cylinder's length, the bright end up) along +X: toward the arrow.
+	Streak->SetRelativeTransform(FTransform(FRotator(-90.0, 0.0, 0.0), FVector(-(AmmoDefaults->StreakBehind + Length * 0.5f), 0.0, 0.0),
+		FVector(Width, Width, Length / 100.0f)));
+	Streak->SetVisibility(true);
 }
 
 void AVaesenProjectile::MulticastImpact_Implementation(const FHitResult& Hit)

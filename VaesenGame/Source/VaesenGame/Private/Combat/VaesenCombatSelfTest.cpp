@@ -1261,6 +1261,8 @@ void UVaesenCombatSelfTest::BuildSteps()
 			Say(TEXT("INFO  no player controller: the bow isn't shot as a player"), FColor::Yellow);
 			return 0.1f;
 		}
+		// The target well out (20 m), so the arrow is seen on its way.
+		Target->SetActorLocation(Origin + FVector(2000.0, 0.0, -10.0));
 		*PlayerPawn = Player->GetPawn();
 		*DamageBefore = DummyDamage(Target);
 		Controller->UnPossess();
@@ -1280,7 +1282,22 @@ void UVaesenCombatSelfTest::BuildSteps()
 		return 1.6f;
 	} });
 	Steps.Add({ FString(), [this, Attack]() { Release(Attack); return 0.03f; } });
-	Steps.Add({ FString(), [this]() { Shot(TEXT("16_ArrowLeaving"), nullptr, 0.0f, false, true); return 0.06f; } });
+	Steps.Add({ FString(), [this]()
+	{
+		// In flight: the arrow with its faint streak behind it.
+		Shot(TEXT("16_ArrowLeaving"));
+		bool bStreak = false;
+		for (TActorIterator<AVaesenProjectile> It(World.Get()); It; ++It)
+		{
+			for (UActorComponent* Component : It->GetComponents())
+			{
+				const UStaticMeshComponent* Part = Cast<UStaticMeshComponent>(Component);
+				bStreak |= Part && Part->GetFName() == TEXT("Streak") && Part->IsVisible();
+			}
+		}
+		Check(bStreak, TEXT("the arrow in flight trails a faint streak"));
+		return 0.06f;
+	} });
 	Steps.Add({ FString(), [this]() { Shot(TEXT("16b_ArrowFlying")); return 1.0f; } });
 	Steps.Add({ FString(), [this, PlayerPawn, DamageBefore]()
 	{
@@ -1295,6 +1312,7 @@ void UVaesenCombatSelfTest::BuildSteps()
 			}
 			Controller->Possess(Fighter);
 			Controller->SetControlRotation(FRotator::ZeroRotator);
+			Target->SetActorLocation(Origin + FVector(500.0, 0.0, -10.0));
 		}
 		return 0.3f;
 	} });
