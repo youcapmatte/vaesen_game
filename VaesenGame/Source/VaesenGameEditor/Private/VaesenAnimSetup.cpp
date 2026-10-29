@@ -3592,6 +3592,9 @@ namespace VaesenAnimSetup
 			Item->DrawMontage = FromBack;
 			Item->SheathMontage = ToBack;
 			Item->NockedArrowMesh = ArrowMesh;
+			// A missile, not a bullet: slow enough to watch, falling in an arc (the arrow turns along it). 28 m/s at full
+			// draw: some 0.7 s and a 2.5 m drop over 20 m, so one aims a little high at range.
+			Item->LaunchSpeed = 2800.0f;
 			Item->StringBowMesh = StringBow;
 			FBlueprintEditorUtils::MarkBlueprintAsModified(Weapon);
 			FKismetEditorUtilities::CompileBlueprint(Weapon);

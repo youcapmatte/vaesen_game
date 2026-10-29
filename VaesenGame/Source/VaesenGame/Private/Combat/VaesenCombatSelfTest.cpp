@@ -1264,6 +1264,7 @@ void UVaesenCombatSelfTest::BuildSteps()
 		// The target well out (20 m), so the arrow is seen on its way.
 		Target->SetActorLocation(Origin + FVector(2000.0, 0.0, -10.0));
 		*PlayerPawn = Player->GetPawn();
+		Target->GetVaesenAbilitySystem()->ResetVitals();
 		*DamageBefore = DummyDamage(Target);
 		Controller->UnPossess();
 		Player->Possess(Fighter);
@@ -1276,12 +1277,15 @@ void UVaesenCombatSelfTest::BuildSteps()
 		// The crosshair (the camera's view) on the target.
 		if (APlayerController* Player = World->GetFirstPlayerController(); Player && Player->PlayerCameraManager)
 		{
-			Player->SetControlRotation((Target->GetActorLocation() + FVector(0.0, 0.0, 30.0) - Player->PlayerCameraManager->GetCameraLocation()).Rotation());
+			// An arrow falls: a little above it at 20 m (about 7 degrees, at 28 m/s).
+			FRotator Aim = (Target->GetActorLocation() + FVector(0.0, 0.0, 30.0) - Player->PlayerCameraManager->GetCameraLocation()).Rotation();
+			Aim.Pitch += 7.0;
+			Player->SetControlRotation(Aim);
 		}
 		Press(Attack);
 		return 1.6f;
 	} });
-	Steps.Add({ FString(), [this, Attack]() { Release(Attack); return 0.03f; } });
+	Steps.Add({ FString(), [this, Attack]() { Release(Attack); return 0.1f; } });
 	Steps.Add({ FString(), [this]()
 	{
 		// In flight: the arrow with its faint streak behind it.
@@ -1296,9 +1300,9 @@ void UVaesenCombatSelfTest::BuildSteps()
 			}
 		}
 		Check(bStreak, TEXT("the arrow in flight trails a faint streak"));
-		return 0.06f;
+		return 0.15f;
 	} });
-	Steps.Add({ FString(), [this]() { Shot(TEXT("16b_ArrowFlying")); return 1.0f; } });
+	Steps.Add({ FString(), [this]() { Shot(TEXT("16b_ArrowFlying")); return 1.2f; } });
 	Steps.Add({ FString(), [this, PlayerPawn, DamageBefore]()
 	{
 		APlayerController* Player = World->GetFirstPlayerController();

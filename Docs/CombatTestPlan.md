@@ -65,7 +65,7 @@ It creates:
 | `BP_Weapon_KragRifle` | Rifle (two-handed, back sling) | **Projectile** 300 m/s, **BoltAction**, Magazine 5 (2.4 s), casings **OnCycle** |
 | `BP_Weapon_MuzzleLoader` | Rifle (two-handed, back sling) | InstantHit, SingleShot, **MuzzleLoading** 7 s, 1 round, casings **None**, smoke ×3 |
 | `BP_Weapon_RollingBlockPistol` | Pistol (Sidearm) | InstantHit, SingleShot, **SingleRound** 1.4 s, 1 round, casings **OnReload** |
-| `BP_Weapon_HuntingBow` | Bow (two-handed, back upper) | Projectile 60 m/s at full draw, action **Draw**, arrows from the inventory |
+| `BP_Weapon_HuntingBow` | Bow (two-handed, back upper) | Projectile 28 m/s at full draw (a visible arc), action **Draw**, arrows from the inventory |
 | `BP_Weapon_Crossbow` | Crossbow (two-handed) | Projectile 70 m/s, SingleShot, SingleRound 3.5 s |
 | `BP_Weapon_OldSword` | OneHandedSword (hip left) | Durability 60; throwable Overhand, Slashing 10 |
 | `BP_Weapon_Dagger` | Dagger (Sidearm, belt) | Throwable PointFirst, Piercing 12 |
