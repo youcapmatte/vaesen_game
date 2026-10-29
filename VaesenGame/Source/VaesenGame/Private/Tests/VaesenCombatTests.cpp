@@ -971,14 +971,20 @@ bool FVaesenAbilityBowTest::RunTest(const FString& Parameters)
 
 	Player->GetInventory()->TryAddItemOfClass(UVaesenTestArrow::StaticClass(), 5);
 
-	// Let go while still nocking: let down, no shot.
+	// Let go while still nocking (a click): a quick shot, nocked and drawn half way, then loosed by itself.
 	ASC->PressAbilityInput(EVaesenAbilityInput::Attack);
 	TestTrue(TEXT("Drawing"), ASC->HasMatchingGameplayTag(VaesenTags::State_DrawingBow));
 	TestWorld.Run(0.2f);
 	ASC->ReleaseAbilityInput(EVaesenAbilityInput::Attack);
-	TestFalse(TEXT("Let down"), ASC->HasMatchingGameplayTag(VaesenTags::State_DrawingBow));
-	TestEqual(TEXT("Arrow kept"), Player->GetInventory()->GetItemCount(UVaesenTestArrow::StaticClass()), 5);
-	TestEqual(TEXT("No projectile"), CountActors(TestWorld.World, AVaesenProjectile::StaticClass()), 0);
+	TestTrue(TEXT("A click: still drawing"), ASC->HasMatchingGameplayTag(VaesenTags::State_DrawingBow));
+	TestEqual(TEXT("A click: no arrow yet"), CountActors(TestWorld.World, AVaesenProjectile::StaticClass()), 0);
+	TestWorld.Run(Bow->NockTime + Bow->DrawTime * 0.5f + 0.2f);
+	TestFalse(TEXT("A click: loosed"), ASC->HasMatchingGameplayTag(VaesenTags::State_DrawingBow));
+	TestEqual(TEXT("A click: an arrow used"), Player->GetInventory()->GetItemCount(UVaesenTestArrow::StaticClass()), 4);
+	TestWorld.Run(1.0f);
+	TestTrue(TEXT("A click: half a draw, a weaker hit"), 100.0f - HealthOf(Dummy) > 0.0f && 100.0f - HealthOf(Dummy) < 20.0f);
+	Dummy->GetVaesenAbilitySystem()->ResetVitals();
+	const int32 PickupsBefore = CountActors(TestWorld.World, AVaesenPickup::StaticClass());
 
 	// Full draw and release: a strong shot that sticks and becomes a pickup.
 	TestWorld.Run(Bow->FireInterval + 0.1f);
@@ -987,11 +993,11 @@ bool FVaesenAbilityBowTest::RunTest(const FString& Parameters)
 	TestWorld.Run(Bow->NockTime + Bow->DrawTime + 0.2f);
 	TestTrue(TEXT("Holding a drawn bow costs stamina"), ASC->GetNumericAttribute(UVaesenAttributeSet::GetStaminaAttribute()) < StaminaBefore);
 	ASC->ReleaseAbilityInput(EVaesenAbilityInput::Attack);
-	TestEqual(TEXT("Arrow used"), Player->GetInventory()->GetItemCount(UVaesenTestArrow::StaticClass()), 4);
+	TestEqual(TEXT("Arrow used"), Player->GetInventory()->GetItemCount(UVaesenTestArrow::StaticClass()), 3);
 	TestEqual(TEXT("Arrow in flight"), CountActors(TestWorld.World, AVaesenProjectile::StaticClass()), 1);
 	TestWorld.Run(0.5f);
 	TestEqual(TEXT("Full draw: full damage"), 100.0f - HealthOf(Dummy), 20.0f);
-	TestEqual(TEXT("Stuck arrow became a pickup"), CountActors(TestWorld.World, AVaesenPickup::StaticClass()), 1);
+	TestEqual(TEXT("Stuck arrow became a pickup"), CountActors(TestWorld.World, AVaesenPickup::StaticClass()), PickupsBefore + 1);
 	return true;
 }
 
