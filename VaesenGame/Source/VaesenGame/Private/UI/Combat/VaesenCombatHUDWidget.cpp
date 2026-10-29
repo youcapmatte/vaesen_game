@@ -90,7 +90,8 @@ void UVaesenCombatHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDel
 	const float FieldOfView = Controller->PlayerCameraManager ? Controller->PlayerCameraManager->GetFOVAngle() : 90.0f;
 	if (const AVaesenRangedWeaponActor* Actor = Ranged ? Cast<AVaesenRangedWeaponActor>(Ranged->GetWeaponActor()) : nullptr)
 	{
-		const bool bAiming = ASC->HasMatchingGameplayTag(VaesenTags::State_Aiming) || ASC->HasMatchingGameplayTag(VaesenTags::State_DrawingBow);
+		// (A bow nocked but held low isn't aimed: the hip spread.)
+		const bool bAiming = ASC->HasMatchingGameplayTag(VaesenTags::State_Aiming);
 		const float Spread = Actor->GetCurrentSpread(bAiming);
 		SpreadPixels = HalfWidth * FMath::Tan(FMath::DegreesToRadians(Spread)) / FMath::Tan(FMath::DegreesToRadians(FieldOfView * 0.5f));
 

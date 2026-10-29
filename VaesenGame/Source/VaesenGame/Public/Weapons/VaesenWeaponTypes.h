@@ -170,6 +170,14 @@ struct FVaesenWeaponMontages
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
 	TObjectPtr<UAnimMontage> Cycle;
 
+	/** A bow nocked without aiming: the arrow taken and put on the string, the bow held low in front. Empty = Reload. */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
+	TObjectPtr<UAnimMontage> NockLow;
+
+	/** A bow nocked low, brought up to shoot straight ahead (ends at full draw, where the release starts). */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
+	TObjectPtr<UAnimMontage> RaiseToShoot;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Animation")
 	TObjectPtr<UAnimMontage> Equip;
 

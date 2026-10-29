@@ -93,6 +93,7 @@ void UVaesenAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		const UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(Character);
 		const auto HasTag = [ASC](const FGameplayTag& Tag) { return ASC && ASC->HasMatchingGameplayTag(Tag); };
 		bAiming = HasTag(VaesenTags::State_Aiming) || HasTag(VaesenTags::State_DrawingBow) || HasTag(VaesenTags::State_Throwing);
+		bBowLowReady = HasTag(VaesenTags::State_DrawingBow) && !HasTag(VaesenTags::State_Aiming);
 		bGuardUp = HasTag(VaesenTags::State_Blocking);
 		// Not squared up to fight: weapon stances use the plain locomotion then, standing, running and jumping. The fighting
 		// stance is for squaring up (aiming, a target lock); guarding without a lock keeps the plain stance.

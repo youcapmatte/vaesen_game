@@ -986,9 +986,10 @@ bool FVaesenAbilityBowTest::RunTest(const FString& Parameters)
 	Dummy->GetVaesenAbilitySystem()->ResetVitals();
 	const int32 PickupsBefore = CountActors(TestWorld.World, AVaesenPickup::StaticClass());
 
-	// Full draw and release: a strong shot that sticks and becomes a pickup.
+	// Aimed, full draw and release: a strong shot at once (no raising first), that sticks and becomes a pickup.
 	TestWorld.Run(Bow->FireInterval + 0.1f);
 	const float StaminaBefore = ASC->GetNumericAttribute(UVaesenAttributeSet::GetStaminaAttribute());
+	ASC->PressAbilityInput(EVaesenAbilityInput::AimOrBlock);
 	ASC->PressAbilityInput(EVaesenAbilityInput::Attack);
 	TestWorld.Run(Bow->NockTime + Bow->DrawTime + 0.2f);
 	TestTrue(TEXT("Holding a drawn bow costs stamina"), ASC->GetNumericAttribute(UVaesenAttributeSet::GetStaminaAttribute()) < StaminaBefore);
@@ -998,6 +999,7 @@ bool FVaesenAbilityBowTest::RunTest(const FString& Parameters)
 	TestWorld.Run(0.5f);
 	TestEqual(TEXT("Full draw: full damage"), 100.0f - HealthOf(Dummy), 20.0f);
 	TestEqual(TEXT("Stuck arrow became a pickup"), CountActors(TestWorld.World, AVaesenPickup::StaticClass()), PickupsBefore + 1);
+	ASC->ReleaseAbilityInput(EVaesenAbilityInput::AimOrBlock);
 	return true;
 }
 

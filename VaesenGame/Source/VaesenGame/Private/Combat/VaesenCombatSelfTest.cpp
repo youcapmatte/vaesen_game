@@ -1196,31 +1196,39 @@ void UVaesenCombatSelfTest::BuildSteps()
 		Check(StringBack > 0.8f, FString::Printf(TEXT("its string to the back, its face forward (%.2f)"), StringBack));
 		return 0.1f;
 	} });
-	// Right mouse alone doesn't raise a bow (nocking does): the plain stance, no zoom, no arrow from the quiver.
-	Steps.Add({ FString(), [this, AimOrBlock]() { Press(AimOrBlock); return 0.8f; } });
-	Steps.Add({ FString(), [this, ASC, Equipment, AimOrBlock]()
+	// The arrow on the string (hidden when there's none), and how high the bow hand is above the pelvis.
+	const auto NockedArrow = [Equipment]() -> const UStaticMeshComponent*
 	{
 		const AVaesenWeaponActor* Bow = Equipment->GetDrawnWeapon() ? Equipment->GetDrawnWeapon()->GetWeaponActor() : nullptr;
-		const float Upright = Bow ? static_cast<float>(Bow->GetActorRightVector().Z) : 0.0f;
-		Check(!ASC->HasMatchingGameplayTag(VaesenTags::State_Aiming) && Upright > 0.8f,
-			FString::Printf(TEXT("right mouse alone doesn't raise the bow: it still hangs at his side (limbs %.2f up)"), Upright));
-		const UStaticMeshComponent* Nocked = nullptr;
 		for (UActorComponent* Component : Bow ? Bow->GetComponents().Array() : TArray<UActorComponent*>())
 		{
 			if (Component->GetFName() == TEXT("NockedArrow"))
 			{
-				Nocked = Cast<UStaticMeshComponent>(Component);
+				return Cast<UStaticMeshComponent>(Component);
 			}
 		}
-		Check(Nocked && Nocked->bHiddenInGame, TEXT("and no arrow on the string yet"));
-		Shot(TEXT("15a2_BowRightMouseIdle"), nullptr, 0.0f, true);
-		Release(AimOrBlock);
-		return 0.6f;
+		return nullptr;
+	};
+	const auto BowHandUp = [this]()
+	{
+		const USkeletalMeshComponent* Body = Fighter->GetMesh();
+		return static_cast<float>(Body->GetSocketLocation(TEXT("hand_l")).Z - Body->GetSocketLocation(TEXT("pelvis")).Z);
+	};
+	// Right mouse raises the bow and aims, with no arrow yet (none taken from the quiver).
+	Steps.Add({ FString(), [this, AimOrBlock]() { Press(AimOrBlock); return 0.8f; } });
+	Steps.Add({ FString(), [this, ASC, NockedArrow, BowHandUp]()
+	{
+		Check(ASC->HasMatchingGameplayTag(VaesenTags::State_Aiming) && BowHandUp() > 35.0f,
+			FString::Printf(TEXT("right mouse raises the bow (the bow hand %.0f cm above the pelvis)"), BowHandUp()));
+		const UStaticMeshComponent* Nocked = NockedArrow();
+		Check(Nocked && Nocked->bHiddenInGame, TEXT("but there's no arrow on the string yet"));
+		Shot(TEXT("15a2_BowRaisedNoArrow"), nullptr, 0.0f, true);
+		return 0.1f;
 	} });
 	Steps.Add({ FString(), [this, ASC, Attack]()
 	{
 		Press(Attack);
-		Check(ASC->HasMatchingGameplayTag(VaesenTags::State_DrawingBow), TEXT("left mouse nocks and draws"));
+		Check(ASC->HasMatchingGameplayTag(VaesenTags::State_DrawingBow), TEXT("aiming, left mouse nocks and draws"));
 		return 0.6f;
 	} });
 	Steps.Add({ FString(), [this]()
@@ -1255,8 +1263,9 @@ void UVaesenCombatSelfTest::BuildSteps()
 		return 1.0f;
 	} });
 	const FVaesenDamagePacket Arrow = AmmoDamage(TEXT("BP_Ammo_Arrow"));
-	Steps.Add({ FString(), [this, Arrow, Equipment]()
+	Steps.Add({ FString(), [this, Arrow, Equipment, AimOrBlock]()
 	{
+		Release(AimOrBlock);
 		Check(DummyDamage(Target) > 0.0f, FString::Printf(TEXT("arrow at full draw hit (%.0f, ammo says %.0f)"), DummyDamage(Target), Arrow.GetTotal()));
 		// What flew and stuck is the arrow itself, not a placeholder: stuck, it's a pickup showing it, near the target.
 		FString Stuck = TEXT("-");
@@ -1272,13 +1281,70 @@ void UVaesenCombatSelfTest::BuildSteps()
 		Shot(TEXT("15e_ArrowStuck"), nullptr, 0.0f, true);
 		return 0.5f;
 	} });
-	// A click (let go at once) still shoots: nocked, drawn half way, loosed.
+	// Left mouse without aiming: nocked with the bow held low in front, the arrow on the string; he walks where he goes.
+	const TSharedRef<float> BeforeLow = MakeShared<float>(0.0f);
+	const auto FaceTarget = [this]()
+	{
+		const FRotator Toward(0.0, (Target->GetActorLocation() - Fighter->GetActorLocation()).Rotation().Yaw, 0.0);
+		Fighter->SetActorRotation(Toward);
+		Controller->SetControlRotation(Toward);
+	};
+	Steps.Add({ FString(), [this, Attack, BeforeLow, FaceTarget]()
+	{
+		Target->GetVaesenAbilitySystem()->ResetVitals();
+		*BeforeLow = DummyDamage(Target);
+		FaceTarget();
+		Press(Attack);
+		return 1.4f;
+	} });
+	Steps.Add({ FString(), [this, ASC, NockedArrow, BowHandUp]()
+	{
+		const UStaticMeshComponent* Nocked = NockedArrow();
+		const float FromHand = Nocked ? FVector::Dist(Nocked->GetComponentLocation(), Fighter->GetMesh()->GetSocketLocation(TEXT("hand_r"))) : -1.0f;
+		Check(ASC->HasMatchingGameplayTag(VaesenTags::State_DrawingBow) && !ASC->HasMatchingGameplayTag(VaesenTags::State_Aiming) && BowHandUp() < 30.0f,
+			FString::Printf(TEXT("left mouse without aiming: nocked, the bow held low (the bow hand %.0f cm above the pelvis)"), BowHandUp()));
+		Check(Nocked && !Nocked->bHiddenInGame && FromHand < 25.0f, FString::Printf(TEXT("held low, the arrow's on the string (%.0f cm from the drawing hand)"), FromHand));
+		Check(Fighter->GetCharacterMovement()->bOrientRotationToMovement && !Fighter->CanJump(),
+			TEXT("held low, he turns where he walks (not to the camera), and can't jump"));
+		Shot(TEXT("15f_BowNockedLow"), nullptr, 0.0f, true);
+		Shot(TEXT("15f2_BowNockedLowSide"));
+		return 0.1f;
+	} });
+	// Aiming with the arrow already on: the bow comes up, nocked; letting go of the aim lowers it again.
+	Steps.Add({ FString(), [this, AimOrBlock]() { Press(AimOrBlock); return 0.7f; } });
+	Steps.Add({ FString(), [this, AimOrBlock, NockedArrow, BowHandUp]()
+	{
+		const UStaticMeshComponent* Nocked = NockedArrow();
+		Check(BowHandUp() > 35.0f && Nocked && !Nocked->bHiddenInGame,
+			FString::Printf(TEXT("nocked low, right mouse raises it with the arrow on (the bow hand %.0f cm up)"), BowHandUp()));
+		Shot(TEXT("15g_BowNockedRaised"), nullptr, 0.0f, true);
+		Release(AimOrBlock);
+		return 0.7f;
+	} });
+	Steps.Add({ FString(), [this, Attack, NockedArrow, BowHandUp, FaceTarget]()
+	{
+		const UStaticMeshComponent* Nocked = NockedArrow();
+		Check(BowHandUp() < 30.0f && Nocked && !Nocked->bHiddenInGame,
+			FString::Printf(TEXT("letting go of the aim lowers it again, still nocked (%.0f cm up)"), BowHandUp()));
+		// Let go: up level, straight ahead.
+		FaceTarget();
+		Release(Attack);
+		return 0.12f;
+	} });
+	Steps.Add({ FString(), [this]() { Shot(TEXT("15h_BowLowShotRaising"), nullptr, 0.0f, true); return 1.2f; } });
+	Steps.Add({ FString(), [this, BeforeLow]()
+	{
+		Check(DummyDamage(Target) > *BeforeLow, FString::Printf(TEXT("let go from low: the bow comes up and the arrow flies straight ahead, it hits (%.0f)"),
+			DummyDamage(Target) - *BeforeLow));
+		return 0.5f;
+	} });
+	// A click (let go at once) still shoots: nocked, drawn half way, loosed (from low, straight ahead).
 	const TSharedRef<float> BeforeClick = MakeShared<float>(0.0f);
-	Steps.Add({ FString(), [this, Attack, BeforeClick]()
+	Steps.Add({ FString(), [this, Attack, BeforeClick, FaceTarget]()
 	{
 		Target->GetVaesenAbilitySystem()->ResetVitals();
 		*BeforeClick = DummyDamage(Target);
-		Controller->SetControlRotation((Target->GetActorLocation() + FVector(0.0, 0.0, 20.0) - Fighter->GetActorLocation()).Rotation());
+		FaceTarget();
 		Press(Attack);
 		return 0.1f;
 	} });
@@ -1320,7 +1386,16 @@ void UVaesenCombatSelfTest::BuildSteps()
 			Aim.Pitch += 3.0;
 			Player->SetControlRotation(Aim);
 		}
-		// The left mouse button itself, through the player controller (its mappings and triggers), as a player clicks.
+		// The mouse buttons themselves, through the player controller (its mappings and triggers): right to aim, then
+		// left to nock and draw.
+		if (APlayerController* Player = World->GetFirstPlayerController())
+		{
+			Player->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::RightMouseButton, IE_Pressed, 1.0f));
+		}
+		return 0.4f;
+	} });
+	Steps.Add({ FString(), [this]()
+	{
 		if (APlayerController* Player = World->GetFirstPlayerController())
 		{
 			Player->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::LeftMouseButton, IE_Pressed, 1.0f));
@@ -1352,6 +1427,15 @@ void UVaesenCombatSelfTest::BuildSteps()
 		return 0.15f;
 	} });
 	Steps.Add({ FString(), [this]() { Shot(TEXT("16b_ArrowFlying")); return 1.2f; } });
+	Steps.Add({ FString(), [this]()
+	{
+		// The aim let go too (while still the player's: its input stops the aim).
+		if (APlayerController* Player = World->GetFirstPlayerController())
+		{
+			Player->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::RightMouseButton, IE_Released, 0.0f));
+		}
+		return 0.3f;
+	} });
 	Steps.Add({ FString(), [this, PlayerPawn, DamageBefore]()
 	{
 		APlayerController* Player = World->GetFirstPlayerController();

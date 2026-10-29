@@ -149,13 +149,29 @@ protected:
 private:
 	void TickDraw();
 
-	/** Looses the arrow at Fraction of a full draw (aims, plays the release, sends the shot). */
+	/** Looses the arrow at Fraction of a full draw: held low, the bow is brought up first (RaiseTime), then LooseNow. */
 	void Loose(float Fraction);
+
+	/** Aims (the camera's, or straight ahead from a bow held low), plays the release and sends the shot. */
+	void LooseNow();
+
+	/** Raised and aimed (right mouse) rather than held low in front. */
+	bool IsRaised() const;
 
 	/** A click (let go before this much of a draw) still shoots: it's drawn this far, then loosed. */
 	static constexpr float QuickShotDraw = 0.5f;
 
+	/** A bow held low comes up to shoot in this long. */
+	static constexpr float RaiseTime = 0.2f;
+
 	double DrawStartTime = 0.0;
 	bool bReleased = false;
 	bool bQuickShot = false;
+	/** Loosing (the bow coming up, or the shot sent): nothing more to do on the input. */
+	bool bLoosing = false;
+	/** Shot from low: straight ahead, not where the camera looks. */
+	bool bLowShot = false;
+	float LooseFraction = 0.0f;
+	/** Raised when last looked at (switching stops the nock montage, so the stance shows). */
+	bool bWasRaised = false;
 };

@@ -128,6 +128,10 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
 	float BowDrawAlpha = 0.0f;
 
+	/** Bows: nocked but not aimed (no right mouse), the bow held low in front. */
+	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
+	bool bBowLowReady = false;
+
 	/** Aim offset, degrees: up/down and left/right of where the body faces. */
 	UPROPERTY(BlueprintReadOnly, Category = "Aim")
 	float AimPitch = 0.0f;

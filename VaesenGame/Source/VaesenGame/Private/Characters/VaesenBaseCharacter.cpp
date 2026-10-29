@@ -187,8 +187,9 @@ void AVaesenBaseCharacter::OnRep_Controller()
 
 bool AVaesenBaseCharacter::WantsToFaceAim() const
 {
+	// (A bow nocked but held low, not aimed, leaves him walking where he goes.)
 	static const FGameplayTagContainer FacingStates = FGameplayTagContainer::CreateFromArray(TArray<FGameplayTag>{
-		VaesenTags::State_Aiming, VaesenTags::State_Blocking, VaesenTags::State_DrawingBow, VaesenTags::State_Throwing });
+		VaesenTags::State_Aiming, VaesenTags::State_Blocking, VaesenTags::State_Throwing });
 	return LockTarget || (AbilitySystem && AbilitySystem->HasAnyMatchingGameplayTags(FacingStates));
 }
 

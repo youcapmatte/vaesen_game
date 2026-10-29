@@ -401,11 +401,9 @@ UVaesenGA_Aim::UVaesenGA_Aim()
 bool UVaesenGA_Aim::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags,
 	const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const
 {
-	// Any ranged weapon but a bow: a bow is raised and aimed by nocking it (left mouse, GA_DrawBow); right mouse
-	// alone leaves it hanging in the plain stance, with no zoom.
-	const UVaesenRangedWeaponItem* Item = GetRangedItem(ActorInfo);
+	// Any ranged weapon, bows included (skips the bow check of the base): a bow is raised, with or without an arrow.
 	return UVaesenGameplayAbility::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags)
-		&& Item && !Item->IsBow();
+		&& GetRangedItem(ActorInfo) != nullptr;
 }
 
 void UVaesenGA_Aim::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
@@ -464,12 +462,18 @@ void UVaesenGA_DrawBow::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 	AVaesenRangedWeaponActor* Actor = GetRangedActor(ActorInfo);
 	bReleased = false;
 	bQuickShot = false;
+	bLoosing = false;
+	bLowShot = false;
+	bWasRaised = IsRaised();
 
-	// Nock, then draw: the strength starts building once the arrow is on the string.
+	// Nock, then draw: the strength starts building once the arrow is on the string. Aiming, it's drawn raised;
+	// otherwise the arrow is put on the string with the bow held low in front.
 	DrawStartTime = GetWorld()->GetTimeSeconds() + Item->NockTime;
-	UE_LOG(LogVaesenCombat, Display, TEXT("%s nocks (%.2f s) and draws (%.2f s)"), *GetNameSafe(GetAvatarActorFromActorInfo()), Item->NockTime, Item->DrawTime);
-	UAnimMontage* Montage = Item->GetReloadMontage();
-	PlayAbilityMontage(Montage, VaesenRangedAbilities::RateToFit(Montage, Item->NockTime + Item->DrawTime));
+	UE_LOG(LogVaesenCombat, Display, TEXT("%s nocks (%.2f s) and draws (%.2f s), %s"), *GetNameSafe(GetAvatarActorFromActorInfo()), Item->NockTime, Item->DrawTime,
+		bWasRaised ? TEXT("aiming") : TEXT("the bow held low"));
+	UAnimMontage* Low = bWasRaised ? nullptr : Item->GetMontage(&FVaesenWeaponMontages::NockLow);
+	UAnimMontage* Montage = Low ? Low : Item->GetReloadMontage();
+	PlayAbilityMontage(Montage, VaesenRangedAbilities::RateToFit(Montage, Low ? Item->NockTime : Item->NockTime + Item->DrawTime));
 	if (IsLocallyControlled())
 	{
 		Actor->PlayWeaponSound(EVaesenWeaponSound::BowNock);
@@ -493,10 +497,17 @@ void UVaesenGA_DrawBow::TickDraw()
 	}
 	const float Fraction = GetDrawFraction();
 	// A click: loosed once drawn far enough.
-	if (bQuickShot && IsLocallyControlled() && Fraction >= FMath::Max(Item->MinDrawToShoot, QuickShotDraw))
+	if (bQuickShot && !bLoosing && IsLocallyControlled() && Fraction >= FMath::Max(Item->MinDrawToShoot, QuickShotDraw))
 	{
 		Loose(Fraction);
 		return;
+	}
+	// Raised or lowered while nocking: the nock montage gives way, so the stance (raised and aimed, or low) shows.
+	const bool bRaised = IsRaised();
+	if (bRaised != bWasRaised && !bLoosing)
+	{
+		bWasRaised = bRaised;
+		StopAbilityMontage();
 	}
 	if (HasAuthority(&CurrentActivationInfo))
 	{
@@ -532,13 +543,41 @@ void UVaesenGA_DrawBow::InputReleased(const FGameplayAbilitySpecHandle Handle, c
 	}
 }
 
+bool UVaesenGA_DrawBow::IsRaised() const
+{
+	const UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+	return ASC && ASC->HasMatchingGameplayTag(VaesenTags::State_Aiming);
+}
+
 void UVaesenGA_DrawBow::Loose(float Fraction)
+{
+	if (bLoosing)
+	{
+		return;
+	}
+	bLoosing = true;
+	bQuickShot = false;
+	LooseFraction = Fraction;
+	bLowShot = !IsRaised();
+	const UVaesenRangedWeaponItem* Item = GetRangedItem();
+	UAnimMontage* Raise = bLowShot && Item ? Item->GetMontage(&FVaesenWeaponMontages::RaiseToShoot) : nullptr;
+	if (!Raise)
+	{
+		LooseNow();
+		return;
+	}
+	// Held low: the bow comes up level first, then the arrow goes.
+	PlayAbilityMontage(Raise, VaesenRangedAbilities::RateToFit(Raise, RaiseTime));
+	GetTimers().SetTimer(StepTimer, this, &UVaesenGA_DrawBow::LooseNow, RaiseTime, false);
+}
+
+void UVaesenGA_DrawBow::LooseNow()
 {
 	const FGameplayAbilityActorInfo* ActorInfo = GetCurrentActorInfo();
 	const FGameplayAbilityActivationInfo ActivationInfo = CurrentActivationInfo;
 	const UVaesenRangedWeaponItem* Item = GetRangedItem(ActorInfo);
 	AVaesenRangedWeaponActor* Actor = GetRangedActor(ActorInfo);
-	bQuickShot = false;
+	const float Fraction = FMath::Max(LooseFraction, GetDrawFraction());
 	if (!Item || !Actor)
 	{
 		SendAimCancelled();
@@ -546,10 +585,19 @@ void UVaesenGA_DrawBow::Loose(float Fraction)
 		return;
 	}
 
+	// Aimed: where the camera looks. From low: straight ahead of the archer, level, not aimed (a looser spread).
 	FVector Origin, Direction;
 	GetAimViewPoint(Origin, Direction);
+	const AActor* Avatar = GetAvatarActorFromActorInfo();
+	if (bLowShot && Avatar)
+	{
+		FRotator Ahead;
+		Avatar->GetActorEyesViewPoint(Origin, Ahead);
+		Direction = FRotator(0.0, Avatar->GetActorRotation().Yaw, 0.0).Vector();
+	}
 	FRandomStream Random(FMath::Rand());
-	Direction = AVaesenRangedWeaponActor::ApplySpread(Direction, Actor->GetCurrentSpread(true), Random);
+	Direction = AVaesenRangedWeaponActor::ApplySpread(Direction, Actor->GetCurrentSpread(!bLowShot), Random);
+	UE_LOG(LogVaesenCombat, Display, TEXT("%s looses %s"), *GetNameSafe(Avatar), bLowShot ? TEXT("from low, straight ahead") : TEXT("aimed"));
 	Actor->PlayWeaponSound(EVaesenWeaponSound::BowRelease);
 	if (!HasAuthority(&ActivationInfo))
 	{

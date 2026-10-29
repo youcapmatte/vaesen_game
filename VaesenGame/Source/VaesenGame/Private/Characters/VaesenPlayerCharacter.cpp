@@ -442,8 +442,9 @@ void AVaesenPlayerCharacter::ReleaseTriggerAttack()
 
 void AVaesenPlayerCharacter::UpdateAimCamera(float DeltaSeconds)
 {
+	// (Not a bow nocked but held low: it isn't aimed.)
 	const bool bAiming = AbilitySystem && (AbilitySystem->HasMatchingGameplayTag(VaesenTags::State_Aiming)
-		|| AbilitySystem->HasMatchingGameplayTag(VaesenTags::State_DrawingBow) || AbilitySystem->HasMatchingGameplayTag(VaesenTags::State_Throwing));
+		|| AbilitySystem->HasMatchingGameplayTag(VaesenTags::State_Throwing));
 	AimAlpha = FMath::FInterpTo(AimAlpha, bAiming ? 1.0f : 0.0f, DeltaSeconds, AimInterpSpeed);
 
 	const UVaesenRangedWeaponItem* Ranged = Cast<UVaesenRangedWeaponItem>(Equipment->GetDrawnWeapon());
