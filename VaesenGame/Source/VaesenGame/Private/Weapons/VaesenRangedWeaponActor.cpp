@@ -33,6 +33,9 @@ namespace VaesenRanged
 	/** How far from the shooter's eyes the server accepts an aim origin (lag, camera boom). */
 	constexpr float MaxAimOriginDistance = 600.0f;
 
+	/** The lowest an arrow leaves, below the eyes: about where the string is anchored at the jaw. */
+	constexpr float BowAnchorBelowEyes = 20.0f;
+
 	void SpawnEffectAttached(UFXSystemAsset* Effect, USceneComponent* AttachTo, FName Socket, float Scale)
 	{
 		if (UNiagaraSystem* Niagara = Cast<UNiagaraSystem>(Effect))
@@ -355,7 +358,12 @@ bool AVaesenRangedWeaponActor::ServerFire(const FVector& AimOrigin, const FVecto
 	const UVaesenAmmoItem* Ammo = AmmoClass ? AmmoClass->GetDefaultObject<UVaesenAmmoItem>() : GetDefault<UVaesenAmmoItem>();
 	const float Strength = FMath::Clamp(DrawStrength, 0.0f, 1.0f) * (Item->IsBow() || Item->Category == EVaesenWeaponCategory::Crossbow ? Item->MaxDrawStrength : 1.0f);
 	const FVaesenDamagePacket Damage = Ammo->GetDamage().Scaled(Item->DamageMultiplier * (Item->IsBow() ? Strength : 1.0f));
-	const FVector Muzzle = GetMuzzleLocation();
+	FVector Muzzle = GetMuzzleLocation();
+	if (Item->IsBow())
+	{
+		// A quick shot looses while the bow is still coming up: the arrow leaves from the shoulder, not the hip.
+		Muzzle.Z = FMath::Max(Muzzle.Z, EyeLocation.Z - VaesenRanged::BowAnchorBelowEyes);
+	}
 	const bool bDebug = UVaesenCombatLibrary::IsCombatDebugEnabled();
 	FVector TraceEnd = Muzzle + Direction * Item->MaxRange;
 
@@ -398,7 +406,7 @@ bool AVaesenRangedWeaponActor::ServerFire(const FVector& AimOrigin, const FVecto
 			*AimPoint.ToCompactString(), *AimOrigin.ToCompactString());
 		if (AVaesenProjectile* Projectile = GetWorld()->SpawnActor<AVaesenProjectile>(AVaesenProjectile::StaticClass(), SpawnTransform, Params))
 		{
-			const float Speed = Item->LaunchSpeed * (Item->IsBow() ? FMath::Lerp(0.35f, 1.0f, FMath::Clamp(DrawStrength, 0.0f, 1.0f)) : 1.0f);
+			const float Speed = Item->LaunchSpeed * (Item->IsBow() ? FMath::Lerp(0.5f, 1.0f, FMath::Clamp(DrawStrength, 0.0f, 1.0f)) : 1.0f);
 			Projectile->InitProjectile(AmmoClass, Damage, Item, ShotDirection * Speed, Item->Effects.TracerOrTrail);
 			Projectile->FinishSpawning(SpawnTransform);
 		}

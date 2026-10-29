@@ -183,6 +183,11 @@ void AVaesenProjectile::OnProjectileHit(UPrimitiveComponent* HitComponent, AActo
 			{
 				Pickup->AttachToActor(StuckIn, FAttachmentTransformRules::KeepWorldTransform);
 			}
+			// A stuck arrow doesn't catch the next one: it would shield what it's stuck in.
+			if (UPrimitiveComponent* Shown = Cast<UPrimitiveComponent>(Pickup->GetRootComponent()))
+			{
+				Shown->SetCollisionResponseToChannel(Collision->GetCollisionObjectType(), ECR_Ignore);
+			}
 		}
 		Destroy();
 		return;

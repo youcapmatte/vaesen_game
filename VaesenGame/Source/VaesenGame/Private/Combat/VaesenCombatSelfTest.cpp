@@ -1294,9 +1294,9 @@ void UVaesenCombatSelfTest::BuildSteps()
 		// The crosshair (the camera's view) on the target.
 		if (APlayerController* Player = World->GetFirstPlayerController(); Player && Player->PlayerCameraManager)
 		{
-			// An arrow falls: a little above it at 20 m (about 7 degrees, at 28 m/s).
+			// An arrow falls: a little above it at 20 m (about 3 degrees, at 45 m/s).
 			FRotator Aim = (Target->GetActorLocation() + FVector(0.0, 0.0, 30.0) - Player->PlayerCameraManager->GetCameraLocation()).Rotation();
-			Aim.Pitch += 7.0;
+			Aim.Pitch += 3.0;
 			Player->SetControlRotation(Aim);
 		}
 		// The left mouse button itself, through the player controller (its mappings and triggers), as a player clicks.
