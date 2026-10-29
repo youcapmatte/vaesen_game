@@ -144,7 +144,11 @@ void AVaesenRangedWeaponActor::UpdateNockedArrow()
 	const AVaesenBaseCharacter* Character = GetOwningCharacter();
 	USkeletalMeshComponent* Body = Character ? Character->GetMesh() : nullptr;
 	const UAnimInstance* Anim = Body ? Body->GetAnimInstance() : nullptr;
-	const bool bCurveShows = Anim && Anim->GetCurveValue(UVaesenAnimInstance::BowArrowCurve) > 0.5f;
+	// Only while nocking or drawing: the aim pose (the pack's "ready" pose) carries the arrow curve too, but aiming
+	// alone hasn't taken an arrow from the quiver.
+	const UAbilitySystemComponent* ASC = Character ? Character->GetAbilitySystemComponent() : nullptr;
+	const bool bDrawing = ASC && ASC->HasMatchingGameplayTag(VaesenTags::State_DrawingBow);
+	const bool bCurveShows = bDrawing && Anim && Anim->GetCurveValue(UVaesenAnimInstance::BowArrowCurve) > 0.5f;
 	// Loosed: hidden until the animation has put the arrow away too (the next is taken from the quiver).
 	if (bArrowLoosed && !bCurveShows)
 	{

@@ -1196,6 +1196,24 @@ void UVaesenCombatSelfTest::BuildSteps()
 		Check(StringBack > 0.8f, FString::Printf(TEXT("its string to the back, its face forward (%.2f)"), StringBack));
 		return 0.1f;
 	} });
+	// Aiming alone takes no arrow from the quiver: none on the string until the left button nocks one.
+	Steps.Add({ FString(), [this, AimOrBlock]() { Press(AimOrBlock); return 0.8f; } });
+	Steps.Add({ FString(), [this, Equipment, AimOrBlock]()
+	{
+		const AVaesenWeaponActor* Bow = Equipment->GetDrawnWeapon() ? Equipment->GetDrawnWeapon()->GetWeaponActor() : nullptr;
+		const UStaticMeshComponent* Nocked = nullptr;
+		for (UActorComponent* Component : Bow ? Bow->GetComponents().Array() : TArray<UActorComponent*>())
+		{
+			if (Component->GetFName() == TEXT("NockedArrow"))
+			{
+				Nocked = Cast<UStaticMeshComponent>(Component);
+			}
+		}
+		Check(Nocked && Nocked->bHiddenInGame, TEXT("aiming the bow alone: no arrow on the string yet"));
+		Shot(TEXT("15a2_BowAimedNoArrow"), nullptr, 0.0f, true);
+		Release(AimOrBlock);
+		return 0.6f;
+	} });
 	Steps.Add({ FString(), [this, ASC, Attack]()
 	{
 		Press(Attack);
