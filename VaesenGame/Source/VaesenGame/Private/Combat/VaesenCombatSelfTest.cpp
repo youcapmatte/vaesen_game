@@ -1196,11 +1196,14 @@ void UVaesenCombatSelfTest::BuildSteps()
 		Check(StringBack > 0.8f, FString::Printf(TEXT("its string to the back, its face forward (%.2f)"), StringBack));
 		return 0.1f;
 	} });
-	// Aiming alone takes no arrow from the quiver: none on the string until the left button nocks one.
+	// Right mouse alone doesn't raise a bow (nocking does): the plain stance, no zoom, no arrow from the quiver.
 	Steps.Add({ FString(), [this, AimOrBlock]() { Press(AimOrBlock); return 0.8f; } });
-	Steps.Add({ FString(), [this, Equipment, AimOrBlock]()
+	Steps.Add({ FString(), [this, ASC, Equipment, AimOrBlock]()
 	{
 		const AVaesenWeaponActor* Bow = Equipment->GetDrawnWeapon() ? Equipment->GetDrawnWeapon()->GetWeaponActor() : nullptr;
+		const float Upright = Bow ? static_cast<float>(Bow->GetActorRightVector().Z) : 0.0f;
+		Check(!ASC->HasMatchingGameplayTag(VaesenTags::State_Aiming) && Upright > 0.8f,
+			FString::Printf(TEXT("right mouse alone doesn't raise the bow: it still hangs at his side (limbs %.2f up)"), Upright));
 		const UStaticMeshComponent* Nocked = nullptr;
 		for (UActorComponent* Component : Bow ? Bow->GetComponents().Array() : TArray<UActorComponent*>())
 		{
@@ -1209,8 +1212,8 @@ void UVaesenCombatSelfTest::BuildSteps()
 				Nocked = Cast<UStaticMeshComponent>(Component);
 			}
 		}
-		Check(Nocked && Nocked->bHiddenInGame, TEXT("aiming the bow alone: no arrow on the string yet"));
-		Shot(TEXT("15a2_BowAimedNoArrow"), nullptr, 0.0f, true);
+		Check(Nocked && Nocked->bHiddenInGame, TEXT("and no arrow on the string yet"));
+		Shot(TEXT("15a2_BowRightMouseIdle"), nullptr, 0.0f, true);
 		Release(AimOrBlock);
 		return 0.6f;
 	} });

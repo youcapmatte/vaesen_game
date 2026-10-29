@@ -401,9 +401,11 @@ UVaesenGA_Aim::UVaesenGA_Aim()
 bool UVaesenGA_Aim::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags,
 	const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const
 {
-	// Any ranged weapon, bows included (skips the bow check of the base).
+	// Any ranged weapon but a bow: a bow is raised and aimed by nocking it (left mouse, GA_DrawBow); right mouse
+	// alone leaves it hanging in the plain stance, with no zoom.
+	const UVaesenRangedWeaponItem* Item = GetRangedItem(ActorInfo);
 	return UVaesenGameplayAbility::CanActivateAbility(Handle, ActorInfo, SourceTags, TargetTags, OptionalRelevantTags)
-		&& GetRangedItem(ActorInfo) != nullptr;
+		&& Item && !Item->IsBow();
 }
 
 void UVaesenGA_Aim::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
