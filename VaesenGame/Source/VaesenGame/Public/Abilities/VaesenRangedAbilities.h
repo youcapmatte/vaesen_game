@@ -149,6 +149,13 @@ protected:
 private:
 	void TickDraw();
 
+	/** Looses the arrow at Fraction of a full draw (aims, plays the release, sends the shot). */
+	void Loose(float Fraction);
+
+	/** A click (let go before this much of a draw) still shoots: it's drawn this far, then loosed. */
+	static constexpr float QuickShotDraw = 0.5f;
+
 	double DrawStartTime = 0.0;
 	bool bReleased = false;
+	bool bQuickShot = false;
 };

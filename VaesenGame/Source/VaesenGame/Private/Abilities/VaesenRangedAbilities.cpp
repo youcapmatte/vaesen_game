@@ -461,9 +461,11 @@ void UVaesenGA_DrawBow::ActivateAbility(const FGameplayAbilitySpecHandle Handle,
 	const UVaesenRangedWeaponItem* Item = GetRangedItem(ActorInfo);
 	AVaesenRangedWeaponActor* Actor = GetRangedActor(ActorInfo);
 	bReleased = false;
+	bQuickShot = false;
 
 	// Nock, then draw: the strength starts building once the arrow is on the string.
 	DrawStartTime = GetWorld()->GetTimeSeconds() + Item->NockTime;
+	UE_LOG(LogVaesenCombat, Display, TEXT("%s nocks (%.2f s) and draws (%.2f s)"), *GetNameSafe(GetAvatarActorFromActorInfo()), Item->NockTime, Item->DrawTime);
 	UAnimMontage* Montage = Item->GetReloadMontage();
 	PlayAbilityMontage(Montage, VaesenRangedAbilities::RateToFit(Montage, Item->NockTime + Item->DrawTime));
 	if (IsLocallyControlled())
@@ -488,6 +490,12 @@ void UVaesenGA_DrawBow::TickDraw()
 		return;
 	}
 	const float Fraction = GetDrawFraction();
+	// A click: loosed once drawn far enough.
+	if (bQuickShot && IsLocallyControlled() && Fraction >= FMath::Max(Item->MinDrawToShoot, QuickShotDraw))
+	{
+		Loose(Fraction);
+		return;
+	}
 	if (HasAuthority(&CurrentActivationInfo))
 	{
 		Actor->ServerSetDrawAlpha(Fraction);
@@ -509,15 +517,30 @@ void UVaesenGA_DrawBow::InputReleased(const FGameplayAbilitySpecHandle Handle, c
 	bReleased = true;
 
 	const UVaesenRangedWeaponItem* Item = GetRangedItem(ActorInfo);
-	AVaesenRangedWeaponActor* Actor = GetRangedActor(ActorInfo);
 	const float Fraction = GetDrawFraction();
-	UE_LOG(LogVaesenCombat, Display, TEXT("%s releases the bow at %.0f%% draw (%s)"), *GetNameSafe(GetAvatarActorFromActorInfo()), Fraction * 100.0f,
-		Item && Actor && Fraction >= Item->MinDrawToShoot ? TEXT("shoots") : TEXT("too little: lets it down"));
-	if (!Item || !Actor || Fraction < Item->MinDrawToShoot)
+	// Let go early (a click): it's nocked and drawn to QuickShotDraw, then loosed (TickDraw), rather than let down.
+	const float QuickShot = Item ? FMath::Max(Item->MinDrawToShoot, QuickShotDraw) : QuickShotDraw;
+	bQuickShot = Fraction < QuickShot;
+	UE_LOG(LogVaesenCombat, Display, TEXT("%s releases the bow after %.2f s, at %.0f%% draw (%s)"), *GetNameSafe(GetAvatarActorFromActorInfo()),
+		Item ? GetWorld()->GetTimeSeconds() - (DrawStartTime - Item->NockTime) : 0.0, Fraction * 100.0f,
+		bQuickShot ? TEXT("a quick shot: drawn a little more, then loosed") : TEXT("shoots"));
+	if (!bQuickShot)
 	{
-		// Let down without a shot.
+		Loose(Fraction);
+	}
+}
+
+void UVaesenGA_DrawBow::Loose(float Fraction)
+{
+	const FGameplayAbilityActorInfo* ActorInfo = GetCurrentActorInfo();
+	const FGameplayAbilityActivationInfo ActivationInfo = CurrentActivationInfo;
+	const UVaesenRangedWeaponItem* Item = GetRangedItem(ActorInfo);
+	AVaesenRangedWeaponActor* Actor = GetRangedActor(ActorInfo);
+	bQuickShot = false;
+	if (!Item || !Actor)
+	{
 		SendAimCancelled();
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		EndAbility(CurrentSpecHandle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
 

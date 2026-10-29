@@ -22,6 +22,7 @@
 #include "Engine/Engine.h"
 #include "Engine/World.h"
 #include "EngineUtils.h"
+#include "InputKeyEventArgs.h"
 #include "GameFramework/PlayerStart.h"
 #include "HAL/IConsoleManager.h"
 #include "Inventory/VaesenEquipmentComponent.h"
@@ -1250,6 +1251,22 @@ void UVaesenCombatSelfTest::BuildSteps()
 		Shot(TEXT("15e_ArrowStuck"), nullptr, 0.0f, true);
 		return 0.5f;
 	} });
+	// A click (let go at once) still shoots: nocked, drawn half way, loosed.
+	const TSharedRef<float> BeforeClick = MakeShared<float>(0.0f);
+	Steps.Add({ FString(), [this, Attack, BeforeClick]()
+	{
+		Target->GetVaesenAbilitySystem()->ResetVitals();
+		*BeforeClick = DummyDamage(Target);
+		Controller->SetControlRotation((Target->GetActorLocation() + FVector(0.0, 0.0, 20.0) - Fighter->GetActorLocation()).Rotation());
+		Press(Attack);
+		return 0.1f;
+	} });
+	Steps.Add({ FString(), [this, Attack]() { Release(Attack); return 1.6f; } });
+	Steps.Add({ FString(), [this, BeforeClick]()
+	{
+		Check(DummyDamage(Target) > *BeforeClick, FString::Printf(TEXT("a click shoots too: drawn half way and loosed, it hits (%.0f)"), DummyDamage(Target) - *BeforeClick));
+		return 0.5f;
+	} });
 	// As a player shoots it: the player controller and its third-person camera aim (not the AI's eyes).
 	const TSharedRef<TWeakObjectPtr<APawn>> PlayerPawn = MakeShared<TWeakObjectPtr<APawn>>();
 	const TSharedRef<float> DamageBefore = MakeShared<float>(0.0f);
@@ -1282,10 +1299,21 @@ void UVaesenCombatSelfTest::BuildSteps()
 			Aim.Pitch += 7.0;
 			Player->SetControlRotation(Aim);
 		}
-		Press(Attack);
+		// The left mouse button itself, through the player controller (its mappings and triggers), as a player clicks.
+		if (APlayerController* Player = World->GetFirstPlayerController())
+		{
+			Player->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::LeftMouseButton, IE_Pressed, 1.0f));
+		}
 		return 1.6f;
 	} });
-	Steps.Add({ FString(), [this, Attack]() { Release(Attack); return 0.1f; } });
+	Steps.Add({ FString(), [this]()
+	{
+		if (APlayerController* Player = World->GetFirstPlayerController())
+		{
+			Player->InputKey(FInputKeyEventArgs::CreateSimulated(EKeys::LeftMouseButton, IE_Released, 0.0f));
+		}
+		return 0.1f;
+	} });
 	Steps.Add({ FString(), [this]()
 	{
 		// In flight: the arrow with its faint streak behind it.
