@@ -486,7 +486,8 @@ namespace VaesenSoundSetup
 			{
 				const FString Name = Data.AssetName.ToString();
 				if (!Name.Contains(TEXT("Whoosh")) && !Name.Contains(TEXT("Take")) && !Name.Contains(TEXT("Pack_Away")) && !Name.Contains(TEXT("VS_Sword"))
-					&& !Name.Contains(TEXT("Parry")) && !Name.Contains(TEXT("Impact")) && !Name.Contains(TEXT("Hit_Then_Blood")) && !Name.Contains(TEXT("Pierce")) && !Name.StartsWith(TEXT("Stab_0")) && !Name.Contains(TEXT("Sword_Stab")))
+					&& !Name.Contains(TEXT("Parry")) && !Name.Contains(TEXT("Impact")) && !Name.Contains(TEXT("Hit_Then_Blood")) && !Name.Contains(TEXT("Pierce")) && !Name.StartsWith(TEXT("Stab_0")) && !Name.Contains(TEXT("Sword_Stab"))
+					&& !Name.Contains(TEXT("Bow")) && !Name.Contains(TEXT("Arrow")))
 				{
 					continue;
 				}
@@ -576,6 +577,25 @@ namespace VaesenSoundSetup
 		if (Sword && SwordCategory.Sounds != Sword)
 		{
 			SwordCategory.Sounds = Sword;
+			Save(Defaults);
+		}
+
+		// The bow: off the back and onto it again (the rifle's sling, the nearest the packs have), the string pulled
+		// back as the arrow is nocked and drawn, its twang as it's let go, the arrow striking home in wood, and a swing
+		// for the strike with it.
+		USoundBase* Unslung = PackAsset<USoundBase>(TEXT("Draws/Dry/SR/Cue/SRM98_Draw_Cue"));
+		UVaesenWeaponSoundSet* BowSounds = SoundSet(TEXT("DA_WeaponSounds_Bow"), {
+			{ EVaesenWeaponSound::Draw, Unslung },
+			{ EVaesenWeaponSound::Sheath, Unslung },
+			{ EVaesenWeaponSound::BowNock, RandomTakes(TEXT("SC_Bow_Draw"), Takes(Weapons, TEXT("Bow_Pull_Back"), 5)) },
+			{ EVaesenWeaponSound::BowRelease, RandomTakes(TEXT("SC_Bow_Release"), Snappy(Takes(Weapons, TEXT("MagicalBow_Shoot"), 5))) },
+			{ EVaesenWeaponSound::ArrowStick, RandomTakes(TEXT("SC_Arrow_Stick"), Snappy(Takes(Weapons, TEXT("Arrow_Hit_Wood"), 5))) },
+			{ EVaesenWeaponSound::SwingLight, RandomTakes(TEXT("SC_Bow_Swing"), Takes(Weapons, TEXT("Whoosh"), 7)) },
+		});
+		FVaesenCategoryDefaults& BowCategory = Defaults->Categories.FindOrAdd(EVaesenWeaponCategory::Bow);
+		if (BowSounds && BowCategory.Sounds != BowSounds)
+		{
+			BowCategory.Sounds = BowSounds;
 			Save(Defaults);
 		}
 

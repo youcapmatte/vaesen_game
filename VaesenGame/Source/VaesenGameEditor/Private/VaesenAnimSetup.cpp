@@ -1695,6 +1695,59 @@ namespace VaesenAnimSetup
 		return Exists(FString(SwordFolder) / TEXT("1HM_Idle_Standing"));
 	}
 
+	/** One more of the pack's animations on Manny (made once), say a mirrored one: a swing with its root motion, like the sword's. */
+	UAnimSequence* RetargetSwordAnim(const TCHAR* Name)
+	{
+		const FString Path = FString(SwordFolder) / Name;
+		if (UAnimSequence* Existing = LoadAt<UAnimSequence>(Path))
+		{
+			return Existing;
+		}
+		USkeletalMesh* Source = LoadObject<USkeletalMesh>(nullptr, SwordPackMesh);
+		USkeletalMesh* Target = LoadObject<USkeletalMesh>(nullptr, MannyMesh);
+		if (!Source || !Target)
+		{
+			return nullptr;
+		}
+		USkeletalMesh* RigSource = LoadObject<USkeletalMesh>(nullptr, UE4MannequinMesh);
+		IAssetRegistry& Registry = FModuleManager::LoadModuleChecked<FAssetRegistryModule>("AssetRegistry").Get();
+		Registry.SearchAllAssets(true);
+		TArray<FAssetData> Found;
+		Registry.GetAssetsByPath(FName(SwordPackFolder), Found, true);
+		FIKRetargetBatchOperationInputs Inputs;
+		for (const FAssetData& Asset : Found)
+		{
+			if (Asset.IsInstanceOf(UAnimSequence::StaticClass()) && Asset.AssetName.ToString() == Name)
+			{
+				Inputs.AssetsToRetarget.Add(Asset);
+			}
+		}
+		if (Inputs.AssetsToRetarget.Num() == 0)
+		{
+			UE_LOG(LogVaesenAnimSetup, Warning, TEXT("%s isn't in the sword pack."), Name);
+			return nullptr;
+		}
+		Inputs.SourceMesh = Source;
+		Inputs.TargetMesh = Target;
+		Inputs.IKRetargetAsset = MakeRetargeter(RigSource ? RigSource : Source, Target);
+		Inputs.TargetPath = SwordFolder;
+		Inputs.bUseSourcePath = false;
+		Inputs.bIncludeReferencedAssets = false;
+		Inputs.bOverwriteExistingFiles = true;
+		UIKRetargetBatchOperation::RunBatchRetarget(Inputs);
+		UAnimSequence* Anim = LoadAt<UAnimSequence>(Path);
+		if (Anim)
+		{
+			Anim->bEnableRootMotion = true;
+			Anim->RootMotionRootLock = ERootMotionRootLock::RefPose;
+			Anim->bForceRootLock = false;
+			Anim->PostEditChange();
+			Save(Anim);
+			UE_LOG(LogVaesenAnimSetup, Display, TEXT("Retargeted %s to Manny."), Name);
+		}
+		return Anim;
+	}
+
 	/**
 	 * The pack's sword as its 1HMBladeMan Blueprint holds it (the mannequin with OneHandSword_Mesh attached to the
 	 * hand, at an offset of its own), in hand_r's space: the blade's direction (the mesh's Z), the way its edge faces
@@ -3602,6 +3655,36 @@ namespace VaesenAnimSetup
 		Bow.Montages.FireAimed = Release;
 		Bow.Montages.NockLow = NockLow;
 		Bow.Montages.RaiseToShoot = Raise;
+
+		// The strike (Shift + left mouse): the sword pack's first slash, mirrored, so the left fist swings the bow. The hit
+		// window where that fist is fastest, the whoosh leading it.
+		if (UAnimSequence* BashAnim = RetargetSwordAnim(TEXT("1HM_Slash01_Mirrored")))
+		{
+			const FSwingTiming Timing = MeasureSwing(BashAnim, TEXT("hand_l"));
+			const float Start = FMath::Max(Timing.WindowStart - 0.06f, 0.0f);
+			const float End = FMath::Min(Timing.WindowEnd + 0.06f, Timing.Length);
+			const FString BashPath = Folder / TEXT("AM_Bow_Bash");
+			const bool bNewBash = !Exists(BashPath);
+			if (UAnimMontage* Bash = MakeMontage(BashPath, BashAnim, FAnimSlotGroup::DefaultSlotName, 0.1f, 0.3f))
+			{
+				if (bNewBash)
+				{
+					AddNotifyState(Bash, NewObject<UAnimNotifyState_VaesenMeleeHitWindow>(Bash), Start, End - Start);
+				}
+				SetSoundNotify(Bash, EVaesenWeaponSound::SwingLight, FMath::Max(Start - SoundLead, 0.0f));
+				Save(Bash);
+				FVaesenMeleeAttack& Strike = Bow.LightAttack;
+				Strike.Montage = Bash;
+				Strike.BlockedMontage = nullptr;
+				Strike.MontageSection = NAME_None;
+				Strike.ComboSteps.Reset();
+				Strike.HitWindowStart = Start;
+				Strike.HitWindowEnd = End;
+				Strike.RecoveryTime = End + 0.2f;
+				Bow.Montages.Attack = Bash;
+				UE_LOG(LogVaesenAnimSetup, Display, TEXT("Bow strike: 1HM_Slash01_Mirrored, hit window %.2f..%.2f of %.2f s"), Start, End, Timing.Length);
+			}
+		}
 		if (Hits.Num() > 0)
 		{
 			Bow.Montages.HitReactions = Hits;

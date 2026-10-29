@@ -1354,6 +1354,39 @@ void UVaesenCombatSelfTest::BuildSteps()
 		Check(DummyDamage(Target) > *BeforeClick, FString::Printf(TEXT("a click shoots too: drawn half way and loosed, it hits (%.0f)"), DummyDamage(Target) - *BeforeClick));
 		return 0.5f;
 	} });
+	// Its sounds: off the back, nocked and drawn, let go.
+	Steps.Add({ FString(), [this]()
+	{
+		const UVaesenWeaponItem* Bow = Fighter->GetEquipment()->GetDrawnWeapon();
+		Check(Bow && Bow->GetSound(EVaesenWeaponSound::Draw) && Bow->GetSound(EVaesenWeaponSound::BowNock) && Bow->GetSound(EVaesenWeaponSound::BowRelease),
+			TEXT("the bow has its sounds: taken from the back, nocked and drawn, let go"));
+		return 0.1f;
+	} });
+	// Shift + left mouse: struck with the bow (the sword's slash, mirrored into the bow hand), close up.
+	const TSharedRef<float> BeforeBash = MakeShared<float>(0.0f);
+	Steps.Add({ FString(), [this, BeforeBash, FaceTarget]()
+	{
+		Target->SetActorLocation(Fighter->GetActorLocation() + Fighter->GetActorForwardVector() * 110.0f + FVector(0.0, 0.0, -10.0));
+		Target->GetVaesenAbilitySystem()->ResetVitals();
+		*BeforeBash = DummyDamage(Target);
+		FaceTarget();
+		Press(static_cast<uint8>(EVaesenAbilityInput::HeavyAttack));
+		return 0.3f;
+	} });
+	Steps.Add({ FString(), [this]()
+	{
+		const UAnimInstance* Anim = Fighter->GetMesh()->GetAnimInstance();
+		const UAnimMontage* Swing = Anim ? Anim->GetCurrentActiveMontage() : nullptr;
+		Check(Swing && Swing->GetName() == TEXT("AM_Bow_Bash"), FString::Printf(TEXT("Shift + left mouse swings the bow (%s)"), *GetNameSafe(Swing)));
+		Shot(TEXT("15i_BowStrike"));
+		Release(static_cast<uint8>(EVaesenAbilityInput::HeavyAttack));
+		return 1.2f;
+	} });
+	Steps.Add({ FString(), [this, BeforeBash]()
+	{
+		Check(DummyDamage(Target) > *BeforeBash, FString::Printf(TEXT("the bow strikes the dummy (%.0f)"), DummyDamage(Target) - *BeforeBash));
+		return 0.3f;
+	} });
 	// As a player shoots it: the player controller and its third-person camera aim (not the AI's eyes).
 	const TSharedRef<TWeakObjectPtr<APawn>> PlayerPawn = MakeShared<TWeakObjectPtr<APawn>>();
 	const TSharedRef<float> DamageBefore = MakeShared<float>(0.0f);
