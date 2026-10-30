@@ -1303,13 +1303,19 @@ void UVaesenCombatSelfTest::BuildSteps()
 		const float FromHand = Nocked ? FVector::Dist(Nocked->GetComponentLocation(), Fighter->GetMesh()->GetSocketLocation(TEXT("hand_r"))) : -1.0f;
 		Check(ASC->HasMatchingGameplayTag(VaesenTags::State_DrawingBow) && !ASC->HasMatchingGameplayTag(VaesenTags::State_Aiming) && BowHandUp() < 30.0f,
 			FString::Printf(TEXT("left mouse without aiming: nocked, the bow held low (the bow hand %.0f cm above the pelvis)"), BowHandUp()));
-		Check(Nocked && !Nocked->bHiddenInGame && FromHand < 25.0f, FString::Printf(TEXT("held low, the arrow's on the string (%.0f cm from the drawing hand)"), FromHand));
+		// The arrow mesh lies along its Y from the nock.
+		const FVector Along = Nocked ? Nocked->GetComponentTransform().GetUnitAxis(EAxis::Y) : FVector::ZeroVector;
+		const float Ahead = static_cast<float>(FVector::DotProduct(Along, Fighter->GetActorForwardVector()));
+		const UAnimInstance* Anim = Fighter->GetMesh()->GetAnimInstance();
+		Check(Nocked && !Nocked->bHiddenInGame && FromHand < 25.0f && Ahead > 0.6f,
+			FString::Printf(TEXT("held low, the arrow's on the string (%.0f cm from the drawing hand), pointing ahead (%.2f; down %.0f degrees; montage %s)"), FromHand, Ahead,
+				FMath::RadiansToDegrees(FMath::Asin(FMath::Clamp(-Along.Z, -1.0, 1.0))), *GetNameSafe(Anim ? Anim->GetCurrentActiveMontage() : nullptr)));
 		Check(Fighter->GetCharacterMovement()->bOrientRotationToMovement && !Fighter->CanJump(),
 			TEXT("held low, he turns where he walks (not to the camera), and can't jump"));
 		Shot(TEXT("15f_BowNockedLow"), nullptr, 0.0f, true);
-		Shot(TEXT("15f2_BowNockedLowSide"));
 		return 0.1f;
 	} });
+	Steps.Add({ FString(), [this]() { Shot(TEXT("15f2_BowNockedLowSide")); return 0.1f; } });
 	// Aiming with the arrow already on: the bow comes up, nocked; letting go of the aim lowers it again.
 	Steps.Add({ FString(), [this, AimOrBlock]() { Press(AimOrBlock); return 0.7f; } });
 	Steps.Add({ FString(), [this, AimOrBlock, NockedArrow, BowHandUp]()

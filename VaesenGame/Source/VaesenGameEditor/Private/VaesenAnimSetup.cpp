@@ -3397,17 +3397,23 @@ namespace VaesenAnimSetup
 			Node->Node.LayerSetup[0].BranchFilters = { Filter };
 		});
 		Builder.Pose(UseMoving(100), Upper, TEXT("BasePose"));
-		// Nocked but not aimed (bBowLowReady): the bow held low in front, the arrow on the string pointing down ahead
-		// (the pack's lowering of a drawn bow, where the arrow's still on the string).
+		// Nocked but not aimed (bBowLowReady): the arrow just on the string, not drawn (the pack's nock and draw where the
+		// draw begins), the bow tipped down ahead by the aim offset (BowLowPitch).
 		UEdGraphNode* Nocked = Aim;
 		if (Low)
 		{
-			UAnimGraphNode_SequenceEvaluator* LowPose = Builder.Add<UAnimGraphNode_SequenceEvaluator>(-1250, 500, [Low, LowTime](UAnimGraphNode_SequenceEvaluator* Node)
+			UAnimGraphNode_SequenceEvaluator* LowPose = Builder.Add<UAnimGraphNode_SequenceEvaluator>(-1600, 500, [Low, LowTime](UAnimGraphNode_SequenceEvaluator* Node)
 			{
 				Node->Node.SetSequence(Low);
 				Node->Node.SetExplicitTime(LowTime);
 			});
-			Nocked = ByBool(Builder, -1050, 300, TEXT("bBowLowReady"), LowPose, Aim, 0.2f);
+			UAnimGraphNode_RotationOffsetBlendSpace* Lowered = Builder.Add<UAnimGraphNode_RotationOffsetBlendSpace>(-1250, 500, [AimOffset](UAnimGraphNode_RotationOffsetBlendSpace* Node)
+			{
+				Node->Node.SetBlendSpace(AimOffset);
+			});
+			Builder.Pose(LowPose, Lowered, TEXT("BasePose"));
+			Builder.Var(TEXT("BowLowPitch"), Lowered, TEXT("X"));
+			Nocked = ByBool(Builder, -1050, 300, TEXT("bBowLowReady"), Lowered, Aim, 0.2f);
 		}
 		Builder.Pose(Nocked, Upper, TEXT("BlendPoses_0"));
 		// Not nocked: the plain locomotion (ABP_Manny), standing, walking, running and jumping, the bow hanging at his side.
@@ -3482,57 +3488,73 @@ namespace VaesenAnimSetup
 		// The hold: the pack's full draw (the draw ends in it, the release starts from it), the aim offset over it.
 		UAnimSequence* Hold = BowAnim(TEXT("Attack"), TEXT("Shoot_Aim_Idle_Root"));
 		UBlendSpace* AimOffset = MakeBowAimOffset(bRebuild);
-		// Held low, nocked: the pack's lowering of a drawn bow (Shoot_Cancel) where the bow's lowest with the arrow still on
-		// the string and the drawing hand in front (later it goes back to the quiver).
-		UAnimSequence* Lowering = BowAnim(TEXT("Attack"), TEXT("Shoot_Cancel_Root"));
+		// Held low, nocked: the pack's nock and draw (Shoot_Start) where the arrow's just on the string, before the draw
+		// (the drawing hand nearest the bow before it's pulled back to full draw), tipped down by the aim offset.
+		UAnimSequence* Lowering = BowAnim(TEXT("Attack"), TEXT("Shoot_Start_Root"));
 		float LowTime = 0.0f;
-		if (const UAnimSequence* Source = BowSource(TEXT("Attack"), TEXT("Shoot_Cancel_Root")))
+		if (const UAnimSequence* Source = BowSource(TEXT("Attack"), TEXT("Shoot_Start_Root")))
 		{
-			double Lowest = TNumericLimits<double>::Max();
 			const double Length = Source->GetPlayLength();
-			for (int32 Step = 0; Step <= 60; ++Step)
+			TArray<double> Gaps;
+			TArray<bool> OnString;
+			for (int32 Step = 0; Step <= 120; ++Step)
 			{
-				const double Time = Length * Step / 60.0;
-				const FAnimPose Pose = PoseAt(Source, Time);
-				const FTransform Pelvis = UAnimPoseExtensions::GetBonePose(Pose, TEXT("pelvis"), EAnimPoseSpaces::World);
-				// The pack's character faces +Y.
-				const FVector Right = UAnimPoseExtensions::GetBonePose(Pose, TEXT("hand_r"), EAnimPoseSpaces::World).GetLocation() - Pelvis.GetLocation();
-				const FVector Left = UAnimPoseExtensions::GetBonePose(Pose, TEXT("hand_l"), EAnimPoseSpaces::World).GetLocation() - Pelvis.GetLocation();
-				// On the string, pointing ahead (down a little at most), not on its way back to the quiver.
+				const FAnimPose Pose = PoseAt(Source, Length * Step / 120.0);
+				const FVector Right = UAnimPoseExtensions::GetBonePose(Pose, TEXT("hand_r"), EAnimPoseSpaces::World).GetLocation();
+				const FVector Left = UAnimPoseExtensions::GetBonePose(Pose, TEXT("hand_l"), EAnimPoseSpaces::World).GetLocation();
+				// The pack's character faces +Y: the arrow shown and pointing ahead.
 				const FTransform Arrow = UAnimPoseExtensions::GetBonePose(Pose, TEXT("arrow"), EAnimPoseSpaces::World);
-				const bool bOnString = Arrow.GetScale3D().X > 0.5 && Arrow.GetUnitAxis(EAxis::Y).Y > 0.75;
-				// The drawing hand still on the string, near the bow (it soon leaves for the quiver, the arrow with it).
-				if (bOnString && Right.Y > 15.0 && FVector::Dist(Right, Left) < 55.0 && Left.Z < Lowest)
+				OnString.Add(Arrow.GetScale3D().X > 0.5 && Arrow.GetUnitAxis(EAxis::Y).Y > 0.75);
+				Gaps.Add(FVector::Dist(Right, Left));
+			}
+			// Full draw: the hands furthest apart with the arrow on. Before it, where they were nearest is the nock.
+			int32 Full = INDEX_NONE;
+			for (int32 Step = 0; Step < Gaps.Num(); ++Step)
+			{
+				if (OnString[Step] && (Full == INDEX_NONE || Gaps[Step] > Gaps[Full]))
 				{
-					Lowest = Left.Z;
-					LowTime = static_cast<float>(Time);
+					Full = Step;
 				}
 			}
-			UE_LOG(LogVaesenAnimSetup, Display, TEXT("Bow held low, nocked: Shoot_Cancel at %.2f s of %.2f (the bow hand %.0f cm above the pelvis)"), LowTime, Length, Lowest);
+			int32 Nocked = Full;
+			for (int32 Step = Full; Step >= 0 && OnString[Step]; --Step)
+			{
+				if (Gaps[Step] < Gaps[Nocked])
+				{
+					Nocked = Step;
+				}
+			}
+			if (Nocked != INDEX_NONE)
+			{
+				LowTime = static_cast<float>(Length * Nocked / 120.0);
+				UE_LOG(LogVaesenAnimSetup, Display, TEXT("Bow held low, nocked: Shoot_Start at %.2f s of %.2f (hands %.0f cm apart; full draw %.0f cm at %.2f s)"),
+					LowTime, Length, Gaps[Nocked], Gaps[Full], Length * Full / 120.0);
+			}
 		}
 		UClass* Graph = BuildBowLocomotion(Skeleton, bRebuild, MakeBowBlendSpace(bRebuild), Hold, AimOffset, LowTime > 0.0f ? Lowering : nullptr, LowTime);
 
 		// Taking an arrow from the quiver, nocking and drawing; the release, the bow lowered.
 		UAnimMontage* Draw = MakeMontage(Folder / TEXT("AM_Bow_NockAndDraw"), BowAnim(TEXT("Attack"), TEXT("Shoot_Start_Root")), UpperBodySlot, 0.15f, 0.15f);
 		UAnimMontage* Release = MakeMontage(Folder / TEXT("AM_Bow_Release"), BowAnim(TEXT("Attack"), TEXT("Shoot_End_Root")), UpperBodySlot, 0.05f, 0.25f);
-		// Held low, the lowering run backwards: from the bow held low without an arrow, the hand to the quiver and the arrow
-		// onto the string (NockLow); and from there up to full draw, level (RaiseToShoot, then the release).
+		// Held low, the nock and draw split where the arrow's on the string: the hand to the quiver and the arrow onto the
+		// string (NockLow, blending into the bow held low), and from there the draw, up level (RaiseToShoot, then the release).
 		UAnimMontage* NockLow = nullptr;
 		UAnimMontage* Raise = nullptr;
 		if (Lowering && LowTime > 0.0f)
 		{
-			NockLow = MakeMontage(Folder / TEXT("AM_Bow_NockLow"), Lowering, UpperBodySlot, 0.15f, 0.15f);
-			Raise = MakeMontage(Folder / TEXT("AM_Bow_RaiseToShoot"), Lowering, UpperBodySlot, 0.05f, 0.05f);
-			const TPair<UAnimMontage*, FVector2D> Parts[] = { { NockLow, FVector2D(LowTime, Lowering->GetPlayLength()) }, { Raise, FVector2D(0.0, LowTime) } };
-			for (const TPair<UAnimMontage*, FVector2D>& Part : Parts)
+			const auto Part = [&](const TCHAR* Name, float From, float To, float BlendIn, float BlendOut)
 			{
-				if (Part.Key)
+				const FString Path = Folder / Name;
+				const bool bNew = !Exists(Path);
+				UAnimMontage* Montage = MakeMontage(Path, Lowering, UpperBodySlot, BlendIn, BlendOut);
+				if (Montage && bNew)
 				{
-					TrimMontage(Part.Key, static_cast<float>(Part.Value.X), static_cast<float>(Part.Value.Y));
-					Part.Key->SlotAnimTracks[0].AnimTrack.AnimSegments[0].AnimPlayRate = -1.0f;
-					Part.Key->RefreshCacheData();
+					TrimMontage(Montage, From, To);
 				}
-			}
+				return Montage;
+			};
+			NockLow = Part(TEXT("AM_Bow_NockLow"), 0.0f, LowTime, 0.15f, 0.2f);
+			Raise = Part(TEXT("AM_Bow_RaiseToShoot"), LowTime, Lowering->GetPlayLength(), 0.1f, 0.05f);
 		}
 		for (UAnimMontage* Montage : { Draw, Release, NockLow, Raise })
 		{

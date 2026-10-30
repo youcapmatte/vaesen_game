@@ -174,6 +174,19 @@ void AVaesenRangedWeaponActor::UpdateNockedArrow()
 		Values[Index] = Anim->GetCurveValue(UVaesenAnimInstance::BowArrowTransformCurves[Index]);
 	}
 	NockedArrow->SetRelativeLocationAndRotation(FVector(Values[0], Values[1], Values[2]), FRotator(Values[3], Values[4], Values[5]));
+	// Held low (no montage: the pose isn't the pack's own draw, whose curves place it): on the string, through the rest.
+	// The arrow mesh lies along its Y from the nock.
+	const UMeshComponent* Mesh = GetWeaponMesh();
+	if (ASC->HasMatchingGameplayTag(VaesenTags::State_DrawingBow) && !ASC->HasMatchingGameplayTag(VaesenTags::State_Aiming) && !Anim->IsAnyMontagePlaying()
+		&& StringBow->GetSkinnedAsset() && Mesh && Mesh->DoesSocketExist(TEXT("Muzzle")))
+	{
+		const FVector Nock = StringBow->GetBoneLocation(TEXT("String"), EBoneSpaces::WorldSpace);
+		const FVector Along = (Mesh->GetSocketLocation(TEXT("Muzzle")) - Nock).GetSafeNormal();
+		if (!Along.IsNearlyZero())
+		{
+			NockedArrow->SetWorldLocationAndRotation(Nock, FRotationMatrix::MakeFromYZ(Along, GetActorUpVector()).Rotator());
+		}
+	}
 	NockedArrow->SetHiddenInGame(false);
 }
 

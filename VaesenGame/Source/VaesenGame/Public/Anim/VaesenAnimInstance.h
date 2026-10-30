@@ -132,6 +132,10 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Weapon")
 	bool bBowLowReady = false;
 
+	/** Bows held low: how far down the nocked bow points (the aim offset's pitch, degrees; it reaches down to about -27). */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon")
+	float BowLowPitch = -20.0f;
+
 	/** Aim offset, degrees: up/down and left/right of where the body faces. */
 	UPROPERTY(BlueprintReadOnly, Category = "Aim")
 	float AimPitch = 0.0f;
