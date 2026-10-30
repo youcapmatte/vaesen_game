@@ -219,8 +219,8 @@ void AVaesenBaseCharacter::OnCombatStateChanged(const FGameplayTag Tag, int32 Ne
 	{
 		Scale = FMath::Min(Scale, BlockingSpeedScale);
 	}
-	if (AbilitySystem->HasMatchingGameplayTag(VaesenTags::State_Aiming) || AbilitySystem->HasMatchingGameplayTag(VaesenTags::State_DrawingBow)
-		|| AbilitySystem->HasMatchingGameplayTag(VaesenTags::State_Throwing))
+	// (Not a bow nocked but held low: only aiming it slows.)
+	if (AbilitySystem->HasMatchingGameplayTag(VaesenTags::State_Aiming) || AbilitySystem->HasMatchingGameplayTag(VaesenTags::State_Throwing))
 	{
 		Scale = FMath::Min(Scale, AimingSpeedScale);
 	}

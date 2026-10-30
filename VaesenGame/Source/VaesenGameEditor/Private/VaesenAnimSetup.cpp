@@ -3332,18 +3332,20 @@ namespace VaesenAnimSetup
 	{
 		if (!bRebuild)
 		{
-			// Made before the low stance was, or with it at another moment: remade.
+			// Made before the low stance was, with it at another moment, or with it over the archer's legs: remade.
 			UAnimBlueprint* Existing = LoadAt<UAnimBlueprint>(BowGraphPath);
-			bool bHasLow = false;
+			bool bHasLow = false, bLowOverPlain = false;
 			for (UEdGraph* Graph : Existing ? Existing->FunctionGraphs : TArray<TObjectPtr<UEdGraph>>())
 			{
 				for (UEdGraphNode* Node : Graph ? Graph->Nodes : TArray<TObjectPtr<UEdGraphNode>>())
 				{
 					const UAnimGraphNode_SequenceEvaluator* Evaluator = Cast<UAnimGraphNode_SequenceEvaluator>(Node);
 					bHasLow |= Evaluator && FMath::IsNearlyEqual(Evaluator->Node.GetExplicitTime(), LowTime, 0.001f);
+					const UAnimGraphNode_SaveCachedPose* Cache = Cast<UAnimGraphNode_SaveCachedPose>(Node);
+					bLowOverPlain |= Cache && Cache->CacheName == TEXT("BowPlain");
 				}
 			}
-			if (Existing && (bHasLow || !Low))
+			if (Existing && ((bHasLow && bLowOverPlain) || !Low))
 			{
 				return Existing->GeneratedClass;
 			}
@@ -3384,22 +3386,48 @@ namespace VaesenAnimSetup
 		});
 		Builder.Pose(Held, Aim, TEXT("BasePose"));
 		Builder.Var(TEXT("AimPitch"), Aim, TEXT("X"));
-		UAnimGraphNode_LayeredBoneBlend* Upper = Builder.Add<UAnimGraphNode_LayeredBoneBlend>(-900, 150, [](UAnimGraphNode_LayeredBoneBlend* Node)
+		const auto FromSpine = [&Builder](int32 Y)
 		{
-			Node->Node.bMeshSpaceRotationBlend = true;
-			if (Node->Node.LayerSetup.Num() == 0)
+			return Builder.Add<UAnimGraphNode_LayeredBoneBlend>(-900, Y, [](UAnimGraphNode_LayeredBoneBlend* Node)
 			{
-				Node->Node.LayerSetup.AddDefaulted();
-			}
-			FBranchFilter Filter;
-			Filter.BoneName = TEXT("spine_01");
-			Filter.BlendDepth = 0;
-			Node->Node.LayerSetup[0].BranchFilters = { Filter };
-		});
+				Node->Node.bMeshSpaceRotationBlend = true;
+				if (Node->Node.LayerSetup.Num() == 0)
+				{
+					Node->Node.LayerSetup.AddDefaulted();
+				}
+				FBranchFilter Filter;
+				Filter.BoneName = TEXT("spine_01");
+				Filter.BlendDepth = 0;
+				Node->Node.LayerSetup[0].BranchFilters = { Filter };
+			});
+		};
+		UAnimGraphNode_LayeredBoneBlend* Upper = FromSpine(150);
 		Builder.Pose(UseMoving(100), Upper, TEXT("BasePose"));
+		Builder.Pose(Aim, Upper, TEXT("BlendPoses_0"));
+
+		// Not nocked: the plain locomotion (ABP_Manny), standing, walking, running and jumping, the bow hanging at his side.
+		UClass* Plain = LoadObject<UClass>(nullptr, UnarmedGraphPath);
+		UAnimGraphNode_LinkedAnimGraph* PlainGraph = Builder.Add<UAnimGraphNode_LinkedAnimGraph>(-1700, 800, [Plain](UAnimGraphNode_LinkedAnimGraph* Node)
+		{
+			Node->Node.InstanceClass = Plain;
+		});
+		UAnimGraphNode_SaveCachedPose* PlainCache = Builder.Add<UAnimGraphNode_SaveCachedPose>(-1400, 800, [](UAnimGraphNode_SaveCachedPose* Node)
+		{
+			Node->CacheName = TEXT("BowPlain");
+		});
+		Builder.Pose(PlainGraph, PlainCache, TEXT("Pose"));
+		const auto UsePlain = [&Builder, PlainCache](int32 Y)
+		{
+			return Builder.Add<UAnimGraphNode_UseCachedPose>(-1150, Y, [PlainCache](UAnimGraphNode_UseCachedPose* Node)
+			{
+				Node->SaveCachedPoseNode = PlainCache;
+			});
+		};
+
 		// Nocked but not aimed (bBowLowReady): the arrow just on the string, not drawn (the pack's nock and draw where the
-		// draw begins), the bow tipped down ahead by the aim offset (BowLowPitch).
-		UEdGraphNode* Nocked = Aim;
+		// draw begins), the bow tipped down ahead by the aim offset (BowLowPitch), over the plain locomotion (he walks and
+		// runs at his own speed; only aiming slows him, and the archer's legs).
+		UEdGraphNode* Nocked = Upper;
 		if (Low)
 		{
 			UAnimGraphNode_SequenceEvaluator* LowPose = Builder.Add<UAnimGraphNode_SequenceEvaluator>(-1600, 500, [Low, LowTime](UAnimGraphNode_SequenceEvaluator* Node)
@@ -3413,16 +3441,12 @@ namespace VaesenAnimSetup
 			});
 			Builder.Pose(LowPose, Lowered, TEXT("BasePose"));
 			Builder.Var(TEXT("BowLowPitch"), Lowered, TEXT("X"));
-			Nocked = ByBool(Builder, -1050, 300, TEXT("bBowLowReady"), Lowered, Aim, 0.2f);
+			UAnimGraphNode_LayeredBoneBlend* LowUpper = FromSpine(500);
+			Builder.Pose(UsePlain(600), LowUpper, TEXT("BasePose"));
+			Builder.Pose(Lowered, LowUpper, TEXT("BlendPoses_0"));
+			Nocked = ByBool(Builder, -600, 300, TEXT("bBowLowReady"), LowUpper, Upper, 0.2f);
 		}
-		Builder.Pose(Nocked, Upper, TEXT("BlendPoses_0"));
-		// Not nocked: the plain locomotion (ABP_Manny), standing, walking, running and jumping, the bow hanging at his side.
-		UClass* Plain = LoadObject<UClass>(nullptr, UnarmedGraphPath);
-		UAnimGraphNode_LinkedAnimGraph* PlainGraph = Builder.Add<UAnimGraphNode_LinkedAnimGraph>(-900, 450, [Plain](UAnimGraphNode_LinkedAnimGraph* Node)
-		{
-			Node->Node.InstanceClass = Plain;
-		});
-		UEdGraphNode* Final = ByBool(Builder, -300, 100, TEXT("bAiming"), Upper, PlainGraph, 0.2f);
+		UEdGraphNode* Final = ByBool(Builder, -300, 100, TEXT("bAiming"), Nocked, UsePlain(450), 0.2f);
 		Builder.Pose(Final, Builder.Root(), TEXT("Result"));
 		CompileAndSave(Blueprint);
 		return Blueprint->GeneratedClass;

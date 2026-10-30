@@ -1312,6 +1312,9 @@ void UVaesenCombatSelfTest::BuildSteps()
 				FMath::RadiansToDegrees(FMath::Asin(FMath::Clamp(-Along.Z, -1.0, 1.0))), *GetNameSafe(Anim ? Anim->GetCurrentActiveMontage() : nullptr)));
 		Check(Fighter->GetCharacterMovement()->bOrientRotationToMovement && !Fighter->CanJump(),
 			TEXT("held low, he turns where he walks (not to the camera), and can't jump"));
+		const float FullSpeed = Fighter->GetClass()->GetDefaultObject<ACharacter>()->GetCharacterMovement()->MaxWalkSpeed;
+		Check(FMath::IsNearlyEqual(Fighter->GetCharacterMovement()->MaxWalkSpeed, FullSpeed, 1.0f),
+			FString::Printf(TEXT("held low, he moves at full speed (%.0f of %.0f)"), Fighter->GetCharacterMovement()->MaxWalkSpeed, FullSpeed));
 		Shot(TEXT("15f_BowNockedLow"), nullptr, 0.0f, true);
 		return 0.1f;
 	} });
@@ -1323,6 +1326,8 @@ void UVaesenCombatSelfTest::BuildSteps()
 		const UStaticMeshComponent* Nocked = NockedArrow();
 		Check(BowHandUp() > 35.0f && Nocked && !Nocked->bHiddenInGame,
 			FString::Printf(TEXT("nocked low, right mouse raises it with the arrow on (the bow hand %.0f cm up)"), BowHandUp()));
+		Check(Fighter->GetCharacterMovement()->MaxWalkSpeed < Fighter->GetClass()->GetDefaultObject<ACharacter>()->GetCharacterMovement()->MaxWalkSpeed * 0.5f,
+			FString::Printf(TEXT("aiming it, he slows (%.0f)"), Fighter->GetCharacterMovement()->MaxWalkSpeed));
 		Shot(TEXT("15g_BowNockedRaised"), nullptr, 0.0f, true);
 		Release(AimOrBlock);
 		return 0.7f;
